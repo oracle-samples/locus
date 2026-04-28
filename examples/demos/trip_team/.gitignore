@@ -1,0 +1,3 @@
+# Generated media — re-render with `python trip_team.py` + the .tape file.
+*.mp4
+*.gif

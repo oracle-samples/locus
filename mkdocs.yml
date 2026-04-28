@@ -1,0 +1,166 @@
+site_name: locus
+site_description: Oracle Generative AI · Multi-Agent · Reasoning · Orchestrator SDK
+site_url: https://oracle-samples.github.io/locus/
+repo_url: https://github.com/oracle-samples/locus
+repo_name: oracle-samples/locus
+edit_uri: edit/main/docs/
+
+docs_dir: docs
+strict: true
+
+exclude_docs: |
+  internal/
+  doc-gen/
+
+theme:
+  name: material
+  custom_dir: overrides
+  logo: img/mark.svg
+  favicon: img/mark.svg
+  font:
+    text: Inter
+    code: JetBrains Mono
+  palette:
+  - media: '(prefers-color-scheme: light)'
+    scheme: default
+    primary: custom
+    accent: custom
+    toggle:
+      icon: material/brightness-7
+      name: Switch to dark mode
+  - media: '(prefers-color-scheme: dark)'
+    scheme: slate
+    primary: custom
+    accent: custom
+    toggle:
+      icon: material/brightness-4
+      name: Switch to light mode
+  features:
+  - navigation.instant
+  - navigation.sections
+  - navigation.tabs
+  - navigation.top
+  - content.code.copy
+  - content.code.annotate
+  - content.tabs.link
+  - search.highlight
+  - search.share
+
+extra_css:
+- stylesheets/locus.css
+
+copyright: <span class="footer-brand"><span class="footer-brand__o" aria-hidden="true"></span><span class="footer-brand__text">Oracle Generative AI</span></span><br><span class="footer-copy">Copyright &copy; 2025–2026 <span class="oracle-mark" aria-label="Oracle"></span> and/or its affiliates</span>
+
+extra:
+  social:
+  - icon: fontawesome/brands/github
+    link: https://github.com/oracle-samples/locus
+    name: locus on GitHub
+  - icon: fontawesome/brands/python
+    link: https://pypi.org/project/locus/
+    name: locus on PyPI
+  generator: false
+
+markdown_extensions:
+- admonition
+- attr_list
+- md_in_html
+- def_list
+- footnotes
+- pymdownx.details
+- pymdownx.highlight:
+    anchor_linenums: true
+    line_spans: __span
+    pygments_lang_class: true
+- pymdownx.inlinehilite
+- pymdownx.snippets
+- pymdownx.superfences
+- pymdownx.tabbed:
+    alternate_style: true
+- pymdownx.emoji:
+    emoji_index: !!python/name:material.extensions.emoji.twemoji
+    emoji_generator: !!python/name:material.extensions.emoji.to_svg
+- tables
+- toc:
+    permalink: true
+
+plugins:
+- search
+- mkdocstrings:
+    default_handler: python
+    handlers:
+      python:
+        paths: [src]
+        options:
+          docstring_style: google
+          show_source: true
+          show_root_heading: true
+          show_root_full_path: false
+          separate_signature: true
+          show_signature_annotations: true
+          merge_init_into_class: true
+          show_if_no_docstring: false
+          inherited_members: true
+          members_order: source
+
+nav:
+- Home: index.md
+- Concepts:
+  - Agents:
+    - Agent: concepts/agent.md
+    - Agent Loop: concepts/agent-loop.md
+    - State: concepts/state.md
+    - Prompts: concepts/prompts.md
+    - Conversation Management: concepts/conversation-management.md
+    - Retry Strategies: concepts/retry.md
+    - Hooks: concepts/hooks.md
+    - Termination: concepts/termination.md
+    - Structured Output: concepts/structured-output.md
+    - Interrupts: concepts/interrupts.md
+    - Errors: concepts/errors.md
+  - Tools:
+    - Tools: concepts/tools.md
+    - Idempotency: concepts/idempotency.md
+    - Executors: concepts/executors.md
+    - MCP: concepts/mcp.md
+  - Reasoning:
+    - Reasoning: concepts/reasoning.md
+  - Memory & Persistence:
+    - Checkpointers: concepts/checkpointers.md
+  - Streaming & Server:
+    - Streaming: concepts/streaming.md
+    - Events: concepts/events.md
+    - Agent Server: concepts/server.md
+  - Models:
+    - Providers: concepts/models.md
+  - Skills & Playbooks:
+    - Skills: concepts/skills.md
+    - Playbooks: concepts/playbooks.md
+  - RAG:
+    - RAG: concepts/rag.md
+  - Safety & Observability:
+    - Safety & Guardrails: concepts/safety.md
+    - Observability: concepts/observability.md
+    - Evaluation: concepts/evaluation.md
+- Multi-agent:
+  - Overview: concepts/multi-agent.md
+  - Composition: concepts/multi-agent/composition.md
+  - Orchestrator: concepts/multi-agent/orchestrator.md
+  - Swarm: concepts/multi-agent/swarm.md
+  - Handoff: concepts/multi-agent/handoff.md
+  - StateGraph: concepts/multi-agent/graph.md
+  - Functional API: concepts/multi-agent/functional.md
+  - A2A protocol: concepts/multi-agent/a2a.md
+- How-to:
+  - Quickstart: how-to/quickstart.md
+  - Deploy: how-to/deploy.md
+  - Persist conversations: how-to/persist-conversations.md
+  - Build a custom tool: how-to/custom-tools.md
+  - Add a checkpointer backend: how-to/custom-checkpointer.md
+  - OCI GenAI models: how-to/oci-models.md
+- API reference:
+  - Agent: api/agent.md
+  - Checkpointers: api/checkpointers.md
+  - Tools: api/tools.md
+  - Events: api/events.md
+- Feature matrix: FEATURES.md

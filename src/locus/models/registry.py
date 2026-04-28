@@ -1,0 +1,137 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
+
+"""Model registry and factory - 100% Pydantic."""
+
+from __future__ import annotations
+
+import os
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    from locus.core.protocols import ModelProtocol
+
+# Provider factories: prefix -> factory function
+_PROVIDERS: dict[str, Callable[..., ModelProtocol]] = {}
+
+
+def register_provider(prefix: str, factory: Callable[..., ModelProtocol]) -> None:
+    """
+    Register a model provider.
+
+    Args:
+        prefix: Provider prefix (e.g., "openai", "oci")
+        factory: Factory function that takes model name and kwargs
+    """
+    _PROVIDERS[prefix] = factory
+
+
+def get_model(model_string: str, **kwargs: Any) -> ModelProtocol:
+    """
+    Get a model from a string identifier.
+
+    Format: "provider:model_name"
+
+    Examples:
+        - "openai:gpt-4o"
+        - "oci:cohere.command-r-plus"
+
+    Args:
+        model_string: Model identifier in "provider:model" format
+        **kwargs: Provider-specific configuration
+
+    Returns:
+        Model instance
+
+    Raises:
+        ValueError: If provider is unknown or model string is invalid
+    """
+    if ":" not in model_string:
+        raise ValueError(
+            f"Model string must be 'provider:model', got: {model_string}. "
+            f"Available providers: {list(_PROVIDERS.keys())}"
+        )
+
+    provider, model_id = model_string.split(":", 1)
+
+    if provider not in _PROVIDERS:
+        raise ValueError(f"Unknown provider: {provider}. Available: {list(_PROVIDERS.keys())}")
+
+    return _PROVIDERS[provider](model_id, **kwargs)
+
+
+def list_providers() -> list[str]:
+    """List available provider prefixes."""
+    return list(_PROVIDERS.keys())
+
+
+def _register_defaults() -> None:
+    """Register default providers on import."""
+    # OpenAI (Oracle partnership)
+    try:
+        from locus.models.native.openai import OpenAIModel
+
+        register_provider(
+            "openai",
+            lambda m, **kw: OpenAIModel(model=m, **kw),
+        )
+    except ImportError:
+        pass
+
+    # Anthropic (Claude)
+    try:
+        from locus.models.native.anthropic import AnthropicModel
+
+        register_provider(
+            "anthropic",
+            lambda m, **kw: AnthropicModel(model=m, **kw),
+        )
+    except ImportError:
+        pass
+
+    # Ollama (local LLMs)
+    try:
+        from locus.models.native.ollama import OllamaModel
+
+        register_provider(
+            "ollama",
+            lambda m, **kw: OllamaModel(model=m, **kw),
+        )
+    except ImportError:
+        pass
+
+    # OCI GenAI — pick the right transport per model family.
+    # Cohere R-series (cohere.command-r-*) needs the OCI SDK's
+    # proprietary chat shape and is routed through OCIModel.
+    # Everything else (OpenAI / Meta / xAI / Mistral / Gemini and
+    # non-R Cohere) goes through OCIOpenAIModel against
+    # /openai/v1/chat/completions — real SSE streaming, day-0 model
+    # support, no Project OCID required. See
+    # docs/how-to/oci-models.md.
+    try:
+        from locus.models.providers.oci import OCIModel, OCIOpenAIModel
+
+        def _make_oci(m: str, **kw: Any) -> ModelProtocol:
+            if m.lower().startswith("cohere.command-r"):
+                # SDK transport: defaults to profile_name="DEFAULT" + API_KEY,
+                # so no env-var fallback needed for one-line ergonomics.
+                return OCIModel(model_id=m, **kw)
+            # V1 transport: strictly requires profile= or auth_type=.
+            # Fall back to OCI_PROFILE env var so `Agent(model="oci:...")`
+            # works in one line. Explicit kwargs always win.
+            if "profile" not in kw and "auth_type" not in kw:
+                env_profile = os.environ.get("OCI_PROFILE")
+                if env_profile:
+                    kw["profile"] = env_profile
+            return OCIOpenAIModel(model=m, **kw)
+
+        register_provider("oci", _make_oci)
+    except ImportError:
+        pass
+
+
+# Register on import
+_register_defaults()
