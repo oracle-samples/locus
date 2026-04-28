@@ -1,0 +1,140 @@
+"""
+Tutorial 35: Advanced Graph — RetryPolicy, CachePolicy, Visualization
+
+This tutorial covers:
+- RetryPolicy: exponential backoff with jitter per node
+- CachePolicy: TTL-based result caching per node
+- Deferred nodes: execute at graph exit
+- Graph visualization: Mermaid and ASCII diagrams
+
+Prerequisites:
+- No model needed for this tutorial
+
+Difficulty: Advanced
+"""
+
+import asyncio
+
+from locus.multiagent.graph import (
+    END,
+    START,
+    CachePolicy,
+    GraphConfig,
+    RetryPolicy,
+    StateGraph,
+)
+from locus.multiagent.visualize import draw_ascii, draw_mermaid
+
+
+# =============================================================================
+# Part 1: RetryPolicy — Exponential Backoff
+# =============================================================================
+
+
+async def example_retry():
+    """Node with retry policy retries on failure."""
+    print("=== Part 1: RetryPolicy ===\n")
+
+    attempt = 0
+
+    async def flaky_api(inputs):
+        nonlocal attempt
+        attempt += 1
+        if attempt < 3:
+            raise ConnectionError(f"Attempt {attempt}: API unreachable")
+        return {"data": "success"}
+
+    graph = StateGraph(config=GraphConfig(parallel=False))
+    graph.add_node(
+        "api_call",
+        flaky_api,
+        retry_policy=RetryPolicy(max_attempts=3, initial_interval=0.1, jitter=False),
+    )
+    graph.add_edge(START, "api_call")
+    graph.add_edge("api_call", END)
+
+    result = await graph.execute({})
+    print(f"Success: {result.success}")
+    print(f"Attempts needed: {attempt}")
+    print(f"Result: {result.final_state.get('data')}")
+
+
+# =============================================================================
+# Part 2: CachePolicy — Avoid Re-computation
+# =============================================================================
+
+
+async def example_cache():
+    """Cache node results to avoid re-computation."""
+    print("\n=== Part 2: CachePolicy ===\n")
+
+    call_count = 0
+
+    async def expensive_lookup(inputs):
+        nonlocal call_count
+        call_count += 1
+        return {"result": f"computed_{call_count}"}
+
+    graph = StateGraph(config=GraphConfig(parallel=False))
+    graph.add_node(
+        "lookup",
+        expensive_lookup,
+        cache_policy=CachePolicy(ttl_seconds=60),
+    )
+    graph.add_edge(START, "lookup")
+    graph.add_edge("lookup", END)
+
+    # First call — computes
+    r1 = await graph.execute({"query": "test"})
+    # Second call — cache hit
+    r2 = await graph.execute({"query": "test"})
+
+    print(f"Call count: {call_count}")  # 1 — second was cached
+    print(f"Both same result: {r1.final_state.get('result') == r2.final_state.get('result')}")
+
+
+# =============================================================================
+# Part 3: Graph Visualization
+# =============================================================================
+
+
+async def example_visualization():
+    """Generate Mermaid and ASCII diagrams."""
+    print("\n=== Part 3: Visualization ===\n")
+
+    graph = StateGraph(config=GraphConfig(parallel=False))
+
+    async def validate(i):
+        return {"valid": True}
+
+    async def process(i):
+        return {"processed": True}
+
+    async def notify(i):
+        return {"done": True}
+
+    graph.add_node("validate", validate)
+    graph.add_node("process", process)
+    graph.add_node("notify", notify)
+    graph.add_edge(START, "validate")
+    graph.add_edge("validate", "process")
+    graph.add_conditional_edges(
+        "process",
+        lambda s: "notify" if s.get("valid") else "__END__",
+        {
+            "notify": "notify",
+            "__END__": "__END__",
+        },
+    )
+    graph.add_edge("notify", END)
+
+    print("Mermaid (paste into https://mermaid.live):")
+    print(draw_mermaid(graph))
+    print(f"\nASCII:")
+    print(draw_ascii(graph))
+
+
+if __name__ == "__main__":
+    asyncio.run(example_retry())
+    asyncio.run(example_cache())
+    asyncio.run(example_visualization())

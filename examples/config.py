@@ -1,0 +1,286 @@
+"""
+Shared configuration for Locus tutorials.
+
+Tutorials are designed to work with any LLM provider. By default, they use
+a mock model so you can explore Locus's features without API credentials.
+
+To run with a real model, set environment variables before running tutorials.
+
+Environment Variables:
+    LOCUS_MODEL_PROVIDER   - Provider: "mock", "oci", "openai"
+                            Default: "mock"
+    LOCUS_MODEL_ID         - Model identifier (provider-specific)
+
+    # OCI GenAI
+    LOCUS_OCI_PROFILE      - OCI config profile name (default: DEFAULT)
+    LOCUS_OCI_AUTH_TYPE    - "api_key", "security_token",
+                              "instance_principal", "resource_principal"
+    LOCUS_OCI_REGION       - OCI region (default: us-chicago-1)
+    LOCUS_OCI_COMPARTMENT  - Compartment OCID. Auto-derived from the
+                              profile's tenancy when LOCUS_OCI_PROFILE
+                              is set; required for instance/resource
+                              principal modes.
+    LOCUS_OCI_ENDPOINT     - Service endpoint URL (only honored by the
+                              SDK transport — OCIModel)
+    LOCUS_OCI_TRANSPORT    - "v1" or "sdk" — force a specific transport.
+                              By default the transport is picked
+                              automatically from LOCUS_MODEL_ID:
+                              cohere.command-r-* → "sdk" (OCIModel),
+                              everything else → "v1" (OCIOpenAIModel).
+
+    # OpenAI
+    OPENAI_API_KEY         - OpenAI API key
+
+Examples:
+    # Run with mock (default - no credentials needed):
+    python examples/tutorial_01_basic_agent.py
+
+    # Run with OCI GenAI (V1 transport, OpenAI-compatible endpoint):
+    export LOCUS_MODEL_PROVIDER=oci
+    export LOCUS_MODEL_ID=openai.gpt-5.5
+    export LOCUS_OCI_PROFILE=MY_PROFILE
+    python examples/tutorial_01_basic_agent.py
+
+    # Run with OCI GenAI (SDK transport, required for Cohere R-series):
+    export LOCUS_MODEL_PROVIDER=oci
+    export LOCUS_MODEL_ID=cohere.command-r-plus-08-2024
+    export LOCUS_OCI_PROFILE=MY_PROFILE
+    export LOCUS_OCI_ENDPOINT=https://inference.generativeai.us-chicago-1.oci.oraclecloud.com
+    python examples/tutorial_01_basic_agent.py
+
+    # Run with OCI on an OCI VM / OKE node (workload identity):
+    export LOCUS_MODEL_PROVIDER=oci
+    export LOCUS_MODEL_ID=openai.gpt-5.5
+    export LOCUS_OCI_AUTH_TYPE=instance_principal
+    export LOCUS_OCI_COMPARTMENT=ocid1.compartment.oc1...
+
+    # Run with OpenAI:
+    export LOCUS_MODEL_PROVIDER=openai
+    export OPENAI_API_KEY=sk-...
+    python examples/tutorial_01_basic_agent.py
+
+See `docs/how-to/oci-models.md` for the full transport story.
+"""
+
+import os
+from collections.abc import AsyncIterator
+from typing import Any
+
+from pydantic import BaseModel
+
+from locus.core.events import ModelChunkEvent
+from locus.core.messages import Message
+from locus.models.base import ModelResponse
+
+
+class MockModel(BaseModel):
+    """
+    Mock model for testing tutorials without API calls.
+
+    Returns predetermined responses for common prompts.
+    """
+
+    max_tokens: int = 100
+    temperature: float = 0.7
+
+    # Simulated responses
+    _responses: dict[str, str] = {
+        "default": "This is a mock response for testing purposes.",
+        "python": "Python is a high-level programming language known for readability.",
+        "languages": "Python, JavaScript, and Rust are popular programming languages.",
+        "math": "The answer is 42.",
+        "2 + 2": "4",
+        "5 * 5": "25",
+        "square root": "12",
+        "10%": "20",
+    }
+
+    async def complete(
+        self,
+        messages: list[Message],
+        tools: list[dict[str, Any]] | None = None,
+        **kwargs: Any,
+    ) -> ModelResponse:
+        """Return a mock response based on the last message."""
+        last_msg = messages[-1].content or "" if messages else ""
+        response = self._get_response(last_msg.lower(), tools)
+        return ModelResponse(
+            message=Message.assistant(content=response),
+            usage={"prompt_tokens": 10, "completion_tokens": 20},
+            stop_reason="end_turn",
+        )
+
+    def _get_response(self, prompt: str, tools: list[dict[str, Any]] | None) -> str:
+        """Get appropriate response based on prompt content."""
+        # Check for tool calls
+        if tools and ("weather" in prompt or "calculate" in prompt):
+            return self._get_tool_response(prompt, tools)
+
+        # Match keywords to responses
+        for keyword, response in self._responses.items():
+            if keyword in prompt:
+                return response
+        return self._responses["default"]
+
+    def _get_tool_response(self, prompt: str, tools: list[dict[str, Any]]) -> str:
+        """Simulate tool usage response."""
+        return "I'll use the available tools to help with that."
+
+    async def stream(
+        self,
+        messages: list[Message],
+        tools: list[dict[str, Any]] | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[ModelChunkEvent]:
+        """Stream mock response in chunks."""
+        response = await self.complete(messages, tools, **kwargs)
+        content = response.content or ""
+
+        # Yield in small chunks
+        chunk_size = 10
+        for i in range(0, len(content), chunk_size):
+            yield ModelChunkEvent(content=content[i : i + chunk_size])
+        yield ModelChunkEvent(done=True)
+
+
+def get_model(**kwargs: Any) -> Any:
+    """
+    Get the configured model based on environment variables.
+
+    Args:
+        **kwargs: Override any model parameters (max_tokens, temperature, etc.)
+
+    Returns:
+        Configured model instance (MockModel, OCIModel, or OpenAIModel)
+    """
+    provider = os.environ.get("LOCUS_MODEL_PROVIDER", "mock").lower()
+
+    if provider == "mock":
+        return MockModel(**kwargs)
+    elif provider == "oci":
+        return _get_oci_model(**kwargs)
+    elif provider == "openai":
+        return _get_openai_model(**kwargs)
+    else:
+        raise ValueError(f"Unknown model provider: {provider}. Use 'mock', 'oci', or 'openai'")
+
+
+def _pick_oci_transport(model_id: str) -> str:
+    """Pick the right OCI transport for a model id.
+
+    Cohere R-series models need the OCI SDK's proprietary chat shape and
+    are routed through ``OCIModel``. Everything else (OpenAI / Meta / xAI
+    / Mistral / Gemini, and non-R Cohere) goes through
+    ``OCIOpenAIModel`` against ``/openai/v1/chat/completions``.
+
+    ``LOCUS_OCI_TRANSPORT=v1|sdk`` overrides the automatic choice.
+    """
+    forced = os.environ.get("LOCUS_OCI_TRANSPORT")
+    if forced in ("v1", "sdk"):
+        return forced
+    return "sdk" if model_id.lower().startswith("cohere.command-r") else "v1"
+
+
+def _get_oci_model(**kwargs: Any) -> Any:
+    """Get an OCI GenAI model — picks V1 vs SDK transport per model family."""
+    model_id = os.environ.get("LOCUS_MODEL_ID", "openai.gpt-5.5")
+    transport = _pick_oci_transport(model_id)
+    if transport == "v1":
+        return _get_oci_v1_model(model_id, **kwargs)
+    return _get_oci_sdk_model(model_id, **kwargs)
+
+
+def _get_oci_v1_model(model_id: str, **kwargs: Any) -> Any:
+    """Build an OCIOpenAIModel against /openai/v1/chat/completions."""
+    from locus.models import OCIOpenAIModel
+
+    region = os.environ.get("LOCUS_OCI_REGION", "us-chicago-1")
+    compartment = os.environ.get("LOCUS_OCI_COMPARTMENT")
+    auth_type = os.environ.get("LOCUS_OCI_AUTH_TYPE", "")
+
+    if auth_type in ("instance_principal", "resource_principal"):
+        if not compartment:
+            msg = f"LOCUS_OCI_COMPARTMENT is required when LOCUS_OCI_AUTH_TYPE={auth_type}"
+            raise ValueError(msg)
+        return OCIOpenAIModel(
+            model=model_id,
+            auth_type=auth_type,
+            compartment_id=compartment,
+            region=region,
+            **kwargs,
+        )
+
+    # Default: profile-based auth. compartment auto-derived from the
+    # profile's tenancy unless overridden.
+    profile = os.environ.get("LOCUS_OCI_PROFILE", "DEFAULT")
+    return OCIOpenAIModel(
+        model=model_id,
+        profile=profile,
+        compartment_id=compartment,
+        region=region,
+        **kwargs,
+    )
+
+
+def _get_oci_sdk_model(model_id: str, **kwargs: Any) -> Any:
+    """Build an OCIModel against /20231130/actions/v1/chat (SDK transport)."""
+    from locus.models import OCIAuthType, OCIModel
+
+    profile = os.environ.get("LOCUS_OCI_PROFILE", "DEFAULT")
+    auth_type_str = os.environ.get("LOCUS_OCI_AUTH_TYPE", "api_key")
+    compartment = os.environ.get("LOCUS_OCI_COMPARTMENT")
+    endpoint = os.environ.get("LOCUS_OCI_ENDPOINT")
+
+    auth_type_map = {
+        "api_key": OCIAuthType.API_KEY,
+        "security_token": OCIAuthType.SECURITY_TOKEN,
+        "session_token": OCIAuthType.SECURITY_TOKEN,
+        "instance_principal": OCIAuthType.INSTANCE_PRINCIPAL,
+        "resource_principal": OCIAuthType.RESOURCE_PRINCIPAL,
+    }
+    auth_type = auth_type_map.get(auth_type_str, OCIAuthType.API_KEY)
+
+    return OCIModel(
+        model_id=model_id,
+        profile_name=profile,
+        auth_type=auth_type,
+        compartment_id=compartment,
+        service_endpoint=endpoint,
+        **kwargs,
+    )
+
+
+def _get_openai_model(**kwargs: Any) -> Any:
+    """Get OpenAI model."""
+    from locus.models import OpenAIModel
+
+    model_id = os.environ.get("LOCUS_MODEL_ID", "gpt-4o")
+    api_key = os.environ.get("OPENAI_API_KEY")
+
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY environment variable required")
+
+    return OpenAIModel(
+        model=model_id,
+        api_key=api_key,
+        **kwargs,
+    )
+
+
+def print_config():
+    """Print current configuration for debugging."""
+    provider = os.environ.get("LOCUS_MODEL_PROVIDER", "mock")
+    model_id = os.environ.get("LOCUS_MODEL_ID", "(default)")
+
+    print(f"Model Provider: {provider}")
+
+    if provider == "mock":
+        print("Using mock model (no API calls)")
+    else:
+        print(f"Model ID: {model_id}")
+
+        if provider == "oci":
+            profile = os.environ.get("LOCUS_OCI_PROFILE", "DEFAULT")
+            auth_type = os.environ.get("LOCUS_OCI_AUTH_TYPE", "api_key")
+            print(f"OCI Profile: {profile}")
+            print(f"OCI Auth Type: {auth_type}")

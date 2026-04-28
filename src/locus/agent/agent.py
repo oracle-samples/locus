@@ -1,0 +1,1661 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
+
+"""Main Agent class - 100% Pydantic."""
+
+from __future__ import annotations
+
+import asyncio
+import time
+from collections.abc import AsyncIterator
+from datetime import UTC, datetime
+from typing import Any
+
+from pydantic import BaseModel, Field, PrivateAttr
+
+from locus.agent.config import AgentConfig, GroundingConfig, ReflexionConfig
+from locus.agent.result import AgentResult, ExecutionMetrics, StopReason
+from locus.core.events import (
+    GroundingEvent,
+    InterruptEvent,
+    LocusEvent,
+    ReflectEvent,
+    TerminateEvent,
+    ThinkEvent,
+    ToolCompleteEvent,
+    ToolStartEvent,
+)
+from locus.core.messages import Message, Role, ToolCall, ToolResult
+from locus.core.state import AgentState, ReasoningStep, ToolExecution
+from locus.models import get_model
+from locus.models.base import ModelResponse
+from locus.tools.decorator import Tool
+from locus.tools.executor import (
+    ConcurrentExecutor,
+    SequentialExecutor,
+    ToolContextFactory,
+    ToolExecutor,
+)
+from locus.tools.registry import ToolRegistry
+
+
+class Agent(BaseModel):
+    """
+    Primary entry point for Locus agents.
+
+    Manages the ReAct loop with optional Reflexion and Grounding.
+
+    Usage:
+        agent = Agent(
+            model="openai:gpt-4o",  # or oci:cohere.command-r-plus
+            tools=[search, calculate],
+            system_prompt="You are a helpful assistant.",
+        )
+
+        # Async streaming
+        async for event in agent.run("What is 2+2?"):
+            print(event)
+
+        # Sync execution
+        result = agent.run_sync("What is 2+2?")
+        print(result.message)
+    """
+
+    model_config = {"arbitrary_types_allowed": True, "extra": "forbid"}
+
+    # Configuration
+    config: AgentConfig = Field(..., description="Agent configuration")
+
+    # Private attributes (not serialized)
+    _model: Any = PrivateAttr(default=None)
+    _tool_registry: ToolRegistry = PrivateAttr(default_factory=ToolRegistry)
+    _executor: ToolExecutor = PrivateAttr(default=None)  # type: ignore[assignment]
+    _hooks: list[Any] = PrivateAttr(default_factory=list)
+    _hook_orchestrator: Any = PrivateAttr(default=None)
+    _conversation_manager: Any = PrivateAttr(default=None)
+    _reflector: Any = PrivateAttr(default=None)
+    _grounding_evaluator: Any = PrivateAttr(default=None)
+    _grounding_model: Any = PrivateAttr(default=None)
+    _last_run_state: AgentState | None = PrivateAttr(default=None)
+    _interrupt_state: Any = PrivateAttr(default=None)
+    _interrupt_prompt: str | None = PrivateAttr(default=None)
+    _has_unverified_writes: bool = PrivateAttr(default=False)
+    _interrupt_thread_id: str | None = PrivateAttr(default=None)
+    _interrupt_metadata: dict | None = PrivateAttr(default=None)
+    _cancel_signal: Any = PrivateAttr(default=None)
+    _initialized: bool = PrivateAttr(default=False)
+
+    def __init__(
+        self,
+        model: str | Any | None = None,
+        tools: list[Tool] | None = None,
+        system_prompt: str | None = None,
+        reflexion: ReflexionConfig | bool | None = None,
+        grounding: GroundingConfig | bool | None = None,
+        max_iterations: int = 20,
+        conversation_manager: Any | None = None,
+        checkpointer: Any | None = None,
+        hooks: list[Any] | None = None,
+        config: AgentConfig | None = None,
+        **kwargs: Any,
+    ):
+        """
+        Initialize an Agent.
+
+        Args:
+            model: Model string or ModelProtocol instance
+            tools: List of tools available to the agent
+            system_prompt: System prompt for the agent
+            reflexion: Reflexion config (True for defaults, False/None to disable)
+            grounding: Grounding config (True for defaults, False/None to disable)
+            max_iterations: Maximum iterations before stopping
+            conversation_manager: Conversation manager for message pruning
+            checkpointer: Checkpointer for state persistence
+            hooks: Lifecycle hooks
+            config: Full AgentConfig (overrides other params)
+            **kwargs: Additional config options
+        """
+        # Build config from params or use provided
+        if config is not None:
+            agent_config = config
+        else:
+            # Handle reflexion
+            reflexion_config = None
+            if reflexion is True:
+                reflexion_config = ReflexionConfig()
+            elif isinstance(reflexion, ReflexionConfig):
+                reflexion_config = reflexion
+
+            # Handle grounding
+            grounding_config = None
+            if grounding is True:
+                grounding_config = GroundingConfig()
+            elif isinstance(grounding, GroundingConfig):
+                grounding_config = grounding
+
+            agent_config = AgentConfig(
+                model=model or "openai:gpt-4o",
+                tools=tools or [],
+                system_prompt=system_prompt or "You are a helpful AI assistant.",
+                reflexion=reflexion_config,
+                grounding=grounding_config,
+                max_iterations=max_iterations,
+                conversation_manager=conversation_manager,
+                checkpointer=checkpointer,
+                hooks=hooks or [],
+                **kwargs,
+            )
+
+        super().__init__(config=agent_config)
+        self._initialize()
+
+    def _initialize(self) -> None:
+        """Initialize model, tools, and executor."""
+        if self._initialized:
+            return
+
+        # Initialize model
+        if isinstance(self.config.model, str):
+            self._model = get_model(self.config.model)
+        else:
+            self._model = self.config.model
+
+        # Register tools
+        self._tool_registry = ToolRegistry()
+        for t in self.config.tools:
+            if isinstance(t, Tool):
+                self._tool_registry.register(t)
+            else:
+                raise TypeError(f"Expected Tool instance, got {type(t)}")
+
+        # Add task_complete built-in tool in explicit completion mode
+        if self.config.completion_mode == "explicit":
+            self._register_builtin_tools()
+
+        # Initialize executor
+        if self.config.tool_execution == "concurrent":
+            self._executor = ConcurrentExecutor(max_concurrency=self.config.max_concurrency)
+        else:
+            self._executor = SequentialExecutor()
+
+        # Store hooks + the orchestrator that dispatches lifecycle events
+        # to them. The orchestrator holds a reference to the same list
+        # so plugin/skill hooks appended below are picked up at dispatch.
+        self._hooks = list(self.config.hooks)
+        from locus.agent.hook_orchestrator import HookOrchestrator
+
+        self._hook_orchestrator = HookOrchestrator(self._hooks)
+
+        # Register plugins (bundles of hooks + tools)
+        for plugin in self.config.plugins:
+            from locus.hooks.plugin import Plugin, PluginAdapter
+
+            if isinstance(plugin, Plugin):
+                plugin.init_agent(self)
+                # Add plugin hooks as an adapter
+                self._hooks.append(PluginAdapter(plugin))
+                # Add plugin tools
+                for plugin_tool in plugin.get_tools():
+                    self._tool_registry.register(plugin_tool)
+
+        # Register skills (AgentSkills.io)
+        if self.config.skills:
+            from locus.hooks.plugin import PluginAdapter
+            from locus.skills.plugin import SkillsPlugin
+
+            skills_plugin = SkillsPlugin(skills=self.config.skills)
+            skills_plugin.init_agent(self)
+            self._hooks.append(PluginAdapter(skills_plugin))
+            self._tool_registry.register(skills_plugin.get_activation_tool())
+
+        # Initialize conversation manager
+        if self.config.conversation_manager is not None:
+            self._conversation_manager = self.config.conversation_manager
+        elif self.config.max_iterations > 10:
+            from locus.memory.conversation import SlidingWindowManager
+
+            window = max(20, self.config.max_iterations * 2)
+            self._conversation_manager = SlidingWindowManager(window_size=window)
+
+        # Initialize Reflector if reflexion is enabled
+        if self.config.reflexion and self.config.reflexion.enabled:
+            from locus.reasoning.reflexion import Reflector
+
+            self._reflector = Reflector(
+                loop_threshold=self.config.tool_loop_threshold,
+                diminishing_returns=self.config.reflexion.diminishing_returns,
+            )
+
+        # Initialize Grounding evaluator if enabled
+        if self.config.grounding and self.config.grounding.enabled:
+            from locus.reasoning.grounding import GroundingEvaluator
+
+            self._grounding_evaluator = GroundingEvaluator(
+                replan_threshold=self.config.grounding.threshold,
+            )
+            # Use separate model for grounding if configured, else reuse main model
+            if self.config.grounding.model:
+                self._grounding_model = get_model(self.config.grounding.model)
+            else:
+                self._grounding_model = self._model
+
+        self._initialized = True
+
+    def _register_builtin_tools(self) -> None:
+        """Register built-in tools for explicit completion mode."""
+        from locus.tools.decorator import tool as tool_decorator
+
+        agent_ref = self  # Closure over agent instance
+
+        @tool_decorator(
+            name="task_complete",
+            description=(
+                "Signal that the current task is complete. "
+                "Call this ONLY when you have verified your work "
+                "(e.g., tests pass, output is correct). "
+                "If you wrote files, you MUST run tests/commands first. "
+                "Provide a summary of what was accomplished."
+            ),
+        )
+        def task_complete(summary: str, status: str = "success") -> str:
+            """Signal task completion with a summary."""
+            if agent_ref.config.require_verification and agent_ref._has_unverified_writes:
+                agent_ref._has_unverified_writes = False  # Reset so it doesn't loop
+                return (
+                    "BLOCKED: You have unverified changes. "
+                    "You wrote files but haven't run tests or verification commands yet. "
+                    "Run tests first (e.g., run_command with pytest), then call task_complete again."
+                )
+            return f"Task completed ({status}): {summary}"
+
+        @tool_decorator(
+            name="ask_user",
+            description=(
+                "Ask the user a question and wait for their response. "
+                "Use this when you need clarification, approval, or a decision "
+                "from the user before proceeding."
+            ),
+        )
+        def ask_user(question: str, options: str | None = None) -> str:
+            """Ask the user a question. Pauses execution until they respond.
+
+            Args:
+                question: The question to ask
+                options: Comma-separated list of options (e.g., "JWT,session,OAuth")
+
+            Returns:
+                A special marker that triggers an interrupt in the agent loop
+            """
+            import json
+
+            option_list = [o.strip() for o in options.split(",")] if options else None
+            return json.dumps(
+                {
+                    "__interrupt__": True,
+                    "question": question,
+                    "options": option_list,
+                }
+            )
+
+        if "task_complete" not in self._tool_registry.tools:
+            self._tool_registry.register(task_complete)
+        if "ask_user" not in self._tool_registry.tools:
+            self._tool_registry.register(ask_user)
+
+    async def run(
+        self,
+        prompt: str,
+        *,
+        thread_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> AsyncIterator[LocusEvent]:
+        """
+        Run the agent with streaming events.
+
+        Args:
+            prompt: User prompt to process
+            thread_id: Optional thread ID for checkpointing
+            metadata: Additional metadata for tools
+
+        Yields:
+            LocusEvent instances for each step
+        """
+        self._initialize()
+
+        # Create initial state
+        state = await self._create_initial_state(prompt, thread_id, metadata)
+
+        # Track metrics
+        started_at = datetime.now(UTC)
+        _total_tokens = 0
+        _tool_calls_count = 0
+        _tool_errors_count = 0
+        _reflexion_evals = 0
+        _grounding_evals = 0
+        _last_assistant_content: str | None = None
+
+        # Run hooks: before_invocation
+        state = await self._run_before_invocation_hooks(prompt, state)
+
+        try:
+            # Main ReAct loop
+            while True:
+                # Check time budget
+                if self.config.time_budget_seconds is not None:
+                    elapsed = (datetime.now(UTC) - started_at).total_seconds()
+                    if elapsed >= self.config.time_budget_seconds:
+                        yield TerminateEvent(
+                            reason="time_budget",
+                            iterations_used=state.iteration,
+                            final_confidence=state.confidence,
+                            total_tool_calls=len(state.tool_executions),
+                            final_message=_last_assistant_content,
+                        )
+                        break
+
+                # Check external cancellation
+                if self.is_cancelled:
+                    yield TerminateEvent(
+                        reason="cancelled",
+                        iterations_used=state.iteration,
+                        final_confidence=state.confidence,
+                        total_tool_calls=_tool_calls_count,
+                        final_message="Agent cancelled by external signal.",
+                    )
+                    break
+
+                # Check termination conditions
+                should_stop, stop_reason = state.should_terminate
+                if should_stop and stop_reason:
+                    if stop_reason == "max_iterations" and state.iteration > 0:
+                        # Inject summary request and do one final call WITHOUT tools
+                        state = state.with_message(
+                            Message.system(
+                                "[Iteration Limit Reached]\n"
+                                "You have used all available iterations. "
+                                "Provide a final summary of your findings and conclusions "
+                                "based on the work done so far. Do NOT call any more tools."
+                            )
+                        )
+                        # Call model without tool schemas to force text response
+                        messages = list(state.messages)
+                        if self._conversation_manager:
+                            if hasattr(self._conversation_manager, "async_apply"):
+                                messages = await self._conversation_manager.async_apply(messages)
+                            else:
+                                messages = self._conversation_manager.apply(messages)
+                        messages = self._validate_messages(messages)
+
+                        response = await self._model.complete(
+                            messages=messages,
+                            tools=None,  # No tools — force text summary
+                            temperature=self.config.temperature,
+                            max_tokens=self.config.max_tokens,
+                        )
+                        prompt_toks = response.usage.get("prompt_tokens", 0)
+                        completion_toks = response.usage.get("completion_tokens", 0)
+                        _total_tokens += prompt_toks + completion_toks
+                        state = state.with_token_usage(prompt_toks, completion_toks)
+
+                        summary = (
+                            response.message.content
+                            or _last_assistant_content
+                            or self._build_fallback_summary(state)
+                        )
+                        yield TerminateEvent(
+                            reason="max_iterations",
+                            iterations_used=state.iteration,
+                            final_confidence=state.confidence,
+                            total_tool_calls=len(state.tool_executions),
+                            final_message=summary,
+                        )
+                        break
+
+                    # All other stop reasons: hard stop
+                    yield TerminateEvent(
+                        reason=stop_reason,
+                        iterations_used=state.iteration,
+                        final_confidence=state.confidence,
+                        total_tool_calls=len(state.tool_executions),
+                        final_message=_last_assistant_content,
+                    )
+                    break
+
+                # Increment iteration
+                state = state.next_iteration()
+
+                # Planning: inject plan prompt on first iteration
+                if self.config.planning and state.iteration == 1:
+                    state = state.with_message(
+                        Message.system(
+                            "[Planning Phase]\n"
+                            "Before taking any action, create a step-by-step plan.\n"
+                            "Format your plan as a numbered list:\n"
+                            "1. First step\n"
+                            "2. Second step\n"
+                            "...\n\n"
+                            "After stating your plan, begin executing step 1.\n"
+                            "Do NOT call tools without a plan."
+                        )
+                    )
+
+                # Budget warning in explicit mode — nudge model to complete
+                if self.config.completion_mode == "explicit":
+                    remaining = self.config.max_iterations - state.iteration
+                    if remaining == 2:
+                        state = state.with_message(
+                            Message.system(
+                                f"[Budget Warning] You have {remaining} iterations left. "
+                                "Start wrapping up. Call task_complete(summary='your findings') "
+                                "to finish, or you'll hit the iteration limit."
+                            )
+                        )
+                    elif remaining == 0:
+                        state = state.with_message(
+                            Message.system(
+                                "[Final Iteration] This is your LAST iteration. "
+                                "You MUST call task_complete now with a summary of everything "
+                                "you've found. Do NOT call any other tools."
+                            )
+                        )
+
+                # Get model response
+                response, state = await self._get_model_response(state)
+                prompt_toks = response.usage.get("prompt_tokens", 0)
+                completion_toks = response.usage.get("completion_tokens", 0)
+                _total_tokens += prompt_toks + completion_toks
+                state = state.with_token_usage(prompt_toks, completion_toks)
+                _last_assistant_content = response.message.content
+
+                # Store plan from first iteration if planning enabled
+                if self.config.planning and state.iteration == 1 and response.message.content:
+                    state = state.with_metadata("plan", response.message.content)
+
+                # Emit think event
+                yield ThinkEvent(
+                    iteration=state.iteration,
+                    reasoning=response.message.content,
+                    tool_calls=list(response.message.tool_calls),
+                )
+
+                # If no structured tool calls, try parsing from text (Cohere fallback)
+                if not response.message.tool_calls and response.message.content:
+                    parsed_calls = self._parse_text_tool_calls(response.message.content)
+                    if parsed_calls:
+                        response = ModelResponse(
+                            message=Message(
+                                role=response.message.role,
+                                content=response.message.content,
+                                tool_calls=parsed_calls,
+                                tool_call_id=response.message.tool_call_id,
+                                name=response.message.name,
+                            ),
+                            usage=response.usage,
+                            stop_reason=response.stop_reason,
+                        )
+                        # Update the assistant message in state with parsed tool calls
+                        messages = list(state.messages)
+                        messages[-1] = response.message
+                        state = state.model_copy(update={"messages": tuple(messages)})
+
+                # If still no tool calls — in auto mode we're done, in explicit mode we continue
+                if not response.message.tool_calls and self.config.completion_mode != "explicit":
+                    # Apply grounding before final response if enabled
+                    if (
+                        self.config.grounding
+                        and self.config.grounding.enabled
+                        and self.config.grounding.check_before_final
+                        and self._grounding_evaluator
+                        and response.message.content
+                        and len(state.tool_executions) > 0
+                    ):
+                        grounding_event, state = await self._apply_grounding(
+                            state, response.message.content
+                        )
+                        _grounding_evals += 1
+                        yield grounding_event
+
+                        # If grounding fails, inject guidance and continue loop
+                        if grounding_event.requires_replan and _grounding_evals <= (
+                            self.config.grounding.max_replans
+                        ):
+                            from locus.reasoning.grounding import GroundingResult
+
+                            replan_guidance = self._grounding_evaluator.get_replan_guidance(
+                                GroundingResult(
+                                    score=grounding_event.score,
+                                    ungrounded_claims=grounding_event.ungrounded_claims,
+                                    requires_replan=True,
+                                )
+                            )
+                            state = state.with_message(
+                                Message.system(f"[Grounding Check Failed]\n{replan_guidance}")
+                            )
+                            continue  # Re-enter loop for replanning
+
+                    yield TerminateEvent(
+                        reason="complete",
+                        iterations_used=state.iteration,
+                        final_confidence=state.confidence,
+                        total_tool_calls=len(state.tool_executions),
+                        final_message=response.message.content,
+                    )
+                    break
+
+                # Execute tool calls
+                tool_results: list[ToolResult] = []
+                reasoning_step_tools: list[ToolExecution] = []
+
+                for tool_call in response.message.tool_calls:
+                    _tool_calls_count += 1
+
+                    # Emit tool start event
+                    yield ToolStartEvent(
+                        tool_name=tool_call.name,
+                        tool_call_id=tool_call.id,
+                        arguments=tool_call.arguments,
+                    )
+
+                    # Run hooks: before_tool_call (event.cancel to skip)
+                    tool_event = await self._run_before_tool_hooks(
+                        tool_call.name, tool_call.id, tool_call.arguments
+                    )
+
+                    # Check for cancel via event
+                    if tool_event.cancel:
+                        cancel_msg = (
+                            tool_event.cancel
+                            if isinstance(tool_event.cancel, str)
+                            else "Cancelled by hook"
+                        )
+                        result = ToolResult(
+                            tool_call_id=tool_call.id,
+                            name=tool_call.name,
+                            content=cancel_msg,
+                            error=None,
+                            duration_ms=0.0,
+                        )
+                        tool_results.append(result)
+                        execution = ToolExecution(
+                            tool_name=result.name,
+                            tool_call_id=result.tool_call_id,
+                            arguments=tool_call.arguments,
+                            result=result.content,
+                        )
+                        state = state.with_tool_execution(execution)
+                        reasoning_step_tools.append(execution)
+                        yield ToolCompleteEvent(
+                            tool_name=result.name,
+                            tool_call_id=result.tool_call_id,
+                            result=result.content,
+                            duration_ms=0.0,
+                        )
+                        continue
+
+                    modified_args = tool_event.arguments
+
+                    # Execute the tool
+                    start_time = time.perf_counter()
+                    try:
+                        ctx_factory = ToolContextFactory(
+                            run_id=state.run_id,
+                            agent_id=state.agent_id,
+                            iteration=state.iteration,
+                            state=state,
+                            invocation_metadata=metadata or {},
+                        )
+                        [result] = await self._executor.execute(
+                            [tool_call.model_copy(update={"arguments": modified_args})],
+                            self._tool_registry,
+                            ctx_factory,
+                        )
+                    except Exception as e:  # noqa: BLE001 — user tool bodies can raise anything; surface as ToolResult.error
+                        result = ToolResult(
+                            tool_call_id=tool_call.id,
+                            name=tool_call.name,
+                            content="",
+                            error=str(e),
+                            duration_ms=(time.perf_counter() - start_time) * 1000,
+                        )
+
+                    # Check for interrupt marker from ask_user tool
+                    if result.content and '"__interrupt__": true' in result.content:
+                        import json as _json
+
+                        try:
+                            interrupt_data = _json.loads(result.content)
+                            if interrupt_data.get("__interrupt__"):
+                                self._last_run_state = state
+                                self._interrupt_state = state
+                                self._interrupt_prompt = prompt
+                                self._interrupt_thread_id = thread_id
+                                self._interrupt_metadata = metadata
+                                yield InterruptEvent(
+                                    question=interrupt_data.get("question", ""),
+                                    options=interrupt_data.get("options"),
+                                    interrupt_id=result.tool_call_id,
+                                )
+                                return  # Pause the generator
+                        except (ValueError, KeyError):
+                            pass  # Not a valid interrupt marker, continue normally
+
+                    # Cap oversized tool results so they don't blow the
+                    # model's context window. When ``tool_result_store``
+                    # is configured we offload the full payload through
+                    # it and inline a recoverable reference key;
+                    # otherwise we fall back to lossy head-truncation.
+                    if (
+                        self.config.max_tool_result_length > 0
+                        and result.content
+                        and len(result.content) > self.config.max_tool_result_length
+                    ):
+                        if self.config.tool_result_store is not None:
+                            result = self.config.tool_result_store.maybe_offload(
+                                result,
+                                run_id=state.run_id,
+                                iteration=state.iteration,
+                            )
+                        else:
+                            original_len = len(result.content)
+                            result = ToolResult(
+                                tool_call_id=result.tool_call_id,
+                                name=result.name,
+                                content=(
+                                    result.content[: self.config.max_tool_result_length]
+                                    + f"\n[OUTPUT TRUNCATED — original: {original_len} chars]"
+                                ),
+                                error=result.error,
+                                duration_ms=result.duration_ms,
+                            )
+
+                    tool_results.append(result)
+
+                    # Track execution
+                    execution = ToolExecution(
+                        tool_name=result.name,
+                        tool_call_id=result.tool_call_id,
+                        arguments=modified_args,
+                        result=result.content if result.success else None,
+                        error=result.error,
+                        duration_ms=result.duration_ms,
+                    )
+                    state = state.with_tool_execution(execution)
+                    reasoning_step_tools.append(execution)
+
+                    if result.error:
+                        _tool_errors_count += 1
+
+                    # Emit tool complete event
+                    yield ToolCompleteEvent(
+                        tool_name=result.name,
+                        tool_call_id=result.tool_call_id,
+                        result=result.content if result.success else None,
+                        error=result.error,
+                        duration_ms=result.duration_ms,
+                    )
+
+                    # Run hooks: after_tool_call (may return HookAction to retry)
+                    after_tool_event = await self._run_after_tool_hooks(
+                        result.name,
+                        result.content if result.success else None,
+                        result.error,
+                    )
+
+                    # Retry tool if hook set event.retry = True
+                    if after_tool_event.retry:
+                        try:
+                            ctx_factory = ToolContextFactory(
+                                run_id=state.run_id,
+                                agent_id=state.agent_id,
+                                iteration=state.iteration,
+                                state=state,
+                                invocation_metadata=metadata or {},
+                            )
+                            [result] = await self._executor.execute(
+                                [tool_call.model_copy(update={"arguments": modified_args})],
+                                self._tool_registry,
+                                ctx_factory,
+                            )
+                        except Exception as e:  # noqa: BLE001 — user tool bodies can raise anything; surface as ToolResult.error
+                            result = ToolResult(
+                                tool_call_id=tool_call.id,
+                                name=tool_call.name,
+                                content="",
+                                error=str(e),
+                                duration_ms=0.0,
+                            )
+
+                    # Track write/verification for completion gate
+                    if result.name in self.config.verify_tools:
+                        self._has_unverified_writes = True
+                    if result.name in self.config.verification_tools:
+                        self._has_unverified_writes = False
+
+                # Add tool results to messages
+                for result in tool_results:
+                    state = state.with_message(Message.tool(result))
+
+                # Inject verification reminder if write-like tools were used
+                if self.config.verify_tools:
+                    tools_used = {e.tool_name for e in reasoning_step_tools}
+                    wrote = tools_used & self.config.verify_tools
+                    if wrote:
+                        state = state.with_message(
+                            Message.system(
+                                "[Verification Reminder] You modified files/data. "
+                                "Before completing, verify your changes:\n"
+                                "- Run tests or checks if available\n"
+                                "- Read back modified files to confirm correctness\n"
+                                "- Fix any issues found\n"
+                                "Do NOT call task_complete until verified."
+                            )
+                        )
+
+                # Apply Reflexion if enabled
+                if (
+                    self.config.reflexion
+                    and self.config.reflexion.enabled
+                    and self._reflector
+                    and state.iteration % self.config.reflexion.evaluate_every_n_iterations == 0
+                ):
+                    reflect_event, state = await self._apply_reflexion(state, reasoning_step_tools)
+                    _reflexion_evals += 1
+                    yield reflect_event
+
+                    # Inject guidance when agent is stuck or looping
+                    if self.config.reflexion.include_guidance and reflect_event.guidance:
+                        guidance = f"[Agent Self-Reflection]\n{reflect_event.guidance}"
+                        # Add replan suggestion if planning is enabled and agent is stuck
+                        if self.config.planning and reflect_event.assessment in (
+                            "stuck",
+                            "loop_detected",
+                        ):
+                            guidance += (
+                                "\n\n[Replan] Your current approach isn't working. "
+                                "Create a NEW plan with a different strategy, then execute it."
+                            )
+                        state = state.with_message(Message.system(guidance))
+
+                # Record reasoning step
+                reasoning_step = ReasoningStep(
+                    iteration=state.iteration,
+                    thought=response.message.content,
+                    tool_calls=list(response.message.tool_calls),
+                    tool_results=reasoning_step_tools,
+                    reflection=None,  # Will be updated if reflexion was applied
+                    confidence_delta=0.0,
+                )
+                state = state.with_reasoning_step(reasoning_step)
+
+                # Checkpoint if enabled
+                if (
+                    self.config.checkpointer
+                    and self.config.checkpoint_every_n_iterations > 0
+                    and state.iteration % self.config.checkpoint_every_n_iterations == 0
+                ):
+                    await self.config.checkpointer.save(
+                        state,
+                        thread_id or state.run_id,
+                    )
+
+        except Exception as e:
+            # Emit error termination
+            state = state.with_error(str(e))
+            yield TerminateEvent(
+                reason="error",
+                iterations_used=state.iteration,
+                final_confidence=state.confidence,
+                total_tool_calls=len(state.tool_executions),
+            )
+            raise
+
+        finally:
+            # Clear cancel signal
+            if self._cancel_signal is not None:
+                self._cancel_signal.clear()
+
+            # Save output to state if output_key configured
+            if self.config.output_key:
+                final_msg = ""
+                for msg in reversed(state.messages):
+                    if msg.role.value == "assistant" and msg.content:
+                        final_msg = msg.content
+                        break
+                if final_msg:
+                    state = state.with_metadata(self.config.output_key, final_msg)
+
+            # Store final state for run_sync access
+            self._last_run_state = state
+
+            # Run hooks: after_invocation
+            _duration_ms = (datetime.now(UTC) - started_at).total_seconds() * 1000  # noqa: F841
+            await self._run_after_invocation_hooks(state, len(state.errors) == 0)
+
+            # Final checkpoint
+            if self.config.checkpointer and thread_id:
+                await self.config.checkpointer.save(state, thread_id)
+
+    def run_sync(
+        self,
+        prompt: str,
+        *,
+        thread_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> AgentResult:
+        """
+        Run the agent synchronously.
+
+        Args:
+            prompt: User prompt to process
+            thread_id: Optional thread ID for checkpointing
+            metadata: Additional metadata for tools
+
+        Returns:
+            AgentResult with final message and state
+        """
+
+        async def _run() -> AgentResult:
+            started_at = datetime.now(UTC)
+            stop_reason: StopReason = "complete"
+            final_message: str = ""
+            tool_errors = 0
+
+            callback = self.config.callback_handler
+
+            async for event in self.run(prompt, thread_id=thread_id, metadata=metadata):
+                # Fire callback if set
+                if callback is not None:
+                    callback(event)
+
+                if isinstance(event, TerminateEvent):
+                    stop_reason = event.reason  # type: ignore[assignment]
+                    final_message = event.final_message or ""
+                elif isinstance(event, ToolCompleteEvent):
+                    if event.error:
+                        tool_errors += 1
+
+            # Use actual final state from run() instead of reconstructing
+            state = self._last_run_state
+            if state is None:
+                state = await self._create_initial_state(prompt, thread_id, metadata)
+                if final_message:
+                    state = state.with_message(Message.assistant(final_message))
+
+            elapsed_ms = (datetime.now(UTC) - started_at).total_seconds() * 1000
+            metrics = ExecutionMetrics(
+                iterations=state.iteration,
+                tool_calls=len(state.tool_executions),
+                tool_errors=tool_errors,
+                total_tokens=state.total_tokens_used,
+                prompt_tokens=state.prompt_tokens_used,
+                completion_tokens=state.completion_tokens_used,
+                duration_ms=elapsed_ms,
+            )
+
+            return AgentResult.from_state(
+                state=state,
+                stop_reason=stop_reason,
+                metrics=metrics,
+                started_at=started_at,
+            )
+
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop, create a new one
+            return asyncio.run(_run())
+        else:
+            # There's a running loop, run in a thread to avoid nesting
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(asyncio.run, _run())
+                return future.result()
+
+    def invoke(
+        self,
+        prompt: str,
+        *,
+        thread_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> AgentResult:
+        """
+        Invoke the agent (alias for run_sync).
+
+        Args:
+            prompt: User prompt to process
+            thread_id: Optional thread ID for checkpointing
+            metadata: Additional metadata for tools
+
+        Returns:
+            AgentResult with final message and state
+        """
+        return self.run_sync(prompt, thread_id=thread_id, metadata=metadata)
+
+    def cancel(self) -> None:
+        """Cancel a running agent from an external thread.
+
+        Sets a signal that the agent loop checks at each iteration.
+        The agent will stop gracefully with stop_reason="cancelled".
+
+        Thread-safe — can be called from any thread while the agent is running.
+
+        Example:
+            import threading
+
+            def run_agent():
+                result = agent.run_sync("Long task...")
+                print(result.stop_reason)  # "cancelled"
+
+            t = threading.Thread(target=run_agent)
+            t.start()
+            time.sleep(5)
+            agent.cancel()  # Stop from main thread
+            t.join()
+        """
+        import threading
+
+        if self._cancel_signal is None:
+            self._cancel_signal = threading.Event()
+        self._cancel_signal.set()
+
+    @property
+    def is_cancelled(self) -> bool:
+        """Check if cancellation has been requested."""
+        return self._cancel_signal is not None and self._cancel_signal.is_set()
+
+    def as_tool(
+        self,
+        name: str | None = None,
+        description: str | None = None,
+    ) -> Tool:
+        """
+        Wrap this agent as a Tool for use by another agent.
+
+        The returned tool accepts a prompt string and returns the agent's
+        final response. This enables agent delegation — a parent agent
+        can call a sub-agent as if it were any other tool.
+
+        Args:
+            name: Tool name (defaults to agent_id or "sub_agent")
+            description: Tool description (defaults to system prompt excerpt)
+
+        Returns:
+            A Tool that runs this agent when called
+
+        Example:
+            >>> researcher = Agent(
+            ...     model=model, tools=[search], system_prompt="You research topics."
+            ... )
+            >>> writer = Agent(model=model, tools=[researcher.as_tool("research")])
+            >>> result = writer.run_sync("Write about quantum computing")
+        """
+        from locus.tools.decorator import tool as tool_decorator
+
+        agent = self
+        tool_name = name or self.config.agent_id or "sub_agent"
+        tool_desc = description or (
+            "Delegate a task to a sub-agent. "
+            "The sub-agent has its own tools and will work independently "
+            "to answer your request. Send a clear, specific prompt."
+        )
+
+        @tool_decorator(name=tool_name, description=tool_desc)
+        def agent_tool(prompt: str) -> str:
+            """Run the sub-agent with the given prompt and return its response.
+
+            Args:
+                prompt: The task or question to delegate to the sub-agent
+
+            Returns:
+                The sub-agent's final response
+            """
+            result = agent.run_sync(prompt)
+            if result.success:
+                return result.message
+            return f"Sub-agent finished with status '{result.stop_reason}': {result.message}"
+
+        return agent_tool
+
+    async def resume(
+        self,
+        response: str,
+    ) -> AsyncIterator[LocusEvent]:
+        """
+        Resume agent execution after an interrupt.
+
+        When a tool calls ask_user() and the agent yields an InterruptEvent,
+        call this method with the user's response to continue execution.
+
+        Args:
+            response: The user's response to the interrupt question
+
+        Yields:
+            LocusEvent instances for the remaining execution
+
+        Example:
+            >>> async for event in agent.run("Build an app"):
+            ...     if isinstance(event, InterruptEvent):
+            ...         answer = input(event.question)
+            ...         async for event in agent.resume(answer):
+            ...             handle(event)
+        """
+        if self._interrupt_state is None:
+            raise RuntimeError("No interrupt to resume from. Call run() first.")
+
+        # Add the user's response as a tool result for ask_user
+        state = self._interrupt_state
+        state = state.with_message(Message.system(f"[User Response] {response}"))
+
+        # Store for _create_initial_state to pick up
+        self._last_run_state = state
+        self._interrupt_state = None
+
+        # Re-run — _create_initial_state will load from checkpoint/state
+        # We pass the original prompt; the state already has the full history
+        prompt = self._interrupt_prompt or ""
+        thread_id = self._interrupt_thread_id
+        metadata = self._interrupt_metadata
+
+        # Clear interrupt bookkeeping
+        self._interrupt_prompt = None
+        self._interrupt_thread_id = None
+        self._interrupt_metadata = None
+
+        # Continue execution from the interrupted state
+        async for event in self._run_from_state(state, prompt, thread_id, metadata):
+            yield event
+
+    async def _run_from_state(
+        self,
+        state: AgentState,
+        prompt: str,
+        thread_id: str | None,
+        metadata: dict[str, Any] | None,
+    ) -> AsyncIterator[LocusEvent]:
+        """Continue execution from a given state (used for resume)."""
+        self._initialize()
+
+        started_at = datetime.now(UTC)
+        _total_tokens = 0
+        _tool_calls_count = 0
+        _tool_errors_count = 0
+        _reflexion_evals = 0
+        _grounding_evals = 0
+        _last_assistant_content: str | None = None
+
+        # Extract last assistant content from state
+        for msg in reversed(state.messages):
+            if msg.role == Role.ASSISTANT and msg.content:
+                _last_assistant_content = msg.content
+                break
+
+        try:
+            while True:
+                # Same loop as run() — check termination, get response, execute tools
+                if self.config.time_budget_seconds is not None:
+                    elapsed = (datetime.now(UTC) - started_at).total_seconds()
+                    if elapsed >= self.config.time_budget_seconds:
+                        yield TerminateEvent(
+                            reason="time_budget",
+                            iterations_used=state.iteration,
+                            final_confidence=state.confidence,
+                            total_tool_calls=len(state.tool_executions),
+                            final_message=_last_assistant_content,
+                        )
+                        break
+
+                should_stop, stop_reason = state.should_terminate
+                if should_stop and stop_reason:
+                    yield TerminateEvent(
+                        reason=stop_reason,
+                        iterations_used=state.iteration,
+                        final_confidence=state.confidence,
+                        total_tool_calls=len(state.tool_executions),
+                        final_message=_last_assistant_content,
+                    )
+                    break
+
+                state = state.next_iteration()
+                response, state = await self._get_model_response(state)
+                prompt_toks = response.usage.get("prompt_tokens", 0)
+                completion_toks = response.usage.get("completion_tokens", 0)
+                _total_tokens += prompt_toks + completion_toks
+                state = state.with_token_usage(prompt_toks, completion_toks)
+                _last_assistant_content = response.message.content
+
+                yield ThinkEvent(
+                    iteration=state.iteration,
+                    reasoning=response.message.content,
+                    tool_calls=list(response.message.tool_calls),
+                )
+
+                if not response.message.tool_calls and self.config.completion_mode != "explicit":
+                    yield TerminateEvent(
+                        reason="complete",
+                        iterations_used=state.iteration,
+                        final_confidence=state.confidence,
+                        total_tool_calls=len(state.tool_executions),
+                        final_message=response.message.content,
+                    )
+                    break
+
+                if not response.message.tool_calls:
+                    continue
+
+                # Execute tools (simplified — reuse main logic)
+                for tc in response.message.tool_calls:
+                    yield ToolStartEvent(
+                        tool_name=tc.name, tool_call_id=tc.id, arguments=tc.arguments
+                    )
+                    start_time = time.perf_counter()
+                    try:
+                        ctx_factory = ToolContextFactory(
+                            run_id=state.run_id,
+                            agent_id=state.agent_id,
+                            iteration=state.iteration,
+                            state=state,
+                            invocation_metadata=metadata or {},
+                        )
+                        [result] = await self._executor.execute(
+                            [tc],
+                            self._tool_registry,
+                            ctx_factory,
+                        )
+                    except Exception as e:  # noqa: BLE001 — catches tool errors and InterruptException; branched below
+                        from locus.core.interrupt import InterruptException
+
+                        if isinstance(e, InterruptException):
+                            self._last_run_state = state
+                            self._interrupt_state = state
+                            self._interrupt_prompt = prompt
+                            self._interrupt_thread_id = thread_id
+                            self._interrupt_metadata = metadata
+                            payload = e.value.payload if hasattr(e, "value") else {}
+                            question = (
+                                payload.get("question", str(payload))
+                                if isinstance(payload, dict)
+                                else str(payload)
+                            )
+                            options = payload.get("options") if isinstance(payload, dict) else None
+                            yield InterruptEvent(
+                                question=question,
+                                options=options,
+                                interrupt_id=e.value.interrupt_id
+                                if hasattr(e, "value")
+                                else "unknown",
+                            )
+                            return
+                        result = ToolResult(
+                            tool_call_id=tc.id,
+                            name=tc.name,
+                            content="",
+                            error=str(e),
+                            duration_ms=(time.perf_counter() - start_time) * 1000,
+                        )
+
+                    state = state.with_tool_execution(
+                        ToolExecution(
+                            tool_name=result.name,
+                            tool_call_id=result.tool_call_id,
+                            arguments=tc.arguments,
+                            result=result.content if result.success else None,
+                            error=result.error,
+                            duration_ms=result.duration_ms,
+                        )
+                    )
+                    state = state.with_message(Message.tool(result))
+
+                    yield ToolCompleteEvent(
+                        tool_name=result.name,
+                        tool_call_id=result.tool_call_id,
+                        result=result.content if result.success else None,
+                        error=result.error,
+                        duration_ms=result.duration_ms,
+                    )
+
+        finally:
+            self._last_run_state = state
+
+    async def _create_initial_state(
+        self,
+        prompt: str,
+        thread_id: str | None,
+        metadata: dict[str, Any] | None,
+    ) -> AgentState:
+        """Create initial agent state."""
+        # Try to load from checkpoint
+        if self.config.checkpointer and thread_id:
+            existing = await self.config.checkpointer.load(thread_id)
+            if existing:
+                # Add new user message and continue
+                resumed: AgentState = existing.with_message(Message.user(prompt))
+                return resumed
+
+        # Create fresh state
+        state = AgentState(
+            agent_id=self.config.agent_id,
+            max_iterations=self.config.max_iterations,
+            confidence_threshold=(
+                self.config.reflexion.confidence_threshold if self.config.reflexion else 0.85
+            ),
+            tool_loop_threshold=self.config.tool_loop_threshold,
+            terminal_tools=frozenset(self.config.terminal_tools),
+            token_budget=self.config.token_budget,
+            completion_mode=self.config.completion_mode,
+            metadata=metadata or {},
+        )
+
+        # Resolve system prompt (string or callable)
+        prompt_value = self.config.system_prompt
+        if callable(prompt_value):
+            prompt_value = prompt_value({"prompt": prompt, "metadata": metadata or {}})
+        state = state.with_message(Message.system(str(prompt_value)))
+        state = state.with_message(Message.user(prompt))
+
+        return state
+
+    async def _get_final_state(
+        self,
+        prompt: str,
+        thread_id: str | None,
+        metadata: dict[str, Any] | None,
+    ) -> AgentState:
+        """Get the final state after run (for run_sync)."""
+        # This is a fallback - in normal operation, state is tracked in run()
+        # For run_sync, we need to reconstruct the final state
+        state = await self._create_initial_state(prompt, thread_id, metadata)
+        return state
+
+    @staticmethod
+    def _validate_messages(messages: list[Message]) -> list[Message]:
+        """Validate message sequence and remove orphaned tool calls/results.
+
+        Many LLM providers (OCI GenAI, Anthropic) reject requests where
+        assistant messages with tool_calls don't have matching tool result
+        messages. This method ensures message pairs are consistent.
+        """
+        # Collect all tool_call IDs that have matching tool results
+        tool_result_ids: set[str] = set()
+        for msg in messages:
+            if msg.role == Role.TOOL and msg.tool_call_id:
+                tool_result_ids.add(msg.tool_call_id)
+
+        # Collect all tool_call IDs from assistant messages
+        tool_call_ids: set[str] = set()
+        for msg in messages:
+            if msg.role == Role.ASSISTANT:
+                for tc in msg.tool_calls:
+                    tool_call_ids.add(tc.id)
+
+        validated: list[Message] = []
+        for msg in messages:
+            if msg.role == Role.ASSISTANT and msg.tool_calls:
+                # Keep only tool calls that have matching results
+                valid_calls = [tc for tc in msg.tool_calls if tc.id in tool_result_ids]
+                if valid_calls:
+                    validated.append(
+                        Message(
+                            role=msg.role,
+                            content=msg.content,
+                            tool_calls=valid_calls,
+                            tool_call_id=msg.tool_call_id,
+                            name=msg.name,
+                        )
+                    )
+                elif msg.content:
+                    # Has content but orphaned tool calls — keep as text-only message
+                    validated.append(
+                        Message(
+                            role=msg.role,
+                            content=msg.content,
+                            tool_calls=[],
+                            tool_call_id=msg.tool_call_id,
+                            name=msg.name,
+                        )
+                    )
+                # else: no content and no valid tool calls — drop entirely
+            elif msg.role == Role.TOOL and msg.tool_call_id:
+                # Keep only tool results whose tool_call exists
+                if msg.tool_call_id in tool_call_ids:
+                    validated.append(msg)
+                # else: orphaned tool result — drop
+            else:
+                validated.append(msg)
+
+        return validated
+
+    def _parse_text_tool_calls(self, text: str) -> list[ToolCall]:
+        """Parse tool calls from model text output (Cohere/OCI GenAI fallback).
+
+        Some models output tool calls as text like ``search(query="test")``
+        instead of structured function calls. This parses them by matching
+        against the registered tool registry.
+
+        Returns parsed ToolCall list, or empty list if no matches found.
+        """
+        import re
+
+        if not text or not self._tool_registry:
+            return []
+
+        # Build case-insensitive lookup: normalized_name -> real_name
+        tool_lookup: dict[str, str] = {}
+        for name in self._tool_registry.tools:
+            normalized = name.lower().replace("_", "").replace("-", "")
+            tool_lookup[normalized] = name
+
+        # Match patterns like: tool_name(arg1="val1", arg2=val2)
+        # Handles: search(query="test"), search(query='test'), search(query=test)
+        pattern = re.compile(
+            r"\b([a-zA-Z_][a-zA-Z0-9_-]*)\s*\(\s*(.*?)\s*\)",
+            re.DOTALL,
+        )
+
+        parsed: list[ToolCall] = []
+        for match in pattern.finditer(text):
+            func_name = match.group(1)
+            args_str = match.group(2)
+
+            # Match against registry (case-insensitive, ignore underscores/hyphens)
+            normalized = func_name.lower().replace("_", "").replace("-", "")
+            real_name = tool_lookup.get(normalized)
+            if not real_name:
+                continue
+
+            # Parse arguments: key="value" or key='value' or key=value
+            args: dict[str, Any] = {}
+            arg_pattern = re.compile(r'(\w+)\s*=\s*(?:"([^"]*?)"|\'([^\']*?)\'|(\S+?))\s*[,)]')
+            # Add trailing ) to help match last arg
+            args_text = args_str + ")"
+            for arg_match in arg_pattern.finditer(args_text):
+                key = arg_match.group(1)
+                value = arg_match.group(2) or arg_match.group(3) or arg_match.group(4)
+                if value is not None:
+                    args[key] = value
+
+            # Validate arguments against tool's schema before accepting
+            tool_obj = self._tool_registry.get(real_name)
+            if tool_obj:
+                schema = tool_obj.to_openai_schema().get("function", {})
+                params = schema.get("parameters", {})
+                valid_params = set(params.get("properties", {}).keys())
+                # Drop any argument not declared in the tool's schema
+                args = {k: v for k, v in args.items() if k in valid_params}
+
+            parsed.append(ToolCall(name=real_name, arguments=args))
+
+        return parsed
+
+    async def _get_model_response(
+        self,
+        state: AgentState,
+    ) -> tuple[ModelResponse, AgentState]:
+        """Get a response from the model."""
+        # Apply conversation manager if present
+        messages = list(state.messages)
+        if self._conversation_manager:
+            if hasattr(self._conversation_manager, "async_apply"):
+                messages = await self._conversation_manager.async_apply(messages)
+            else:
+                messages = self._conversation_manager.apply(messages)
+
+        # Validate message pairs (remove orphaned tool calls/results)
+        messages = self._validate_messages(messages)
+
+        # Get tool schemas
+        tool_schemas = self._tool_registry.to_openai_schemas()
+
+        # Pre-model hooks: allow hooks to modify messages before model call
+        messages = await self._run_before_model_hooks(messages, tool_schemas or None)
+
+        # Call model with hook-driven retry support
+        # Hooks can request retries via event.retry = True
+        max_model_retries = 5
+        for _model_attempt in range(max_model_retries):
+            response = await self._model.complete(
+                messages=messages,
+                tools=tool_schemas or None,
+                temperature=self.config.temperature,
+                max_tokens=self.config.max_tokens,
+            )
+
+            # Post-model hooks: event.retry = True to re-call
+            after_event = await self._run_after_model_hooks(response, messages)
+
+            if after_event.retry:
+                continue  # Retry model call
+            response = after_event.response
+            break
+
+        # Add assistant message to state
+        state = state.with_message(response.message)
+
+        return response, state
+
+    async def _apply_reflexion(
+        self,
+        state: AgentState,
+        iteration_executions: list[ToolExecution] | None = None,
+    ) -> tuple[ReflectEvent, AgentState]:
+        """Apply Reflexion using the real Reflector.
+
+        Delegates to reasoning.reflexion.Reflector for loop detection,
+        execution analysis, confidence calculation, and guidance generation.
+        """
+        from locus.reasoning.reflexion import ReflectionResult
+
+        if self._reflector is None:
+            # Fallback: no-op reflection
+            return (
+                ReflectEvent(
+                    iteration=state.iteration,
+                    assessment="on_track",
+                    confidence_delta=0.0,
+                    new_confidence=state.confidence,
+                    guidance=None,
+                ),
+                state,
+            )
+
+        # Delegate to the real Reflector
+        reflection: ReflectionResult = self._reflector.reflect(
+            state, iteration_executions=iteration_executions
+        )
+
+        # Update state confidence
+        state = self._reflector.adjust_state_confidence(state, reflection)
+
+        # Create guidance message text
+        guidance_text = self._reflector.create_guidance_message(reflection)
+
+        return (
+            ReflectEvent(
+                iteration=state.iteration,
+                assessment=reflection.assessment.value,
+                confidence_delta=reflection.confidence_delta,
+                new_confidence=state.confidence,
+                guidance=guidance_text,
+            ),
+            state,
+        )
+
+    async def _apply_grounding(
+        self,
+        state: AgentState,
+        final_response: str,
+    ) -> tuple[GroundingEvent, AgentState]:
+        """Apply grounding evaluation using LLM-as-judge.
+
+        Extracts claims from the final response, gathers evidence from
+        tool results, and uses the GroundingEvaluator to validate.
+        """
+        if self._grounding_evaluator is None or self._grounding_model is None:
+            return (
+                GroundingEvent(
+                    score=1.0,
+                    claims_evaluated=0,
+                    ungrounded_claims=[],
+                    requires_replan=False,
+                ),
+                state,
+            )
+
+        # Extract claims and evidence
+        claims = self._extract_claims(final_response)
+        evidence = self._gather_evidence(state)
+
+        if not claims or not evidence:
+            return (
+                GroundingEvent(
+                    score=1.0,
+                    claims_evaluated=0,
+                    ungrounded_claims=[],
+                    requires_replan=False,
+                ),
+                state,
+            )
+
+        # Use LLM-as-judge
+        from locus.reasoning.grounding import GroundingResult
+
+        grounding_result: GroundingResult = await self._grounding_evaluator.evaluate_with_llm(
+            claims=claims,
+            evidence=evidence,
+            model=self._grounding_model,
+        )
+
+        return (
+            GroundingEvent(
+                score=grounding_result.score,
+                claims_evaluated=len(grounding_result.claims),
+                ungrounded_claims=grounding_result.ungrounded_claims,
+                requires_replan=grounding_result.requires_replan,
+            ),
+            state,
+        )
+
+    @staticmethod
+    def _extract_claims(response: str) -> list[str]:
+        """Extract evaluable claims from the agent's response."""
+        import re
+
+        sentences = re.split(r"(?<=[.!])\s+", response.strip())
+        claims = []
+        for sentence in sentences:
+            sentence = sentence.strip()  # noqa: PLW2901
+            if (
+                len(sentence) > 20
+                and not sentence.endswith("?")
+                and not sentence.lower().startswith(("i ", "i'm ", "i'll ", "let me"))
+            ):
+                claims.append(sentence)
+        return claims
+
+    @staticmethod
+    def _gather_evidence(state: AgentState) -> list[str]:
+        """Gather evidence from tool execution results."""
+        evidence = []
+        for execution in state.tool_executions:
+            if execution.success and execution.result:
+                result_text = execution.result
+                if len(result_text) > 500:
+                    result_text = result_text[:500] + "..."
+                evidence.append(f"[{execution.tool_name}]: {result_text}")
+        return evidence
+
+    @staticmethod
+    def _build_fallback_summary(state: AgentState) -> str:
+        """Build a summary from state when model returns no content on grace iteration."""
+        parts = [
+            f"Completed {state.iteration} iterations with {len(state.tool_executions)} tool calls."
+        ]
+        # Include last few tool results
+        for execution in state.tool_executions[-3:]:
+            if execution.success and execution.result:
+                preview = (
+                    execution.result[:150] + "..."
+                    if len(execution.result) > 150
+                    else execution.result
+                )
+                parts.append(f"- {execution.tool_name}: {preview}")
+        return "\n".join(parts)
+
+    # Hook lifecycle dispatch is delegated to HookOrchestrator; these
+    # thin wrappers preserve the original method names so internal
+    # callers don't need to change.
+
+    async def _run_before_invocation_hooks(
+        self,
+        prompt: str,
+        state: AgentState,
+    ) -> AgentState:
+        return await self._hook_orchestrator.run_before_invocation(prompt, state)  # type: ignore[no-any-return]
+
+    async def _run_after_invocation_hooks(
+        self,
+        state: AgentState,
+        success: bool,
+    ) -> None:
+        await self._hook_orchestrator.run_after_invocation(state, success)
+
+    async def _run_before_model_hooks(
+        self,
+        messages: list[Any],
+        tools: list[dict[str, Any]] | None,
+    ) -> list[Any]:
+        return await self._hook_orchestrator.run_before_model(messages, tools)  # type: ignore[no-any-return]
+
+    async def _run_after_model_hooks(
+        self,
+        response: Any,
+        messages: list[Any],
+    ) -> Any:
+        return await self._hook_orchestrator.run_after_model(response, messages)
+
+    async def _run_before_tool_hooks(
+        self,
+        tool_name: str,
+        tool_call_id: str,
+        arguments: dict[str, Any],
+    ) -> Any:
+        return await self._hook_orchestrator.run_before_tool(
+            tool_name,
+            tool_call_id,
+            arguments,
+        )
+
+    async def _run_after_tool_hooks(
+        self,
+        tool_name: str,
+        result: Any,
+        error: str | None,
+    ) -> Any:
+        return await self._hook_orchestrator.run_after_tool(tool_name, result, error)
+
+    # Properties for easy access
+    @property
+    def model(self) -> Any:
+        """Get the model instance."""
+        self._initialize()
+        return self._model
+
+    @property
+    def tools(self) -> ToolRegistry:
+        """Get the tool registry."""
+        self._initialize()
+        return self._tool_registry
+
+    @property
+    def system_prompt(self) -> str:
+        """Get the configured system prompt as a string.
+
+        If the config value is a callable (dynamic prompt), it is
+        coerced to its ``repr`` so this property never returns non-str.
+        Use ``self.config.system_prompt`` directly to access the raw
+        value (string or callable) when you need to invoke the
+        dynamic form.
+        """
+        prompt = self.config.system_prompt
+        return prompt if isinstance(prompt, str) else repr(prompt)

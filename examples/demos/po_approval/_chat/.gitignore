@@ -1,0 +1,5 @@
+# Local-only render assets — chat-bubble screenshot for slides / decks.
+# Source HTML lives here but is not committed; regenerate with:
+#   python snap.py
+*
+!.gitignore

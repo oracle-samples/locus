@@ -1,0 +1,94 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
+
+"""Memory and state persistence for Locus.
+
+This module provides conversation management, checkpointing, and cross-thread storage:
+
+Conversation Management:
+- ConversationManager: Base class for conversation strategies
+- NullManager: Keep all messages unchanged
+- SlidingWindowManager: Keep last N messages
+- SummarizingManager: Summarize older messages
+
+Checkpointing:
+- BaseCheckpointer: Abstract base for checkpointer implementations
+- DeltaCheckpointer: Efficient delta-based checkpointing (~77% storage savings)
+- get_checkpointer: Get a checkpointer by string identifier
+- register_checkpointer: Register a custom checkpointer provider
+- list_checkpointers: List available checkpointer providers
+
+Cross-Thread Store (Long-term Memory):
+- BaseStore: Abstract base for store implementations
+- InMemoryStore: In-memory store (testing/development)
+- NamespacedStore: Scoped store wrapper
+- StoreContext: Convenient store access for nodes
+
+Backends (in locus.memory.backends):
+- MemoryCheckpointer: In-memory storage (testing/development)
+- FileCheckpointer: Local file storage
+- HTTPCheckpointer: Remote HTTP API storage
+- SQLiteBackend, RedisBackend, PostgreSQLBackend, etc.
+"""
+
+from locus.core.protocols import CheckpointerCapabilities
+from locus.memory.checkpointer import BaseCheckpointer
+from locus.memory.conversation import (
+    ConversationManager,
+    NullManager,
+    SlidingWindowManager,
+    SummarizingManager,
+)
+from locus.memory.delta import (
+    CheckpointMetadata,
+    DeltaCheckpoint,
+    DeltaCheckpointer,
+    DeltaStorage,
+    InMemoryDeltaStorage,
+)
+from locus.memory.registry import (
+    get_checkpointer,
+    list_checkpointers,
+    register_checkpointer,
+)
+from locus.memory.store import (
+    BaseStore,
+    InMemoryStore,
+    NamespacedStore,
+    SemanticSearchResult,
+    StoreCapabilities,
+    StoreContext,
+    StoreItem,
+    StoreProtocol,
+)
+
+
+__all__ = [
+    # Conversation management
+    "ConversationManager",
+    "NullManager",
+    "SlidingWindowManager",
+    "SummarizingManager",
+    # Checkpointing
+    "BaseCheckpointer",
+    "CheckpointerCapabilities",
+    "DeltaCheckpointer",
+    "DeltaStorage",
+    "InMemoryDeltaStorage",
+    "DeltaCheckpoint",
+    "CheckpointMetadata",
+    # Registry
+    "get_checkpointer",
+    "register_checkpointer",
+    "list_checkpointers",
+    # Cross-Thread Store
+    "BaseStore",
+    "InMemoryStore",
+    "NamespacedStore",
+    "SemanticSearchResult",
+    "StoreCapabilities",
+    "StoreContext",
+    "StoreItem",
+    "StoreProtocol",
+]
