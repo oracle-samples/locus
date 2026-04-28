@@ -1,0 +1,377 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
+
+"""OCI GenAI Embeddings - Cohere models on Oracle Cloud.
+
+Uses OCI GenAI service which hosts Cohere embedding models.
+Authentication via OCI SDK (config file, instance principal, etc.).
+"""
+
+from __future__ import annotations
+
+from enum import Enum
+from typing import TYPE_CHECKING, Any
+
+from pydantic import BaseModel, Field
+
+from locus.rag.embeddings.base import (
+    BaseEmbedding,
+    EmbeddingCapabilities,
+    EmbeddingConfig,
+    EmbeddingResult,
+)
+
+
+if TYPE_CHECKING:
+    from oci.generative_ai_inference import GenerativeAiInferenceClient
+
+
+class OCIEmbeddingModel(str, Enum):
+    """Available Cohere embedding models on OCI GenAI."""
+
+    COHERE_EMBED_ENGLISH_V3 = "cohere.embed-english-v3.0"
+    COHERE_EMBED_MULTILINGUAL_V3 = "cohere.embed-multilingual-v3.0"
+    COHERE_EMBED_ENGLISH_LIGHT_V3 = "cohere.embed-english-light-v3.0"
+    COHERE_EMBED_MULTILINGUAL_LIGHT_V3 = "cohere.embed-multilingual-light-v3.0"
+
+
+# Model dimensions
+MODEL_DIMENSIONS = {
+    OCIEmbeddingModel.COHERE_EMBED_ENGLISH_V3: 1024,
+    OCIEmbeddingModel.COHERE_EMBED_MULTILINGUAL_V3: 1024,
+    OCIEmbeddingModel.COHERE_EMBED_ENGLISH_LIGHT_V3: 384,
+    OCIEmbeddingModel.COHERE_EMBED_MULTILINGUAL_LIGHT_V3: 384,
+}
+
+
+class OCIEmbeddingConfig(BaseModel):
+    """Configuration for OCI GenAI Embeddings."""
+
+    model_id: str = Field(
+        default=OCIEmbeddingModel.COHERE_EMBED_ENGLISH_V3.value,
+        description="OCI GenAI embedding model ID",
+    )
+    compartment_id: str = Field(
+        default="",
+        description="OCI compartment OCID (uses tenancy root if not specified)",
+    )
+    service_endpoint: str | None = Field(
+        default=None,
+        description="OCI GenAI service endpoint (auto-detected from region)",
+    )
+    profile_name: str = Field(
+        default="DEFAULT",
+        description="OCI config profile name",
+    )
+    config_file: str = Field(
+        default="~/.oci/config",
+        description="Path to OCI config file",
+    )
+    auth_type: str = Field(
+        default="api_key",
+        description="Auth type: api_key, security_token, instance_principal, resource_principal",
+    )
+    truncate: str = Field(
+        default="END",
+        description="Truncation strategy: NONE, START, END",
+    )
+    input_type: str = Field(
+        default="SEARCH_DOCUMENT",
+        description="Input type: SEARCH_DOCUMENT, SEARCH_QUERY, CLASSIFICATION, CLUSTERING",
+    )
+
+
+class OCIEmbeddings(BaseModel, BaseEmbedding):
+    """
+    OCI GenAI Embeddings using Cohere models.
+
+    Uses Oracle Cloud Infrastructure GenAI service which hosts
+    Cohere embedding models with enterprise-grade reliability.
+
+    Example:
+        >>> embedder = OCIEmbeddings(
+        ...     model_id="cohere.embed-english-v3.0",
+        ...     profile_name="DEFAULT",
+        ...     auth_type="security_token",
+        ... )
+        >>> result = await embedder.embed("Hello world")
+        >>> print(len(result.embedding))  # 1024
+
+    Example with compartment:
+        >>> embedder = OCIEmbeddings(
+        ...     model_id="cohere.embed-multilingual-v3.0",
+        ...     compartment_id="ocid1.compartment.oc1..xxx",
+        ... )
+    """
+
+    oci_config: OCIEmbeddingConfig = Field(default_factory=OCIEmbeddingConfig)
+    _client: GenerativeAiInferenceClient | None = None
+    _oci_config_dict: dict[str, Any] | None = None
+
+    model_config = {"arbitrary_types_allowed": True}
+
+    def __init__(
+        self,
+        model_id: str = OCIEmbeddingModel.COHERE_EMBED_ENGLISH_V3.value,
+        compartment_id: str = "",
+        profile_name: str = "DEFAULT",
+        auth_type: str = "api_key",
+        service_endpoint: str | None = None,
+        **kwargs: Any,
+    ) -> None:
+        oci_config = OCIEmbeddingConfig(
+            model_id=model_id,
+            compartment_id=compartment_id,
+            profile_name=profile_name,
+            auth_type=auth_type,
+            service_endpoint=service_endpoint,
+            **kwargs,
+        )
+        super().__init__(oci_config=oci_config)
+
+    @property
+    def config(self) -> EmbeddingConfig:
+        """Get embedding configuration."""
+        # Determine dimension from model
+        model_enum = None
+        for m in OCIEmbeddingModel:
+            if m.value == self.oci_config.model_id:
+                model_enum = m
+                break
+
+        dimension = MODEL_DIMENSIONS.get(model_enum, 1024) if model_enum else 1024
+
+        return EmbeddingConfig(
+            dimension=dimension,
+            max_tokens=8192,  # Cohere limit
+            batch_size=96,  # Cohere batch limit
+        )
+
+    @property
+    def capabilities(self) -> EmbeddingCapabilities:
+        """OCI Cohere embeddings: native batching (96), separate
+        SEARCH_QUERY vs SEARCH_DOCUMENT input types, image-capable
+        variants for ``cohere.embed-*-image-v3.0``."""
+        multimodal = "image" in self.oci_config.model_id
+        return EmbeddingCapabilities(
+            supports_query_vs_doc=True,
+            supports_multimodal=multimodal,
+            supports_batching=True,
+            max_batch_size=96,
+            max_input_tokens=8192,
+        )
+
+    async def _get_client(self) -> GenerativeAiInferenceClient:
+        """Get or create the OCI client."""
+        if self._client is not None:
+            return self._client
+
+        try:
+            import oci
+            from oci.generative_ai_inference import GenerativeAiInferenceClient
+        except ImportError as e:
+            raise ImportError(
+                "OCIEmbeddings requires the 'oci' package. Install with: pip install oci"
+            ) from e
+
+        # Load OCI config
+        config_file = self.oci_config.config_file
+        if config_file.startswith("~"):
+            import os
+
+            config_file = os.path.expanduser(config_file)
+
+        self._oci_config_dict = oci.config.from_file(
+            config_file,
+            self.oci_config.profile_name,
+        )
+
+        # Determine service endpoint
+        endpoint = self.oci_config.service_endpoint
+        if endpoint is None:
+            region = self._oci_config_dict.get("region", "us-chicago-1")
+            endpoint = f"https://inference.generativeai.{region}.oci.oraclecloud.com"
+
+        # Determine auth type - respect explicit setting, only auto-detect if needed
+        auth_type = self.oci_config.auth_type
+
+        # Only auto-detect security_token if:
+        # 1. User didn't explicitly set api_key auth AND
+        # 2. Config has security_token_file AND
+        # 3. Config doesn't have user field (api_key profiles have user)
+        if (
+            auth_type != "api_key"
+            and "security_token_file" in self._oci_config_dict
+            and "user" not in self._oci_config_dict
+        ):
+            auth_type = "security_token"
+
+        # Create client based on auth type
+        if auth_type == "security_token":
+            token_file = self._oci_config_dict.get("security_token_file")
+            if token_file:
+                import os as os_module
+
+                token_file = os_module.path.expanduser(token_file)
+                with open(token_file) as f:
+                    token = f.read().strip()
+                key_file = os_module.path.expanduser(self._oci_config_dict["key_file"])
+                private_key = oci.signer.load_private_key_from_file(key_file)
+                signer = oci.auth.signers.SecurityTokenSigner(token, private_key)
+                self._client = GenerativeAiInferenceClient(
+                    config={},
+                    signer=signer,
+                    service_endpoint=endpoint,
+                )
+            else:
+                signer = oci.auth.signers.get_resource_principals_signer()
+                self._client = GenerativeAiInferenceClient(
+                    config={},
+                    signer=signer,
+                    service_endpoint=endpoint,
+                )
+        elif auth_type == "instance_principal":
+            signer = oci.auth.signers.InstancePrincipalsSecurityTokenSigner()
+            self._client = GenerativeAiInferenceClient(
+                config={},
+                signer=signer,
+                service_endpoint=endpoint,
+            )
+        elif auth_type == "resource_principal":
+            signer = oci.auth.signers.get_resource_principals_signer()
+            self._client = GenerativeAiInferenceClient(
+                config={},
+                signer=signer,
+                service_endpoint=endpoint,
+            )
+        else:
+            # API key auth (default) - just pass config, SDK creates signer
+            self._client = GenerativeAiInferenceClient(
+                config=self._oci_config_dict,
+                service_endpoint=endpoint,
+            )
+
+        return self._client
+
+    def _get_compartment_id(self) -> str:
+        """Get compartment ID, defaulting to tenancy."""
+        if self.oci_config.compartment_id:
+            return self.oci_config.compartment_id
+        if self._oci_config_dict:
+            return self._oci_config_dict.get("tenancy", "")
+        return ""
+
+    async def embed(self, text: str) -> EmbeddingResult:
+        """Embed a single text."""
+        results = await self.embed_batch([text])
+        return results[0]
+
+    async def embed_batch(self, texts: list[str]) -> list[EmbeddingResult]:
+        """Embed multiple texts."""
+        from oci.generative_ai_inference.models import (
+            EmbedTextDetails,
+            OnDemandServingMode,
+        )
+
+        client = await self._get_client()
+
+        embed_details = EmbedTextDetails(
+            inputs=texts,
+            serving_mode=OnDemandServingMode(model_id=self.oci_config.model_id),
+            compartment_id=self._get_compartment_id(),
+            truncate=self.oci_config.truncate,
+            input_type=self.oci_config.input_type,
+        )
+
+        response = client.embed_text(embed_details)
+        embeddings = response.data.embeddings
+
+        results = []
+        for i, text in enumerate(texts):
+            results.append(
+                EmbeddingResult(
+                    embedding=embeddings[i],
+                    text=text,
+                    model=self.oci_config.model_id,
+                    tokens=None,  # OCI doesn't return token count
+                )
+            )
+
+        return results
+
+    async def embed_query(self, query: str) -> EmbeddingResult:
+        """Embed a query for retrieval.
+
+        Uses SEARCH_QUERY input type for Cohere models.
+        """
+        # Temporarily set input type for query
+        original_type = self.oci_config.input_type
+        # Note: Can't modify frozen config, so we handle this differently
+        from oci.generative_ai_inference.models import (
+            EmbedTextDetails,
+            OnDemandServingMode,
+        )
+
+        client = await self._get_client()
+
+        embed_details = EmbedTextDetails(
+            inputs=[query],
+            serving_mode=OnDemandServingMode(model_id=self.oci_config.model_id),
+            compartment_id=self._get_compartment_id(),
+            truncate=self.oci_config.truncate,
+            input_type="SEARCH_QUERY",  # Query-specific
+        )
+
+        response = client.embed_text(embed_details)
+
+        return EmbeddingResult(
+            embedding=response.data.embeddings[0],
+            text=query,
+            model=self.oci_config.model_id,
+            tokens=None,
+        )
+
+    async def embed_documents(self, documents: list[str]) -> list[EmbeddingResult]:
+        """Embed documents for storage.
+
+        Uses SEARCH_DOCUMENT input type for Cohere models.
+        """
+        from oci.generative_ai_inference.models import (
+            EmbedTextDetails,
+            OnDemandServingMode,
+        )
+
+        client = await self._get_client()
+
+        # Process in batches
+        results = []
+        batch_size = self.config.batch_size
+
+        for i in range(0, len(documents), batch_size):
+            batch = documents[i : i + batch_size]
+
+            embed_details = EmbedTextDetails(
+                inputs=batch,
+                serving_mode=OnDemandServingMode(model_id=self.oci_config.model_id),
+                compartment_id=self._get_compartment_id(),
+                truncate=self.oci_config.truncate,
+                input_type="SEARCH_DOCUMENT",  # Document-specific
+            )
+
+            response = client.embed_text(embed_details)
+
+            for j, text in enumerate(batch):
+                results.append(
+                    EmbeddingResult(
+                        embedding=response.data.embeddings[j],
+                        text=text,
+                        model=self.oci_config.model_id,
+                        tokens=None,
+                    )
+                )
+
+        return results
+
+    def __repr__(self) -> str:
+        return f"OCIEmbeddings(model={self.oci_config.model_id!r})"

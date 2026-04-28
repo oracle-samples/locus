@@ -1,0 +1,627 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
+
+"""Integration tests for checkpointer adapters with Agent."""
+
+from __future__ import annotations
+
+import asyncio
+import os
+
+import pytest
+
+from locus.core.messages import Message, Role
+from locus.core.state import AgentState
+from locus.memory.backends import (
+    MemoryCheckpointer,
+    SQLiteBackend,
+    StorageBackendAdapter,
+    sqlite_checkpointer,
+)
+
+
+pytestmark = pytest.mark.integration
+
+
+# =============================================================================
+# Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def sample_state() -> AgentState:
+    """Create a sample agent state for testing."""
+    state = AgentState(
+        agent_id="test-agent",
+        max_iterations=10,
+        confidence=0.5,
+        metadata={"key": "value"},
+    )
+    state = state.with_message(Message(role=Role.USER, content="Hello"))
+    state = state.with_message(Message(role=Role.ASSISTANT, content="Hi there!"))
+    return state
+
+
+# =============================================================================
+# StorageBackendAdapter Tests
+# =============================================================================
+
+
+class TestStorageBackendAdapter:
+    """Test StorageBackendAdapter with SQLite backend."""
+
+    @pytest.fixture
+    def adapter(self, tmp_path):
+        """Create adapter with SQLite backend."""
+        backend = SQLiteBackend(path=str(tmp_path / "test.db"))
+        return StorageBackendAdapter(backend)
+
+    @pytest.mark.asyncio
+    async def test_save_and_load(self, adapter, sample_state):
+        """Save and load state through adapter."""
+        # Save state
+        checkpoint_id = await adapter.save(sample_state, "thread-1")
+        assert checkpoint_id is not None
+
+        # Load state
+        loaded = await adapter.load("thread-1")
+        assert loaded is not None
+        assert loaded.agent_id == sample_state.agent_id
+        assert len(loaded.messages) == len(sample_state.messages)
+        assert loaded.confidence == sample_state.confidence
+
+    @pytest.mark.asyncio
+    async def test_load_specific_checkpoint(self, adapter, sample_state):
+        """Load a specific checkpoint by ID."""
+        # Save multiple checkpoints
+        cp1 = await adapter.save(sample_state, "thread-1")
+
+        state2 = sample_state.with_confidence(0.8)
+        cp2 = await adapter.save(state2, "thread-1")
+
+        # Load specific checkpoint
+        loaded1 = await adapter.load("thread-1", cp1)
+        assert loaded1.confidence == 0.5
+
+        loaded2 = await adapter.load("thread-1", cp2)
+        assert loaded2.confidence == 0.8
+
+        # Load latest (should be cp2)
+        latest = await adapter.load("thread-1")
+        assert latest.confidence == 0.8
+
+    @pytest.mark.asyncio
+    async def test_list_checkpoints(self, adapter, sample_state):
+        """List checkpoints for a thread."""
+        # Save multiple checkpoints
+        await adapter.save(sample_state, "thread-1", "cp-1")
+        await adapter.save(sample_state, "thread-1", "cp-2")
+        await adapter.save(sample_state, "thread-1", "cp-3")
+
+        # List checkpoints
+        checkpoints = await adapter.list_checkpoints("thread-1")
+        assert len(checkpoints) == 3
+        assert "cp-1" in checkpoints
+        assert "cp-2" in checkpoints
+        assert "cp-3" in checkpoints
+
+    @pytest.mark.asyncio
+    async def test_delete_specific_checkpoint(self, adapter, sample_state):
+        """Delete a specific checkpoint."""
+        await adapter.save(sample_state, "thread-1", "cp-1")
+        await adapter.save(sample_state, "thread-1", "cp-2")
+
+        # Delete cp-1
+        result = await adapter.delete("thread-1", "cp-1")
+        assert result is True
+
+        # cp-1 should be gone, cp-2 should exist
+        assert not await adapter.exists("thread-1", "cp-1")
+        assert await adapter.exists("thread-1", "cp-2")
+
+    @pytest.mark.asyncio
+    async def test_delete_all_checkpoints(self, adapter, sample_state):
+        """Delete all checkpoints for a thread."""
+        await adapter.save(sample_state, "thread-1", "cp-1")
+        await adapter.save(sample_state, "thread-1", "cp-2")
+
+        # Delete all
+        result = await adapter.delete("thread-1")
+        assert result is True
+
+        # All should be gone
+        assert not await adapter.exists("thread-1")
+
+    @pytest.mark.asyncio
+    async def test_exists(self, adapter, sample_state):
+        """Check checkpoint existence."""
+        assert not await adapter.exists("thread-1")
+
+        await adapter.save(sample_state, "thread-1", "cp-1")
+
+        assert await adapter.exists("thread-1")
+        assert await adapter.exists("thread-1", "cp-1")
+        assert not await adapter.exists("thread-1", "cp-nonexistent")
+
+
+# =============================================================================
+# Factory Function Tests
+# =============================================================================
+
+
+class TestFactoryFunctions:
+    """Test checkpointer factory functions."""
+
+    @pytest.mark.asyncio
+    async def test_sqlite_checkpointer(self, tmp_path, sample_state):
+        """Test sqlite_checkpointer factory."""
+        checkpointer = sqlite_checkpointer(str(tmp_path / "factory.db"))
+
+        # Should work like a full checkpointer
+        checkpoint_id = await checkpointer.save(sample_state, "thread-1")
+        assert checkpoint_id is not None
+
+        loaded = await checkpointer.load("thread-1")
+        assert loaded is not None
+        assert loaded.agent_id == sample_state.agent_id
+
+
+# =============================================================================
+# Agent Integration Tests
+# =============================================================================
+
+
+class TestAgentWithCheckpointer:
+    """Test Agent with various checkpointer backends."""
+
+    @pytest.mark.asyncio
+    async def test_agent_with_memory_checkpointer(self):
+        """Agent with MemoryCheckpointer."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        from locus import Agent
+        from locus.models.base import ModelResponse
+
+        # Create mock model
+        mock_model = MagicMock()
+        mock_response = ModelResponse(
+            message=Message(
+                role=Role.ASSISTANT,
+                content="The answer is 4.",
+                tool_calls=[],
+            ),
+            usage={"total_tokens": 100},
+            raw={},
+        )
+        mock_model.complete = AsyncMock(return_value=mock_response)
+
+        # Create checkpointer
+        checkpointer = MemoryCheckpointer()
+
+        # Create agent
+        agent = Agent(
+            model=mock_model,
+            system_prompt="You are helpful.",
+            checkpointer=checkpointer,
+            max_iterations=5,
+        )
+
+        # Run agent
+        result = agent.run_sync("What is 2+2?", thread_id="test-thread")
+
+        assert result.success
+        assert "4" in result.message
+
+        # Check state was saved
+        assert await checkpointer.exists("test-thread")
+        loaded = await checkpointer.load("test-thread")
+        assert loaded is not None
+
+    @pytest.mark.asyncio
+    async def test_agent_with_sqlite_adapter(self, tmp_path):
+        """Agent with SQLite-backed checkpointer."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        from locus import Agent
+        from locus.memory.backends import sqlite_checkpointer
+        from locus.models.base import ModelResponse
+
+        # Create mock model
+        mock_model = MagicMock()
+        mock_response = ModelResponse(
+            message=Message(
+                role=Role.ASSISTANT,
+                content="Hello! How can I help?",
+                tool_calls=[],
+            ),
+            usage={"total_tokens": 50},
+            raw={},
+        )
+        mock_model.complete = AsyncMock(return_value=mock_response)
+
+        # Create checkpointer
+        checkpointer = sqlite_checkpointer(str(tmp_path / "agent.db"))
+
+        # Create agent
+        agent = Agent(
+            model=mock_model,
+            system_prompt="You are helpful.",
+            checkpointer=checkpointer,
+            max_iterations=5,
+        )
+
+        # Run agent
+        result = agent.run_sync("Hello!", thread_id="sqlite-thread")
+
+        assert result.success
+
+        # Verify checkpoint was saved
+        assert await checkpointer.exists("sqlite-thread")
+
+    @pytest.mark.asyncio
+    async def test_agent_resumes_from_checkpoint(self, tmp_path):
+        """Agent resumes conversation from checkpoint."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        from locus import Agent
+        from locus.memory.backends import sqlite_checkpointer
+        from locus.models.base import ModelResponse
+
+        checkpointer = sqlite_checkpointer(str(tmp_path / "resume.db"))
+
+        def create_mock_model(response_text: str):
+            mock_model = MagicMock()
+            mock_response = ModelResponse(
+                message=Message(
+                    role=Role.ASSISTANT,
+                    content=response_text,
+                    tool_calls=[],
+                ),
+                usage={"total_tokens": 50},
+                raw={},
+            )
+            mock_model.complete = AsyncMock(return_value=mock_response)
+            return mock_model
+
+        # First conversation
+        agent1 = Agent(
+            model=create_mock_model("Hello! My name is Assistant."),
+            system_prompt="You are helpful.",
+            checkpointer=checkpointer,
+            max_iterations=5,
+        )
+        result1 = agent1.run_sync("Hi, what's your name?", thread_id="resume-thread")
+        assert "Assistant" in result1.message
+
+        # Verify checkpoint was saved
+        assert await checkpointer.exists("resume-thread")
+
+        # Load the checkpoint and verify state
+        loaded_state = await checkpointer.load("resume-thread")
+        assert loaded_state is not None
+        # Should have: system, user ("Hi..."), assistant ("Hello!...")
+        assert len(loaded_state.messages) >= 2
+
+    @pytest.mark.asyncio
+    async def test_agent_with_auto_checkpoint(self, tmp_path):
+        """Agent with auto-checkpoint every N iterations."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        from locus import Agent
+        from locus.core.messages import ToolCall
+        from locus.memory.backends import sqlite_checkpointer
+        from locus.tools import tool
+
+        checkpointer = sqlite_checkpointer(str(tmp_path / "auto.db"))
+
+        # Create mock model that makes tool calls
+        mock_model = MagicMock()
+        call_count = [0]
+
+        def make_response():
+            call_count[0] += 1
+            if call_count[0] <= 2:
+                # First two calls: use a tool
+                msg = Message(
+                    role=Role.ASSISTANT,
+                    content="Let me calculate that.",
+                    tool_calls=[
+                        ToolCall(id=f"call-{call_count[0]}", name="add", arguments={"a": 1, "b": 2})
+                    ],
+                )
+            else:
+                # Final call: return result
+                msg = Message(
+                    role=Role.ASSISTANT,
+                    content="The answer is 3.",
+                )
+            mock_response = MagicMock()
+            mock_response.message = msg
+            mock_response.usage = {"total_tokens": 50}
+            return mock_response
+
+        mock_model.complete = AsyncMock(side_effect=lambda **kwargs: make_response())
+
+        @tool
+        async def add(a: int, b: int) -> str:
+            """Add two numbers."""
+            return str(a + b)
+
+        # Create agent with auto-checkpoint
+        agent = Agent(
+            model=mock_model,
+            tools=[add],
+            system_prompt="You are a calculator.",
+            checkpointer=checkpointer,
+            checkpoint_every_n_iterations=1,  # Checkpoint every iteration
+            max_iterations=5,
+        )
+
+        # Run agent
+        events = []
+        async for event in agent.run("Add 1 and 2", thread_id="auto-thread"):
+            events.append(event)
+
+        # Verify checkpoint exists
+        assert await checkpointer.exists("auto-thread")
+
+
+# =============================================================================
+# Redis Backend Tests (requires Redis)
+# =============================================================================
+
+
+@pytest.mark.requires_redis
+class TestRedisAdapter:
+    """Test Redis checkpointer adapter."""
+
+    @pytest.fixture
+    async def adapter(self):
+        from locus.memory.backends import redis_checkpointer
+
+        adapter = redis_checkpointer(
+            url=os.getenv("REDIS_URL", "redis://localhost:6379"),
+            prefix="locus:test:adapter:",
+        )
+        yield adapter
+        # Cleanup
+        await adapter.delete("redis-thread")
+        await adapter.close()
+
+    @pytest.mark.asyncio
+    async def test_redis_adapter_roundtrip(self, adapter, sample_state):
+        """Redis adapter save/load roundtrip."""
+        checkpoint_id = await adapter.save(sample_state, "redis-thread")
+        assert checkpoint_id is not None
+
+        loaded = await adapter.load("redis-thread")
+        assert loaded is not None
+        assert loaded.agent_id == sample_state.agent_id
+
+
+# =============================================================================
+# PostgreSQL Backend Tests (requires PostgreSQL)
+# =============================================================================
+
+
+@pytest.mark.requires_postgres
+class TestPostgreSQLAdapter:
+    """Test PostgreSQL checkpointer adapter."""
+
+    @pytest.fixture
+    async def adapter(self):
+        from locus.memory.backends import postgresql_checkpointer
+
+        adapter = postgresql_checkpointer(
+            host=os.getenv("POSTGRES_HOST", "localhost"),
+            port=int(os.getenv("POSTGRES_PORT", "5432")),
+            database=os.getenv("POSTGRES_DB", "locus_test"),
+            user=os.getenv("POSTGRES_USER", "postgres"),
+            password=os.getenv("POSTGRES_PASSWORD", ""),
+        )
+        yield adapter
+        await adapter.delete("pg-thread")
+        await adapter.close()
+
+    @pytest.mark.asyncio
+    async def test_postgresql_adapter_roundtrip(self, adapter, sample_state):
+        """PostgreSQL adapter save/load roundtrip."""
+        checkpoint_id = await adapter.save(sample_state, "pg-thread")
+        assert checkpoint_id is not None
+
+        loaded = await adapter.load("pg-thread")
+        assert loaded is not None
+        assert loaded.agent_id == sample_state.agent_id
+
+
+# =============================================================================
+# OpenSearch Backend Tests (requires OpenSearch)
+# =============================================================================
+
+
+@pytest.mark.requires_opensearch
+class TestOpenSearchAdapter:
+    """Test OpenSearch checkpointer adapter."""
+
+    @pytest.fixture
+    async def adapter(self):
+        from locus.memory.backends import opensearch_checkpointer
+
+        hosts_env = os.getenv("OPENSEARCH_HOSTS") or os.getenv("OPENSEARCH_HOST", "localhost:9200")
+        hosts = [h.strip() for h in hosts_env.split(",")]
+        adapter = opensearch_checkpointer(
+            hosts=hosts,
+            index_name="locus-test-adapter",
+            username=os.getenv("OPENSEARCH_USER"),
+            password=os.getenv("OPENSEARCH_PASSWORD"),
+            use_ssl=os.getenv("OPENSEARCH_USE_SSL", "false").lower() == "true",
+            verify_certs=os.getenv("OPENSEARCH_VERIFY_CERTS", "true").lower() == "true",
+        )
+        yield adapter
+        await adapter.delete("os-thread")
+        await adapter.close()
+
+    @pytest.mark.asyncio
+    async def test_opensearch_adapter_roundtrip(self, adapter, sample_state):
+        """OpenSearch adapter save/load roundtrip."""
+        checkpoint_id = await adapter.save(sample_state, "os-thread")
+        assert checkpoint_id is not None
+
+        await asyncio.sleep(1)  # Wait for indexing
+
+        loaded = await adapter.load("os-thread")
+        assert loaded is not None
+        assert loaded.agent_id == sample_state.agent_id
+
+
+# =============================================================================
+# OCI Bucket Backend Tests (requires OCI)
+# =============================================================================
+
+
+@pytest.mark.requires_oci_bucket
+class TestOCIBucketAdapter:
+    """Test OCI Bucket checkpointer adapter."""
+
+    @pytest.fixture
+    async def adapter(self, oci_bucket_config):
+        from locus.memory.backends import oci_bucket_checkpointer
+
+        adapter = oci_bucket_checkpointer(
+            bucket_name=oci_bucket_config["bucket_name"],
+            namespace=oci_bucket_config["namespace"],
+            prefix=f"{oci_bucket_config['prefix']}adapter/",
+            profile_name=oci_bucket_config["profile_name"],
+            auth_type=oci_bucket_config["auth_type"],
+            region=oci_bucket_config["region"],
+        )
+        yield adapter
+        await adapter.delete("oci-thread")
+
+    @pytest.mark.asyncio
+    async def test_oci_adapter_roundtrip(self, adapter, sample_state):
+        """OCI Bucket adapter save/load roundtrip."""
+        checkpoint_id = await adapter.save(sample_state, "oci-thread")
+        assert checkpoint_id is not None
+
+        loaded = await adapter.load("oci-thread")
+        assert loaded is not None
+        assert loaded.agent_id == sample_state.agent_id
+
+
+# =============================================================================
+# Agent + OCIBucketBackend end-to-end (requires OCI)
+# =============================================================================
+
+
+@pytest.mark.requires_oci_bucket
+class TestAgentWithOCIBucketBackend:
+    """End-to-end: ``Agent(checkpointer=OCIBucketBackend(...))``.
+
+    This is the integration that matters for downstream consumers — the
+    bucket backend is passed directly to an Agent, the Agent persists
+    state across a simulated restart, and a *second* Agent instance with
+    the same ``thread_id`` continues the conversation from the bucket.
+    No adapter. No wrapping. Just the SDK primitive.
+    """
+
+    @pytest.fixture
+    async def backend(self, oci_bucket_config):
+        from locus.memory.backends import OCIBucketBackend
+
+        backend = OCIBucketBackend(
+            bucket_name=oci_bucket_config["bucket_name"],
+            namespace=oci_bucket_config["namespace"],
+            prefix=f"{oci_bucket_config['prefix']}agent-e2e/",
+            profile_name=oci_bucket_config["profile_name"],
+            auth_type=oci_bucket_config["auth_type"],
+            region=oci_bucket_config["region"],
+        )
+        yield backend
+        threads = await backend.list_threads(limit=1000)
+        for t in threads:
+            await backend.delete(t)
+
+    @staticmethod
+    def _mock_model(reply: str):
+        """Tiny mock chat model that always returns ``reply``."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        from locus.models.base import ModelResponse
+
+        model = MagicMock()
+        model.complete = AsyncMock(
+            return_value=ModelResponse(
+                message=Message(role=Role.ASSISTANT, content=reply, tool_calls=[]),
+                usage={"total_tokens": 10},
+                raw={},
+            )
+        )
+        return model
+
+    @staticmethod
+    async def _run_once(agent, prompt: str, thread_id: str) -> str:
+        """Drain the Agent's event stream and return the final assistant message."""
+        from locus.core.events import TerminateEvent
+
+        final = ""
+        async for event in agent.run(prompt, thread_id=thread_id):
+            if isinstance(event, TerminateEvent):
+                final = event.final_message or ""
+        return final
+
+    @pytest.mark.asyncio
+    async def test_agent_can_take_backend_as_checkpointer(self, backend):
+        """``Agent(checkpointer=OCIBucketBackend(...))`` runs to completion
+        and persists state — no StorageBackendAdapter involved."""
+        from locus import Agent
+
+        agent = Agent(
+            model=self._mock_model("acknowledged"),
+            system_prompt="You are a test agent.",
+            checkpointer=backend,
+            max_iterations=3,
+        )
+
+        final = await self._run_once(agent, "ping-alpha", "agent-e2e-1")
+        assert "acknowledged" in final
+
+        # State is durably in the bucket — no in-memory magic.
+        assert await backend.exists("agent-e2e-1")
+        loaded = await backend.load("agent-e2e-1")
+        assert loaded is not None
+        assert any(
+            m.role == Role.USER and "ping-alpha" in (m.content or "") for m in loaded.messages
+        )
+
+    @pytest.mark.asyncio
+    async def test_second_agent_resumes_from_bucket(self, backend):
+        """Simulates a worker restart: a fresh Agent with the same thread_id
+        picks up the saved state from Object Storage and continues."""
+        from locus import Agent
+
+        agent1 = Agent(
+            model=self._mock_model("stored-first"),
+            system_prompt="You are a test agent.",
+            checkpointer=backend,
+            max_iterations=3,
+        )
+        await self._run_once(agent1, "turn-one-marker", "agent-e2e-resume")
+
+        # Brand-new Agent instance — as if the worker process was restarted.
+        agent2 = Agent(
+            model=self._mock_model("stored-second"),
+            system_prompt="You are a test agent.",
+            checkpointer=backend,
+            max_iterations=3,
+        )
+        await self._run_once(agent2, "turn-two-marker", "agent-e2e-resume")
+
+        # The conversation loaded from the bucket must contain the earlier
+        # user turn — proving cross-instance durability.
+        loaded = await backend.load("agent-e2e-resume")
+        assert loaded is not None
+        user_turns = [m.content or "" for m in loaded.messages if m.role == Role.USER]
+        assert any("turn-one-marker" in c for c in user_turns)
+        assert any("turn-two-marker" in c for c in user_turns)

@@ -1,0 +1,655 @@
+/* ============================================================================
+   locus docs — Oracle FY26 palette + locus brand rules.
+
+   Brand (from docs/img/logo.svg):
+     - Wordmark is always lowercase "locus", never capitalized.
+     - Type is sans-serif throughout (no serif headings).
+     - Wordmark colour:  #312D2A   (warm near-black)
+     - Mark accent:      #C74634   (Oracle red, also FY26 accent3)
+     - Tagline:          uppercase, weight 500, letter-spacing 0.16em,
+                         colour #78716C.
+     - Wordmark display: weight 700, letter-spacing -0.04em.
+
+   Palette: Oracle FY26 (Oracle_PPT-template_FY26 theme1.xml — Oracle-FY26-8.6).
+   ========================================================================== */
+
+:root {
+  /* locus brand greys (logo-derived) */
+  --locus-ink:      #312D2A;   /* wordmark colour */
+  --locus-mute:     #78716C;   /* tagline grey */
+  --locus-paper:    #FAFAF9;   /* logo white-out — paper */
+
+  /* Oracle FY26 palette */
+  --or-text:        #2A2F2F;   /* dk1 */
+  --or-bg:          #FBF9F8;   /* lt2 — off-white */
+  --or-bg-soft:     #F4EFEC;   /* derived: tint of lt2 */
+  --or-rule:        #E5DED9;   /* derived */
+
+  --or-red:         #C74634;   /* accent3 — Oracle red, also locus mark accent */
+  --or-red-deep:    #A03828;   /* derived */
+  --or-red-light:   #E2715F;   /* derived */
+
+  --or-teal:        #04536F;   /* accent1 */
+  --or-link:        #00688C;   /* hlink */
+  --or-mauve:       #6C3F49;   /* accent2 */
+  --or-sand:        #F0CC71;   /* accent4 */
+  --or-sage-teal:   #89B2B0;   /* accent5 */
+  --or-sage-green:  #86B596;   /* accent6 */
+
+  /* locus type stack — same as logo SVG, sans throughout */
+  --locus-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+                "Oracle Sans Tab", Helvetica, system-ui, sans-serif;
+  --locus-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo,
+                Consolas, monospace;
+}
+
+/* ---------------------------------------------------------------------------
+   Light scheme (default).
+   --------------------------------------------------------------------------- */
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color:        var(--or-red);
+  --md-primary-fg-color--light:  var(--or-red-light);
+  --md-primary-fg-color--dark:   var(--or-red-deep);
+  --md-primary-bg-color:        #FFFFFF;
+  --md-primary-bg-color--light: #FFFFFFcc;
+
+  --md-accent-fg-color:         var(--or-link);
+  --md-accent-fg-color--transparent: rgba(0, 104, 140, 0.10);
+  --md-accent-bg-color:         #FFFFFF;
+
+  --md-default-bg-color:        var(--or-bg);
+  --md-default-fg-color:        var(--or-text);
+  --md-default-fg-color--light: #4a4f4f;
+  --md-default-fg-color--lighter: #7a7e7e;
+  --md-default-fg-color--lightest: #c5c8c8;
+
+  --md-typeset-color:           var(--or-text);
+  --md-typeset-a-color:          var(--or-link);
+  --md-typeset-mark-color:       rgba(240, 204, 113, 0.45);  /* Oracle sand */
+
+  --md-footer-bg-color:         #1F2424;
+  --md-footer-bg-color--dark:    #161A1A;
+  --md-footer-fg-color:         #FFFFFF;
+  --md-footer-fg-color--light:   #C9CCCC;
+
+  --md-code-bg-color:           #F4EFEC;
+  --md-code-fg-color:           #2A2F2F;
+}
+
+/* ---------------------------------------------------------------------------
+   Dark scheme — keep Oracle red but tone the canvas.
+   --------------------------------------------------------------------------- */
+[data-md-color-scheme="slate"] {
+  --md-hue: 200;
+
+  --md-primary-fg-color:        var(--or-red);
+  --md-primary-fg-color--light:  var(--or-red-light);
+  --md-primary-fg-color--dark:   var(--or-red-deep);
+
+  --md-accent-fg-color:         var(--or-sand);
+  --md-typeset-a-color:          var(--or-sand);
+  --md-typeset-mark-color:       rgba(240, 204, 113, 0.30);
+}
+
+/* ---------------------------------------------------------------------------
+   Typography — sans throughout, matching the locus wordmark.
+   Display headings carry the wordmark's tight tracking (-0.04em on h1, -0.02em
+   below). Subheadings can opt into the tagline pattern (uppercase + 0.16em)
+   via the `.tagline` utility class.
+   --------------------------------------------------------------------------- */
+.md-typeset {
+  font-family: var(--locus-sans);
+  font-feature-settings: "ss01", "cv11";
+  color: var(--locus-ink);
+}
+.md-typeset code,
+.md-typeset pre {
+  font-family: var(--locus-mono);
+}
+
+.md-typeset h1,
+.md-typeset h2,
+.md-typeset h3,
+.md-typeset h4,
+.md-typeset h5,
+.md-header__topic > .md-ellipsis,
+.md-nav__title {
+  font-family: var(--locus-sans);
+}
+
+.md-typeset h1 {
+  color: var(--locus-ink);
+  font-weight: 700;
+  font-size: 2.4rem;
+  line-height: 1.10;
+  letter-spacing: -0.04em;       /* wordmark tracking */
+  margin: 0 0 1.2rem;
+  text-transform: lowercase;     /* mirror the wordmark — never CamelCase */
+}
+.md-typeset h2 {
+  color: var(--locus-ink);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  border-bottom: 1px solid var(--or-rule);
+  padding-bottom: 0.4rem;
+  margin-top: 1.6rem;
+}
+.md-typeset h3 {
+  color: var(--or-red-deep);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+.md-typeset h4 {
+  color: var(--locus-ink);
+  font-weight: 700;
+}
+
+.md-typeset p,
+.md-typeset li {
+  line-height: 1.65;
+}
+
+/* Homepage hero — Strands-format split (copy left, code right) with
+   Oracle-FY26 soft-glow background blobs for visual warmth without
+   enterprise stiffness. */
+.md-typeset .locus-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 2.4rem;
+  align-items: start;          /* both columns top-align — no dead vertical space */
+  margin: 1rem 0 1.4rem;
+  padding: 1.6rem 0 0.8rem;
+  isolation: isolate;
+  overflow: hidden;
+}
+/* Oracle-red soft glow behind the H1 — the warm spotlight */
+.md-typeset .locus-hero::before {
+  content: "";
+  position: absolute;
+  top: -180px; left: -220px;
+  width: 760px; height: 760px;
+  background: radial-gradient(circle,
+              rgba(199, 70, 52, 0.10) 0%,
+              rgba(240, 204, 113, 0.06) 35%,   /* FY26 sand */
+              transparent 70%);
+  z-index: -1;
+  border-radius: 50%;
+  pointer-events: none;
+}
+/* Sage glow on the right side — FY26 accent6, behind the code editor */
+.md-typeset .locus-hero::after {
+  content: "";
+  position: absolute;
+  top: 60px; right: -160px;
+  width: 560px; height: 560px;
+  background: radial-gradient(circle,
+              rgba(134, 181, 150, 0.10) 0%,    /* FY26 sage green */
+              rgba(137, 178, 176, 0.05) 40%,   /* FY26 sage teal */
+              transparent 70%);
+  z-index: -1;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.md-typeset .locus-hero h1 {
+  font-size: 3.6rem;
+  line-height: 1.04;
+  letter-spacing: -0.05em;
+  font-weight: 800;
+  text-transform: lowercase;
+  color: var(--locus-ink);
+  margin: 0 0 1.4rem;
+}
+.md-typeset .locus-hero h1 .accent {
+  color: var(--or-red);
+  position: relative;
+  display: inline-block;
+}
+.md-typeset .locus-hero h1 .accent::after {
+  content: "";
+  position: absolute;
+  left: -0.05em; right: -0.05em; bottom: 0.06em;
+  height: 0.30em;
+  background: linear-gradient(
+              90deg,
+              rgba(199, 70, 52, 0.22) 0%,
+              rgba(240, 204, 113, 0.30) 100%);   /* red → sand sweep */
+  z-index: -1;
+  border-radius: 3px;
+  transform: skewX(-6deg);
+}
+.md-typeset .locus-hero p {
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: var(--locus-ink);
+  margin: 0 0 1rem;
+}
+.md-typeset .locus-hero__copy > p:first-of-type strong {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.md-typeset .locus-hero p em {
+  display: block;
+  margin-top: 1rem;
+  font-style: normal;
+  font-size: 0.78rem;
+  color: var(--locus-mute);
+  letter-spacing: 0.04em;
+}
+.md-typeset .locus-hero .md-button {
+  margin: 0.5rem 0.5rem 0.5rem 0;
+  padding: 0.55rem 1.4rem;
+  font-size: 0.85rem;
+}
+.md-typeset .locus-hero pre {
+  font-size: 0.78rem;
+}
+.md-typeset .locus-hero .locus-hero__code .highlight {
+  border-radius: 8px;
+  box-shadow: 0 18px 50px -16px rgba(49, 45, 42, 0.18);
+  border-left: 0;
+}
+/* Inline `pip install` chip in the hero — clean rounded pill, no duplicate
+   left-rule. The global `.md-typeset .highlight` rule already adds the red
+   left border + rounded corners; we override it inside the hero so the
+   chip reads as a single piece, not stacked borders. */
+.md-typeset .locus-hero__copy .highlight {
+  border-left: 0;
+  border-radius: 6px;
+  display: inline-block;
+  max-width: 100%;
+}
+.md-typeset .locus-hero__copy pre {
+  background: var(--or-bg-soft);
+  border: 0;
+  border-radius: 6px;
+  padding: 0.45rem 0.9rem;
+  margin: 0.6rem 0;
+  font-size: 0.78rem;
+}
+@media (max-width: 76em) {
+  .md-typeset .locus-hero {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  .md-typeset .locus-hero h1 {
+    font-size: 2.6rem;
+  }
+}
+
+/* Grid cards (workflows you can build) */
+.md-typeset .grid.cards {
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.9rem;
+}
+.md-typeset .grid.cards > ul > li,
+.md-typeset .grid.cards > ol > li {
+  background: #FFFFFF;
+  border: 1px solid var(--or-rule);
+  border-radius: 6px;
+  padding: 1rem 1.1rem;
+  transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
+}
+.md-typeset .grid.cards > ul > li:hover,
+.md-typeset .grid.cards > ol > li:hover {
+  box-shadow: 0 8px 28px -16px rgba(49, 45, 42, 0.22);
+  transform: translateY(-2px);
+  border-color: var(--or-red-light);
+}
+.md-typeset .grid.cards .twemoji,
+.md-typeset .grid.cards svg {
+  color: var(--or-red);
+}
+
+/* ---------------------------------------------------------------------------
+   Header — white slab, hairline Oracle-red rule below.
+   Layout: locus mark (icon) left · "locus" + tagline middle · GitHub right.
+   --------------------------------------------------------------------------- */
+.md-header {
+  background-color: #FFFFFF;
+  color: var(--locus-ink);
+  border-bottom: 1px solid var(--or-rule);
+  box-shadow: 0 6px 16px -12px rgba(49, 45, 42, 0.18);
+}
+.md-header::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 2px;
+  background: var(--or-red);
+}
+.md-header__inner {
+  min-height: 4rem;
+  padding: 0.45rem 1rem 0.7rem;
+}
+
+/* Bigger locus mark on the left */
+.md-header__button.md-logo {
+  margin: 0 0.4rem 0 0;
+  padding: 0;
+}
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg {
+  height: 2.6rem;
+  max-height: 56px;
+  width: auto;
+}
+.md-header__button.md-logo:hover {
+  opacity: 0.85;
+}
+
+/* Title block in the middle — "locus" wordmark only.
+   The slogan lives in the SVG logo and on the homepage; trying to
+   stack a tagline beneath the title fights Material's absolute-
+   positioned topic toggle, so we keep the header clean. */
+.md-header__title {
+  display: flex;
+  align-items: center;
+  margin-left: 0.6rem;
+  align-self: center;
+}
+/* Stack the first topic vertically: "locus" wordmark + small "AGENTS SDK"
+   subtitle beneath, mirroring the SVG logo's wordmark+tagline lockup. */
+.md-header__ellipsis > .md-header__topic:first-of-type {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.05rem;
+}
+.md-header__ellipsis > .md-header__topic:first-of-type > .md-ellipsis {
+  font-family: var(--locus-sans);
+  font-weight: 700;
+  font-size: 1.4rem;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  text-transform: lowercase;
+  color: var(--locus-ink);
+}
+.md-header__ellipsis > .md-header__topic:first-of-type::after {
+  content: "AGENTS SDK";
+  font-family: var(--locus-sans);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: var(--or-red);
+  line-height: 1;
+}
+@media (max-width: 56em) {
+  .md-header__ellipsis > .md-header__topic:first-of-type::after {
+    display: none;
+  }
+}
+
+/* Right side — OCI rounded-O mark + black Oracle wordmark, linked
+   to oracle.com/.../generative-ai. GitHub repo link lives in the footer. */
+.md-header__source.md-header__oci {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.55rem;
+  margin-right: -0.3rem;
+  margin-left: 0.3rem;
+  border-radius: 7px;
+  transition: background-color 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+.md-header__source.md-header__oci:hover {
+  background-color: rgba(199, 70, 52, 0.08);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px -2px rgba(199, 70, 52, 0.25);
+}
+/* Header OCI rounded-O mark — 32×32 square (Oracle social-avatar scale). */
+.md-header__oci-mark {
+  width: 32px;
+  height: 32px;
+  display: block;
+  flex: 0 0 auto;
+}
+/* Header Oracle wordmark — 22px tall × auto width (preserves the official
+   4.763:1 aspect ratio from FY26 image50.svg viewBox 109.36 × 22.96). */
+.md-header__oracle-wordmark {
+  height: 22px;
+  width: auto;
+  aspect-ratio: 109.36 / 22.96;
+  display: block;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 60em) {
+  /* On narrow screens, hide the wordmark; keep just the OCI mark. */
+  .md-header__oracle-wordmark {
+    display: none;
+  }
+}
+
+.md-tabs {
+  background-color: var(--or-bg);
+  color: var(--locus-ink);
+  border-bottom: 1px solid var(--or-rule);
+}
+.md-tabs__link {
+  color: var(--locus-mute);
+  font-weight: 600;
+  opacity: 1;
+  letter-spacing: 0.01em;
+}
+.md-tabs__link:hover {
+  color: var(--or-red);
+}
+.md-tabs__link--active {
+  color: var(--locus-ink);
+  position: relative;
+}
+.md-tabs__link--active::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 2px;
+  background: var(--or-red);
+}
+
+/* ---------------------------------------------------------------------------
+   Side-nav — calmer, Oracle off-white feel.
+   --------------------------------------------------------------------------- */
+.md-nav__title {
+  color: var(--or-text);
+  font-weight: 700;
+}
+.md-nav__link--active,
+.md-nav__link[aria-current="true"] {
+  color: var(--or-red-deep) !important;
+  font-weight: 600;
+}
+.md-nav__item .md-nav__link:hover {
+  color: var(--or-link);
+}
+
+/* ---------------------------------------------------------------------------
+   Code blocks — soft sand background, Oracle red filename tab.
+   --------------------------------------------------------------------------- */
+.md-typeset code {
+  background-color: rgba(199, 70, 52, 0.06);
+  color: var(--or-red-deep);
+  border-radius: 3px;
+  font-size: 0.85em;
+}
+.md-typeset pre > code {
+  background-color: var(--or-bg-soft);
+  color: var(--or-text);
+}
+.md-typeset .highlight {
+  border-left: 3px solid var(--or-red);
+  border-radius: 4px;
+}
+
+/* ---------------------------------------------------------------------------
+   Tables — Oracle off-white striping, subtle red header underline.
+   --------------------------------------------------------------------------- */
+.md-typeset table:not([class]) {
+  border: 1px solid var(--or-rule);
+  border-radius: 4px;
+  overflow: hidden;
+  font-size: 0.84rem;
+}
+.md-typeset table:not([class]) th {
+  background-color: var(--or-bg-soft);
+  color: var(--or-text);
+  font-family: Georgia, serif;
+  font-weight: 700;
+  border-bottom: 2px solid var(--or-red);
+}
+.md-typeset table:not([class]) tr:nth-child(even) {
+  background-color: rgba(244, 239, 236, 0.45);
+}
+
+/* ---------------------------------------------------------------------------
+   Admonitions — re-tint to Oracle accents.
+   --------------------------------------------------------------------------- */
+.md-typeset .admonition.note,
+.md-typeset details.note {
+  border-left-color: var(--or-link);
+}
+.md-typeset .admonition.note > .admonition-title,
+.md-typeset details.note > summary {
+  background-color: rgba(0, 104, 140, 0.08);
+  color: var(--or-link);
+}
+.md-typeset .admonition.warning,
+.md-typeset details.warning {
+  border-left-color: var(--or-red);
+}
+.md-typeset .admonition.warning > .admonition-title,
+.md-typeset details.warning > summary {
+  background-color: rgba(199, 70, 52, 0.08);
+  color: var(--or-red-deep);
+}
+.md-typeset .admonition.tip,
+.md-typeset details.tip {
+  border-left-color: var(--or-sage-green);
+}
+.md-typeset .admonition.tip > .admonition-title,
+.md-typeset details.tip > summary {
+  background-color: rgba(134, 181, 150, 0.18);
+  color: #2f6243;
+}
+
+/* ---------------------------------------------------------------------------
+   Buttons / pills — Oracle red CTA.
+   --------------------------------------------------------------------------- */
+.md-typeset .md-button {
+  background-color: transparent;
+  border: 1px solid var(--or-red);
+  color: var(--or-red);
+  border-radius: 3px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.md-typeset .md-button:hover,
+.md-typeset .md-button:focus {
+  background-color: var(--or-red);
+  color: #FFFFFF;
+  border-color: var(--or-red);
+}
+.md-typeset .md-button--primary {
+  background-color: var(--or-red);
+  color: #FFFFFF;
+}
+.md-typeset .md-button--primary:hover {
+  background-color: var(--or-red-deep);
+}
+
+/* ---------------------------------------------------------------------------
+   Footer — Oracle dark bar with red micro-accent + Oracle wordmark.
+   --------------------------------------------------------------------------- */
+.md-footer-meta {
+  background-color: #161A1A;
+}
+.md-footer__inner {
+  border-top: 2px solid var(--or-red);
+}
+
+/* Footer brand block — Oracle Generative AI title + copyright line.
+   Driven by HTML in mkdocs.yml `copyright:`. */
+.md-copyright {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  line-height: 1.45;
+}
+.md-copyright__highlight {
+  display: block;
+  padding: 0;
+}
+
+.footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--locus-sans);
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: -0.005em;
+  color: #FFFFFF;
+  margin: 0 0 0.25rem;
+  text-transform: none;
+}
+.footer-brand__o {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  background-image: url("../img/oci-mark.svg");
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  flex: 0 0 auto;
+}
+.footer-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  color: rgba(255, 255, 255, 0.72);
+}
+/* Footer Oracle wordmark — official aspect 4.763:1 (109.36 × 22.96).
+   Anchor the height; let width compute from aspect-ratio for pixel-perfect
+   proportions. */
+.oracle-mark {
+  display: inline-block;
+  height: 14px;
+  aspect-ratio: 109.36 / 22.96;
+  width: auto;
+  min-width: 66.7px;
+  background-image: url("../img/oracle.svg");
+  background-position: left center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  filter: brightness(0) invert(1) opacity(0.85);
+  vertical-align: middle;
+}
+
+/* ---------------------------------------------------------------------------
+   Search input — keep neutral, red focus ring.
+   --------------------------------------------------------------------------- */
+.md-search__input {
+  background-color: var(--or-bg-soft);
+  color: var(--locus-ink);
+}
+.md-search__input::placeholder {
+  color: var(--locus-mute);
+}
+.md-search__input + .md-search__icon {
+  color: var(--locus-mute);
+}
+.md-search__input:focus,
+.md-search__input:hover {
+  background-color: #FFFFFF;
+  box-shadow: 0 0 0 2px rgba(199, 70, 52, 0.20);
+}
+
+/* ---------------------------------------------------------------------------
+   Hero treatment for the index page (`# Locus` h1).
+   --------------------------------------------------------------------------- */
+.md-typeset h1:first-of-type {
+  font-size: 2.8rem;
+  letter-spacing: -0.01em;
+}
