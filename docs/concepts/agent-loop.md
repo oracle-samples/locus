@@ -12,8 +12,8 @@ and is composed of four files:
 [`react.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/loop/react.py) (the runner),
 [`nodes.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/loop/nodes.py) (Think / Execute / Reflect / Terminate),
 [`router.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/loop/router.py) (transitions),
-and [`agent_state.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/loop/agent_state.py)
-(the state value object).
+and [`runner.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/loop/runner.py)
+(the loop driver that wires the nodes together).
 
 ## Origin: ReAct, then refinement
 

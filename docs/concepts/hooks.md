@@ -67,3 +67,15 @@ from locus.hooks.builtin import LoggingHook, GuardrailsHook
 
 agent = Agent(..., hooks=[LoggingHook(), GuardrailsHook()])
 ```
+
+## See also
+
+- [Tutorial 05 — agent hooks](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_05_agent_hooks.py)
+  — the basics, end to end.
+- [Tutorial 27 — hooks advanced](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_27_hooks_advanced.py)
+  — write-protected events, retry, cancel.
+- [Tutorial 31 — plugins](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_31_plugins.py)
+  — bundle hooks + tools + lifecycle into a reusable `Plugin`.
+- [Retry Strategies](retry.md), [Safety & Guardrails](safety.md),
+  [Observability](observability.md) — the user-facing concept pages
+  for the built-in hooks.

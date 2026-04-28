@@ -48,4 +48,4 @@ different transports.
 
 ## Source
 
-`src/locus/integrations/mcp/` — built on FastMCP.
+`src/locus/integrations/fastmcp.py` — built on FastMCP.
