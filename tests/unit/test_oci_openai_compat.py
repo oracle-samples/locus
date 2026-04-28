@@ -1,0 +1,294 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
+
+"""Unit tests for the OCI OpenAI-compat model.
+
+Verifies:
+- Auth-mode validation (exactly one of profile/auth_type).
+- Profile path builds an AsyncOpenAI with an OCIRequestSigner-wrapped
+  httpx client.
+- ``auth_type`` paths require ``compartment_id`` and dispatch to the
+  correct signer.
+- Region default and base-URL derivation.
+- Inherited :class:`OpenAIModel` parsing still works.
+
+No live OCI calls — the openai SDK and OCI signers are mocked.
+"""
+
+from __future__ import annotations
+
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
+from locus.core.messages import Message
+from locus.models.providers.oci.openai_compat import (
+    DEFAULT_OCI_GENAI_REGION,
+    OCIOpenAIConfig,
+    OCIOpenAIModel,
+    build_oci_openai_base_url,
+)
+
+
+COMPARTMENT_OCID = "ocid1.compartment.oc1..aaaaaaaaexample"
+
+
+class TestBuildOCIOpenAIBaseURL:
+    def test_default_region(self):
+        assert build_oci_openai_base_url(DEFAULT_OCI_GENAI_REGION) == (
+            "https://inference.generativeai.us-chicago-1.oci.oraclecloud.com/openai/v1"
+        )
+
+    def test_other_region(self):
+        assert build_oci_openai_base_url("eu-frankfurt-1") == (
+            "https://inference.generativeai.eu-frankfurt-1.oci.oraclecloud.com/openai/v1"
+        )
+
+
+class TestAuthModeValidation:
+    def test_no_auth_mode_raises(self):
+        with pytest.raises(ValueError, match="specify exactly one"):
+            OCIOpenAIModel(model="openai.gpt-5.5")
+
+    def test_both_auth_modes_raises(self):
+        with pytest.raises(ValueError, match="specify exactly one"):
+            OCIOpenAIModel(
+                model="openai.gpt-5.5",
+                profile="MY_PROFILE",
+                auth_type="instance_principal",
+                compartment_id=COMPARTMENT_OCID,
+            )
+
+    def test_unknown_auth_type_raises(self):
+        with pytest.raises(ValueError, match="auth_type must be one of"):
+            OCIOpenAIModel(
+                model="openai.gpt-5.5",
+                auth_type="federated_user",
+                compartment_id=COMPARTMENT_OCID,
+            )
+
+    def test_auth_type_without_compartment_raises(self):
+        with pytest.raises(ValueError, match="compartment_id is required"):
+            OCIOpenAIModel(
+                model="openai.gpt-5.5",
+                auth_type="instance_principal",
+            )
+
+
+class TestProfileMode:
+    def test_config_set(self):
+        with patch(
+            "locus.models.providers.oci.openai_compat._load_profile_config",
+            return_value={"tenancy": COMPARTMENT_OCID},
+        ):
+            model = OCIOpenAIModel(model="openai.gpt-5.5", profile="MY_PROFILE")
+        assert model.config.profile == "MY_PROFILE"
+        assert model.config.auth_type is None
+        assert model.config.compartment_id == COMPARTMENT_OCID
+        assert model.config.region == DEFAULT_OCI_GENAI_REGION
+
+    def test_compartment_auto_derived_from_profile_tenancy(self):
+        with patch(
+            "locus.models.providers.oci.openai_compat._load_profile_config",
+            return_value={"tenancy": "ocid1.tenancy.oc1..fromprofile"},
+        ):
+            model = OCIOpenAIModel(model="openai.gpt-5.5", profile="MY_PROFILE")
+        assert model.config.compartment_id == "ocid1.tenancy.oc1..fromprofile"
+
+    def test_explicit_compartment_overrides_auto_derive(self):
+        with patch(
+            "locus.models.providers.oci.openai_compat._load_profile_config",
+            return_value={"tenancy": "ocid1.tenancy.oc1..fromprofile"},
+        ) as mock_load:
+            model = OCIOpenAIModel(
+                model="openai.gpt-5.5",
+                profile="MY_PROFILE",
+                compartment_id="ocid1.compartment.oc1..explicit",
+            )
+        # When explicit, no need to load the profile.
+        mock_load.assert_not_called()
+        assert model.config.compartment_id == "ocid1.compartment.oc1..explicit"
+
+    def test_profile_load_failure_does_not_crash_init(self):
+        with patch(
+            "locus.models.providers.oci.openai_compat._load_profile_config",
+            side_effect=FileNotFoundError("no config file"),
+        ):
+            # init should still succeed (compartment ends up None).
+            model = OCIOpenAIModel(model="openai.gpt-5.5", profile="MISSING")
+        assert model.config.compartment_id is None
+
+    def test_client_uses_signer_http_client(self):
+        with patch(
+            "locus.models.providers.oci.openai_compat._load_profile_config",
+            return_value={"tenancy": COMPARTMENT_OCID},
+        ):
+            model = OCIOpenAIModel(model="openai.gpt-5.5", profile="MY_PROFILE")
+
+        signer = MagicMock(name="signer")
+        with (
+            patch(
+                "locus.models.providers.oci.openai_compat._build_signer_from_profile",
+                return_value=signer,
+            ) as mock_build,
+            patch("openai.AsyncOpenAI") as mock_async_openai,
+            patch("httpx.AsyncClient") as mock_httpx_client,
+        ):
+            _ = model.client
+            mock_build.assert_called_once_with("MY_PROFILE", "~/.oci/config")
+            mock_httpx_client.assert_called_once()
+            kwargs = mock_async_openai.call_args.kwargs
+            assert kwargs["api_key"] == "not-used"
+            assert kwargs["base_url"] == build_oci_openai_base_url(DEFAULT_OCI_GENAI_REGION)
+            assert "http_client" in kwargs
+
+    def test_custom_config_file_passed_to_signer(self):
+        with patch(
+            "locus.models.providers.oci.openai_compat._load_profile_config",
+            return_value={"tenancy": COMPARTMENT_OCID},
+        ):
+            model = OCIOpenAIModel(
+                model="openai.gpt-5.5",
+                profile="MY_PROFILE",
+                config_file="/tmp/oci-config",
+            )
+        with (
+            patch(
+                "locus.models.providers.oci.openai_compat._build_signer_from_profile",
+                return_value=MagicMock(),
+            ) as mock_build,
+            patch("openai.AsyncOpenAI"),
+            patch("httpx.AsyncClient"),
+        ):
+            _ = model.client
+            mock_build.assert_called_once_with("MY_PROFILE", "/tmp/oci-config")
+
+
+class TestAuthTypeMode:
+    def test_instance_principal(self):
+        model = OCIOpenAIModel(
+            model="openai.gpt-5.5",
+            auth_type="instance_principal",
+            compartment_id=COMPARTMENT_OCID,
+        )
+        assert model.config.auth_type == "instance_principal"
+        assert model.config.compartment_id == COMPARTMENT_OCID
+
+        with (
+            patch(
+                "locus.models.providers.oci.openai_compat._build_instance_principal_signer",
+                return_value=MagicMock(),
+            ) as mock_build,
+            patch("openai.AsyncOpenAI"),
+            patch("httpx.AsyncClient"),
+        ):
+            _ = model.client
+            mock_build.assert_called_once_with()
+
+    def test_resource_principal(self):
+        model = OCIOpenAIModel(
+            model="openai.gpt-5.5",
+            auth_type="resource_principal",
+            compartment_id=COMPARTMENT_OCID,
+        )
+        assert model.config.auth_type == "resource_principal"
+
+        with (
+            patch(
+                "locus.models.providers.oci.openai_compat._build_resource_principal_signer",
+                return_value=MagicMock(),
+            ) as mock_build,
+            patch("openai.AsyncOpenAI"),
+            patch("httpx.AsyncClient"),
+        ):
+            _ = model.client
+            mock_build.assert_called_once_with()
+
+
+class TestBaseURLAndRegion:
+    def test_explicit_base_url_wins(self):
+        with patch(
+            "locus.models.providers.oci.openai_compat._load_profile_config",
+            return_value={"tenancy": COMPARTMENT_OCID},
+        ):
+            model = OCIOpenAIModel(
+                model="openai.gpt-5.5",
+                profile="MY_PROFILE",
+                base_url="https://custom.example.com/v1",
+            )
+        assert model.config.base_url == "https://custom.example.com/v1"
+
+    def test_other_region(self):
+        with patch(
+            "locus.models.providers.oci.openai_compat._load_profile_config",
+            return_value={"tenancy": COMPARTMENT_OCID},
+        ):
+            model = OCIOpenAIModel(
+                model="openai.gpt-5.5",
+                profile="MY_PROFILE",
+                region="eu-frankfurt-1",
+            )
+        assert model.config.base_url == (
+            "https://inference.generativeai.eu-frankfurt-1.oci.oraclecloud.com/openai/v1"
+        )
+
+
+class TestClientCaching:
+    def test_client_built_once(self):
+        with patch(
+            "locus.models.providers.oci.openai_compat._load_profile_config",
+            return_value={"tenancy": COMPARTMENT_OCID},
+        ):
+            model = OCIOpenAIModel(model="openai.gpt-5.5", profile="MY_PROFILE")
+        with (
+            patch(
+                "locus.models.providers.oci.openai_compat._build_signer_from_profile",
+                return_value=MagicMock(),
+            ),
+            patch("openai.AsyncOpenAI") as mock_async_openai,
+            patch("httpx.AsyncClient"),
+        ):
+            mock_async_openai.return_value = MagicMock()
+            first = model.client
+            second = model.client
+            assert first is second
+            assert mock_async_openai.call_count == 1
+
+
+class TestConfigInheritsOpenAIFields:
+    def test_seed_and_stop_sequences(self):
+        config = OCIOpenAIConfig(
+            model="openai.gpt-5.5",
+            seed=42,
+            stop_sequences=["STOP"],
+        )
+        assert config.seed == 42
+        assert config.stop_sequences == ["STOP"]
+
+
+class TestCompleteEndToEndMocked:
+    """Confirms inherited complete() still works through the OCI subclass."""
+
+    @pytest.mark.asyncio
+    async def test_complete(self):
+        with patch(
+            "locus.models.providers.oci.openai_compat._load_profile_config",
+            return_value={"tenancy": COMPARTMENT_OCID},
+        ):
+            model = OCIOpenAIModel(model="openai.gpt-5.5", profile="MY_PROFILE")
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "Hi from OCI"
+        mock_response.choices[0].message.tool_calls = None
+        mock_response.choices[0].finish_reason = "stop"
+        mock_response.usage.prompt_tokens = 5
+        mock_response.usage.completion_tokens = 3
+
+        mock_client = MagicMock()
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+        model._client = mock_client
+
+        result = await model.complete([Message.user("Hi")])
+        assert result.message.content == "Hi from OCI"
+        assert result.stop_reason == "stop"
