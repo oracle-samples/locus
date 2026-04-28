@@ -331,7 +331,7 @@ path. No magic, no hidden registries, no import-time side-effects.
 | Skills · AgentSkills.io | [`src/locus/skills/`](https://github.com/oracle-samples/locus/tree/main/src/locus/skills) |
 | Playbooks · enforcer | [`src/locus/playbooks/`](https://github.com/oracle-samples/locus/tree/main/src/locus/playbooks) |
 | Evaluation harness | [`src/locus/evaluation/`](https://github.com/oracle-samples/locus/tree/main/src/locus/evaluation) |
-| MCP client + server | [`src/locus/integrations/mcp/`](https://github.com/oracle-samples/locus/tree/main/src/locus/integrations/mcp) |
+| MCP client + server | [`src/locus/integrations/fastmcp.py`](https://github.com/oracle-samples/locus/tree/main/src/locus/integrations/fastmcp.py) |
 | A2A protocol | [`src/locus/a2a/`](https://github.com/oracle-samples/locus/tree/main/src/locus/a2a) |
 
 Read the [concepts](concepts/agent.md) for the *why*; read the
@@ -395,6 +395,7 @@ The six in-process patterns plus A2A:
 [Agent Server](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_28_agent_server.py) ·
 [Model providers](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_29_model_providers.py) ·
 [Guardrails advanced](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_30_guardrails_advanced.py) ·
+[Plugins](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_31_plugins.py) ·
 [Steering](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_33_steering.py) ·
 [Graph advanced](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_35_graph_advanced.py) ·
 [Termination](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_37_termination.py).
