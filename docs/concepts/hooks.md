@@ -52,30 +52,31 @@ explicit, so the intent is unambiguous.
 
 ## Built-in hooks
 
-Locus ships five batteries:
+Locus ships these out of the box:
 
 | Hook | What it does |
 |---|---|
-| `LoggingHook` | Structured logs at every phase |
-| `RetryHook` | Exponential backoff on model throttling |
-| `GuardrailsHook` | PII detection, SQL/XSS/command-injection checks |
-| `SteeringHook` | LLM-powered real-time tool approval |
-| `TelemetryHook` | OpenTelemetry spans + metrics |
+| `LoggingHook` / `StructuredLoggingHook` | Plain or JSON-structured logs at every phase |
+| `TelemetryHook` / `NoOpTelemetryHook` | OpenTelemetry spans + counters + histograms |
+| `ModelRetryHook` | Backoff retries on empty / rate-limited model responses |
+| `GuardrailsHook` / `ContentFilterHook` | PII / SQL / XSS / command-injection regex policies |
+| `SteeringHook` | LLM-as-judge tool approval (a second model votes before each tool call) |
 
 ```python
-from locus.hooks.builtin import LoggingHook, GuardrailsHook
+from locus.hooks.builtin import (
+    GuardrailsHook,
+    LoggingHook,
+    ModelRetryHook,
+    SteeringHook,
+    TelemetryHook,
+)
 
-agent = Agent(..., hooks=[LoggingHook(), GuardrailsHook()])
+agent = Agent(
+    ...,
+    hooks=[
+        LoggingHook(),
+        ModelRetryHook(max_retries=3),
+        GuardrailsHook(),
+    ],
+)
 ```
-
-## See also
-
-- [Tutorial 05 — agent hooks](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_05_agent_hooks.py)
-  — the basics, end to end.
-- [Tutorial 27 — hooks advanced](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_27_hooks_advanced.py)
-  — write-protected events, retry, cancel.
-- [Tutorial 31 — plugins](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_31_plugins.py)
-  — bundle hooks + tools + lifecycle into a reusable `Plugin`.
-- [Retry Strategies](retry.md), [Safety & Guardrails](safety.md),
-  [Observability](observability.md) — the user-facing concept pages
-  for the built-in hooks.

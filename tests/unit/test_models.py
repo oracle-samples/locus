@@ -361,6 +361,93 @@ class TestAnthropicModel:
 
         assert "anthropic" in list_providers()
 
+    def test_structured_output_tool_translates_response_format(self):
+        """``response_format`` becomes a synthetic ``respond_with_schema`` tool.
+
+        Anthropic does not accept OpenAI's ``response_format``; the idiomatic
+        equivalent is to declare a tool whose ``input_schema`` is the desired
+        JSON schema and pin ``tool_choice`` to it. This guards that translation.
+        """
+        pytest.importorskip("anthropic")
+        from pydantic import BaseModel
+
+        from locus.core.structured import build_response_format
+        from locus.models.native.anthropic import AnthropicModel
+
+        class Reply(BaseModel):
+            answer: str
+            confidence: float
+
+        model = AnthropicModel(api_key="test")
+        rf = build_response_format(Reply, strict=True)
+        tool = model._structured_output_tool(rf)
+
+        assert tool["name"] == "respond_with_schema"
+        assert "input_schema" in tool
+        # The tool's ``input_schema`` must carry the field names from the model.
+        properties = tool["input_schema"].get("properties", {})
+        assert "answer" in properties
+        assert "confidence" in properties
+
+    async def test_structured_output_extracts_tool_args_as_content(self):
+        """In structured mode the tool's args are surfaced as message content.
+
+        Downstream ``parse_structured`` should be able to validate them just
+        as it would a native ``response_format`` provider response.
+        """
+        pytest.importorskip("anthropic")
+        from unittest.mock import AsyncMock, MagicMock
+
+        from pydantic import BaseModel
+
+        from locus.core.messages import Message
+        from locus.core.structured import build_response_format, parse_structured
+        from locus.models.native.anthropic import AnthropicModel
+
+        class Reply(BaseModel):
+            answer: str
+            confidence: float
+
+        # Build a fake Anthropic SDK response with a single ``tool_use`` block.
+        tool_block = MagicMock()
+        tool_block.type = "tool_use"
+        tool_block.id = "tu_1"
+        tool_block.name = "respond_with_schema"
+        tool_block.input = {"answer": "42", "confidence": 0.99}
+        fake_response = MagicMock()
+        fake_response.content = [tool_block]
+        fake_response.usage.input_tokens = 10
+        fake_response.usage.output_tokens = 5
+        fake_response.stop_reason = "tool_use"
+
+        model = AnthropicModel(api_key="test")
+        # Inject a stub client so we don't hit the network.
+        stub_client = MagicMock()
+        stub_client.messages.create = AsyncMock(return_value=fake_response)
+        model._client = stub_client
+
+        result = await model.complete(
+            [Message.user("What is the answer?")],
+            tools=None,
+            response_format=build_response_format(Reply, strict=True),
+        )
+
+        # The tool_use block's input must be JSON-dumped onto ``message.content``.
+        assert result.message.content is not None
+        parsed = parse_structured(result.message.content, Reply)
+        assert parsed.parsed is not None
+        assert parsed.parsed.answer == "42"
+        assert parsed.parsed.confidence == 0.99
+        # The synthetic tool must NOT bubble up as a tool_call to the agent loop.
+        assert result.message.tool_calls == []
+        # The Anthropic call must have shipped tool_choice pinned to our tool.
+        sent_kwargs = stub_client.messages.create.call_args.kwargs
+        assert sent_kwargs["tool_choice"] == {
+            "type": "tool",
+            "name": "respond_with_schema",
+        }
+        assert any(t["name"] == "respond_with_schema" for t in sent_kwargs["tools"])
+
 
 # =============================================================================
 # Ollama Provider Tests

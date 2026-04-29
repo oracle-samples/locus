@@ -18,6 +18,9 @@
   --locus-ink:      #312D2A;   /* wordmark colour */
   --locus-mute:     #78716C;   /* tagline grey */
   --locus-paper:    #FAFAF9;   /* logo white-out — paper */
+  --locus-surface:  #FFFFFF;   /* elevated surface (header, cards, focused inputs) */
+  --locus-table-stripe: rgba(244, 239, 236, 0.45);
+  --locus-code-inline: var(--or-red-deep);
 
   /* Oracle FY26 palette */
   --or-text:        #2A2F2F;   /* dk1 */
@@ -82,13 +85,50 @@
 [data-md-color-scheme="slate"] {
   --md-hue: 200;
 
+  /* Flip the locus brand greys for dark mode — everything that uses
+     these variables (text colour, header bg, card bg, tagline mute,
+     code surface, tables) now reads correctly without needing
+     per-rule overrides. */
+  --locus-ink:      #F0EBE6;            /* warm off-white ink */
+  --locus-mute:     #9F9892;            /* mid-grey for taglines / muted text */
+  --locus-paper:    #1B1A18;            /* deep warm near-black — page bg */
+  --locus-surface:  #1F1D1A;            /* slight elevation — header, cards */
+  --locus-table-stripe: rgba(240, 235, 230, 0.04);
+  --locus-code-inline: var(--or-red-light);
+
+  --or-text:        #F0EBE6;
+  --or-bg:          #1B1A18;            /* page background */
+  --or-bg-soft:     #25231F;            /* card / code surface — one step lighter */
+  --or-rule:        #36332E;            /* hairline borders */
+
+  /* Material's variable surface */
   --md-primary-fg-color:        var(--or-red);
   --md-primary-fg-color--light:  var(--or-red-light);
   --md-primary-fg-color--dark:   var(--or-red-deep);
+  --md-primary-bg-color:        #1B1A18;
+  --md-primary-bg-color--light: #1B1A18cc;
 
   --md-accent-fg-color:         var(--or-sand);
+  --md-accent-fg-color--transparent: rgba(240, 204, 113, 0.15);
+  --md-accent-bg-color:         #25231F;
+
+  --md-default-bg-color:        var(--or-bg);
+  --md-default-fg-color:        var(--or-text);
+  --md-default-fg-color--light: #c9c4be;
+  --md-default-fg-color--lighter: #95908a;
+  --md-default-fg-color--lightest: #4a4844;
+
+  --md-typeset-color:           var(--or-text);
   --md-typeset-a-color:          var(--or-sand);
-  --md-typeset-mark-color:       rgba(240, 204, 113, 0.30);
+  --md-typeset-mark-color:       rgba(240, 204, 113, 0.28);
+
+  --md-footer-bg-color:         #131211;
+  --md-footer-bg-color--dark:    #0c0b0a;
+  --md-footer-fg-color:         #F0EBE6;
+  --md-footer-fg-color--light:   #b8b3ad;
+
+  --md-code-bg-color:           #25231F;
+  --md-code-fg-color:           #E8E2DA;
 }
 
 /* ---------------------------------------------------------------------------
@@ -202,21 +242,6 @@
 }
 .md-typeset .locus-hero h1 .accent {
   color: var(--or-red);
-  position: relative;
-  display: inline-block;
-}
-.md-typeset .locus-hero h1 .accent::after {
-  content: "";
-  position: absolute;
-  left: -0.05em; right: -0.05em; bottom: 0.06em;
-  height: 0.30em;
-  background: linear-gradient(
-              90deg,
-              rgba(199, 70, 52, 0.22) 0%,
-              rgba(240, 204, 113, 0.30) 100%);   /* red → sand sweep */
-  z-index: -1;
-  border-radius: 3px;
-  transform: skewX(-6deg);
 }
 .md-typeset .locus-hero p {
   font-size: 1.05rem;
@@ -285,7 +310,7 @@
 }
 .md-typeset .grid.cards > ul > li,
 .md-typeset .grid.cards > ol > li {
-  background: #FFFFFF;
+  background: var(--locus-surface);
   border: 1px solid var(--or-rule);
   border-radius: 6px;
   padding: 1rem 1.1rem;
@@ -307,7 +332,7 @@
    Layout: locus mark (icon) left · "locus" + tagline middle · GitHub right.
    --------------------------------------------------------------------------- */
 .md-header {
-  background-color: #FFFFFF;
+  background-color: var(--locus-surface);
   color: var(--locus-ink);
   border-bottom: 1px solid var(--or-rule);
   box-shadow: 0 6px 16px -12px rgba(49, 45, 42, 0.18);
@@ -382,14 +407,27 @@
   }
 }
 
+/* Header right slot — keep OCI/Oracle button and GitHub icon on one row.
+   Material wraps source.html in `<div class="md-header__source">`, and our two
+   anchors inside it are also `md-header__source` (block, width:100%). Force the
+   parent slot to flex-row and let the children size to content. */
+.md-header__source:has(> .md-header__oci) {
+  display: flex !important;
+  align-items: center;
+  flex-direction: row;
+  gap: 0.25rem;
+  width: auto;
+  max-width: none;
+}
+
 /* Right side — OCI rounded-O mark + black Oracle wordmark, linked
-   to oracle.com/.../generative-ai. GitHub repo link lives in the footer. */
+   to oracle.com/.../generative-ai. */
 .md-header__source.md-header__oci {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.35rem 0.55rem;
-  margin-right: -0.3rem;
+  margin-right: 0;
   margin-left: 0.3rem;
   border-radius: 7px;
   transition: background-color 0.15s, transform 0.15s, box-shadow 0.15s;
@@ -469,8 +507,8 @@
    Code blocks — soft sand background, Oracle red filename tab.
    --------------------------------------------------------------------------- */
 .md-typeset code {
-  background-color: rgba(199, 70, 52, 0.06);
-  color: var(--or-red-deep);
+  background-color: rgba(199, 70, 52, 0.10);
+  color: var(--locus-code-inline);
   border-radius: 3px;
   font-size: 0.85em;
 }
@@ -500,7 +538,7 @@
   border-bottom: 2px solid var(--or-red);
 }
 .md-typeset table:not([class]) tr:nth-child(even) {
-  background-color: rgba(244, 239, 236, 0.45);
+  background-color: var(--locus-table-stripe);
 }
 
 /* ---------------------------------------------------------------------------
@@ -642,7 +680,7 @@
 }
 .md-search__input:focus,
 .md-search__input:hover {
-  background-color: #FFFFFF;
+  background-color: var(--locus-surface);
   box-shadow: 0 0 0 2px rgba(199, 70, 52, 0.20);
 }
 
@@ -652,4 +690,65 @@
 .md-typeset h1:first-of-type {
   font-size: 2.8rem;
   letter-spacing: -0.01em;
+}
+
+/* ---------------------------------------------------------------------------
+   Diagrams — responsive sizing for the agent-loop SVG and similar.
+   --------------------------------------------------------------------------- */
+.md-typeset img[src*="agent-loop"],
+.md-typeset img[src*="multi-agent-patterns"],
+.md-typeset img[src*="img/patterns/"],
+.md-typeset img.diagram {
+  display: block;
+  width: 100%;
+  max-width: 720px;
+  height: auto;
+  margin: 1.5rem auto;
+}
+.md-typeset img[src*="multi-agent-patterns"] {
+  max-width: 920px;
+}
+
+/* ---------------------------------------------------------------------------
+   Dark-mode logo handling.
+   - Oracle wordmark (black-fill) → invert filter flips to white.
+   - locus mark (dark stroke + red accents) → swap to mark-dark.svg variant
+     which has the stroke recoloured to off-white.
+   --------------------------------------------------------------------------- */
+[data-md-color-scheme="slate"] .md-header__oracle-wordmark {
+  content: url("../img/oracle-white.svg");
+}
+[data-md-color-scheme="slate"] .md-header__button.md-logo img {
+  content: url("../img/mark-dark.svg");
+}
+/* Footer Oracle wordmark already inverts the red SVG to white via filter;
+   in dark mode swap to the official white SVG and drop the filter. */
+[data-md-color-scheme="slate"] .oracle-mark {
+  background-image: url("../img/oracle-white.svg");
+  filter: none;
+}
+
+/* Header GitHub link — sits next to the OCI / Oracle source button. */
+.md-header__source.md-header__github {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  max-width: none;
+  padding: 0;
+  margin-left: 0.4rem;
+  border-radius: 8px;
+  color: var(--locus-ink);
+  transition: background-color 0.15s, color 0.15s, transform 0.15s;
+}
+.md-header__source.md-header__github:hover {
+  background-color: rgba(199, 70, 52, 0.10);
+  color: var(--or-red);
+  transform: translateY(-1px);
+}
+.md-header__github-icon {
+  width: 22px;
+  height: 22px;
+  display: block;
 }

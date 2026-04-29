@@ -5,9 +5,11 @@
 """FastAPI-based agent server.
 
 Exposes a Locus Agent as HTTP endpoints:
-- POST /invoke  — synchronous invocation, returns final result
-- POST /stream  — SSE streaming of agent events
-- GET  /health  — health check
+- POST   /invoke         — synchronous invocation, returns final result
+- POST   /stream         — SSE streaming of agent events
+- GET    /threads/{tid}  — load a thread's persisted state (requires checkpointer)
+- DELETE /threads/{tid}  — drop a thread's persisted state (requires checkpointer)
+- GET    /health         — health check
 
 Security model
 --------------
@@ -337,6 +339,62 @@ class AgentServer:
                 event_generator(),
                 media_type="text/event-stream",
             )
+
+        @app.get("/threads/{thread_id}")
+        async def get_thread(
+            thread_id: str,
+            principal: str = auth_dep,
+        ) -> dict[str, Any]:
+            """Return the persisted thread state, scoped to the caller principal.
+
+            Returns 404 if no checkpointer is configured or the thread isn't
+            found. The principal-scoping prevents thread enumeration across
+            API keys when an upstream proxy multiplexes clients.
+            """
+            from fastapi import HTTPException
+
+            checkpointer = agent.config.checkpointer
+            if checkpointer is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="No checkpointer configured on this AgentServer",
+                )
+            scoped_id = scope_thread(principal, thread_id)
+            state = await checkpointer.load(scoped_id)
+            if state is None:
+                raise HTTPException(status_code=404, detail=f"Thread {thread_id!r} not found")
+            # Hand back the public Pydantic projection. AgentState is already
+            # JSON-serializable; the principal scope is intentionally hidden
+            # from the response (callers see their unprefixed id).
+            return {
+                "thread_id": thread_id,
+                "iteration": state.iteration,
+                "messages": [m.model_dump(mode="json") for m in state.messages],
+                "tool_executions": [te.model_dump(mode="json") for te in state.tool_executions],
+                "metadata": state.metadata,
+            }
+
+        @app.delete("/threads/{thread_id}")
+        async def delete_thread(
+            thread_id: str,
+            principal: str = auth_dep,
+        ) -> dict[str, Any]:
+            """Drop a thread's persisted state. 404 when no checkpointer.
+
+            Idempotent: deleting a non-existent thread returns ``deleted=False``
+            with a 200, matching ``BaseCheckpointer.delete()``'s contract.
+            """
+            from fastapi import HTTPException
+
+            checkpointer = agent.config.checkpointer
+            if checkpointer is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="No checkpointer configured on this AgentServer",
+                )
+            scoped_id = scope_thread(principal, thread_id)
+            deleted = await checkpointer.delete(scoped_id)
+            return {"thread_id": thread_id, "deleted": bool(deleted)}
 
         return app
 

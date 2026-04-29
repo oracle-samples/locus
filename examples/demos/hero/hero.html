@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Locus hero</title>
+    <style>
+      :root {
+        --bg: #0e0e10;
+        --fg: #f6f5f4;
+        --dim: #b9b6b3;
+        --muted: #6f6c69;
+        --red: #c74634;
+        --green: #4cb37b;
+        --yellow: #ffb454;
+        --blue: #6cb0ff;
+        --panel: #1a1a1d;
+        --line: #2a2a2e;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; padding: 0; width: 100%; height: 100%;
+        background: var(--bg); color: var(--fg);
+        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
+          system-ui, sans-serif;
+        overflow: hidden;
+      }
+      .stage {
+        width: 1280px; height: 720px; position: relative;
+        margin: 0 auto;
+      }
+
+      /* ───── Scene 1: title ───────────────────────────────────────── */
+      .title {
+        position: absolute; inset: 0;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        opacity: 0;
+        animation: title 5s ease forwards;
+      }
+      @keyframes title {
+        0%   { opacity: 0; transform: translateY(8px); }
+        12%  { opacity: 1; transform: translateY(0); }
+        78%  { opacity: 1; transform: translateY(0); }
+        100% { opacity: 0; transform: translateY(-8px); }
+      }
+      .mark { width: 96px; height: 96px; margin-bottom: 24px; }
+      .title h1 {
+        font-size: 56px; font-weight: 700; letter-spacing: -0.02em;
+        margin: 0;
+      }
+      .title .sub {
+        margin-top: 16px;
+        font-size: 18px; color: var(--dim); letter-spacing: 0.02em;
+      }
+      .title .badges { margin-top: 28px; display: flex; gap: 14px; }
+      .title .badge {
+        font-size: 12px; padding: 6px 12px;
+        border: 1px solid var(--line); border-radius: 999px;
+        color: var(--dim);
+      }
+      .title .badge strong { color: var(--fg); font-weight: 600; }
+
+      /* ───── Scene 2: code panel ──────────────────────────────────── */
+      .code-stage {
+        position: absolute; inset: 0;
+        opacity: 0;
+        animation: code-stage 19s ease forwards;
+        animation-delay: 4.5s;
+      }
+      @keyframes code-stage {
+        0%   { opacity: 0; }
+        3%   { opacity: 1; }
+        95%  { opacity: 1; }
+        100% { opacity: 0; }
+      }
+      .code-panel {
+        position: absolute;
+        top: 60px; left: 80px; width: 1120px;
+        background: var(--panel); border: 1px solid var(--line);
+        border-radius: 12px;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 16px; line-height: 1.5;
+        overflow: hidden;
+      }
+      .code-head {
+        padding: 10px 16px; border-bottom: 1px solid var(--line);
+        display: flex; align-items: center; gap: 10px;
+        font-size: 12px; color: var(--muted);
+      }
+      .code-head .dot {
+        width: 11px; height: 11px; border-radius: 50%;
+        background: var(--line);
+      }
+      .code-head .file { margin-left: 8px; color: var(--dim); }
+      .code-body {
+        padding: 16px 20px; white-space: pre;
+        color: var(--fg);
+      }
+      .kw   { color: #ff79c6; }
+      .str  { color: #f1fa8c; }
+      .com  { color: var(--muted); }
+      .fn   { color: #50fa7b; }
+      .num  { color: #bd93f9; }
+      .self { color: var(--blue); }
+
+      /* Highlight pulses on key terms */
+      .hl {
+        background: rgba(199, 70, 52, 0.18);
+        border-radius: 4px;
+        padding: 0 4px;
+        box-shadow: 0 0 0 0 rgba(199, 70, 52, 0.5);
+        animation: pulse 1.4s ease both;
+      }
+      .hl-1 { animation-delay: 6.5s; }
+      .hl-2 { animation-delay: 11s; }
+      .hl-3 { animation-delay: 15.5s; }
+      @keyframes pulse {
+        0%   { background: rgba(199, 70, 52, 0); box-shadow: 0 0 0 0 rgba(199, 70, 52, 0); }
+        20%  { background: rgba(199, 70, 52, 0.32); box-shadow: 0 0 0 6px rgba(199, 70, 52, 0.18); }
+        100% { background: rgba(199, 70, 52, 0.18); box-shadow: 0 0 0 0 rgba(199, 70, 52, 0); }
+      }
+
+      /* Callout labels next to highlights */
+      .callout {
+        position: absolute;
+        font-size: 13px; font-weight: 600;
+        color: var(--red);
+        background: var(--bg);
+        padding: 4px 10px; border-radius: 6px;
+        border: 1px solid var(--red);
+        white-space: nowrap;
+        opacity: 0;
+        transform: translateX(-10px);
+      }
+      .co-1 { top: 188px; right: 80px; animation: cofade 4s ease both 6.5s; }
+      .co-2 { top: 360px; right: 80px; animation: cofade 4s ease both 11s; }
+      .co-3 { top: 500px; right: 80px; animation: cofade 4s ease both 15.5s; }
+      @keyframes cofade {
+        0%   { opacity: 0; transform: translateX(-10px); }
+        20%  { opacity: 1; transform: translateX(0); }
+        80%  { opacity: 1; transform: translateX(0); }
+        100% { opacity: 0; }
+      }
+
+      /* ───── Scene 3: terminal trace ─────────────────────────────── */
+      .term-stage {
+        position: absolute; inset: 0;
+        opacity: 0;
+        animation: term-stage 18s ease forwards;
+        animation-delay: 23s;
+      }
+      @keyframes term-stage {
+        0%   { opacity: 0; }
+        4%   { opacity: 1; }
+        92%  { opacity: 1; }
+        100% { opacity: 1; }
+      }
+      .term {
+        position: absolute;
+        top: 40px; left: 80px; width: 1120px; height: 640px;
+        background: #0a0a0c; border: 1px solid var(--line);
+        border-radius: 12px; overflow: hidden;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 15px; line-height: 1.55;
+      }
+      .term-head {
+        padding: 10px 16px; border-bottom: 1px solid var(--line);
+        font-size: 12px; color: var(--muted);
+        display: flex; align-items: center; justify-content: space-between;
+      }
+      .term-head .what {
+        font-size: 12px; color: var(--dim);
+      }
+      .result-box {
+        margin: 16px 20px; padding: 16px 20px;
+        background: linear-gradient(135deg, rgba(76,179,123,0.10), rgba(14,30,20,0.4));
+        border: 1px solid var(--green); border-radius: 10px;
+        opacity: 0;
+        animation: lineIn 0.6s ease 6.5s forwards;
+      }
+      .result-box .label {
+        font-size: 11px; color: var(--green); letter-spacing: 0.18em;
+        font-weight: 700; margin-bottom: 8px;
+      }
+      .result-box .msg {
+        font-size: 14px; color: var(--fg); font-weight: 400;
+        line-height: 1.55;
+        font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+      }
+      .result-box .msg em {
+        color: var(--dim); font-style: normal; font-weight: 600;
+        margin-right: 6px;
+      }
+      .term-body { padding: 14px 20px; color: var(--dim); }
+      .term-body .l { opacity: 0; }
+      .term-body .think { color: var(--blue); }
+      .term-body .tool  { color: var(--yellow); }
+      .term-body .row   { color: var(--green); }
+      .term-body .reflex{ color: #c8a8ff; }
+      .term-body .ok    { color: var(--green); font-weight: 700; }
+      .term-body .red   { color: var(--red); font-weight: 600; }
+      .term-body b      { color: var(--fg); font-weight: 600; }
+
+      /* Each line fades in at its own time */
+      @keyframes lineIn {
+        from { opacity: 0; transform: translateY(4px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      .l { animation: lineIn 0.25s ease forwards; }
+
+      /* ───── Scene 4: victory ────────────────────────────────────── */
+      .victory {
+        position: absolute;
+        left: 50%; bottom: 40px;
+        transform: translateX(-50%) translateY(60px);
+        opacity: 0;
+        animation: vict 6s ease forwards;
+        animation-delay: 36s;
+        background: linear-gradient(135deg, #1c2c20, #0e1a13);
+        border: 1px solid var(--green); border-radius: 14px;
+        padding: 18px 28px;
+        display: flex; flex-direction: column; gap: 6px;
+      }
+      @keyframes vict {
+        0%   { opacity: 0; transform: translateX(-50%) translateY(60px); }
+        15%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+        100% { opacity: 1; transform: translateX(-50%) translateY(0); }
+      }
+      .victory .top {
+        display: flex; align-items: baseline; gap: 14px;
+      }
+      .victory .check {
+        font-size: 22px; color: var(--green);
+      }
+      .victory .head {
+        font-size: 18px; font-weight: 700; color: var(--fg);
+      }
+      .victory .stats {
+        font-family: ui-monospace, monospace; font-size: 13px;
+        color: var(--dim); letter-spacing: 0.02em;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="stage">
+      <!-- Scene 1: title ─────────────────────────────────────────── -->
+      <div class="title">
+        <svg class="mark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect x="20" y="20" width="60" height="60" rx="4" fill="none" stroke="#f6f5f4" stroke-width="3" transform="rotate(45 50 50)"/>
+          <rect x="28" y="28" width="44" height="44" rx="3" fill="none" stroke="#c74634" stroke-width="3" transform="rotate(22.5 50 50)"/>
+          <rect x="38" y="38" width="24" height="24" rx="2" fill="#c74634"/>
+          <circle cx="50" cy="50" r="4" fill="#0e0e10"/>
+        </svg>
+        <h1>locus</h1>
+        <div class="sub">Build agents that finish.</div>
+        <div class="badges">
+          <span class="badge"><strong>Oracle 26ai</strong> · vector search</span>
+          <span class="badge"><strong>OCI GenAI</strong> · gpt-5.5</span>
+          <span class="badge"><strong>OCI bucket</strong> · checkpointer</span>
+        </div>
+      </div>
+
+      <!-- Scene 2: code ─────────────────────────────────────────── -->
+      <div class="code-stage">
+        <div class="code-panel">
+          <div class="code-head">
+            <span class="dot" style="background:#ff5f57"></span>
+            <span class="dot" style="background:#febc2e"></span>
+            <span class="dot" style="background:#28c840"></span>
+            <span class="file">demo.py</span>
+          </div>
+          <div class="code-body"><span class="kw">from</span> locus <span class="kw">import</span> Agent
+<span class="kw">from</span> locus.rag <span class="kw">import</span> OCIEmbeddings, <span class="hl hl-1">OracleVectorStore</span>, RAGRetriever
+<span class="kw">from</span> locus.memory.backends.oci_bucket <span class="kw">import</span> OCIBucketBackend
+<span class="kw">from</span> locus.tools.decorator <span class="kw">import</span> tool
+
+<span class="com">## tools</span>
+<span class="kw">@tool</span>
+<span class="kw">def</span> <span class="fn">search_corpus</span>(topic: <span class="kw">str</span>, limit: <span class="kw">int</span> = <span class="num">3</span>) -&gt; <span class="kw">list</span>[<span class="kw">dict</span>]:
+    rs = asyncio.run(retriever.retrieve(topic, limit=limit))
+    <span class="kw">return</span> [{<span class="str">"id"</span>: r.document.id, <span class="str">"content"</span>: r.document.content,
+             <span class="str">"score"</span>: <span class="kw">round</span>(r.score, <span class="num">3</span>)} <span class="kw">for</span> r <span class="kw">in</span> rs.documents]
+
+<span class="kw">@tool</span>(<span class="hl hl-2">idempotent=True</span>)
+<span class="kw">def</span> <span class="fn">email_report</span>(to, subject, body): ...
+
+<span class="com">## agent</span>
+agent = Agent(
+    model=<span class="str">"oci:openai.gpt-5.5"</span>,
+    tools=[search_corpus, email_report],
+    skills=[Skill.from_file(<span class="str">"skills/researcher"</span>)],
+    <span class="hl hl-3">reflexion=True</span>,
+    checkpointer=OCIBucketBackend(bucket_name=..., namespace=...),
+)
+agent.run(<span class="str">"Brief me on HNSW. Cite top 3. Email me."</span>)</div>
+        </div>
+        <div class="callout co-1">Oracle 26ai native VECTOR similarity</div>
+        <div class="callout co-2">no double-charges</div>
+        <div class="callout co-3">self-correcting agent</div>
+      </div>
+
+      <!-- Scene 3: terminal ─────────────────────────────────────── -->
+      <div class="term-stage">
+        <div class="term">
+          <div class="term-head">
+            <span>$ python demo.py</span>
+            <span class="what">live · Oracle 26ai · OCI GenAI · OCI bucket</span>
+          </div>
+          <div class="term-body" id="trace">
+            <div class="l" style="animation-delay: 0.3s;"><span class="ok">→</span> Oracle AI Database <b>26ai</b> Enterprise Edition Release 23.26.2.1.0</div>
+            <div class="l" style="animation-delay: 0.7s;"><span class="ok">→</span> LOCUS_DEMO_DOCS: <b>5 rows</b> · <b>VECTOR(1024, FLOAT32)</b></div>
+            <div class="l" style="animation-delay: 1.4s; margin-top:8px;"><span class="think">💭 [iter 1] thinking:</span> I'll load the researcher skill so I can follow its corpus-grounded workflow.</div>
+            <div class="l" style="animation-delay: 1.7s;">   <span class="tool">🔧 skills</span>(skill_name=<span style="color:#f1fa8c;">'researcher'</span>)</div>
+            <div class="l" style="animation-delay: 2.0s;"><span class="reflex">↻ reflexion: new_findings</span> (confidence 0.15)</div>
+            <div class="l" style="animation-delay: 2.6s; margin-top:8px;"><span class="think">💭 [iter 2] thinking:</span> I'll search the corpus for HNSW to find the top three relevant papers.</div>
+            <div class="l" style="animation-delay: 2.9s;">   <span class="tool">🔧 search_corpus</span>(topic=<span style="color:#f1fa8c;">'HNSW'</span>, limit=3)</div>
+            <div class="l" style="animation-delay: 3.2s;"><span class="row">      ↳ Oracle 26ai → id=hnsw         score=0.799</span></div>
+            <div class="l" style="animation-delay: 3.4s;"><span class="row">      ↳ Oracle 26ai → id=embeddings   score=0.565</span></div>
+            <div class="l" style="animation-delay: 3.6s;"><span class="row">      ↳ Oracle 26ai → id=ivf          score=0.558</span></div>
+            <div class="l" style="animation-delay: 3.9s;"><span class="reflex">↻ reflexion: new_findings</span> (confidence 0.26)</div>
+            <div class="l" style="animation-delay: 4.4s; margin-top:8px;"><span class="think">💭 [iter 3] thinking:</span> I'll email the 2-sentence corpus-grounded HNSW summary now.</div>
+            <div class="l" style="animation-delay: 4.7s;">   <span class="tool">🔧 email_report</span>(to=<span style="color:#f1fa8c;">'me@org.com'</span>, subject=<span style="color:#f1fa8c;">'HNSW brief'</span>)</div>
+            <div class="l" style="animation-delay: 5.0s;"><span class="row">      ↳ email mock → 'me@org.com' (540 chars, idempotent)</span></div>
+            <div class="l" style="animation-delay: 5.3s;"><span class="reflex">↻ reflexion: on_track</span> (confidence 0.34)</div>
+
+            <div class="result-box">
+              <div class="label">EMAIL BODY · sent to me@org.com</div>
+              <div class="msg">
+                <em>Subject:</em> HNSW brief<br><br>
+                HNSW (Hierarchical Navigable Small World) is a graph-based
+                approximate nearest-neighbor index that traverses a multi-layer
+                graph from coarse to fine, finding similar vectors in
+                logarithmic time. The corpus cited the seminal HNSW paper
+                (id=hnsw, 2018), the embeddings primer (id=embeddings, 2024),
+                and the IVF baseline (id=ivf, 2017).
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scene 4: victory panel ────────────────────────────────── -->
+      <div class="victory">
+        <div class="top">
+          <span class="check">✓</span>
+          <span class="head">Brief sent.</span>
+        </div>
+        <div class="stats">
+          4 iterations · 3 tools · 5 services · powered by locus on Oracle 26ai
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

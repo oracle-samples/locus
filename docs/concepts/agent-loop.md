@@ -6,6 +6,8 @@ runs next, one typed event stream, one piece of immutable state that
 flows through. This page is the architectural reference — what each
 node does, why it exists, what it emits, and how to extend it.
 
+![locus agent loop — Think → Execute → Reflect → Terminate, with idempotent dedupe at Execute, Reflexion and Causal at Reflect, and composable termination algebra at Terminate](../img/agent-loop.svg)
+
 The loop is implemented in
 [`src/locus/loop/`](https://github.com/oracle-samples/locus/tree/main/src/locus/loop)
 and is composed of four files:
@@ -84,7 +86,7 @@ behaviours make it different from a "just run the function" callback:
    cached result is returned; the body never runs. The model can
    retry, loop, or panic without firing the tool a second time.
    Implementation:
-   [`_find_matching_execution()` in `loop/nodes.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/loop/nodes.py).
+   [`_find_matching_execution()` `loop/nodes.py:114`](https://github.com/oracle-samples/locus/blob/main/src/locus/loop/nodes.py#L114-L144) — called from `ExecuteNode.execute` at [`loop/nodes.py:195`](https://github.com/oracle-samples/locus/blob/main/src/locus/loop/nodes.py#L195).
 
 2. **Parallel dispatch.** Tool calls returned in the same model
    response fire concurrently. Execute awaits them all before
@@ -110,7 +112,7 @@ rather than going straight back to Think:
   repeating pattern.
 
 The Reflector itself
-([`src/locus/reasoning/reflexion.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/reasoning/reflexion.py))
+([`Reflector` class — `reasoning/reflexion.py:70`](https://github.com/oracle-samples/locus/blob/main/src/locus/reasoning/reflexion.py#L70))
 asks the model to evaluate its last step, adjusts a confidence
 score, and emits a `ReflectEvent` carrying the judgment text and
 new confidence. The next Think sees the reflection in its message
@@ -125,7 +127,8 @@ Two complementary reasoning add-ons share the Reflect node:
 
 Both are off by default and switch on via `Agent(grounding=True)` /
 `Agent(causal=True)`. Source:
-[`src/locus/reasoning/`](https://github.com/oracle-samples/locus/tree/main/src/locus/reasoning).
+[`GroundingEvaluator` `reasoning/grounding.py:106`](https://github.com/oracle-samples/locus/blob/main/src/locus/reasoning/grounding.py#L106) ·
+[`CausalChain` `reasoning/causal.py:160`](https://github.com/oracle-samples/locus/blob/main/src/locus/reasoning/causal.py#L160).
 
 ## Terminate
 
@@ -156,7 +159,7 @@ Source:
 ## The router
 
 Transitions between nodes are decided by
-[`Router`](https://github.com/oracle-samples/locus/blob/main/src/locus/loop/router.py).
+[`Router` class — `loop/router.py:36`](https://github.com/oracle-samples/locus/blob/main/src/locus/loop/router.py#L36) (the `route_from_reflect` rule lives at [line 126](https://github.com/oracle-samples/locus/blob/main/src/locus/loop/router.py#L126)).
 It is a pure function of `(current_node, state)` returning the next
 node — no hidden state, no side effects, no surprises. Three rules:
 
@@ -179,14 +182,13 @@ observe but never mutate:
 
 | Event | Emitted by |
 |---|---|
-| `IterationEvent` | the runner, at the start of each iteration |
 | `ThinkEvent` | Think, when the model returns reasoning |
-| `ModelChunkEvent` | Think, per streamed token |
+| `ModelChunkEvent` | Think, per streamed chunk |
 | `ToolStartEvent` | Execute, before each tool fires |
-| `ToolCompleteEvent` | Execute, after each tool returns |
-| `ToolCacheHitEvent` | Execute, when an idempotent dedup short-circuits |
-| `ToolErrorEvent` | Execute, when a tool raises |
+| `ToolCompleteEvent` | Execute, after each tool returns (sets `error` on failure) |
 | `ReflectEvent` | Reflect, after each self-evaluation |
+| `GroundingEvent` | Reflect, after each grounding pass |
+| `InterruptEvent` | Execute, when a tool requests human input |
 | `TerminateEvent` | Terminate, when the loop exits |
 
 Events are Pydantic models with `model_config = {"frozen": True}`.
@@ -210,7 +212,9 @@ Built-in hooks:
 `TelemetryHook` (OpenTelemetry-compatible),
 `ModelRetryHook`, `GuardrailsHook` (topic policy + PII redaction),
 and `SteeringHook` (LLM-as-judge tool approval). Source:
-[`src/locus/hooks/`](https://github.com/oracle-samples/locus/tree/main/src/locus/hooks).
+[`hooks/builtin/__init__.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/hooks/builtin/__init__.py) (re-exports the four most-used hooks) ·
+[`hooks/builtin/steering.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/hooks/builtin/steering.py) ·
+[`hooks/builtin/retry.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/hooks/builtin/retry.py).
 
 ## A concrete example
 

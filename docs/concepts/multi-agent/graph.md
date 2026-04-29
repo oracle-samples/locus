@@ -1,11 +1,55 @@
 # StateGraph
 
-`StateGraph` is the explicit-control-flow shape: nodes do work, edges
-decide what runs next, and state flows through. It supports cycles
-(retry-until-confidence), conditional branches, and subgraphs.
+`StateGraph` is the **explicit-control-flow** shape: nodes do work,
+edges decide what runs next, and state flows through. Cycles
+(retry-until-confidence), conditional branches, and subgraphs are
+all first-class.
+
+![StateGraph pattern — START → plan → research → write → review → END, with a conditional loop-back from review to research when confidence < 0.85](../../img/patterns/graph.svg){ .diagram }
+
+## What it is
+
+- **`StateGraph(state_schema=...)`** — a builder bound to a typed
+  state shape (your own dataclass or BaseModel).
+- **`add_node(name, agent_or_callable)`** — a unit of work.
+- **`add_edge(src, dst)`** — unconditional transition.
+- **`add_conditional_edges(src, fn)`** — `fn(state) → next_node_name`
+  picks the next node dynamically.
+- **`compile()`** — produces a runnable graph; `run` and `run_sync`
+  walk like any agent.
+
+State is a typed value object with custom **reducers** that control
+how each node's output merges into shared fields.
+
+## When to use it
+
+- ✅ The flow has **cycles** — review-loop, retry, refine-until-confidence.
+- ✅ You want **explicit, inspectable control flow** with a Mermaid
+  diagram you can paste into a design doc.
+- ✅ You need **per-node retry / cache policies** (different policies
+  per node).
+- ✅ **Subgraphs** — encapsulate a sub-workflow as a single node.
+
+## When NOT to use it
+
+- ❌ The flow is a **straight pipe** with maybe a fan-out → use
+  [Composition](composition.md).
+- ❌ You don't know the flow at design time; agents should
+  **self-organise** → use [Swarm](swarm.md).
+- ❌ A central agent should **decide which expert runs next** → use
+  [Orchestrator](orchestrator.md).
+
+## Code
 
 ```python
-from locus.multiagent import StateGraph
+from locus.multiagent import StateGraph, END
+from pydantic import BaseModel, Field
+
+class ResearchState(BaseModel):
+    prompt: str
+    research_notes: list[str] = Field(default_factory=list)
+    draft: str = ""
+    confidence: float = 0.0
 
 graph = StateGraph(state_schema=ResearchState)
 
@@ -16,53 +60,83 @@ graph.add_node("review", review_agent)
 
 graph.add_edge("plan", "research")
 graph.add_edge("research", "write")
-graph.add_conditional_edges(
-    "review",
-    lambda state: "write" if state.confidence < 0.8 else END,
-)
 graph.add_edge("write", "review")
 
+graph.add_conditional_edges(
+    "review",
+    lambda state: END if state.confidence >= 0.85 else "research",
+)
+
 result = graph.compile().run_sync({"prompt": "Write a launch brief."})
+print(result.draft)
 ```
 
-State is a typed value object (`ResearchState` here) with custom
-**reducers** controlling how each node's output merges into shared
-fields. Edges can be **static** (always go from A to B) or
-**conditional** (a function of state picks the next node).
+## Per-node policies
 
-## Features
+```python
+from locus.multiagent.graph import RetryPolicy, CachePolicy
 
-- **Cycles** — `add_conditional_edges` can route back to an earlier
-  node. Combine with a [termination](../termination.md) condition to
-  guarantee progress.
-- **Subgraphs** — a node can be another compiled graph. Encapsulate
-  sub-workflows.
-- **Send / SendBatch** — fan-out to N copies of a node with different
-  inputs (map/reduce; see [Functional](functional.md)).
-- **RetryPolicy** / **CachePolicy** per node — retry on transient
-  errors, cache deterministic outputs.
-- **Mermaid** visualisation — `graph.compile().get_mermaid()` for a
-  drop-in diagram.
+graph.add_node(
+    "research",
+    research_agent,
+    retry_policy=RetryPolicy(max_attempts=3, backoff="exponential"),
+    cache_policy=CachePolicy(ttl_seconds=3600),
+)
+```
 
-## When to use
+Retries handle transient failures inside the node. Cache
+short-circuits when an identical input has been seen recently
+(useful for expensive deterministic nodes).
 
-- The flow has cycles (review-loop, retry, refine-until-confidence).
-- You want explicit, inspectable control flow.
-- You need per-node retry / cache policies.
+## Send / SendBatch — fan-out inside a graph
 
-## When not to use
+For map/reduce inside a graph use the `Send` primitive from
+`locus.core.send`:
 
-- The flow is a straight pipe → use [Composition](composition.md).
-- You don't know the flow at design time; agents should self-organise →
-  use [Swarm](swarm.md).
+```python
+from locus.core.send import Send
+
+def fan_out_review(state):
+    return [Send("review_one", {"vendor": v}) for v in state.vendors]
+
+graph.add_conditional_edges("plan", fan_out_review)
+graph.add_node("review_one", review_one_vendor_agent)
+graph.add_edge("review_one", "merge")
+graph.add_node("merge", merge_reviews_agent)
+```
+
+Each `Send` becomes a parallel invocation of the target node with
+the given partial state. The merge node sees all results.
+
+## Mermaid visualisation
+
+```python
+graph.compile().get_mermaid()
+```
+
+…returns a Mermaid flowchart string you can paste into the docs or
+a design review.
 
 ## Tutorials
 
 - [`tutorial_06_basic_graph.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_06_basic_graph.py)
+  — your first StateGraph.
 - [`tutorial_07_conditional_routing.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_07_conditional_routing.py)
+  — `add_conditional_edges`.
 - [`tutorial_08_state_reducers.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_08_state_reducers.py)
+  — custom state reducers.
 - [`tutorial_35_graph_advanced.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_35_graph_advanced.py)
+  — `RetryPolicy`, `CachePolicy`, subgraphs, Mermaid output.
 
 ## Source
 
-`src/locus/multiagent/graph.py`.
+[`multiagent/graph.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/multiagent/graph.py)
+— `StateGraph`, `Node`, `Edge`, `ConditionalEdge`, `RetryPolicy`,
+`CachePolicy`. `Send` lives in
+[`core/send.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/core/send.py).
+
+## See also
+
+- [Multi-agent overview](../multi-agent.md) — pick a shape.
+- [Functional](functional.md) — when you'd rather use plain asyncio.
+- [Termination](../termination.md) — composable stop conditions.

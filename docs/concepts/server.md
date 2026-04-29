@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
 | Path | Method | Body | Returns |
 |---|---|---|---|
-| `/invoke` | POST | `{"prompt": "...", "thread_id": "..."}` | full `RunResult` JSON |
+| `/invoke` | POST | `{"prompt": "...", "thread_id": "..."}` | full `AgentResult` JSON |
 | `/stream` | POST | same | `text/event-stream` SSE of typed events |
 | `/health` | GET | — | liveness probe |
 | `/threads/{tid}` | GET | — | conversation history (if checkpointer set) |

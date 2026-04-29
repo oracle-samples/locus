@@ -1,16 +1,17 @@
 # Observability
 
-What the agent did, how long each step took, and what it cost — three
-hooks and the standard OpenTelemetry stack do all of it.
+What the agent did, how long each step took, and what it cost — two
+built-in hooks plus the standard OpenTelemetry stack do all of it.
 
 ## Logging
 
 ```python
+import logging
 from locus.hooks.builtin import StructuredLoggingHook
 
 agent = Agent(
     model=...,
-    hooks=[StructuredLoggingHook(level="INFO")],
+    hooks=[StructuredLoggingHook(level=logging.INFO)],
 )
 ```
 
@@ -33,29 +34,30 @@ from locus.hooks.builtin import TelemetryHook
 
 agent = Agent(
     model=...,
-    hooks=[TelemetryHook(otel_exporter="grpc://otel-collector:4317")],
+    hooks=[TelemetryHook(service_name="procurement-agent")],
 )
 ```
 
-Emits OpenTelemetry spans for every iteration, every tool call, and
-every model call. Counters: `agent.iterations`, `agent.tool_calls`,
-`agent.tokens.{prompt,completion}`. Histograms: `agent.tool.duration`,
-`agent.model.ttft`.
+Emits OpenTelemetry spans for every invocation, every iteration, and
+every tool call. Counters: `locus.invocations`, `locus.iterations`,
+`locus.tool_calls`, `locus.tool_errors`. Histograms:
+`locus.invocation.duration`, `locus.tool_call.duration`.
 
-The exporter target is up to you — Honeycomb, Tempo, OCI APM, Grafana
-Cloud, anything that speaks OTLP. locus does not lock you into a
-vendor-hosted backend.
+The exporter target is configured the standard OpenTelemetry way — set
+`OTEL_EXPORTER_OTLP_ENDPOINT` (and friends) before the agent starts.
+Honeycomb, Tempo, OCI APM, Grafana Cloud — anything that speaks OTLP
+works. locus does not lock you into a vendor-hosted backend.
 
 ## Cost
 
-`TelemetryHook` records token usage on every model call (input,
-completion, and reasoning tokens where the provider exposes them).
-Read the totals off the `RunResult` returned by `agent.run_sync(...)`:
+Token totals are accumulated by the agent loop and surfaced on the
+`AgentResult` returned by `agent.run_sync(...)`:
 
 ```python
 result = agent.run_sync("Plan Q3 launch.")
-print(f"prompt: {result.token_usage.prompt}")
-print(f"completion: {result.token_usage.completion}")
+print(f"prompt: {result.metrics.prompt_tokens}")
+print(f"completion: {result.metrics.completion_tokens}")
+print(f"total: {result.metrics.total_tokens}")
 ```
 
 Multiply by your provider's per-token rate to get a per-run cost.
@@ -67,4 +69,4 @@ Multiply by your provider's per-token rate to get a per-run cost.
 
 ## Source
 
-`src/locus/hooks/logging.py`, `src/locus/hooks/telemetry.py`.
+`src/locus/hooks/builtin/logging.py`, `src/locus/hooks/builtin/telemetry.py`.

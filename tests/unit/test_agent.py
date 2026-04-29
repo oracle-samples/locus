@@ -4649,7 +4649,7 @@ class TestErrorSanitization:
         """OCI resource IDs are redacted."""
         from locus.tools.executor import _sanitize_error
 
-        error = "NotFound: ocid1.compartment.oc1..notfound"
+        error = "NotFound: ocid1.compartment.oc1..aaaaaaaandceai675euuovyyazlymnglde2xknsq35rni43zzmwdhxxu4v7q"
         sanitized = _sanitize_error(error)
         assert "aaaaaa" not in sanitized
         assert "[REDACTED]" in sanitized

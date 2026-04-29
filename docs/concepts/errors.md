@@ -13,12 +13,6 @@ except LocusError as exc:
     raise
 ```
 
-!!! info "Available from 0.2"
-    The `LocusError` hierarchy lands in MR !54. In 0.1, errors
-    propagate as `ValueError`, `RuntimeError`, `ImportError`, etc.
-    with no common superclass. Pin `locus>=0.2` to use the
-    hierarchy.
-
 ## Hierarchy
 
 ```

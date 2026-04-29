@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
 You get out of the box:
 
-- `POST /invoke` — synchronous run, full `RunResult` JSON.
+- `POST /invoke` — synchronous run, full `AgentResult` JSON.
 - `POST /stream` — Server-Sent Events of every typed event.
 - `GET / DELETE /threads/{id}` — conversation persistence.
 - `GET /health` — liveness probe.
@@ -206,14 +206,21 @@ Content-Type: application/json
 
 ## Observability
 
-Wire `TelemetryHook` to your OTLP collector for traces and metrics:
+Wire `TelemetryHook` to your OTLP collector for traces and metrics.
+Set the exporter target via the standard OpenTelemetry environment
+variables before the agent starts:
+
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+export OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+```
 
 ```python
 from locus.hooks.builtin import TelemetryHook
 
 agent = Agent(
     ...,
-    hooks=[TelemetryHook(otel_exporter="grpc://otel-collector:4317")],
+    hooks=[TelemetryHook(service_name="my-agent")],
 )
 ```
 

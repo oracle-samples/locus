@@ -49,6 +49,7 @@ Example - Human-in-the-loop:
 from __future__ import annotations
 
 import asyncio
+import contextvars
 from collections import defaultdict
 from collections.abc import AsyncIterator, Callable
 from datetime import UTC, datetime
@@ -544,6 +545,80 @@ class GraphConfig(BaseModel):
 
 
 # =============================================================================
+# Streaming sink helper
+# =============================================================================
+
+
+# Context-local stream sink. ``StateGraph.stream()`` sets this for the
+# duration of a streaming run so node bodies can emit custom events via
+# :func:`emit_custom`. ``None`` outside a streaming context — emitting
+# then is a silent no-op so node code can be written once and run under
+# either ``stream()`` or ``execute()``.
+_active_stream_sink: contextvars.ContextVar[Any] = contextvars.ContextVar(
+    "_locus_active_stream_sink", default=None
+)
+
+
+async def emit_custom(data: Any, *, node_id: str | None = None) -> None:
+    """Emit a ``StreamEvent(mode=CUSTOM)`` from inside a graph node.
+
+    Use this when your node wants to surface progress / partial output that
+    isn't a state update. The event reaches consumers of
+    ``StateGraph.stream()`` immediately; outside a streaming context it's
+    a silent no-op so the same node code works under ``execute()`` too.
+
+    Example::
+
+        async def long_running_node(state):
+            for i in range(10):
+                await emit_custom({"progress": i / 10})
+                await asyncio.sleep(0.1)
+            return {"done": True}
+    """
+    sink = _active_stream_sink.get()
+    if sink is None:
+        return
+    await sink(StreamEvent(mode=StreamMode.CUSTOM, node_id=node_id, data=data))
+
+
+async def _emit_node_events(
+    sink: Any,
+    node_id: str,
+    result: NodeResult,
+    state: dict[str, Any],
+    mode: StreamMode,
+) -> None:
+    """Push node-completion events through the streaming sink.
+
+    Called from inside ``StateGraph.execute`` after each node completes.
+    A no-op when ``sink`` is None (the default for non-streaming
+    ``execute`` callers). When set, builds the appropriate ``StreamEvent``
+    for the active mode and forwards it to the sink.
+    """
+    if sink is None:
+        return
+    if mode == StreamMode.VALUES:
+        # Snapshot of full state after this node completed.
+        await sink(StreamEvent(mode=mode, node_id=node_id, data=dict(state)))
+    elif mode == StreamMode.UPDATES:
+        await sink(StreamEvent(mode=mode, node_id=node_id, data=result.output))
+    elif mode == StreamMode.NODES:
+        await sink(StreamEvent(mode=mode, node_id=node_id, data=result))
+    elif mode == StreamMode.DEBUG:
+        await sink(
+            StreamEvent(
+                mode=mode,
+                node_id=node_id,
+                data={
+                    "result": result.model_dump(mode="json"),
+                    "state": dict(state),
+                },
+            )
+        )
+    # CUSTOM is reserved for user-emitted data; nothing automatic to forward.
+
+
+# =============================================================================
 # State Graph
 # =============================================================================
 
@@ -869,6 +944,7 @@ class StateGraph(BaseModel):
         inputs: dict[str, Any] | Command | None = None,
         *,
         config: GraphConfig | None = None,
+        _event_sink: Any = None,
     ) -> GraphResult:
         """
         Execute the graph.
@@ -876,6 +952,10 @@ class StateGraph(BaseModel):
         Args:
             inputs: Initial state or Command (for resume)
             config: Optional execution configuration
+            _event_sink: Internal-use only. When provided, an async callable
+                ``(StreamEvent) -> None`` invoked after each node completes
+                so :meth:`stream` can yield intermediate events. Public
+                callers should use :meth:`stream` instead of touching this.
 
         Returns:
             GraphResult with final state and outputs
@@ -977,6 +1057,9 @@ class StateGraph(BaseModel):
                     ):
                         node_results[node_id] = result
                         execution_order.append(node_id)
+                        await _emit_node_events(
+                            _event_sink, node_id, result, state, cfg.stream_mode
+                        )
             else:
                 # Sequential execution
                 for node_id in current_nodes:
@@ -993,6 +1076,7 @@ class StateGraph(BaseModel):
                     )
                     node_results[node_id] = result
                     execution_order.append(node_id)
+                    await _emit_node_events(_event_sink, node_id, result, state, cfg.stream_mode)
 
             # Clear resume context after first node
             resume_node = None
@@ -1180,45 +1264,75 @@ class StateGraph(BaseModel):
         config: GraphConfig | None = None,
         mode: StreamMode | None = None,
     ) -> AsyncIterator[StreamEvent]:
-        """
-        Stream graph execution events.
+        """Stream graph execution events as nodes complete.
+
+        Drives :meth:`execute` on a background task with an async-queue
+        sink wired in, then yields each node-completion event in real time
+        (instead of collecting them at the end). The final state arrives as
+        the last yielded event in ``VALUES`` mode.
 
         Args:
-            inputs: Initial state or Command
-            config: Execution configuration
-            mode: Stream mode (overrides config)
+            inputs: Initial state or Command (for resume).
+            config: Execution configuration.
+            mode: Stream mode override (``VALUES`` / ``UPDATES`` / ``NODES``
+                / ``DEBUG`` / ``CUSTOM``). Defaults to ``config.stream_mode``.
 
         Yields:
-            StreamEvent for each execution step
+            ``StreamEvent`` per node, then a terminal ``VALUES`` event with
+            the final state when ``mode == VALUES``. Re-raises any
+            exception the underlying execute raised so callers can react.
         """
         cfg = config or self.config
+        # The mode argument is per-call; reflect it in cfg so the sink in
+        # execute() emits the right events. We don't mutate the caller's
+        # cfg — clone it.
         stream_mode = mode or cfg.stream_mode
+        if mode is not None and mode != cfg.stream_mode:
+            cfg = cfg.model_copy(update={"stream_mode": mode})
 
-        # For now, execute and yield final result
-        # TODO: Implement proper streaming with intermediate events
-        result = await self.execute(inputs, config=cfg)
+        queue: asyncio.Queue[StreamEvent | None] = asyncio.Queue()
+        sentinel = None  # marks normal completion in the queue
 
+        async def _sink(event: StreamEvent) -> None:
+            await queue.put(event)
+
+        async def _drive() -> GraphResult:
+            # Make the sink visible to ``emit_custom`` calls inside node
+            # bodies via the module-level ContextVar. Reset on exit so we
+            # don't leak the sink into unrelated tasks.
+            token = _active_stream_sink.set(_sink)
+            try:
+                return await self.execute(inputs, config=cfg, _event_sink=_sink)
+            finally:
+                _active_stream_sink.reset(token)
+                # Signal end-of-stream regardless of success/error so the
+                # consumer never deadlocks.
+                await queue.put(sentinel)
+
+        task = asyncio.create_task(_drive())
+
+        consumer_broke_early = False
+        try:
+            while True:
+                event = await queue.get()
+                if event is sentinel:
+                    break
+                yield event
+        except (GeneratorExit, asyncio.CancelledError):
+            consumer_broke_early = True
+            raise
+        finally:
+            # If the consumer broke out early, cancel the driver so the
+            # background task doesn't leak.
+            if consumer_broke_early and not task.done():
+                task.cancel()
+
+        # task is done (or was cancelled). Surface any exception execute
+        # raised; otherwise emit the terminal final-state event in
+        # VALUES mode.
+        result = task.result()
         if stream_mode == StreamMode.VALUES:
-            yield StreamEvent(
-                mode=stream_mode,
-                data=result.final_state,
-            )
-        elif stream_mode == StreamMode.UPDATES:
-            for node_id in result.execution_order:
-                if node_id in result.node_results:
-                    yield StreamEvent(
-                        mode=stream_mode,
-                        node_id=node_id,
-                        data=result.node_results[node_id].output,
-                    )
-        elif stream_mode == StreamMode.NODES:
-            for node_id in result.execution_order:
-                if node_id in result.node_results:
-                    yield StreamEvent(
-                        mode=stream_mode,
-                        node_id=node_id,
-                        data=result.node_results[node_id],
-                    )
+            yield StreamEvent(mode=stream_mode, data=result.final_state)
 
     def compile(
         self,

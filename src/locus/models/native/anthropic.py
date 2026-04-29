@@ -143,15 +143,50 @@ class AnthropicModel(BaseModel):
             )
         return anthropic_tools
 
+    _STRUCTURED_TOOL_NAME = "respond_with_schema"
+
+    def _structured_output_tool(self, response_format: dict[str, Any]) -> dict[str, Any]:
+        """Translate an OpenAI-style ``response_format`` into an Anthropic tool.
+
+        Anthropic does not support a ``response_format`` parameter; the
+        idiomatic way to enforce a JSON schema is to declare a single tool
+        whose ``input_schema`` is the desired schema and force the model to
+        call it via ``tool_choice``. We name the tool ``respond_with_schema``
+        and re-use the underlying schema name as the tool description so the
+        model picks up any high-level docstring.
+        """
+        json_schema = response_format.get("json_schema", {}) or {}
+        schema = json_schema.get("schema") or {}
+        description = (
+            json_schema.get("description")
+            or f"Return your final answer as a {json_schema.get('name', 'JSON')} object."
+        )
+        return {
+            "name": self._STRUCTURED_TOOL_NAME,
+            "description": description,
+            "input_schema": schema or {"type": "object", "properties": {}},
+        }
+
     async def complete(
         self,
         messages: list[Message],
         tools: list[dict[str, Any]] | None = None,
         **kwargs: Any,
     ) -> ModelResponse:
-        """Complete a chat request."""
+        """Complete a chat request.
+
+        Recognises an OpenAI-style ``response_format={"type": "json_schema", ...}``
+        kwarg and translates it into Anthropic's tool-use mechanism: a synthetic
+        ``respond_with_schema`` tool is appended to the call and ``tool_choice``
+        is pinned to it. The tool arguments are then surfaced as the message
+        content (canonical JSON) so callers can parse them with
+        :func:`locus.core.structured.parse_structured` exactly as they would
+        with native ``response_format`` providers.
+        """
+        import json as _json
+
         system_prompt, anthropic_messages = self._convert_messages(messages)
-        anthropic_tools = self._convert_tools(tools)
+        anthropic_tools = self._convert_tools(tools) or []
 
         params: dict[str, Any] = {
             "model": self.config.model,
@@ -161,6 +196,20 @@ class AnthropicModel(BaseModel):
         }
         if system_prompt:
             params["system"] = system_prompt
+
+        # Structured-output mode: emulate ``response_format`` via tool-use.
+        response_format = kwargs.get("response_format")
+        structured_mode = (
+            isinstance(response_format, dict) and response_format.get("type") == "json_schema"
+        )
+        if structured_mode:
+            assert isinstance(response_format, dict)  # narrowed by structured_mode
+            anthropic_tools.append(self._structured_output_tool(response_format))
+            params["tool_choice"] = {
+                "type": "tool",
+                "name": self._STRUCTURED_TOOL_NAME,
+            }
+
         if anthropic_tools:
             params["tools"] = anthropic_tools
 
@@ -169,11 +218,15 @@ class AnthropicModel(BaseModel):
         # Parse response
         content: str | None = None
         tool_calls: list[ToolCall] = []
+        structured_payload: dict[str, Any] | None = None
 
         for block in response.content:
             if block.type == "text":
                 content = (content or "") + block.text
             elif block.type == "tool_use":
+                if structured_mode and block.name == self._STRUCTURED_TOOL_NAME:
+                    structured_payload = block.input if isinstance(block.input, dict) else {}
+                    continue
                 tool_calls.append(
                     ToolCall(
                         id=block.id,
@@ -181,6 +234,11 @@ class AnthropicModel(BaseModel):
                         arguments=block.input if isinstance(block.input, dict) else {},
                     )
                 )
+
+        # In structured mode, surface the tool's arguments as the message
+        # content so downstream ``parse_structured`` can validate it.
+        if structured_mode and structured_payload is not None:
+            content = _json.dumps(structured_payload)
 
         usage = {}
         if response.usage:

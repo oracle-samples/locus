@@ -38,8 +38,28 @@ await agent.run("Now book the flights.", thread_id="user-42").__anext__()
 | `OracleBackend` | Oracle Database | Enterprise, with JSON search |
 | `OCIBucketBackend` | OCI Object Storage | Serverless, lifecycle policies |
 
-All of them implement `BaseCheckpointer` natively. There is no adapter
-layer. You pass the instance directly to `Agent`.
+Four of them implement `BaseCheckpointer` directly and accept
+`AgentState`: `MemoryCheckpointer`, `FileCheckpointer`, `HTTPCheckpointer`,
+`OCIBucketBackend`. Pass any of these straight to `Agent(checkpointer=...)`.
+
+The other five — `SQLiteBackend`, `RedisBackend`, `PostgreSQLBackend`,
+`OpenSearchBackend`, `OracleBackend` — expose a simpler dict-shaped
+storage interface and are wrapped via `StorageBackendAdapter` (or the
+matching `*_checkpointer()` factory in `locus.memory.backends`):
+
+```python
+from locus.memory.backends import postgresql_checkpointer
+
+checkpointer = postgresql_checkpointer(
+    dsn="postgresql://...", schema="locus_threads",
+)
+agent = Agent(model=..., checkpointer=checkpointer)
+```
+
+If you build directly with `RedisBackend(...)` etc. and pass the result
+to `Agent(checkpointer=...)`, save/load will fail because the agent
+calls `checkpointer.save(state, thread_id)` and these classes expose
+`save(thread_id, dict)`. Use the factory.
 
 ## Capabilities
 
@@ -70,6 +90,7 @@ Capability flags:
 
 See [how-to/custom-checkpointer](../how-to/custom-checkpointer.md)
 for a worked example. The short version is: subclass
-`BaseCheckpointer`, implement `save`, `load`, `list_checkpoints`,
-`delete`. Advertise your capabilities. You can pass the instance
-directly to `Agent` — no glue required.
+`BaseCheckpointer`, implement the abstract `save`, `load`,
+`list_checkpoints`, plus `exists` and `delete`. Advertise your
+capabilities. You can pass the instance directly to `Agent` — no glue
+required, no `StorageBackendAdapter` wrapping needed.

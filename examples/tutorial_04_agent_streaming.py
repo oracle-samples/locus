@@ -364,6 +364,30 @@ def main():
     asyncio.run(example_collect_metrics())
     asyncio.run(example_progress_tracking())
 
+    # =========================================================================
+    # See also: structured streaming
+    # =========================================================================
+    print("=== See also: StructuredStream ===\n")
+    print(
+        "When you want incremental Pydantic instances during streaming\n"
+        "(not raw chunks), wrap any event iterator with StructuredStream:\n"
+    )
+    print(
+        """    from locus.streaming import StructuredStream
+
+    stream = StructuredStream(agent.run("Top 3 vendors."), schema=VendorList)
+    async for partial in stream:
+        ui.render(partial)               # may have 0, 1, 2, then 3 vendors
+    final: VendorList | None = stream.final
+"""
+    )
+    print(
+        "Each ModelChunkEvent is appended to a buffer; locus auto-closes\n"
+        "any unbalanced braces / brackets / strings, runs the result\n"
+        "through schema.model_validate, and yields the parsed instance\n"
+        "if it succeeds.\n"
+    )
+
     print("=" * 60)
     print("Next: Tutorial 05 - Agent Hooks")
     print("=" * 60)

@@ -1,42 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 290"
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 380"
      font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif"
-     shape-rendering="geometricPrecision">
+     shape-rendering="geometricPrecision"
+     preserveAspectRatio="xMidYMid meet">
 
-  <!-- ===== Oracle FY26 palette (theme1.xml of Oracle_PPT-template_FY26) =====
-       dk1     #2A2F2F   text
-       lt2     #FBF9F8   paper
-       accent1 #04536F   deep teal       — Think
-       accent3 #C74634   Oracle red      — Execute
-       accent5 #89B2B0   sage teal       — Reflect
-       accent4 #F0CC71   sand            — Terminate
-       accent2 #6C3F49   mauve           — loop-back arrow
-  -->
+  <!-- ===== Oracle FY26 palette =====
+       accent1 #04536F  deep teal     — Think
+       accent3 #C74634  Oracle red    — Execute
+       accent5 #89B2B0  sage teal     — Reflect
+       accent4 #F0CC71  sand          — Terminate
+       accent2 #6C3F49  mauve         — loop-back arrow -->
 
   <defs>
     <filter id="card-shadow" x="-20%" y="-20%" width="140%" height="160%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
-      <feOffset dx="0" dy="3" result="off"/>
-      <feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer>
-      <feMerge>
-        <feMergeNode/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2.5"/>
+      <feOffset dx="0" dy="2" result="off"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.20"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
 
     <marker id="arrow-fwd" viewBox="0 0 12 12" refX="11" refY="6"
-            markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M 0,0 L 12,6 L 0,12 z" fill="#2A2F2F"/>
     </marker>
 
     <marker id="arrow-loop" viewBox="0 0 12 12" refX="11" refY="6"
-            markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+            markerWidth="8" markerHeight="8" orient="auto-start-reverse">
       <path d="M 0,0 L 12,6 L 0,12 z" fill="#6C3F49"/>
     </marker>
 
-    <!-- Star badge — ONLY on the two genuinely-unique innovations
-         (Execute idempotent dedup + Terminate algebra). Not on Reflect:
-         distinctive packaging, but not novel pattern. -->
     <symbol id="innov" viewBox="0 0 22 22">
       <circle cx="11" cy="11" r="10" fill="#C74634"/>
       <text x="11" y="15.5" text-anchor="middle" font-size="13"
@@ -44,77 +36,87 @@
     </symbol>
   </defs>
 
-  <!-- ============ THINK ============ -->
+  <!-- Legend -->
+  <g transform="translate(20, 20)">
+    <use href="#innov" x="0" y="0" width="14" height="14"/>
+    <text x="20" y="11" font-size="10.5" font-weight="600" fill="#2A2F2F"
+          letter-spacing="0.06em">UNIQUE TO LOCUS · NO COMPETITOR SHIPS THESE</text>
+  </g>
+
+  <!-- ============ TWO-ROW LAYOUT (160 wide cards, 2x2 grid) ============ -->
+
+  <!-- THINK (top-left) -->
   <g filter="url(#card-shadow)">
-    <rect x="20" y="60" width="200" height="110" rx="12" ry="12" fill="#04536F"/>
-    <text x="120" y="100" text-anchor="middle" font-size="22" font-weight="800"
+    <rect x="40" y="60" width="160" height="105" rx="11" ry="11" fill="#04536F"/>
+    <text x="120" y="95" text-anchor="middle" font-size="20" font-weight="800"
           fill="#FFFFFF" letter-spacing="-0.01em">Think</text>
-    <text x="120" y="128" text-anchor="middle" font-size="11.5" font-weight="500"
-          fill="#FFFFFF" opacity="0.85" letter-spacing="0.06em">THE MODEL DECIDES</text>
-    <text x="120" y="146" text-anchor="middle" font-size="11.5" font-weight="500"
-          fill="#FFFFFF" opacity="0.75">next action / final answer</text>
+    <text x="120" y="121" text-anchor="middle" font-size="10.5" font-weight="600"
+          fill="#FFFFFF" opacity="0.86" letter-spacing="0.06em">THE MODEL DECIDES</text>
+    <text x="120" y="139" text-anchor="middle" font-size="10.5" font-weight="500"
+          fill="#FFFFFF" opacity="0.78">next action / final answer</text>
   </g>
 
-  <line x1="225" y1="115" x2="265" y2="115" stroke="#2A2F2F"
-        stroke-width="2.5" stroke-linecap="round" marker-end="url(#arrow-fwd)"/>
+  <!-- arrow Think → Execute -->
+  <line x1="205" y1="112" x2="245" y2="112" stroke="#2A2F2F"
+        stroke-width="2.4" stroke-linecap="round" marker-end="url(#arrow-fwd)"/>
 
-  <!-- ============ EXECUTE — innovation ★ ============ -->
+  <!-- EXECUTE (top-right) — innovation ★ -->
   <g filter="url(#card-shadow)">
-    <rect x="270" y="60" width="200" height="110" rx="12" ry="12" fill="#C74634"/>
-    <text x="370" y="100" text-anchor="middle" font-size="22" font-weight="800"
+    <rect x="250" y="60" width="160" height="105" rx="11" ry="11" fill="#C74634"/>
+    <text x="330" y="95" text-anchor="middle" font-size="20" font-weight="800"
           fill="#FFFFFF" letter-spacing="-0.01em">Execute</text>
-    <text x="370" y="128" text-anchor="middle" font-size="11.5" font-weight="500"
-          fill="#FFFFFF" opacity="0.85" letter-spacing="0.06em">IDEMPOTENT DEDUPE</text>
-    <text x="370" y="146" text-anchor="middle" font-size="11.5" font-weight="500"
-          fill="#FFFFFF" opacity="0.75">retries return the cached receipt</text>
-    <use href="#innov" x="455" y="55" width="20" height="20"/>
+    <text x="330" y="121" text-anchor="middle" font-size="10.5" font-weight="600"
+          fill="#FFFFFF" opacity="0.86" letter-spacing="0.06em">IDEMPOTENT DEDUPE</text>
+    <text x="330" y="139" text-anchor="middle" font-size="10.5" font-weight="500"
+          fill="#FFFFFF" opacity="0.78">retries return cached receipt</text>
+    <use href="#innov" x="395" y="55" width="18" height="18"/>
   </g>
 
-  <line x1="475" y1="115" x2="515" y2="115" stroke="#2A2F2F"
-        stroke-width="2.5" stroke-linecap="round" marker-end="url(#arrow-fwd)"/>
-
-  <!-- ============ REFLECT — distinctive packaging, NO star ============ -->
+  <!-- REFLECT (bottom-right, mirroring Execute position) -->
   <g filter="url(#card-shadow)">
-    <rect x="520" y="60" width="200" height="110" rx="12" ry="12" fill="#89B2B0"/>
-    <text x="620" y="100" text-anchor="middle" font-size="22" font-weight="800"
+    <rect x="250" y="220" width="160" height="105" rx="11" ry="11" fill="#89B2B0"/>
+    <text x="330" y="255" text-anchor="middle" font-size="20" font-weight="800"
           fill="#1F2828" letter-spacing="-0.01em">Reflect</text>
-    <text x="620" y="128" text-anchor="middle" font-size="11.5" font-weight="600"
+    <text x="330" y="281" text-anchor="middle" font-size="10.5" font-weight="600"
           fill="#1F2828" opacity="0.85" letter-spacing="0.06em">REFLEXION · CAUSAL</text>
-    <text x="620" y="146" text-anchor="middle" font-size="11.5" font-weight="500"
-          fill="#1F2828" opacity="0.75">router-integrated graph node</text>
+    <text x="330" y="299" text-anchor="middle" font-size="10.5" font-weight="500"
+          fill="#1F2828" opacity="0.78">router-integrated graph node</text>
   </g>
 
-  <line x1="725" y1="115" x2="765" y2="115" stroke="#2A2F2F"
-        stroke-width="2.5" stroke-linecap="round" marker-end="url(#arrow-fwd)"/>
+  <!-- arrow Execute → Reflect (vertical, on the right side) -->
+  <path d="M 410 112 Q 460 112, 460 192 Q 460 272, 412 272"
+        stroke="#2A2F2F" stroke-width="2.4" fill="none" stroke-linecap="round"
+        marker-end="url(#arrow-fwd)"/>
 
-  <!-- ============ TERMINATE? — innovation ★ ============ -->
+  <!-- TERMINATE? (bottom-left) — innovation ★ -->
   <g filter="url(#card-shadow)">
-    <rect x="770" y="60" width="190" height="110" rx="12" ry="12" fill="#F0CC71"/>
-    <text x="865" y="100" text-anchor="middle" font-size="22" font-weight="800"
+    <rect x="40" y="220" width="160" height="105" rx="11" ry="11" fill="#F0CC71"/>
+    <text x="120" y="252" text-anchor="middle" font-size="19" font-weight="800"
           fill="#3A2A0F" letter-spacing="-0.01em">Terminate?</text>
-    <text x="865" y="128" text-anchor="middle" font-size="11.5" font-weight="600"
+    <text x="120" y="278" text-anchor="middle" font-size="10.5" font-weight="600"
           fill="#3A2A0F" opacity="0.85" letter-spacing="0.06em">ALGEBRA: AND · OR</text>
-    <text x="865" y="146" text-anchor="middle" font-size="11.5" font-weight="500"
-          fill="#3A2A0F" opacity="0.75">composable stops, just data</text>
-    <use href="#innov" x="945" y="55" width="20" height="20"/>
+    <text x="120" y="296" text-anchor="middle" font-size="10.5" font-weight="500"
+          fill="#3A2A0F" opacity="0.78">composable stops, just data</text>
+    <use href="#innov" x="185" y="215" width="18" height="18"/>
   </g>
 
-  <!-- ============ Loop-back arrow ============ -->
-  <path d="M 865 175
-           Q 865 240, 480 240
-           Q 120 240, 120 175"
-        stroke="#6C3F49" stroke-width="2.5" fill="none"
-        stroke-dasharray="7,5" stroke-linecap="round"
+  <!-- arrow Reflect → Terminate -->
+  <line x1="245" y1="272" x2="205" y2="272" stroke="#2A2F2F"
+        stroke-width="2.4" stroke-linecap="round" marker-end="url(#arrow-fwd)"/>
+
+  <!-- arrow Terminate → Think (loop-back, on the left, dashed mauve) -->
+  <path d="M 120 215 Q 120 190, 120 170"
+        stroke="#6C3F49" stroke-width="2.4" fill="none"
+        stroke-dasharray="6,4" stroke-linecap="round"
         marker-end="url(#arrow-loop)"/>
-  <text x="480" y="265" text-anchor="middle" font-size="12.5" font-weight="600"
-        fill="#6C3F49" font-style="italic" letter-spacing="0.04em">
-    another iteration · until the algebra says stop
+  <text x="40" y="195" text-anchor="start" font-size="10.5" font-weight="600"
+        fill="#6C3F49" font-style="italic">
+    iterate
   </text>
 
-  <!-- Legend strip — be honest about what the star means -->
-  <g transform="translate(20, 25)">
-    <use href="#innov" x="0" y="0" width="16" height="16"/>
-    <text x="22" y="13" font-size="11" font-weight="500" fill="#2A2F2F"
-          letter-spacing="0.04em">PRIMITIVES UNIQUE TO LOCUS · NO COMPETITOR SHIPS THESE</text>
-  </g>
+  <!-- "or done" exit arrow from Terminate? going down off-card -->
+  <text x="240" y="357" text-anchor="middle" font-size="10.5" font-weight="600"
+        fill="#2A2F2F" font-style="italic">
+    when the algebra says stop · the loop ends with a typed TerminateEvent
+  </text>
 </svg>

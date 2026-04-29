@@ -93,15 +93,16 @@ the same shape: a checkpoint between Think and Execute.
 Three ways to stop a running agent without waiting for the
 termination algebra to fire:
 
-1. **Hook returns `Cancel(reason="…")`.** Any hook can short-circuit
-   the loop. Useful for budget guards.
+1. **Hook raises to short-circuit the loop.** Any hook callback can
+   raise to abort the run. Useful for budget guards.
 
    ```python
-   class BudgetGuard(Hook):
-       async def on_iteration(self, ev: IterationEvent) -> Directive:
-           if ev.token_total > 100_000:
-               return Cancel(reason="token budget exceeded")
-           return Continue()
+   class BudgetGuard(HookProvider):
+       async def on_iteration_start(
+           self, iteration: int, state: AgentState
+       ) -> None:
+           if state.total_tokens_used > 100_000:
+               raise RuntimeError("token budget exceeded")
    ```
 
 2. **Caller cancels the task.** Standard `asyncio` cancellation:

@@ -46,7 +46,8 @@ async def example_retry():
 
     graph = StateGraph(config=GraphConfig(parallel=False))
     graph.add_node(
-        "api_call", flaky_api,
+        "api_call",
+        flaky_api,
         retry_policy=RetryPolicy(max_attempts=3, initial_interval=0.1, jitter=False),
     )
     graph.add_edge(START, "api_call")
@@ -76,7 +77,8 @@ async def example_cache():
 
     graph = StateGraph(config=GraphConfig(parallel=False))
     graph.add_node(
-        "lookup", expensive_lookup,
+        "lookup",
+        expensive_lookup,
         cache_policy=CachePolicy(ttl_seconds=60),
     )
     graph.add_edge(START, "lookup")
@@ -116,9 +118,14 @@ async def example_visualization():
     graph.add_node("notify", notify)
     graph.add_edge(START, "validate")
     graph.add_edge("validate", "process")
-    graph.add_conditional_edges("process", lambda s: "notify" if s.get("valid") else "__END__", {
-        "notify": "notify", "__END__": "__END__",
-    })
+    graph.add_conditional_edges(
+        "process",
+        lambda s: "notify" if s.get("valid") else "__END__",
+        {
+            "notify": "notify",
+            "__END__": "__END__",
+        },
+    )
     graph.add_edge("notify", END)
 
     print("Mermaid (paste into https://mermaid.live):")
@@ -127,7 +134,37 @@ async def example_visualization():
     print(draw_ascii(graph))
 
 
+async def example_realtime_streaming():
+    """Stream node events in real time + push custom progress events."""
+    print("\n=== Part 4: Real-time streaming with emit_custom ===\n")
+    from locus.multiagent import StreamMode, emit_custom
+
+    graph = StateGraph(config=GraphConfig(parallel=False))
+
+    async def slow_node(inputs):
+        for i in range(3):
+            await emit_custom({"step": i + 1, "of": 3}, node_id="slow_node")
+            await asyncio.sleep(0.05)
+        return {"done": True}
+
+    graph.add_node("slow_node", slow_node)
+    graph.add_edge(START, "slow_node")
+    graph.add_edge("slow_node", END)
+
+    seen_custom = 0
+    seen_updates = 0
+    async for event in graph.stream({}, mode=StreamMode.UPDATES):
+        if event.mode == StreamMode.CUSTOM:
+            seen_custom += 1
+            print(f"  [CUSTOM]  {event.data}")
+        else:
+            seen_updates += 1
+            print(f"  [UPDATE]  {event.node_id}: {event.data}")
+    print(f"\nDelivered {seen_custom} custom events + {seen_updates} updates.")
+
+
 if __name__ == "__main__":
     asyncio.run(example_retry())
     asyncio.run(example_cache())
     asyncio.run(example_visualization())
+    asyncio.run(example_realtime_streaming())

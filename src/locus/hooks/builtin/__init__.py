@@ -6,17 +6,16 @@
 
 This module provides ready-to-use hook providers for common use cases:
 
-- LoggingHook: Log all lifecycle events
+- LoggingHook / StructuredLoggingHook: Log all lifecycle events
 - TelemetryHook: OpenTelemetry integration
-- GuardrailsHook: Security guardrails and content filtering
+- GuardrailsHook / ContentFilterHook: Security guardrails and content filtering
+- ModelRetryHook: Backoff retries for empty / rate-limited model responses
+- SteeringHook: LLM-as-judge tool gating
 
 Example:
-    from locus.hooks import HookRegistry
-    from locus.hooks.builtin import LoggingHook, GuardrailsHook
+    from locus.hooks.builtin import LoggingHook, GuardrailsHook, ModelRetryHook
 
-    registry = HookRegistry()
-    registry.add_provider(LoggingHook())
-    registry.add_provider(GuardrailsHook())
+    agent = Agent(..., hooks=[LoggingHook(), GuardrailsHook(), ModelRetryHook()])
 """
 
 from locus.hooks.builtin.guardrails import (
@@ -27,6 +26,13 @@ from locus.hooks.builtin.guardrails import (
     GuardrailViolation,
 )
 from locus.hooks.builtin.logging import LoggingHook, StructuredLoggingHook
+from locus.hooks.builtin.retry import ModelRetryHook
+from locus.hooks.builtin.steering import (
+    SteeringAction,
+    SteeringContext,
+    SteeringDecision,
+    SteeringHook,
+)
 from locus.hooks.builtin.telemetry import (
     NoOpTelemetryHook,
     TelemetryHook,
@@ -48,4 +54,11 @@ __all__ = [
     "GuardrailAction",
     "GuardrailViolation",
     "ContentFilterHook",
+    # Retry
+    "ModelRetryHook",
+    # Steering
+    "SteeringHook",
+    "SteeringAction",
+    "SteeringContext",
+    "SteeringDecision",
 ]

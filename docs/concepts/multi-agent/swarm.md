@@ -2,42 +2,113 @@
 
 A swarm is a peer-to-peer task pool. Agents pull tasks off a shared
 queue, run them, and may post follow-up tasks for any peer to pick up.
-Nobody is in charge.
+**Nobody is in charge.**
+
+![Swarm pattern — SharedContext task queue at top with multiple tasks, agents below pulling from queue and posting follow-up tasks back](../../img/patterns/swarm.svg){ .diagram }
+
+## What it is
+
+Three pieces:
+
+- A **`SharedContext`** — a dict every agent reads and writes.
+- A **task queue** — agents pull from it; agents push to it.
+- N **agents** — each with its own tools and system prompt.
+
+Each iteration, every available agent picks the next task it's
+qualified for, runs it, and may emit follow-up tasks. The swarm
+exits when the queue empties or `max_iterations` is hit.
+
+## When to use it
+
+- ✅ **Open-ended research** — no fixed plan; whatever an agent finds
+  may spawn new sub-tasks.
+- ✅ **Heterogeneous specialists** — each agent has different tools
+  but any of them can pick up the next task they're qualified for.
+- ✅ **Long-running batch** — a queue depth + a max-iteration budget
+  is the natural shape.
+- ✅ **No single coordinator should exist** — peer-to-peer is the
+  point.
+
+## When NOT to use it
+
+- ❌ The flow is actually **linear** → use [Composition](composition.md).
+- ❌ One agent should **decide** who runs → use [Orchestrator](orchestrator.md).
+- ❌ The **conversation transcript** should follow one role to another → use [Handoff](handoff.md).
+- ❌ You need **deterministic ordering** — swarms are non-deterministic
+  by design.
+
+## Code
 
 ```python
 from locus.multiagent import Swarm
 
-swarm = Swarm(
-    agents=[researcher, summariser, fact_checker],
-    shared_context={"topic": "Q3 launch"},
-    max_iterations=8,
+researcher = Agent(
+    model="oci:openai.gpt-5.5",
+    tools=[search_corpus, summarise],
+    system_prompt="You are a researcher. Read, summarise, post follow-ups.",
+)
+fact_checker = Agent(
+    model="oci:openai.gpt-5.5",
+    tools=[verify_claim, search_corpus],
+    system_prompt="You are a fact-checker. Verify claims, flag conflicts.",
+)
+writer = Agent(
+    model="oci:openai.gpt-5.5",
+    tools=[draft, revise],
+    system_prompt="You are a writer. Take vetted summaries, draft prose.",
 )
 
-result = swarm.run_sync("Produce a launch brief on Q3.")
+swarm = Swarm(
+    agents=[researcher, fact_checker, writer],
+    shared_context={"topic": "Q3 launch", "audience": "exec summary"},
+    max_iterations=12,
+    initial_tasks=["read corpus", "summarise top sources"],
+)
+
+result = swarm.run_sync()
+print(result.final_artefact)
 ```
 
-Each agent sees the `SharedContext` (a dict of keys any agent can read
-or write) and the running task list. When an agent's `run` produces a
-`ToolCall(create_task=...)` the new task is enqueued for the next
-available peer.
+## How agents post follow-up tasks
 
-## When to use
+Each agent's tool surface includes (implicitly) a `post_task(...)`
+mechanism. When an agent finishes, it can append new tasks to the
+shared queue:
 
-- **Open-ended research.** No fixed plan; whatever an agent finds may
-  spawn new sub-tasks.
-- **Heterogeneous specialists.** Each agent has different tools but
-  any of them can pick up the next task they're qualified for.
-- **Long-running batch.** A queue depth + a max-iteration budget is the
-  natural shape.
+```python
+# inside a tool the agent calls
+@tool
+def summarise_and_followup(text: str, ctx: ToolContext) -> dict:
+    summary = summarise(text)
+    if has_uncited_claims(summary):
+        ctx.swarm.post_task(f"verify claims in: {summary[:200]}…")
+    return {"summary": summary}
+```
 
-## When not to use
+The next iteration, any qualifying agent (here — the fact-checker)
+picks up that task.
 
-- The flow is actually linear → use [Composition](composition.md).
-- One agent should decide who runs → use [Orchestrator](orchestrator.md).
-- You need the conversation transcript to follow one role to another →
-  use [Handoff](handoff.md).
+## Termination
+
+Swarms stop when:
+
+- The queue empties **and** no agent emits new tasks, OR
+- `max_iterations` is hit, OR
+- A custom `terminate` condition matches (the swarm honours
+  [Termination algebra](../termination.md) the same way an `Agent` does).
+
+## Tutorial
+
+[`tutorial_11_swarm_multiagent.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_11_swarm_multiagent.py)
+— a three-agent research swarm with shared context.
 
 ## Source
 
-`src/locus/multiagent/swarm.py` — see also
-[`tutorial_11_swarm_multiagent.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_11_swarm_multiagent.py).
+[`multiagent/swarm.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/multiagent/swarm.py)
+— `Swarm`, `SharedContext`.
+
+## See also
+
+- [Multi-agent overview](../multi-agent.md) — pick a shape.
+- [Orchestrator](orchestrator.md) — when you DO want a router.
+- [Termination](../termination.md) — composable stop conditions.

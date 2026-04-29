@@ -18,8 +18,9 @@ Wire up a **state graph** that loops until confident. Mesh agents
 that knows when to stop.
 
 Six multi-agent shapes. One Oracle-native runtime. Every model on OCI
-the day it lands. The agent stack you'd actually let near a credit
-card.
+the day it lands. Production-grade idempotent tools, durable
+checkpointing, and typed events — the agent stack built for the
+workloads Oracle customers actually run.
 
 [See what you can build](#what-you-can-build){ .md-button .md-button--primary }
 [GitHub](https://github.com/oracle-samples/locus){ .md-button }
@@ -126,17 +127,21 @@ audit; termination is just data.
 ### Multi-agent meshes across teams and processes
 
 Your research agent calls a finance agent on another team's service
-over **A2A**. They share one event stream. They discover each other
-by capability tag, not URL. You ship one agent at a time, on your
-team's schedule, in your team's repo — and they still talk.
+over **A2A**. They share one event stream. Each agent advertises an
+`AgentCard` that lists its capability tags; the calling agent fetches
+the card from a known URL and decides whether to delegate. You ship
+one agent at a time, on your team's schedule, in your team's repo —
+and they still talk.
 
 ### Agents that ship to your users on day one
 
 `AgentServer` is a drop-in FastAPI app: `POST /invoke` for synchronous
-runs, `POST /stream` for SSE-streamed events, `X-Session-ID` for
-per-user conversations. Native to Oracle Generative AI — every model
-the day OCI ships it. Two transports, one auth surface, zero glue
-between laptop and production.
+runs, `POST /stream` for SSE-streamed events, `GET` / `DELETE
+/threads/{id}` for per-thread persistence (scoped to the bearer
+principal so two API keys can't read each other's conversations).
+Native to Oracle Generative AI — every model the day OCI ships it.
+Two transports, one auth surface, zero glue between laptop and
+production.
 
 ## The locus agent loop
 
@@ -263,10 +268,10 @@ them in one process; stream events from any of them in the same
 
 | | |
 |---|---|
-| **🧠 Reasoning** | Reflexion · Grounding · Causal — one line on `Agent(...)`. |
+| **🧠 Reasoning** | Reflexion + Grounding — one line on `Agent(...)` (`reflexion=True`, `grounding=True`). `CausalChain` is a separate graph builder. |
 | **🤝 Multi-agent** | Composition · Orchestrator · Swarm · Handoff · StateGraph · Functional — six in-process patterns, plus A2A for cross-process meshes. |
 | **🛡 Idempotent tools** | `@tool(idempotent=True)`. The model can't double-charge. |
-| **💾 Durable memory** | Nine native checkpointer backends — OCI Object Storage, Oracle 26ai, PostgreSQL, OpenSearch, Redis, SQLite, HTTP, file, in-memory. |
+| **💾 Durable memory** | Four native checkpointers (OCI Object Storage, in-memory, file, HTTP) plus five storage-backed (PostgreSQL, OpenSearch, Redis, SQLite, Oracle 26ai) auto-wrapped via `*_checkpointer()` factories. |
 | **🔎 RAG on your data** | Seven vector stores · OCI Cohere + OpenAI embeddings · multimodal (PDF + OCR + audio). |
 | **🧩 Skills + Playbooks** | Filesystem-first capability disclosure + declarative step plans. |
 | **📡 Streaming + Server** | Typed events for `match` consumers · SSE · drop-in FastAPI `AgentServer`. |
@@ -314,23 +319,28 @@ locus is small enough to read end-to-end. Every capability has its own
 concept page on this site, and every page links straight to its source
 path. No magic, no hidden registries, no import-time side-effects.
 
-| Capability | Source |
+| Capability | Source — class or section that does the work |
 |---|---|
-| Loop nodes (Think · Execute · Reflect) | [`src/locus/loop/`](https://github.com/oracle-samples/locus/tree/main/src/locus/loop) |
-| Termination algebra | [`src/locus/core/termination.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/core/termination.py) |
-| Tools, decorator, registry | [`src/locus/tools/`](https://github.com/oracle-samples/locus/tree/main/src/locus/tools) |
-| Memory · 9 backends | [`src/locus/memory/`](https://github.com/oracle-samples/locus/tree/main/src/locus/memory) |
-| Multi-agent · 6 in-process patterns | [`src/locus/multiagent/`](https://github.com/oracle-samples/locus/tree/main/src/locus/multiagent) |
-| A2A · cross-process protocol | [`src/locus/a2a/`](https://github.com/oracle-samples/locus/tree/main/src/locus/a2a) |
-| Models · provider registry | [`src/locus/models/`](https://github.com/oracle-samples/locus/tree/main/src/locus/models) |
-| RAG · embedders + stores | [`src/locus/rag/`](https://github.com/oracle-samples/locus/tree/main/src/locus/rag) |
-| Reasoning · Reflexion + Grounding + Causal | [`src/locus/reasoning/`](https://github.com/oracle-samples/locus/tree/main/src/locus/reasoning) |
-| Hooks · 5 built-ins | [`src/locus/hooks/`](https://github.com/oracle-samples/locus/tree/main/src/locus/hooks) |
-| Streaming · events + SSE | [`src/locus/streaming/`](https://github.com/oracle-samples/locus/tree/main/src/locus/streaming) |
-| Server · FastAPI wrapper | [`src/locus/server/`](https://github.com/oracle-samples/locus/tree/main/src/locus/server) |
-| Skills · AgentSkills.io | [`src/locus/skills/`](https://github.com/oracle-samples/locus/tree/main/src/locus/skills) |
-| Playbooks · enforcer | [`src/locus/playbooks/`](https://github.com/oracle-samples/locus/tree/main/src/locus/playbooks) |
-| Evaluation harness | [`src/locus/evaluation/`](https://github.com/oracle-samples/locus/tree/main/src/locus/evaluation) |
+| Loop nodes — Think | [`ThinkNode` in `loop/nodes.py:59`](https://github.com/oracle-samples/locus/blob/main/src/locus/loop/nodes.py#L59-L135) |
+| Loop nodes — Execute (idempotent dedup) | [`ExecuteNode` in `loop/nodes.py:136`](https://github.com/oracle-samples/locus/blob/main/src/locus/loop/nodes.py#L136-L259) |
+| Loop nodes — Reflect | [`ReflectNode` in `loop/nodes.py:260`](https://github.com/oracle-samples/locus/blob/main/src/locus/loop/nodes.py#L260-L361) |
+| Termination algebra (`__or__` / `__and__` overloads) | [`TerminationCondition` in `core/termination.py:39`](https://github.com/oracle-samples/locus/blob/main/src/locus/core/termination.py#L39-L117) |
+| Tool decorator + idempotent flag | [`tool()` in `tools/decorator.py:113`](https://github.com/oracle-samples/locus/blob/main/src/locus/tools/decorator.py#L113-L165) · [`Tool` model `:26`](https://github.com/oracle-samples/locus/blob/main/src/locus/tools/decorator.py#L26-L112) |
+| Memory — example backend | [`OCIBucketBackend` in `memory/backends/oci_bucket.py:57`](https://github.com/oracle-samples/locus/blob/main/src/locus/memory/backends/oci_bucket.py#L57) (sibling backends in [`memory/backends/`](https://github.com/oracle-samples/locus/tree/main/src/locus/memory/backends)) |
+| Multi-agent — entry exports | [`multiagent/__init__.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/multiagent/__init__.py) (per-pattern files: `swarm.py`, `orchestrator.py`, `handoff.py`, `graph.py`, `functional.py`, `specialist.py`) |
+| A2A — server + client | [`A2AServer` in `a2a/protocol.py:84`](https://github.com/oracle-samples/locus/blob/main/src/locus/a2a/protocol.py#L84-L294) · [`A2AClient` `:295`](https://github.com/oracle-samples/locus/blob/main/src/locus/a2a/protocol.py#L295) |
+| Models — OCI two-transport | [`OCIOpenAIModel` in `models/providers/oci/openai_compat.py:163`](https://github.com/oracle-samples/locus/blob/main/src/locus/models/providers/oci/openai_compat.py#L163) |
+| RAG — retriever | [`RAGRetriever` in `rag/retriever.py:72`](https://github.com/oracle-samples/locus/blob/main/src/locus/rag/retriever.py#L72) · [`OCIEmbeddings` `embeddings/oci.py:85`](https://github.com/oracle-samples/locus/blob/main/src/locus/rag/embeddings/oci.py#L85) · [`OracleVectorStore` `stores/oracle.py:90`](https://github.com/oracle-samples/locus/blob/main/src/locus/rag/stores/oracle.py#L90) |
+| Reasoning — Reflexion | [`Reflector` in `reasoning/reflexion.py:70`](https://github.com/oracle-samples/locus/blob/main/src/locus/reasoning/reflexion.py#L70) |
+| Reasoning — Grounding (LLM-as-judge) | [`GroundingEvaluator` in `reasoning/grounding.py:106`](https://github.com/oracle-samples/locus/blob/main/src/locus/reasoning/grounding.py#L106) |
+| Reasoning — Causal | [`CausalChain` in `reasoning/causal.py:160`](https://github.com/oracle-samples/locus/blob/main/src/locus/reasoning/causal.py#L160) |
+| Hooks — built-in providers | [`hooks/builtin/__init__.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/hooks/builtin/__init__.py) (re-exports `LoggingHook`, `StructuredLoggingHook`, `TelemetryHook`, `GuardrailsHook`) · [`SteeringHook` `builtin/steering.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/hooks/builtin/steering.py) · [`ModelRetryHook` `builtin/retry.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/hooks/builtin/retry.py) |
+| Streaming — typed events | [`core/events.py:17` `LocusEvent`](https://github.com/oracle-samples/locus/blob/main/src/locus/core/events.py#L17) (frozen Pydantic models — `ThinkEvent`, `ToolStartEvent`, `ToolCompleteEvent`, `ReflectEvent`, `TerminateEvent`, `ModelChunkEvent`) |
+| Server — FastAPI wrapper | [`AgentServer` in `server/app.py:89`](https://github.com/oracle-samples/locus/blob/main/src/locus/server/app.py#L89) |
+| Skills — AgentSkills.io | [`SkillsPlugin` in `skills/plugin.py:24`](https://github.com/oracle-samples/locus/blob/main/src/locus/skills/plugin.py#L24) |
+| Playbooks — enforcer | [`PlaybookEnforcer` in `playbooks/enforcer.py:52`](https://github.com/oracle-samples/locus/blob/main/src/locus/playbooks/enforcer.py#L52) |
+| Evaluation harness | [`EvalCase` `evaluation/framework.py:22`](https://github.com/oracle-samples/locus/blob/main/src/locus/evaluation/framework.py#L22) · [`EvalRunner` `:119`](https://github.com/oracle-samples/locus/blob/main/src/locus/evaluation/framework.py#L119) |
+| MCP — server + client | [`LocusMCPServer` in `integrations/fastmcp.py:275`](https://github.com/oracle-samples/locus/blob/main/src/locus/integrations/fastmcp.py#L275) · [`MCPClient` `:414`](https://github.com/oracle-samples/locus/blob/main/src/locus/integrations/fastmcp.py#L414) |
 | MCP client + server | [`src/locus/integrations/fastmcp.py`](https://github.com/oracle-samples/locus/tree/main/src/locus/integrations/fastmcp.py) |
 | A2A protocol | [`src/locus/a2a/`](https://github.com/oracle-samples/locus/tree/main/src/locus/a2a) |
 
@@ -422,7 +432,7 @@ server.run(host="0.0.0.0", port=8080)
 
 You get out of the box:
 
-- `POST /invoke` — synchronous run, full `RunResult` JSON.
+- `POST /invoke` — synchronous run, full `AgentResult` JSON.
 - `POST /stream` — Server-Sent Events of every typed event.
 - `GET / DELETE /threads/{id}` — conversation persistence (with a
   checkpointer attached).

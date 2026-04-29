@@ -6,15 +6,25 @@ resume a conversation — even across process restarts.
 
 ## 1. Pick a backend
 
-For single-machine development, `FileCheckpointer` or
-`SQLiteBackend`. For production, pick by infrastructure:
+For single-machine development, `FileCheckpointer` (no deps) or
+`sqlite_checkpointer()`. For production, pick by infrastructure:
 
-- Redis cluster → `RedisBackend`
-- Managed Postgres → `PostgreSQLBackend`
-- OpenSearch cluster → `OpenSearchBackend`
-- OCI Object Storage (serverless, lifecycle) → `OCIBucketBackend`
+- OCI Object Storage (serverless, lifecycle) → `OCIBucketBackend` (native)
+- Redis cluster → `redis_checkpointer(...)`
+- Managed Postgres → `postgresql_checkpointer(...)`
+- OpenSearch cluster → `opensearch_checkpointer(...)`
+- Oracle Database → `oracle_checkpointer(...)`
+
+The first four (`MemoryCheckpointer`, `FileCheckpointer`,
+`HTTPCheckpointer`, `OCIBucketBackend`) are native `BaseCheckpointer`
+subclasses — pass the instance straight to `Agent`. The other five
+expose a simpler dict-shaped storage interface and are wrapped via the
+matching `*_checkpointer()` factory (or `StorageBackendAdapter`
+directly).
 
 ## 2. Instantiate and pass to the Agent
+
+Native checkpointer (no wrapping):
 
 ```python
 from locus import Agent
@@ -32,7 +42,22 @@ agent = Agent(
 )
 ```
 
-No adapter wrapping. The backend *is* a checkpointer.
+Storage-backend with the factory:
+
+```python
+from locus.memory.backends import postgresql_checkpointer
+
+checkpointer = postgresql_checkpointer(
+    dsn="postgresql://locus:locus@db.example.com:5432/locus",
+)
+agent = Agent(model="oci:openai.gpt-5.5", tools=[...], checkpointer=checkpointer)
+```
+
+If you build a storage backend directly (`RedisBackend(...)`,
+`PostgreSQLBackend(...)`, etc.) and pass the result to `Agent`, save /
+load will fail at runtime — the agent calls
+`checkpointer.save(state, thread_id)` and these classes expose
+`save(thread_id, dict)`. Use the factory.
 
 ## 3. Use a stable thread_id
 

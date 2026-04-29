@@ -258,6 +258,40 @@ async def example_results():
     print()
 
 
+async def example_streaming():
+    """Stream node-completion events in real time + emit custom progress."""
+    print("=== Part 6: Real-time streaming + emit_custom ===\n")
+    from locus.multiagent import StreamMode, emit_custom
+
+    graph = StateGraph()
+
+    async def step1(inputs):
+        # Push a CUSTOM progress event mid-execution. Outside a stream()
+        # context this is a silent no-op, so the same node code runs fine
+        # under execute() too.
+        await emit_custom({"phase": "starting", "value": inputs.get("x", 0)})
+        await asyncio.sleep(0.05)
+        await emit_custom({"phase": "halfway"})
+        return {"y": inputs.get("x", 0) * 2}
+
+    async def step2(inputs):
+        return {"z": inputs.get("y", 0) + 10}
+
+    graph.add_node("step1", step1)
+    graph.add_node("step2", step2)
+    graph.add_edge(START, "step1")
+    graph.add_edge("step1", "step2")
+    graph.add_edge("step2", END)
+
+    print("Streaming UPDATES + CUSTOM events as they arrive:")
+    async for event in graph.stream({"x": 21}, mode=StreamMode.UPDATES):
+        if event.mode == StreamMode.CUSTOM:
+            print(f"  [CUSTOM]  {event.node_id}: {event.data}")
+        else:
+            print(f"  [UPDATE]  {event.node_id}: {event.data}")
+    print()
+
+
 # =============================================================================
 # Main
 # =============================================================================
@@ -275,6 +309,7 @@ async def main():
     await example_state_flow()
     await example_parallel()
     await example_results()
+    await example_streaming()
 
     print("=" * 60)
     print("Next: Tutorial 07 - Conditional Routing")

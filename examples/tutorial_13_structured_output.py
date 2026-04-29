@@ -248,6 +248,48 @@ Think step by step before selecting a tool."""
     print(system_prompt[:500] + "...")
 
     # =========================================================================
+    # Part 8: Agent Integration — output_schema=
+    # =========================================================================
+    print("\n=== Part 8: Agent output_schema= ===\n")
+
+    print(
+        "When you want the agent's final answer to fill a shape, set\n"
+        "`output_schema=YourPydanticModel` on the Agent constructor. The\n"
+        "agent's last assistant message is parsed into an instance of that\n"
+        "model and surfaced on `AgentResult.parsed`. On supporting providers\n"
+        "(OpenAI / OCI OpenAI-compat) the request also carries a strict\n"
+        "`response_format` for constrained decoding; on other providers\n"
+        "locus falls back to prompted JSON + validate-and-retry.\n"
+    )
+
+    print("Sketch (requires real model credentials to run):\n")
+    print(
+        """    from pydantic import BaseModel, Field
+    from locus import Agent
+
+    class Vendor(BaseModel):
+        name: str
+        score: float = Field(ge=0.0, le=1.0)
+        region: str
+
+    class VendorList(BaseModel):
+        vendors: list[Vendor]
+
+    agent = Agent(
+        model="oci:openai.gpt-5-mini",
+        output_schema=VendorList,
+        output_schema_retries=2,        # default
+        system_prompt="Pick three vendors for cloud hosting.",
+    )
+
+    result = agent.run_sync("Top three for $2M of cloud spend.")
+    picks: VendorList = result.parsed   # type: ignore[assignment]
+    for v in picks.vendors:
+        print(v.name, v.score, v.region)
+"""
+    )
+
+    # =========================================================================
     print("\n" + "=" * 60)
     print("Next: Tutorial 14 - Reasoning Patterns")
     print("=" * 60)

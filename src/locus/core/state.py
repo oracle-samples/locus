@@ -25,6 +25,10 @@ class ToolExecution(BaseModel):
     error: str | None = None
     duration_ms: float | None = None
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    # True when this execution short-circuited via idempotent dedup
+    # (a prior call with identical arguments produced the result that was
+    # reused). The tool body did NOT run again.
+    idempotent_cache_hit: bool = False
 
     @property
     def success(self) -> bool:

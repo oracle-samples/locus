@@ -62,9 +62,15 @@ class AgentConfig(BaseModel):
     auxiliary_model: str | Any | None = Field(
         default=None,
         description=(
-            "Cheap/fast model for helper calls (summarization, "
-            "classification, compaction). String or ModelProtocol "
-            "instance. ``None`` (default) falls back to ``model``."
+            "Cheap / fast model for non-primary calls. When set, the "
+            "agent uses it for the max-iterations final summary, "
+            "grounding evaluation (when ``grounding.model`` isn't set "
+            "explicitly), and any conversation manager that supports "
+            "an auxiliary fallback (``LLMCompactor``). The primary "
+            "ReAct loop and structured-output repair stay on "
+            "``model``. String (``'openai:gpt-4o-mini'``) or "
+            "ModelProtocol instance. ``None`` (default) falls back to "
+            "``model`` everywhere."
         ),
     )
 
@@ -251,6 +257,62 @@ class AgentConfig(BaseModel):
         default=None,
         description="If set, agent's final message is saved to state metadata under this key. "
         "Enables simple data flow between agents in multi-agent setups.",
+    )
+
+    # Structured output — coerce the agent's final answer into a Pydantic model.
+    output_schema: Any | None = Field(
+        default=None,
+        description=(
+            "Optional Pydantic ``BaseModel`` subclass. When set, the agent's "
+            "final assistant message is parsed into an instance of this schema "
+            "and surfaced on ``AgentResult.parsed``. Supporting providers "
+            "(OpenAI / OCI OpenAI-compat) receive a strict ``response_format`` "
+            "for constrained decoding; others fall back to prompted JSON + "
+            "validate-and-retry."
+        ),
+    )
+
+    output_schema_retries: int = Field(
+        default=2,
+        ge=0,
+        le=10,
+        description=(
+            "Maximum re-prompts after a structured-output validation failure. "
+            "Each retry feeds the Pydantic ``ValidationError`` details back to "
+            "the model so it can repair the response. Set to 0 to disable."
+        ),
+    )
+
+    output_schema_strict: bool = Field(
+        default=True,
+        description=(
+            "When True (default), request provider-enforced strict mode for "
+            "``output_schema`` on supporting providers. Disable for providers "
+            "that reject strict ``json_schema`` mode (some OCI model families)."
+        ),
+    )
+
+    @field_validator("output_schema")
+    @classmethod
+    def _validate_output_schema(cls, v: Any) -> Any:
+        """Ensure output_schema is a Pydantic BaseModel subclass."""
+        if v is None:
+            return None
+        if not (isinstance(v, type) and issubclass(v, BaseModel)):
+            raise TypeError(f"output_schema must be a pydantic.BaseModel subclass, got: {v!r}")
+        return v
+
+    # Playbook enforcement (optional). When set, a PlaybookEnforcerHook is
+    # auto-installed during Agent initialization so the model is held to the
+    # playbook's step sequence and tool constraints.
+    playbook: Any | None = Field(
+        default=None,
+        description=(
+            "Optional ``locus.playbooks.models.Playbook`` instance. When "
+            "provided, ``Agent`` installs a ``PlaybookEnforcerHook`` that "
+            "validates each tool call against the current step and "
+            "auto-advances when the step's ``expected_tools`` are exhausted."
+        ),
     )
 
     # Agent identity

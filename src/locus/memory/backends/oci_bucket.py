@@ -64,7 +64,7 @@ class OCIBucketBackend(BaseCheckpointer):
 
         checkpointer = OCIBucketBackend(
             bucket_name="my-checkpoints",
-            namespace="<your-namespace>",
+            namespace="yzhbfkqxqsx9",
             profile_name="API_KEY_AUTH",
         )
         agent = Agent(config=cfg, checkpointer=checkpointer)
@@ -73,7 +73,7 @@ class OCIBucketBackend(BaseCheckpointer):
 
         checkpointer = OCIBucketBackend(
             bucket_name="my-checkpoints",
-            namespace="<your-namespace>",
+            namespace="yzhbfkqxqsx9",
             auth_type="instance_principal",
         )
 
