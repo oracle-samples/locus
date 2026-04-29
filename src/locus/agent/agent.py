@@ -40,6 +40,50 @@ from locus.tools.executor import (
 from locus.tools.registry import ToolRegistry
 
 
+_VALID_STOP_REASONS: frozenset[str] = frozenset(
+    {
+        "complete",
+        "terminal_tool",
+        "confidence_met",
+        "max_iterations",
+        "tool_loop",
+        "no_tools",
+        "grounding_failed",
+        "token_budget",
+        "time_budget",
+        "interrupted",
+        "error",
+        "cancelled",
+    }
+)
+
+
+def _normalize_stop_reason(raw: str | None) -> StopReason:
+    """Map a free-form ``TerminateEvent.reason`` to the ``StopReason`` Literal.
+
+    User-supplied composable termination conditions emit reasons like
+    ``"text_mention:DONE"``, ``"tool_called:book_flight"``, or AND-combined
+    strings like ``"confidence_met AND tool_called:book_flight"``. Map by
+    membership / prefix to the closest semantic match and fall back to
+    ``"complete"``.
+    """
+    if not raw:
+        return "complete"
+    if raw in _VALID_STOP_REASONS:
+        return raw  # type: ignore[return-value]
+    # AND combinator joins child reasons with " AND ". Take the strongest
+    # signal (terminal tool) if any branch matched it; otherwise fall through.
+    if "tool_called:" in raw:
+        return "terminal_tool"
+    if "text_mention:" in raw:
+        return "complete"
+    # Composite reasons that contain a known literal as a substring.
+    for known in _VALID_STOP_REASONS:
+        if known in raw:
+            return known  # type: ignore[return-value]
+    return "complete"
+
+
 class Agent(BaseModel):
     """
     Primary entry point for Locus agents.
@@ -77,6 +121,7 @@ class Agent(BaseModel):
     _reflector: Any = PrivateAttr(default=None)
     _grounding_evaluator: Any = PrivateAttr(default=None)
     _grounding_model: Any = PrivateAttr(default=None)
+    _auxiliary_model: Any = PrivateAttr(default=None)
     _last_run_state: AgentState | None = PrivateAttr(default=None)
     _interrupt_state: Any = PrivateAttr(default=None)
     _interrupt_prompt: str | None = PrivateAttr(default=None)
@@ -209,6 +254,14 @@ class Agent(BaseModel):
             self._hooks.append(PluginAdapter(skills_plugin))
             self._tool_registry.register(skills_plugin.get_activation_tool())
 
+        # Auto-install the PlaybookEnforcerHook when ``playbook`` is set
+        # so the README claim ("PlaybookEnforcer validates tool calls
+        # against step constraints") is real instead of aspirational.
+        if self.config.playbook is not None:
+            from locus.playbooks.hook import PlaybookEnforcerHook
+
+            self._hooks.append(PlaybookEnforcerHook(self.config.playbook))
+
         # Initialize conversation manager
         if self.config.conversation_manager is not None:
             self._conversation_manager = self.config.conversation_manager
@@ -227,6 +280,20 @@ class Agent(BaseModel):
                 diminishing_returns=self.config.reflexion.diminishing_returns,
             )
 
+        # Resolve the auxiliary (cheap/fast) model once. Used for
+        # grounding eval, structured-output repair, and the max-iterations
+        # final-summary call so those side calls don't burn primary-model
+        # budget. Falls back to the primary model when ``auxiliary_model``
+        # isn't set on the config.
+        if self.config.auxiliary_model is not None:
+            aux_cfg = self.config.auxiliary_model
+            if isinstance(aux_cfg, str):
+                self._auxiliary_model = get_model(aux_cfg)
+            else:
+                self._auxiliary_model = aux_cfg
+        else:
+            self._auxiliary_model = self._model
+
         # Initialize Grounding evaluator if enabled
         if self.config.grounding and self.config.grounding.enabled:
             from locus.reasoning.grounding import GroundingEvaluator
@@ -234,11 +301,11 @@ class Agent(BaseModel):
             self._grounding_evaluator = GroundingEvaluator(
                 replan_threshold=self.config.grounding.threshold,
             )
-            # Use separate model for grounding if configured, else reuse main model
+            # Precedence: grounding.model > auxiliary_model > primary.
             if self.config.grounding.model:
                 self._grounding_model = get_model(self.config.grounding.model)
             else:
-                self._grounding_model = self._model
+                self._grounding_model = self._auxiliary_model
 
         self._initialized = True
 
@@ -334,6 +401,12 @@ class Agent(BaseModel):
         _reflexion_evals = 0
         _grounding_evals = 0
         _last_assistant_content: str | None = None
+        _last_no_tool_calls = False
+
+        # Reset any user-supplied composable termination condition so
+        # time-windowed checks (TimeLimit) start their clock at run start.
+        if self.config.termination is not None:
+            self.config.termination.reset()
 
         # Run hooks: before_invocation
         state = await self._run_before_invocation_hooks(prompt, state)
@@ -365,6 +438,25 @@ class Agent(BaseModel):
                     )
                     break
 
+                # User-supplied composable termination condition runs first
+                # so MaxIterations(...) | TextMention("DONE") and friends
+                # actually fire before the hard-coded fallbacks.
+                if self.config.termination is not None:
+                    user_stop, user_reason = self.config.termination.check(
+                        state,
+                        last_message=_last_assistant_content or "",
+                        no_tool_calls=_last_no_tool_calls,
+                    )
+                    if user_stop:
+                        yield TerminateEvent(
+                            reason=user_reason or "complete",
+                            iterations_used=state.iteration,
+                            final_confidence=state.confidence,
+                            total_tool_calls=len(state.tool_executions),
+                            final_message=_last_assistant_content,
+                        )
+                        break
+
                 # Check termination conditions
                 should_stop, stop_reason = state.should_terminate
                 if should_stop and stop_reason:
@@ -378,7 +470,10 @@ class Agent(BaseModel):
                                 "based on the work done so far. Do NOT call any more tools."
                             )
                         )
-                        # Call model without tool schemas to force text response
+                        # Call model without tool schemas to force text response.
+                        # Use the auxiliary (cheap) model when configured —
+                        # this is just a final summary, no need to spend
+                        # primary-model budget.
                         messages = list(state.messages)
                         if self._conversation_manager:
                             if hasattr(self._conversation_manager, "async_apply"):
@@ -387,7 +482,8 @@ class Agent(BaseModel):
                                 messages = self._conversation_manager.apply(messages)
                         messages = self._validate_messages(messages)
 
-                        response = await self._model.complete(
+                        summary_model = self._auxiliary_model or self._model
+                        response = await summary_model.complete(
                             messages=messages,
                             tools=None,  # No tools — force text summary
                             temperature=self.config.temperature,
@@ -467,6 +563,9 @@ class Agent(BaseModel):
                 _total_tokens += prompt_toks + completion_toks
                 state = state.with_token_usage(prompt_toks, completion_toks)
                 _last_assistant_content = response.message.content
+                # Track for the user-supplied termination condition. Updated again
+                # below if a Cohere-style text tool call is parsed out of the body.
+                _last_no_tool_calls = not response.message.tool_calls
 
                 # Store plan from first iteration if planning enabled
                 if self.config.planning and state.iteration == 1 and response.message.content:
@@ -498,6 +597,7 @@ class Agent(BaseModel):
                         messages = list(state.messages)
                         messages[-1] = response.message
                         state = state.model_copy(update={"messages": tuple(messages)})
+                        _last_no_tool_calls = False
 
                 # If still no tool calls — in auto mode we're done, in explicit mode we continue
                 if not response.message.tool_calls and self.config.completion_mode != "explicit":
@@ -594,6 +694,39 @@ class Agent(BaseModel):
                         continue
 
                     modified_args = tool_event.arguments
+
+                    # Idempotent dedup: if the tool declared idempotent=True
+                    # and an earlier call in this run used the same arguments,
+                    # reuse the prior result instead of invoking the body.
+                    # Without this, ``@tool(idempotent=True)`` is silently a no-op
+                    # for the main Agent.run() path (despite being advertised on
+                    # the README hero example).
+                    cached = self._maybe_cached_idempotent_result(
+                        state, tool_call.name, modified_args, tool_call.id
+                    )
+                    if cached is not None:
+                        result = cached
+                        # Track + emit immediately, skip executor entirely.
+                        tool_results.append(result)
+                        execution = ToolExecution(
+                            tool_name=result.name,
+                            tool_call_id=result.tool_call_id,
+                            arguments=modified_args,
+                            result=result.content if result.success else None,
+                            error=result.error,
+                            duration_ms=result.duration_ms,
+                            idempotent_cache_hit=True,
+                        )
+                        state = state.with_tool_execution(execution)
+                        reasoning_step_tools.append(execution)
+                        yield ToolCompleteEvent(
+                            tool_name=result.name,
+                            tool_call_id=result.tool_call_id,
+                            result=result.content,
+                            error=result.error,
+                            duration_ms=result.duration_ms,
+                        )
+                        continue
 
                     # Execute the tool
                     start_time = time.perf_counter()
@@ -869,7 +1002,7 @@ class Agent(BaseModel):
                     callback(event)
 
                 if isinstance(event, TerminateEvent):
-                    stop_reason = event.reason  # type: ignore[assignment]
+                    stop_reason = _normalize_stop_reason(event.reason)
                     final_message = event.final_message or ""
                 elif isinstance(event, ToolCompleteEvent):
                     if event.error:
@@ -881,6 +1014,19 @@ class Agent(BaseModel):
                 state = await self._create_initial_state(prompt, thread_id, metadata)
                 if final_message:
                     state = state.with_message(Message.assistant(final_message))
+
+            # Structured-output coercion (no-op when output_schema is unset).
+            parsed_obj = None
+            parse_error_msg = None
+            structured_message = final_message
+            if self.config.output_schema is not None:
+                parsed_obj, parse_error_msg, state = await self._structure_output(
+                    state, final_message or ""
+                )
+                if parsed_obj is not None:
+                    # Replace ``message`` with the canonical JSON form so callers
+                    # using ``result.message`` still see a schema-valid string.
+                    structured_message = parsed_obj.model_dump_json()
 
             elapsed_ms = (datetime.now(UTC) - started_at).total_seconds() * 1000
             metrics = ExecutionMetrics(
@@ -898,6 +1044,9 @@ class Agent(BaseModel):
                 stop_reason=stop_reason,
                 metrics=metrics,
                 started_at=started_at,
+                parsed=parsed_obj,
+                parse_error=parse_error_msg,
+                message=structured_message,
             )
 
         try:
@@ -1084,12 +1233,17 @@ class Agent(BaseModel):
         _reflexion_evals = 0
         _grounding_evals = 0
         _last_assistant_content: str | None = None
+        _last_no_tool_calls = False
 
         # Extract last assistant content from state
         for msg in reversed(state.messages):
             if msg.role == Role.ASSISTANT and msg.content:
                 _last_assistant_content = msg.content
                 break
+
+        # Reset user-supplied composable termination state; resume = fresh clock.
+        if self.config.termination is not None:
+            self.config.termination.reset()
 
         try:
             while True:
@@ -1099,6 +1253,22 @@ class Agent(BaseModel):
                     if elapsed >= self.config.time_budget_seconds:
                         yield TerminateEvent(
                             reason="time_budget",
+                            iterations_used=state.iteration,
+                            final_confidence=state.confidence,
+                            total_tool_calls=len(state.tool_executions),
+                            final_message=_last_assistant_content,
+                        )
+                        break
+
+                if self.config.termination is not None:
+                    user_stop, user_reason = self.config.termination.check(
+                        state,
+                        last_message=_last_assistant_content or "",
+                        no_tool_calls=_last_no_tool_calls,
+                    )
+                    if user_stop:
+                        yield TerminateEvent(
+                            reason=user_reason or "complete",
                             iterations_used=state.iteration,
                             final_confidence=state.confidence,
                             total_tool_calls=len(state.tool_executions),
@@ -1124,6 +1294,7 @@ class Agent(BaseModel):
                 _total_tokens += prompt_toks + completion_toks
                 state = state.with_token_usage(prompt_toks, completion_toks)
                 _last_assistant_content = response.message.content
+                _last_no_tool_calls = not response.message.tool_calls
 
                 yield ThinkEvent(
                     iteration=state.iteration,
@@ -1251,7 +1422,20 @@ class Agent(BaseModel):
         prompt_value = self.config.system_prompt
         if callable(prompt_value):
             prompt_value = prompt_value({"prompt": prompt, "metadata": metadata or {}})
-        state = state.with_message(Message.system(str(prompt_value)))
+        prompt_str = str(prompt_value)
+
+        # When output_schema is set, append a schema instruction so even
+        # providers without ``response_format`` support produce valid JSON.
+        if self.config.output_schema is not None:
+            from locus.core.structured import create_schema_prompt
+
+            prompt_str = (
+                f"{prompt_str}\n\n"
+                f"=== Final-answer schema ===\n"
+                f"{create_schema_prompt(self.config.output_schema)}"
+            )
+
+        state = state.with_message(Message.system(prompt_str))
         state = state.with_message(Message.user(prompt))
 
         return state
@@ -1433,6 +1617,120 @@ class Agent(BaseModel):
         state = state.with_message(response.message)
 
         return response, state
+
+    def _maybe_cached_idempotent_result(
+        self,
+        state: AgentState,
+        tool_name: str,
+        arguments: dict[str, Any],
+        tool_call_id: str,
+    ) -> ToolResult | None:
+        """Return a cached ``ToolResult`` for an idempotent re-call, or None.
+
+        A tool decorated with ``@tool(idempotent=True)`` should fire its body
+        at most once per (name, arguments) pair within a run. If we find a
+        prior execution on ``state.tool_executions`` with the same name and
+        structurally-equal arguments, reuse its output and skip the executor.
+
+        Returns None when:
+          * the tool is unknown to the registry,
+          * the tool didn't declare ``idempotent=True``, or
+          * no prior execution matches.
+        """
+        tool = self._tool_registry.get(tool_name) if self._tool_registry else None
+        if tool is None or not getattr(tool, "idempotent", False):
+            return None
+
+        # Late import to avoid circularity (loop.nodes -> agent.agent).
+        from locus.loop.nodes import _find_matching_execution
+
+        prior = _find_matching_execution(state, tool_name, dict(arguments))
+        if prior is None:
+            return None
+        return ToolResult(
+            tool_call_id=tool_call_id,
+            name=tool_name,
+            content=prior.result if prior.result is not None else "",
+            error=prior.error,
+            duration_ms=0.0,
+        )
+
+    async def _structure_output(
+        self,
+        state: AgentState,
+        final_message: str,
+    ) -> tuple[BaseModel | None, str | None, AgentState]:
+        """Coerce the agent's final answer into ``config.output_schema``.
+
+        Tries to parse ``final_message`` directly; on validation failure,
+        re-prompts the model up to ``output_schema_retries`` times with the
+        Pydantic error details inlined so it can repair the JSON. Supporting
+        providers receive a strict ``response_format`` for constrained
+        decoding.
+
+        Returns a triple ``(parsed, parse_error, state)`` — exactly one of
+        ``parsed`` / ``parse_error`` is non-None.
+        """
+        from locus.core.structured import (
+            build_response_format,
+            format_validation_errors,
+            parse_structured,
+        )
+
+        schema = self.config.output_schema
+        if schema is None:
+            return None, None, state
+
+        # First attempt: parse what the agent already produced.
+        attempt = parse_structured(final_message, schema, strict=False)
+        if attempt.success:
+            return attempt.parsed, None, state
+
+        last_error = attempt.error or "structured-output parse failed"
+        last_validation_errors = attempt.validation_errors
+
+        response_format = build_response_format(schema, strict=self.config.output_schema_strict)
+
+        for _retry in range(self.config.output_schema_retries):
+            error_detail = format_validation_errors(last_validation_errors)
+            repair_prompt = (
+                "[Schema Repair] Your previous response did not match the "
+                "required JSON schema.\n"
+                f"Validation errors:\n{error_detail}\n\n"
+                "Return ONLY a valid JSON object that matches the schema. "
+                "Do not wrap it in markdown fences. Do not add commentary."
+            )
+            state = state.with_message(Message.system(repair_prompt))
+            messages = self._validate_messages(list(state.messages))
+
+            try:
+                response = await self._model.complete(
+                    messages=messages,
+                    tools=None,
+                    temperature=self.config.temperature,
+                    max_tokens=self.config.max_tokens,
+                    response_format=response_format,
+                )
+            except TypeError:
+                # Provider doesn't accept response_format kwarg — retry without.
+                response = await self._model.complete(
+                    messages=messages,
+                    tools=None,
+                    temperature=self.config.temperature,
+                    max_tokens=self.config.max_tokens,
+                )
+
+            new_message = response.message.content or ""
+            state = state.with_message(response.message)
+
+            attempt = parse_structured(new_message, schema, strict=False)
+            if attempt.success:
+                return attempt.parsed, None, state
+
+            last_error = attempt.error or last_error
+            last_validation_errors = attempt.validation_errors
+
+        return None, last_error, state
 
     async def _apply_reflexion(
         self,

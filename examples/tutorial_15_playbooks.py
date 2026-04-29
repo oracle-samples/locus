@@ -323,6 +323,46 @@ def main():
     print("8. Include validation criteria for critical steps")
 
     # =========================================================================
+    # Part 10: Auto-installing the enforcer via Agent(playbook=...)
+    # =========================================================================
+    print("\n=== Part 10: Agent(playbook=...) auto-install ===\n")
+    print(
+        "When you pass a Playbook to the Agent constructor, Locus auto-\n"
+        "installs PlaybookEnforcerHook for you. Each tool call is validated\n"
+        "against the current step's expected_tools; out-of-sequence calls\n"
+        "are cancelled with a hint. The plan auto-advances when a step's\n"
+        "expected_tools are exhausted.\n"
+    )
+    print("Sketch (requires real model credentials to run):\n")
+    print(
+        """    from locus import Agent
+    from locus.playbooks import Playbook, PlaybookStep
+
+    triage = Playbook(
+        id="triage",
+        name="Incident triage",
+        steps=[
+            PlaybookStep(id="gather", description="Pull logs",
+                         expected_tools=["fetch_logs"]),
+            PlaybookStep(id="classify", description="Severity",
+                         expected_tools=["classify_severity"]),
+            PlaybookStep(id="page", description="Page oncall",
+                         expected_tools=["page_oncall"]),
+        ],
+    )
+
+    agent = Agent(
+        model="oci:openai.gpt-5",
+        tools=[fetch_logs, classify_severity, page_oncall],
+        playbook=triage,           # auto-installs PlaybookEnforcerHook
+    )
+
+    result = agent.run_sync("Triage incident INC-42.")
+    # Out-of-order calls are blocked; the plan reaches `is_complete` in order.
+"""
+    )
+
+    # =========================================================================
     print("\n" + "=" * 60)
     print("Next: Tutorial 16 - Agent Handoff")
     print("=" * 60)

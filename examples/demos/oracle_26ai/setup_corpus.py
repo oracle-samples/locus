@@ -4,7 +4,7 @@ Run once before ``demo.py``. Idempotent — re-running just no-ops if the
 table already has data.
 
 Required env vars:
-    OCI_PROFILE          — OCI config profile (default DEFAULT)
+    OCI_PROFILE          — OCI config profile (default API_FREE_TIER)
     ORACLE_PASSWORD      — ADB ADMIN password
     ORACLE_WALLET        — wallet directory (default ~/.oci/wallets/deepresearch)
     ORACLE_DSN           — TNS alias (default deepresearch_low)
@@ -65,7 +65,7 @@ CORPUS = [
 
 
 async def main():
-    profile = os.environ.get("OCI_PROFILE", "DEFAULT")
+    profile = os.environ.get("OCI_PROFILE", "API_FREE_TIER")
     wallet = os.environ.get("ORACLE_WALLET", os.path.expanduser("~/.oci/wallets/deepresearch"))
     pw = os.environ["ORACLE_PASSWORD"]
 

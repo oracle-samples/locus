@@ -33,6 +33,8 @@ from locus.multiagent.graph import (
     StreamMode,
     # Convenience functions
     create_graph,
+    # Streaming
+    emit_custom,
     node,
 )
 from locus.multiagent.handoff import (
@@ -95,6 +97,8 @@ __all__ = [
     # Graph - Convenience
     "create_graph",
     "node",
+    # Graph - Streaming
+    "emit_custom",
     # Handoff
     "Handoff",
     "HandoffAgent",

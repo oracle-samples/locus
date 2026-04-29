@@ -1,38 +1,36 @@
-# Reporting security vulnerabilities
+# Security Policy
 
-Oracle values the independent security research community and believes that
-responsible disclosure of security vulnerabilities helps us ensure the security
-and privacy of all our users.
+## Reporting a Vulnerability
 
-Please do NOT raise a GitHub Issue to report a security vulnerability. If you
-believe you have found a security vulnerability, please submit a report to
-[secalert_us@oracle.com][1] preferably with a proof of concept. Please review
-some additional information on [how to report security vulnerabilities to Oracle][2].
-We encourage people who contact Oracle Security to use email encryption using
-[our encryption key][3].
+If you believe you have found a security vulnerability in Locus, please report it to us through coordinated disclosure.
 
-We ask that you do not use other channels or contact the project maintainers
-directly.
+**Please do not report security vulnerabilities through public GitHub issues.**
 
-Non-vulnerability related security issues including ideas for new or improved
-security features are welcome on GitHub Issues.
+Instead, please send an email to the maintainers with:
 
-## Security updates, alerts and bulletins
+- A description of the vulnerability
+- Steps to reproduce the issue
+- Any potential impact
+- Any suggested fixes (if applicable)
 
-Security updates will be released on a regular cadence. Many of our projects
-will typically release security fixes in conjunction with the
-Oracle Critical Patch Update program. Additional
-information, including past advisories, is available on our [security alerts][4]
-page.
+We will acknowledge receipt of your vulnerability report and send you regular updates about our progress.
 
-## Security-related information
+## Supported Versions
 
-We will provide security related information such as a threat model, considerations
-for secure use, or any known security issues in our documentation. Please note
-that labs and sample code are intended to demonstrate a concept and may not be
-sufficiently hardened for production use.
+| Version | Supported          |
+| ------- | ------------------ |
+| 0.1.x   | :white_check_mark: |
 
-[1]: mailto:secalert_us@oracle.com
-[2]: https://www.oracle.com/corporate/security-practices/assurance/vulnerability/reporting.html
-[3]: https://www.oracle.com/security-alerts/encryptionkey.html
-[4]: https://www.oracle.com/security-alerts/
+## Security Best Practices
+
+When using Locus in production:
+
+1. **API Keys**: Never commit API keys or secrets to version control. Use environment variables or secret management systems.
+
+2. **Tool Execution**: Be cautious when allowing agents to execute tools that interact with external systems. Implement proper sandboxing and validation.
+
+3. **Input Validation**: Always validate and sanitize user inputs before passing them to agents.
+
+4. **Model Access**: Use appropriate IAM policies to restrict access to OCI GenAI and other model providers.
+
+5. **Checkpointing**: When using persistent checkpointing backends (Redis, PostgreSQL, etc.), ensure proper authentication and encryption in transit.

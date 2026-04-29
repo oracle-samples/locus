@@ -11,6 +11,7 @@ strict: true
 exclude_docs: |
   internal/
   doc-gen/
+  img/patterns/README.md
 
 theme:
   name: material
@@ -107,7 +108,7 @@ nav:
 - Home: index.md
 - Concepts:
   - Agents:
-    - Agent: concepts/agent.md
+    - Overview: concepts/agent.md
     - Agent Loop: concepts/agent-loop.md
     - State: concepts/state.md
     - Prompts: concepts/prompts.md
@@ -119,25 +120,27 @@ nav:
     - Interrupts: concepts/interrupts.md
     - Errors: concepts/errors.md
   - Tools:
-    - Tools: concepts/tools.md
+    - Overview: concepts/tools.md
     - Idempotency: concepts/idempotency.md
     - Executors: concepts/executors.md
     - MCP: concepts/mcp.md
-  - Reasoning:
-    - Reasoning: concepts/reasoning.md
-  - Memory & Persistence:
-    - Checkpointers: concepts/checkpointers.md
+  - Reasoning: concepts/reasoning.md
+  - Memory: concepts/checkpointers.md
   - Streaming & Server:
     - Streaming: concepts/streaming.md
     - Events: concepts/events.md
+    - Graph streaming: concepts/graph-streaming.md
     - Agent Server: concepts/server.md
-  - Models:
-    - Providers: concepts/models.md
+  - Model Providers:
+    - Overview: concepts/models.md
+    - OCI: concepts/providers/oci.md
+    - OpenAI: concepts/providers/openai.md
+    - Anthropic: concepts/providers/anthropic.md
+    - Ollama: concepts/providers/ollama.md
   - Skills & Playbooks:
     - Skills: concepts/skills.md
     - Playbooks: concepts/playbooks.md
-  - RAG:
-    - RAG: concepts/rag.md
+  - RAG: concepts/rag.md
   - Safety & Observability:
     - Safety & Guardrails: concepts/safety.md
     - Observability: concepts/observability.md

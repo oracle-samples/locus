@@ -21,7 +21,7 @@ Set Shell "bash"
 Hide
 Type "cd /tmp/locus-gifs/editor-demo" Enter
 Type "export PATH=/Users/federico.kamelhar/Projects/locus/.venv/bin:$PATH" Enter
-Type "export OCI_PROFILE=DEFAULT" Enter
+Type "export OCI_PROFILE=LUIGI_FRA_API" Enter
 Type "clear" Enter
 Sleep 300ms
 Show

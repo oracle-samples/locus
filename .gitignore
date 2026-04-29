@@ -255,6 +255,3 @@ examples/start_and_test.sh
 # Old tutorials directory (superseded by examples/tutorial_*.py)
 tutorials/
 site/
-
-# Internal-only docs (threat models, security review, roadmap)
-docs/internal/

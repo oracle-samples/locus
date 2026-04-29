@@ -48,7 +48,11 @@ _LAZY_IMPORTS = {
     "Agent": ("locus.agent.agent", "Agent"),
     "AgentConfig": ("locus.agent.config", "AgentConfig"),
     "AgentResult": ("locus.agent.result", "AgentResult"),
-    "Reflexion": ("locus.reasoning.reflexion", "Reflexion"),
+    # Public name "Reflexion" maps to the actual class "Reflector". The
+    # mismatch was an import error on locus 0.1.0 — keep the alias so existing
+    # docs / code that does ``from locus import Reflexion`` keeps working.
+    "Reflexion": ("locus.reasoning.reflexion", "Reflector"),
+    "Reflector": ("locus.reasoning.reflexion", "Reflector"),
     "GroundingEvaluator": ("locus.reasoning.grounding", "GroundingEvaluator"),
     "CausalChain": ("locus.reasoning.causal", "CausalChain"),
     "HookProvider": ("locus.hooks.provider", "HookProvider"),
@@ -88,6 +92,7 @@ __all__ = [
     "LocusSettings",
     "Message",
     "ReflectEvent",
+    "Reflector",
     "Reflexion",
     "Role",
     "TerminateEvent",

@@ -7,12 +7,15 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any, Literal
+from typing import Any, Literal, TypeVar
 
 from pydantic import BaseModel, Field, computed_field
 
 from locus.core.messages import Message
 from locus.core.state import AgentState, ReasoningStep, ToolExecution
+
+
+T = TypeVar("T", bound=BaseModel)
 
 
 class ExecutionMetrics(BaseModel):
@@ -124,6 +127,23 @@ class AgentResult(BaseModel):
         description="Claims that couldn't be grounded",
     )
 
+    # Structured output (if Agent was configured with output_schema)
+    parsed: BaseModel | None = Field(
+        default=None,
+        description=(
+            "Final assistant message parsed into the configured ``output_schema``. "
+            "``None`` when no schema is set or all parse retries failed."
+        ),
+    )
+
+    parse_error: str | None = Field(
+        default=None,
+        description=(
+            "Pydantic validation error from the last structured-output attempt, "
+            "or ``None`` on success. Mutually exclusive with ``parsed``."
+        ),
+    )
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def success(self) -> bool:
@@ -168,6 +188,27 @@ class AgentResult(BaseModel):
                 return msg.content
         return None
 
+    def parsed_as(self, schema: type[T]) -> T:
+        """Return ``parsed`` cast to ``schema``, with a runtime check.
+
+        Use this when you want a typed handle on the structured output without
+        casting yourself::
+
+            picks = result.parsed_as(VendorList)
+            for v in picks.vendors:
+                ...
+
+        Raises ``ValueError`` if ``parsed`` is None (parse failed or no schema
+        configured) and ``TypeError`` if ``parsed`` is the wrong concrete type.
+        """
+        if self.parsed is None:
+            if self.parse_error:
+                raise ValueError(f"AgentResult has no parsed output: {self.parse_error}")
+            raise ValueError("AgentResult has no parsed output (no output_schema was configured)")
+        if not isinstance(self.parsed, schema):
+            raise TypeError(f"Expected {schema.__name__}, got {type(self.parsed).__name__}")
+        return self.parsed
+
     def to_dict(self) -> dict[str, Any]:
         """Export result to dictionary."""
         return self.model_dump(mode="json")
@@ -182,21 +223,27 @@ class AgentResult(BaseModel):
         error: str | None = None,
         grounding_score: float | None = None,
         ungrounded_claims: list[str] | None = None,
+        parsed: BaseModel | None = None,
+        parse_error: str | None = None,
+        message: str | None = None,
     ) -> AgentResult:
         """
         Create a result from final state.
 
-        Extracts the final message from the last assistant response.
+        Extracts the final message from the last assistant response unless an
+        explicit ``message`` is supplied (used after a structuring re-prompt).
         """
-        # Find the last assistant message
-        message = ""
-        for msg in reversed(state.messages):
-            if msg.role.value == "assistant":
-                message = msg.content or ""
-                break
+        # Find the last assistant message if not provided
+        final_message = message
+        if final_message is None:
+            final_message = ""
+            for msg in reversed(state.messages):
+                if msg.role.value == "assistant":
+                    final_message = msg.content or ""
+                    break
 
         return cls(
-            message=message,
+            message=final_message,
             state=state,
             stop_reason=stop_reason,
             metrics=metrics or ExecutionMetrics(),
@@ -205,6 +252,8 @@ class AgentResult(BaseModel):
             error=error,
             grounding_score=grounding_score,
             ungrounded_claims=ungrounded_claims or [],
+            parsed=parsed,
+            parse_error=parse_error,
         )
 
 

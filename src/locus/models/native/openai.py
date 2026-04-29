@@ -21,6 +21,32 @@ if TYPE_CHECKING:
     import openai
 
 
+def _decode_tool_arguments(raw: str | None) -> dict[str, Any]:
+    """Decode the ``tc.function.arguments`` payload into a dict.
+
+    Most providers send a JSON object string like ``'{"q": "Tokyo"}'``. A few
+    (notably some OCI Llama deployments) double-encode it so ``json.loads``
+    yields a string that itself parses back to the dict — try once more before
+    giving up. Returns ``{}`` on any unrecoverable error.
+    """
+    if not raw:
+        return {}
+    try:
+        decoded = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+    if isinstance(decoded, dict):
+        return decoded
+    if isinstance(decoded, str):
+        try:
+            second = json.loads(decoded)
+        except json.JSONDecodeError:
+            return {}
+        if isinstance(second, dict):
+            return second
+    return {}
+
+
 class OpenAIConfig(ModelConfig):
     """Configuration for OpenAI models."""
 
@@ -163,10 +189,7 @@ class OpenAIModel(BaseModel):
 
         if msg is not None and msg.tool_calls:
             for tc in msg.tool_calls:
-                try:
-                    arguments = json.loads(tc.function.arguments)
-                except json.JSONDecodeError:
-                    arguments = {}
+                arguments = _decode_tool_arguments(tc.function.arguments)
                 tool_calls.append(
                     ToolCall(
                         id=tc.id,
@@ -247,6 +270,12 @@ class OpenAIModel(BaseModel):
         if self.config.stop_sequences and not uses_completion_tokens:
             request_kwargs["stop"] = self.config.stop_sequences
 
+        # Forward ``response_format`` for structured output. Caller is expected
+        # to pass a fully-formed dict (see locus.core.structured.build_response_format).
+        response_format = kwargs.get("response_format")
+        if response_format is not None:
+            request_kwargs["response_format"] = response_format
+
         response = await self.client.chat.completions.create(**request_kwargs)
         return self._parse_response(response)
 
@@ -303,6 +332,13 @@ class OpenAIModel(BaseModel):
 
         if self.config.stop_sequences:
             request_kwargs["stop"] = self.config.stop_sequences
+
+        # Forward ``response_format`` for streaming structured output —
+        # symmetric with complete(). Caller is expected to pass a fully-
+        # formed dict (see locus.core.structured.build_response_format).
+        response_format = kwargs.get("response_format")
+        if response_format is not None:
+            request_kwargs["response_format"] = response_format
 
         # Track tool calls during streaming
         current_tool_calls: dict[int, dict[str, Any]] = {}

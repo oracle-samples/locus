@@ -14,14 +14,14 @@ async for event in agent.run("Plan a trip to Paris."):
     match event:
         case ThinkEvent(reasoning=r) if r:
             print(f"💭 {r}")
-        case ToolStartEvent(tool_name=n, args=a):
+        case ToolStartEvent(tool_name=n, arguments=a):
             print(f"🔧 {n}({a})")
         case ToolCompleteEvent(tool_name=n, result=r):
             print(f"   ↳ {r}")
-        case ModelChunkEvent(text=t):
-            print(t, end="", flush=True)        # token-level streaming
-        case ReflectEvent(judgment=j):
-            print(f"🪞 {j}")
+        case ModelChunkEvent(content=c) if c:
+            print(c, end="", flush=True)        # token-level streaming
+        case ReflectEvent(assessment=a, new_confidence=c):
+            print(f"🪞 {a} ({c:.2f})")
         case TerminateEvent(final_message=m):
             print(f"\n✅ {m}")
 ```
@@ -35,12 +35,11 @@ async for event in agent.run("Plan a trip to Paris."):
 | `ToolStartEvent` | Agent decided to call a tool. |
 | `ToolCompleteEvent` | Tool returned (or raised). |
 | `ReflectEvent` | Reflexion loop emitted a self-evaluation. |
-| `IterationEvent` | A new ReAct iteration began (count + budget left). |
+| `GroundingEvent` | Grounding evaluation finished. |
+| `InterruptEvent` | A tool requested human-in-the-loop input. |
 | `TerminateEvent` | The run is done — terminal condition met. |
 
-Every event carries `agent_name`, `thread_id`, and a monotonic
-sequence number — useful for multi-agent UIs that interleave streams
-from several agents.
+Every event carries `event_type` and a UTC `timestamp`.
 
 ## Write-protected
 
@@ -51,7 +50,7 @@ returns a control directive (e.g. `Cancel`, `Retry`).
 ## Sync wrapper
 
 If you don't want to consume events, `agent.run_sync(prompt)` returns
-the final `RunResult` directly.
+the final `AgentResult` directly.
 
 ## SSE over HTTP
 

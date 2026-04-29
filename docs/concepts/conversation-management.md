@@ -15,7 +15,7 @@ agent = Agent(
     model="oci:openai.gpt-5.5",
     tools=[...],
     checkpointer=OCIBucketBackend(
-        bucket="locus-threads",
+        bucket_name="locus-threads",
         namespace="<your-namespace>",
     ),
 )
@@ -73,9 +73,9 @@ state = await checkpointer.load("user-c42-support")
 print(len(state.messages), "messages")
 
 # Branch — new thread, copy of an existing one
-await checkpointer.branch(
-    source="user-c42-support",
-    target="user-c42-support-experiment",
+await checkpointer.copy_thread(
+    source_thread_id="user-c42-support",
+    dest_thread_id="user-c42-support-experiment",
 )
 
 # Drop
@@ -98,9 +98,9 @@ bug — you'll race on the checkpoint. Three patterns to avoid that:
    serialise messages per session.
 2. **Distinct sub-threads.** If the user asks two things in
    parallel, give them two thread ids.
-3. **Optimistic concurrency.** Some checkpointer backends
-   (`OracleCheckpointer`, `PostgreSQLBackend`) support `If-Match`
-   semantics — second writer raises `ThreadConflictError`.
+3. **Last-write-wins is the default.** locus checkpointers do not
+   currently expose a conflict exception — if you need optimistic
+   concurrency, layer it at the application or database level.
 
 ## Compaction — keep long threads in budget
 

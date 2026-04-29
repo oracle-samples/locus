@@ -59,8 +59,9 @@ The model sees `find_customer`; your Python name stays `_impl`.
 
 ## Accessing context
 
-If your tool needs the current thread_id, the model, or the agent's
-metadata, accept a `ctx: ToolContext` parameter:
+If your tool needs the current run id, iteration counter, agent state,
+or per-invocation metadata passed via `agent.run(..., metadata=...)`,
+accept a `ctx: ToolContext` parameter:
 
 ```python
 from locus import tool
@@ -69,8 +70,14 @@ from locus.tools.context import ToolContext
 @tool
 def with_context(message: str, ctx: ToolContext) -> str:
     """..."""
-    return f"{ctx.thread_id}: {message}"
+    return f"run={ctx.run_id} iter={ctx.iteration}: {message}"
 ```
+
+`ToolContext` exposes:
+`tool_call_id`, `tool_name`, `agent_id`, `run_id`, `iteration`, `state`,
+`invocation_metadata`, `tool_config`, `messages`, `confidence`. Use
+`ctx.invocation_metadata.get("thread_id")` if you persisted the
+thread id there at agent-run time.
 
 ## Error handling
 

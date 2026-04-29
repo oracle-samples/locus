@@ -25,6 +25,7 @@ from locus.streaming.sse import (
     SSEMessage,
     create_sse_response_headers,
 )
+from locus.streaming.structured import StructuredStream, stream_structured
 
 
 __all__ = [
@@ -42,4 +43,7 @@ __all__ = [
     "AsyncSSEHandler",
     "SSEMessage",
     "create_sse_response_headers",
+    # Structured streaming
+    "StructuredStream",
+    "stream_structured",
 ]
