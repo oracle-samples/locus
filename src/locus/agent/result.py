@@ -127,6 +127,41 @@ class AgentResult(BaseModel):
         description="Claims that couldn't be grounded",
     )
 
+    # GSAR info (if AgentConfig.gsar was set). The framework lives in
+    # locus.reasoning.gsar — see arXiv:2604.23366. The fields are typed
+    # as ``Any`` here to keep ``locus.agent`` import-light; the actual
+    # values are ``JudgeOutput``, ``float``, and ``Decision`` from
+    # ``locus.reasoning.gsar*``.
+    gsar_judgment: Any = Field(
+        default=None,
+        description=(
+            "The :class:`~locus.reasoning.gsar_judge.JudgeOutput` "
+            "produced by the configured GSAR judge over the agent's "
+            "final message + tool-execution history. ``None`` when "
+            "``AgentConfig.gsar`` is unset."
+        ),
+    )
+
+    gsar_score: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Scalar score ``S`` from Eq. 2, recomputed from the "
+            "judgment partition under the configured weight map and "
+            "contradiction penalty. ``None`` when GSAR is unset."
+        ),
+    )
+
+    gsar_decision: str | None = Field(
+        default=None,
+        description=(
+            "The :class:`~locus.reasoning.gsar.Decision` (``proceed``, "
+            "``regenerate``, ``replan``, ``abstain``) for ``gsar_score`` "
+            "under the configured thresholds. ``None`` when GSAR is unset."
+        ),
+    )
+
     # Structured output (if Agent was configured with output_schema)
     parsed: BaseModel | None = Field(
         default=None,
@@ -226,6 +261,9 @@ class AgentResult(BaseModel):
         parsed: BaseModel | None = None,
         parse_error: str | None = None,
         message: str | None = None,
+        gsar_judgment: Any = None,
+        gsar_score: float | None = None,
+        gsar_decision: str | None = None,
     ) -> AgentResult:
         """
         Create a result from final state.
@@ -254,6 +292,9 @@ class AgentResult(BaseModel):
             ungrounded_claims=ungrounded_claims or [],
             parsed=parsed,
             parse_error=parse_error,
+            gsar_judgment=gsar_judgment,
+            gsar_score=gsar_score,
+            gsar_decision=gsar_decision,
         )
 
 

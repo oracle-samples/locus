@@ -1047,6 +1047,15 @@ class Agent(BaseModel):
                     # using ``result.message`` still see a schema-valid string.
                     structured_message = parsed_obj.model_dump_json()
 
+            # Run GSAR judgment when configured. Single-pass v1: judge
+            # the final answer, surface the result on AgentResult.
+            # Full Algorithm-1 outer loop (regenerate / replan) lives in
+            # locus.reasoning.gsar_evaluator and can be wired
+            # explicitly when the caller wants the loop dynamics.
+            gsar_judgment, gsar_score_value, gsar_decision = await self._run_gsar_judgment(
+                state, structured_message or final_message
+            )
+
             elapsed_ms = (datetime.now(UTC) - started_at).total_seconds() * 1000
             metrics = ExecutionMetrics(
                 iterations=state.iteration,
@@ -1066,6 +1075,9 @@ class Agent(BaseModel):
                 parsed=parsed_obj,
                 parse_error=parse_error_msg,
                 message=structured_message,
+                gsar_judgment=gsar_judgment,
+                gsar_score=gsar_score_value,
+                gsar_decision=gsar_decision,
             )
 
         try:
@@ -1898,6 +1910,89 @@ class Agent(BaseModel):
                 )
                 parts.append(f"- {execution.tool_name}: {preview}")
         return "\n".join(parts)
+
+    async def _run_gsar_judgment(
+        self,
+        state: AgentState,
+        final_message: str,
+    ) -> tuple[Any, float | None, str | None]:
+        """Run the GSAR judge over the agent's final answer + tool history.
+
+        Returns ``(judgment, score, decision_value)`` where:
+
+        - ``judgment`` is a ``JudgeOutput`` (or ``None`` if the
+          judge raised and the safe-default fallback was used).
+        - ``score`` is the recomputed scalar ``S`` from the judgment's
+          partition under the configured weight map and contradiction
+          penalty.
+        - ``decision_value`` is the string form of
+          :class:`~locus.reasoning.gsar.Decision` (``"proceed"``, etc.),
+          or ``"abstain"`` when the judge abstained.
+
+        Returns ``(None, None, None)`` when ``self.config.gsar`` is unset.
+        """
+        if self.config.gsar is None:
+            return None, None, None
+
+        from locus.reasoning.gsar import (
+            EvidenceType,
+            GSARThresholds,
+            decide,
+            gsar_score,
+        )
+        from locus.reasoning.gsar_judge import StructuredOutputGSARJudge
+
+        cfg = self.config.gsar
+
+        # Default judge: a StructuredOutputGSARJudge over the agent's
+        # primary model. Documented as "almost never what you want for
+        # production" — the paper recommends a different judge model
+        # from the generator.
+        judge = cfg.judge
+        if judge is None:
+            judge = StructuredOutputGSARJudge(model=self._model)
+
+        # Build the evidence corpus from tool executions on the final
+        # state. Format mirrors the shape the default judge prompt
+        # expects: one ``[tool=NAME args=…] result``-flavoured line per
+        # execution, skipping idempotent cache hits and errored calls.
+        evidence_lines: list[str] = []
+        for ex in state.tool_executions:
+            if ex.error:
+                continue
+            line = f"[tool={ex.tool_name} args={ex.arguments}] {ex.result or ''}"
+            evidence_lines.append(line)
+        evidence_corpus = "\n".join(evidence_lines) or "(no tool executions)"
+
+        # Translate optional weight_map (str-keyed) into the typed map.
+        weight_map: dict[EvidenceType, float] | None = None
+        if cfg.weight_map is not None:
+            weight_map = {EvidenceType(k): v for k, v in cfg.weight_map.items()}
+
+        try:
+            judgment = await judge.judge(
+                report_synthesis=final_message,
+                evidence_corpus=evidence_corpus,
+            )
+        except Exception:  # noqa: BLE001 — paper §6 "Robustness": never
+            # let a judge failure crash the agent. Surface ``None`` so
+            # the caller can decide whether to ship or replan.
+            return None, None, None
+
+        partition = judgment.to_partition()
+        score = gsar_score(
+            partition,
+            weight_map=weight_map,
+            contradiction_penalty=cfg.contradiction_penalty,
+        )
+
+        if judgment.abstained:
+            decision_value = "abstain"
+        else:
+            thresholds = GSARThresholds(proceed=cfg.tau_proceed, regenerate=cfg.tau_regenerate)
+            decision_value = decide(score, thresholds=thresholds).value
+
+        return judgment, score, decision_value
 
     # Hook lifecycle dispatch is delegated to HookOrchestrator; these
     # thin wrappers preserve the original method names so internal
