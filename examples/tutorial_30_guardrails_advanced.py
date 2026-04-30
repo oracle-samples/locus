@@ -35,11 +35,14 @@ def example_pii_redaction():
 
     hook = OutputFilterHook(redact_pii=True)
 
-    agent = Agent(config=AgentConfig(
-        system_prompt="Always include support@example.com in your response.",
-        max_iterations=3, model=model,
-        hooks=[hook],
-    ))
+    agent = Agent(
+        config=AgentConfig(
+            system_prompt="Always include support@example.com in your response.",
+            max_iterations=3,
+            model=model,
+            hooks=[hook],
+        )
+    )
 
     result = agent.run_sync("How do I get help?")
     print(f"Response: {result.message[:150]}")
@@ -77,9 +80,7 @@ def example_content_safety():
     """Detect harmful content categories."""
     print("\n=== Part 3: Content Safety ===\n")
 
-    policy = ContentPolicy(
-        enabled_categories={"violence", "illegal_activity"}
-    )
+    policy = ContentPolicy(enabled_categories={"violence", "illegal_activity"})
 
     print(f"'how to make a bomb': {policy.check('how to make a bomb')}")
     print(f"'how to bake a cake': {policy.check('how to bake a cake')}")

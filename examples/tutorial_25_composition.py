@@ -37,14 +37,20 @@ async def example_sequential():
 
     model = get_model()
 
-    researcher = Agent(config=AgentConfig(
-        system_prompt="You are a researcher. Provide 3 key facts about the topic.",
-        max_iterations=3, model=model,
-    ))
-    writer = Agent(config=AgentConfig(
-        system_prompt="You are a writer. Take the research and write a short paragraph.",
-        max_iterations=3, model=model,
-    ))
+    researcher = Agent(
+        config=AgentConfig(
+            system_prompt="You are a researcher. Provide 3 key facts about the topic.",
+            max_iterations=3,
+            model=model,
+        )
+    )
+    writer = Agent(
+        config=AgentConfig(
+            system_prompt="You are a writer. Take the research and write a short paragraph.",
+            max_iterations=3,
+            model=model,
+        )
+    )
 
     pipeline = SequentialPipeline(agents=[researcher, writer])
     result = await pipeline.run("Benefits of regular exercise")
@@ -65,14 +71,20 @@ async def example_parallel():
 
     model = get_model()
 
-    pros = Agent(config=AgentConfig(
-        system_prompt="List 2 pros of the topic. Be concise.",
-        max_iterations=3, model=model,
-    ))
-    cons = Agent(config=AgentConfig(
-        system_prompt="List 2 cons of the topic. Be concise.",
-        max_iterations=3, model=model,
-    ))
+    pros = Agent(
+        config=AgentConfig(
+            system_prompt="List 2 pros of the topic. Be concise.",
+            max_iterations=3,
+            model=model,
+        )
+    )
+    cons = Agent(
+        config=AgentConfig(
+            system_prompt="List 2 cons of the topic. Be concise.",
+            max_iterations=3,
+            model=model,
+        )
+    )
 
     pipeline = ParallelPipeline(agents=[pros, cons])
     result = await pipeline.run("Remote work for engineers")
@@ -93,13 +105,16 @@ async def example_loop():
 
     model = get_model()
 
-    improver = Agent(config=AgentConfig(
-        system_prompt=(
-            "You improve text quality. When the text is good enough, "
-            "include the word APPROVED at the end."
-        ),
-        max_iterations=3, model=model,
-    ))
+    improver = Agent(
+        config=AgentConfig(
+            system_prompt=(
+                "You improve text quality. When the text is good enough, "
+                "include the word APPROVED at the end."
+            ),
+            max_iterations=3,
+            model=model,
+        )
+    )
 
     loop = LoopAgent(
         agent=improver,

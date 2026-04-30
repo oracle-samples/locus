@@ -12,8 +12,8 @@ on:
 permissions:
   contents: read
 
-# If another push to the same PR or branch happens while this workflow is still running,
-# cancel the earlier run in favor of the next run.
+# If another push to the same PR or branch happens while this workflow is
+# still running, cancel the earlier run in favor of the next run.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -31,13 +31,21 @@ jobs:
     permissions:
       contents: read
 
+  precommit:
+    name: Pre-commit
+    uses: ./.github/workflows/_precommit.yml
+    permissions:
+      contents: read
+
   codespell:
     name: Codespell
     uses: ./.github/workflows/_codespell.yml
     permissions:
       contents: read
 
-  # Verify commits are signed off (OCA compliance)
+  # Verify commits are signed off (OCA compliance). Only runs on PRs —
+  # main pushes have already been signed off through the PR that
+  # produced them.
   dco:
     name: DCO Check
     runs-on: ubuntu-latest
@@ -52,26 +60,34 @@ jobs:
           fetch-depth: 0
 
       - name: Check DCO
-        # tisonkun/actions-dco@v1.1 — v1.2 was deleted upstream; pin to SHA
-        # to avoid silently using a tag that disappears or is rewritten.
+        # tisonkun/actions-dco@v1.1 — pin to SHA so a deleted/rewritten
+        # tag can't silently change the action body.
         uses: tisonkun/actions-dco@f1024cd563550b5632e754df11b7d30b73be54a5
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+  # Aggregate gate. If every required check above succeeded (or was
+  # skipped on a non-applicable event), this job succeeds; otherwise it
+  # fails. Branch-protection should require this single status check
+  # rather than each individual one — that lets us add / remove jobs
+  # without retouching protection rules.
   ci-success:
     name: CI Success
-    needs: [lint, test, codespell]
+    needs: [lint, test, precommit, codespell, dco]
     if: always()
     runs-on: ubuntu-latest
     permissions: {}
-    env:
-      JOBS_JSON: ${{ toJSON(needs) }}
-      RESULTS_JSON: ${{ toJSON(needs.*.result) }}
-      EXIT_CODE: ${{!contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && '0' || '1'}}
     steps:
-      - name: CI Success
+      - name: Verify required jobs succeeded
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
-          echo "$JOBS_JSON"
-          echo "$RESULTS_JSON"
-          echo "Exiting with $EXIT_CODE"
-          exit "$EXIT_CODE"
+          set -eu
+          echo "$NEEDS_JSON"
+          # Fail the gate if any upstream job failed or was cancelled.
+          # `skipped` is allowed (DCO is skipped on non-PR events).
+          if echo "$NEEDS_JSON" | grep -qE '"result":[[:space:]]*"(failure|cancelled)"'; then
+            echo "::error::At least one required job failed or was cancelled."
+            exit 1
+          fi
+          echo "All required jobs passed."

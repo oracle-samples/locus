@@ -217,7 +217,7 @@ async def main():
     print("Chain handoff completed:")
     for i, result in enumerate(chain_results):
         status = "OK" if result.success else f"FAILED: {result.error}"
-        print(f"  Step {i+1}: {result.source_agent_id} -> {result.target_agent_id}: {status}")
+        print(f"  Step {i + 1}: {result.source_agent_id} -> {result.target_agent_id}: {status}")
 
     # =========================================================================
     # Part 8: Handoff History

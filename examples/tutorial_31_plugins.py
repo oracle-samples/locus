@@ -56,11 +56,15 @@ def example_plugin():
         return f"Results for: {query}"
 
     plugin = AuditPlugin()
-    agent = Agent(config=AgentConfig(
-        system_prompt="Use the search tool to answer questions.",
-        max_iterations=5, model=model,
-        tools=[search], plugins=[plugin],
-    ))
+    agent = Agent(
+        config=AgentConfig(
+            system_prompt="Use the search tool to answer questions.",
+            max_iterations=5,
+            model=model,
+            tools=[search],
+            plugins=[plugin],
+        )
+    )
 
     result = agent.run_sync("Search for Python best practices")
     print(f"Response: {result.message[:100]}...")
@@ -79,11 +83,14 @@ def example_callback():
     model = get_model()
     events = []
 
-    agent = Agent(config=AgentConfig(
-        system_prompt="Answer concisely.",
-        max_iterations=3, model=model,
-        callback_handler=lambda e: events.append(e.event_type),
-    ))
+    agent = Agent(
+        config=AgentConfig(
+            system_prompt="Answer concisely.",
+            max_iterations=3,
+            model=model,
+            callback_handler=lambda e: events.append(e.event_type),
+        )
+    )
 
     agent.run_sync("What is 2+2?")
     print(f"Events received: {events}")
@@ -100,9 +107,13 @@ def example_cancel():
 
     model = get_model()
 
-    agent = Agent(config=AgentConfig(
-        system_prompt="Answer concisely.", max_iterations=3, model=model,
-    ))
+    agent = Agent(
+        config=AgentConfig(
+            system_prompt="Answer concisely.",
+            max_iterations=3,
+            model=model,
+        )
+    )
 
     # Cancel before running
     agent.cancel()

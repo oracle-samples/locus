@@ -53,12 +53,15 @@ def example_cancel_tool():
         """Read a file."""
         return f"Contents of {path}"
 
-    agent = Agent(config=AgentConfig(
-        system_prompt="You manage files. If blocked, tell the user.",
-        max_iterations=5, model=model,
-        tools=[delete_file, read_file],
-        hooks=[SecurityHook()],
-    ))
+    agent = Agent(
+        config=AgentConfig(
+            system_prompt="You manage files. If blocked, tell the user.",
+            max_iterations=5,
+            model=model,
+            tools=[delete_file, read_file],
+            hooks=[SecurityHook()],
+        )
+    )
 
     result = agent.run_sync("Delete /tmp/secret.txt")
     print(f"Response: {result.message[:150]}")
@@ -77,9 +80,7 @@ def example_write_protection():
 
     from locus.hooks.provider import BeforeToolCallEvent
 
-    event = BeforeToolCallEvent(
-        tool_name="test", tool_call_id="c1", arguments={"x": 1}
-    )
+    event = BeforeToolCallEvent(tool_name="test", tool_call_id="c1", arguments={"x": 1})
 
     # Writable fields work fine
     event.arguments = {"x": 2}

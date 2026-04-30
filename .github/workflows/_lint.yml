@@ -12,11 +12,13 @@ env:
 
 jobs:
   build:
-    name: "make lint #${{ matrix.python-version }}"
+    name: "lint+typecheck #${{ matrix.python-version }}"
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # Only lint on the min and max supported Python versions.
+        # Lint on the min and max supported Python versions. mypy can
+        # surface version-specific type errors (e.g. ``typing.Self`` in
+        # 3.11 vs 3.12+) so we cover both ends of the matrix.
         python-version:
           - "3.11"
           - "3.14"
@@ -34,5 +36,8 @@ jobs:
       - name: Install Hatch
         run: pip install hatch==${{ env.HATCH_VERSION }}
 
-      - name: Run linting
-        run: hatch run lint
+      # `hatch run check` runs format-check + ruff lint + mypy in one
+      # command (defined in pyproject.toml). All three must pass for
+      # the job to succeed.
+      - name: Run format-check + ruff + mypy
+        run: hatch run check

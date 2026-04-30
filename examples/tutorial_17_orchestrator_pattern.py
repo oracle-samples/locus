@@ -199,7 +199,7 @@ Prioritize based on urgency indicated in the task.""",
     print(f"  Decisions made: {len(orch_result.decisions)}")
 
     for i, decision in enumerate(orch_result.decisions):
-        print(f"\n  Decision {i+1}: {decision.decision_type}")
+        print(f"\n  Decision {i + 1}: {decision.decision_type}")
         if decision.specialists:
             print(f"    Specialists: {decision.specialists}")
 

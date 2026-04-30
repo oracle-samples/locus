@@ -29,10 +29,13 @@ def example_evaluation():
 
     model = get_model()
 
-    agent = Agent(config=AgentConfig(
-        system_prompt="You are a helpful assistant. Answer concisely.",
-        max_iterations=3, model=model,
-    ))
+    agent = Agent(
+        config=AgentConfig(
+            system_prompt="You are a helpful assistant. Answer concisely.",
+            max_iterations=3,
+            model=model,
+        )
+    )
 
     # Define test cases
     cases = [
