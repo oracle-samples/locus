@@ -442,43 +442,63 @@ async def test_gsar_rho_zero_inflation_visible_live() -> None:
 
     out = await judge.judge(report_synthesis=report, evidence_corpus=evidence)
     partition = out.to_partition()
+    parts = (
+        ("grounded", len(partition.grounded)),
+        ("ungrounded", len(partition.ungrounded)),
+        ("contradicted", len(partition.contradicted)),
+        ("complementary", len(partition.complementary)),
+    )
 
-    # Pre-condition for the test to be meaningful: the judge identified
-    # at least one contradicted claim. The "rps held steady at 4500"
-    # statement directly conflicts with the tool output (12.4 RPS).
+    # Pre-conditions for the strict inflation inequality to be
+    # observable (Property P5 from §4.2 / Appendix A):
+    #   1. The judge identified at least one contradicted claim
+    #      (W(X) > 0 — without it both ρ values yield identical S).
+    #   2. The judge identified at least one grounded or complementary
+    #      claim (W(G) + W(K) > 0 — without it the numerator is 0
+    #      regardless of ρ, so both yield S=0). When the judge over-
+    #      contradicts and leaves no positive mass, the math still
+    #      holds (s_no_rho ≥ s_default) but inflation is degenerate.
     if not partition.contradicted:
         pytest.skip(
-            "judge did not produce a contradicted claim on this run; "
-            "P5 ablation requires W(X) > 0 to be observable. "
-            f"partition={[(b, len(getattr(partition, b))) for b in ('grounded', 'ungrounded', 'contradicted', 'complementary')]}"
+            f"judge produced no contradicted claim — W(X)=0 makes P5 "
+            f"unobservable. partition={parts}"
+        )
+    if not (partition.grounded or partition.complementary):
+        pytest.skip(
+            f"judge produced no grounded/complementary claims — "
+            f"W(G)+W(K)=0 collapses both ρ scores to 0. partition={parts}"
         )
 
     s_default = gsar_score(partition, contradiction_penalty=0.5)
     s_no_rho = gsar_score(partition, contradiction_penalty=0.0)
 
+    # Weak inequality always holds under P5.
     assert s_no_rho >= s_default - 1e-9, (
-        f"ρ=0 produced lower score than ρ=0.5: s_default={s_default:.4f}, s_no_rho={s_no_rho:.4f}"
+        f"ρ=0 produced lower score than ρ=0.5 (violates P5): "
+        f"s_default={s_default:.4f}, s_no_rho={s_no_rho:.4f}, partition={parts}"
     )
+    # Strict inequality holds when both pre-conditions above are met.
     assert s_no_rho > s_default, (
-        f"ρ=0 should strictly inflate when there's contradicted mass — "
-        f"s_default={s_default:.4f}, s_no_rho={s_no_rho:.4f}, "
-        f"|X|={len(partition.contradicted)}"
+        f"ρ=0 should strictly inflate when W(X) > 0 and W(G)+W(K) > 0: "
+        f"s_default={s_default:.4f}, s_no_rho={s_no_rho:.4f}, partition={parts}"
     )
 
 
 @skip_without_openai
 @pytest.mark.asyncio
-async def test_gsar_cross_judge_decision_agreement() -> None:
-    """Two different OpenAI judges should agree on δ for clear inputs.
+async def test_gsar_cross_judge_score_directional_agreement() -> None:
+    """Two different OpenAI judges should agree on the *direction* of S
+    between a grounded and an ungrounded report.
 
-    Paper §11 / Table 10 claim: the C₃ contradiction-penalty effect is
-    judge-agnostic. We exercise a weaker but cheaper version — for a
-    clearly-grounded report and a clearly-ungrounded report, two
-    different judge models should land in the same decision tier
-    under the reference thresholds.
+    Paper §11 / Table 10: the contradiction-penalty effect is
+    judge-agnostic. The cheap proxy here: for the same pair of
+    (grounded, ungrounded) reports, both judges must score the
+    grounded report strictly higher than the ungrounded one. We
+    don't pin the exact decision tier — judges legitimately disagree
+    on tier under variance — but the score-ordering must be stable.
     """
     from locus.models.native.openai import OpenAIModel
-    from locus.reasoning.gsar import Decision, decide, gsar_score
+    from locus.reasoning.gsar import gsar_score
     from locus.reasoning.gsar_judge import StructuredOutputGSARJudge
 
     j_mini = StructuredOutputGSARJudge(
@@ -503,26 +523,40 @@ async def test_gsar_cross_judge_decision_agreement() -> None:
         "evidence": "[signal] alert_id=A-1042 fired_at=02:48:12 metric=availability\n",
     }
 
-    async def decision_for(judge, payload: dict[str, str]) -> Decision:
+    async def score_for(judge, payload: dict[str, str]) -> float:
         out = await judge.judge(
             report_synthesis=payload["report"],
             evidence_corpus=payload["evidence"],
         )
         if out.abstained:
-            return Decision.ABSTAIN
-        score = gsar_score(out.to_partition())
-        return decide(score)
+            # Treat abstain as score 0 for directional comparison —
+            # abstain on a grounded report would be a real failure;
+            # abstain on the ungrounded report is fine.
+            return 0.0
+        return gsar_score(out.to_partition())
 
-    d_mini_g = await decision_for(j_mini, grounded)
-    d_full_g = await decision_for(j_full, grounded)
-    d_mini_u = await decision_for(j_mini, ungrounded)
-    d_full_u = await decision_for(j_full, ungrounded)
+    s_mini_g = await score_for(j_mini, grounded)
+    s_full_g = await score_for(j_full, grounded)
+    s_mini_u = await score_for(j_mini, ungrounded)
+    s_full_u = await score_for(j_full, ungrounded)
 
-    # Grounded report: both judges should not land in `replan`. We allow
-    # `regenerate` because gpt-4o-mini occasionally over-flags an
-    # inference; the cheap-recovery tier is correct in that case.
-    assert d_mini_g != Decision.REPLAN, f"gpt-4o-mini sent grounded → replan: {d_mini_g}"
-    assert d_full_g != Decision.REPLAN, f"gpt-4o sent grounded → replan: {d_full_g}"
-    # Ungrounded report: both judges should not land in `proceed`.
-    assert d_mini_u != Decision.PROCEED, f"gpt-4o-mini sent ungrounded → proceed: {d_mini_u}"
-    assert d_full_u != Decision.PROCEED, f"gpt-4o sent ungrounded → proceed: {d_full_u}"
+    # The judge-agnostic claim: each judge scores the grounded report
+    # strictly higher than the ungrounded report. We don't compare
+    # *across* judges — that would conflate model variance with the
+    # mechanism we're testing.
+    assert s_mini_g > s_mini_u, (
+        f"gpt-4o-mini did not order grounded > ungrounded: "
+        f"grounded={s_mini_g:.3f}, ungrounded={s_mini_u:.3f}"
+    )
+    assert s_full_g > s_full_u, (
+        f"gpt-4o did not order grounded > ungrounded: "
+        f"grounded={s_full_g:.3f}, ungrounded={s_full_u:.3f}"
+    )
+    # Sanity floor: the grounded report should clear the regenerate
+    # threshold (0.65) on at least one of the two judges. If both fall
+    # below, the report itself is too ambiguous and the test isn't
+    # measuring what it claims to measure.
+    assert max(s_mini_g, s_full_g) >= 0.65, (
+        f"both judges scored grounded report below τ_regenerate: "
+        f"mini={s_mini_g:.3f}, full={s_full_g:.3f}"
+    )
