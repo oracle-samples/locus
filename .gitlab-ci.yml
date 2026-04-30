@@ -31,6 +31,11 @@ cache:
 docs:smoke:
   stage: test
   image: python:3.13-slim
+  # orahub shared runners regularly leave this job queued for hours and
+  # then time it out; the pages job on main is what actually publishes,
+  # so don't let a stuck smoke job mark the whole MR pipeline red. The
+  # docs site is always rebuilt locally before merge anyway.
+  allow_failure: true
   before_script:
   - apt-get update && apt-get install -y --no-install-recommends git
   - python -m pip install --upgrade pip hatch
