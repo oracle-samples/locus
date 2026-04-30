@@ -254,6 +254,25 @@ class Agent(BaseModel):
             self._hooks.append(PluginAdapter(skills_plugin))
             self._tool_registry.register(skills_plugin.get_activation_tool())
 
+        # Auto-register multi-modal provider tools (web_search, web_fetch,
+        # generate_image, speak/transcribe) when the config carries the
+        # corresponding providers.
+        if (
+            self.config.web_search is not None
+            or self.config.web_fetch is not None
+            or self.config.image_generator is not None
+            or self.config.speech_provider is not None
+        ):
+            from locus.providers.tools import auto_register
+
+            auto_register(
+                tool_registry=self._tool_registry,
+                web_search=self.config.web_search,
+                web_fetch=self.config.web_fetch,
+                image_generator=self.config.image_generator,
+                speech_provider=self.config.speech_provider,
+            )
+
         # Auto-install the PlaybookEnforcerHook when ``playbook`` is set
         # so the README claim ("PlaybookEnforcer validates tool calls
         # against step constraints") is real instead of aspirational.

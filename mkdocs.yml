@@ -124,6 +124,7 @@ nav:
     - Idempotency: concepts/idempotency.md
     - Executors: concepts/executors.md
     - MCP: concepts/mcp.md
+    - Multi-modal providers: concepts/multi-modal-providers.md
   - Reasoning: concepts/reasoning.md
   - Memory: concepts/checkpointers.md
   - Streaming & Server:

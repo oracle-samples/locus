@@ -31,7 +31,7 @@
   <a href="#one-run-end-to-end">A run, end to end</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#capabilities">Capabilities</a> ·
-  <a href="examples/">37 tutorials</a> ·
+  <a href="examples/">38 tutorials</a> ·
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
@@ -94,6 +94,7 @@ Oracle 26ai. Run against the live free-tier ADB it produces:
 | **📡 Streaming + Server** | Typed events for `match`-statement consumers · SSE · drop-in FastAPI `AgentServer` with `thread_id` persistence (scoped to the bearer principal so two API keys can't read each other's threads). |
 | **🪝 Hooks** | `LoggingHook` / `StructuredLoggingHook` · `TelemetryHook` (OpenTelemetry) · `ModelRetryHook` · `GuardrailsHook` + `ContentFilterHook` · `SteeringHook` (LLM-as-judge tool approval). |
 | **🪙 MCP both ways** | `MCPClient` consumes external Anthropic-spec MCP servers. `LocusMCPServer` exposes locus tools as MCP. Round-trip. |
+| **🌐 Multi-modal providers** | `Agent(web_search=..., web_fetch=..., image_generator=..., speech_provider=...)` auto-registers a matching `@tool`. Built-in `HTTPXWebFetcher` + OpenAI search-preview / DALL-E / TTS+Whisper; bring your own via the four one-method Protocols. |
 | **📊 Evaluation** | `EvalCase` / `EvalRunner` / `EvalReport` — regression suites, custom evaluators, pass / score / duration reporting. |
 | **🛂 Termination algebra** | Eight composable stop conditions on `Agent(termination=...)`: `MaxIterations \| TextMention("DONE") & ConfidenceMet(0.9)` is real Python (`__or__` / `__and__` overloads). |
 | **🧰 Models** | OCI GenAI native (V1 + SDK transport, 90+ models, day-0) · OpenAI · Anthropic · Ollama. One auth surface for OCI: profile, session token, instance / resource principal. |
@@ -403,7 +404,7 @@ pip install "locus[all]"           # everything
 
 ## More examples
 
-[`examples/`](examples/) has 37 progressive tutorials, each a single runnable
+[`examples/`](examples/) has 38 progressive tutorials, each a single runnable
 file. Highlights:
 
 - [`tutorial_01_basic_agent.py`](examples/tutorial_01_basic_agent.py) — start here
@@ -415,6 +416,7 @@ file. Highlights:
 - [`tutorial_22_rag_basics.py`](examples/tutorial_22_rag_basics.py) — RAG over a vector store
 - [`tutorial_27_hooks_advanced.py`](examples/tutorial_27_hooks_advanced.py) — guardrails + steering
 - [`tutorial_34_a2a_protocol.py`](examples/tutorial_34_a2a_protocol.py) — Agent-to-Agent protocol
+- [`tutorial_38_multimodal_providers.py`](examples/tutorial_38_multimodal_providers.py) — web search, fetch, image, speech providers
 
 ## Repo layout
 
