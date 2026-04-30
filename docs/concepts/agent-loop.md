@@ -414,4 +414,4 @@ async for event in agent.run("Find a vendor for $2M cloud spend.",
 - [Termination](termination.md) — every built-in condition + composition.
 - [Events & Streaming](events.md) — the typed event taxonomy.
 - [Hooks](hooks.md) — observe + steer.
-- [Multi-agent](multi-agent.md) — the loop runs inside seven coordination shapes.
+- [Multi-agent](multi-agent.md) — the loop runs inside six in-process patterns plus A2A.

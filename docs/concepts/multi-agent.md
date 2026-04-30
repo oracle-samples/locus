@@ -38,7 +38,7 @@ schedulers): use the **Functional API** (`@task`, `@entrypoint`).
 That's just a thinner wrapper that brings agent runs into the
 ordinary asyncio universe.
 
-## The seven patterns
+## The six in-process patterns plus A2A
 
 | Pattern | Best for | Key class | Source |
 |---|---|---|---|
@@ -206,8 +206,8 @@ side keeps its own `Agent` runtime. Tutorial:
 
 ## One event stream across all of them
 
-The whole point of having one `Agent` class is that all seven shapes
-share the same event taxonomy:
+The whole point of having one `Agent` class is that all six in-process
+shapes plus A2A share the same event taxonomy:
 
 ```python
 async for event in pipeline.run("Plan Q3"):
