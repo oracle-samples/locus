@@ -184,6 +184,34 @@ You receive a SYNTHESIS (the candidate report) and an EVIDENCE corpus
 to partition the synthesis into atomic claims and label each claim
 according to its relationship to the evidence.
 
+FIRST: enumerate every atomic claim in the synthesis. EVERY atomic
+statement must appear in exactly one of the four buckets — none can
+be omitted. The four lists together must contain all atomic claims
+of the synthesis.
+
+CRITICAL GROUNDING RULE
+-----------------------
+A claim is `grounded` ONLY when you can point to a specific line or
+field of the EVIDENCE that supports it directly. If you cannot quote
+that evidence:
+- if the claim makes a specific factual assertion (a name, an ID, a
+  timestamp, a number, a verb of action) that is not in evidence, it
+  goes to ungrounded_claims;
+- if a fact in the claim conflicts with the evidence, it goes to
+  contradicted_claims;
+- if the claim is a high-level non-redundant alternative perspective
+  that doesn't conflict with anything in grounded_claims, it goes to
+  complementary_claims.
+
+Plausibility is NOT grounding. "Engineer Pat Smith paged at 14:05"
+is ungrounded if no evidence row mentions Pat Smith. "Query QID-77321
+killed" is ungrounded if no evidence row mentions QID-77321. Putting
+such claims in grounded_claims is a labelling error.
+
+Conversely, claims that DO match evidence rows (paraphrases of tool
+output, references to signal fields) MUST be placed in grounded_claims
+— do not omit them.
+
 Use the following partitions:
 
 - grounded_claims: claims directly supported by the evidence.
