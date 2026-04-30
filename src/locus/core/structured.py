@@ -185,6 +185,55 @@ def create_output_instructions(schema: type[BaseModel]) -> str:
     return "\n".join(lines)
 
 
+def _strip_keywords_alongside_ref(node: Any) -> None:
+    """Strict ``json_schema`` mode rejects ``$ref`` nodes that carry sibling
+    keywords (``description``, ``default``, ``title``, …).
+
+    Pydantic emits these when a field uses ``Field(description=…)`` on a
+    referenced sub-schema (an enum or nested model). The OpenAI API
+    rejects the schema with::
+
+        $ref cannot have keywords {'description'}.
+
+    We strip every sibling key from any node carrying ``$ref`` so the
+    schema satisfies the OpenAI strict-mode contract.
+    """
+    if isinstance(node, dict):
+        if "$ref" in node:
+            ref_value = node["$ref"]
+            for key in list(node.keys()):
+                if key != "$ref":
+                    del node[key]
+            node["$ref"] = ref_value
+        for v in node.values():
+            _strip_keywords_alongside_ref(v)
+    elif isinstance(node, list):
+        for item in node:
+            _strip_keywords_alongside_ref(item)
+
+
+def _enforce_all_properties_required(node: Any) -> None:
+    """Walk a JSON Schema and set ``required`` to every property on object
+    nodes that have ``properties``.
+
+    OpenAI's strict ``json_schema`` response format additionally requires
+    ``required`` to list *every* key in ``properties`` — fields that are
+    optional in Pydantic (default values, ``Optional[...]``) still need
+    to appear, but their schema can include ``null`` in their type union
+    so the model can emit ``null``. Pydantic doesn't add defaulted fields
+    to ``required`` by default; we add them here so strict mode accepts
+    schemas that have any optional field.
+    """
+    if isinstance(node, dict):
+        if node.get("type") == "object" and "properties" in node:
+            node["required"] = list(node["properties"].keys())
+        for v in node.values():
+            _enforce_all_properties_required(v)
+    elif isinstance(node, list):
+        for item in node:
+            _enforce_all_properties_required(item)
+
+
 def _enforce_additional_properties_false(node: Any) -> None:
     """Walk a JSON Schema and set ``additionalProperties: false`` on every
     object node.
@@ -227,6 +276,8 @@ def build_response_format(schema: type[BaseModel], *, strict: bool = True) -> di
     json_schema.pop("title", None)
     if strict:
         _enforce_additional_properties_false(json_schema)
+        _enforce_all_properties_required(json_schema)
+        _strip_keywords_alongside_ref(json_schema)
     return {
         "type": "json_schema",
         "json_schema": {

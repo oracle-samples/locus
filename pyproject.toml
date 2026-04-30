@@ -292,6 +292,14 @@ ignore = [
     "S110",    # try-except-pass
     "S112",    # try-except-continue
     "UP041",   # use PEP 585 instead of typing
+    # GSAR (locus.reasoning.gsar*) reproduces math notation from
+    # arXiv:2604.23366 — Greek letters (ρ, τ), set operators (∪, ⊔),
+    # and section markers (§) appear in docstrings and comments. The
+    # ambiguous-confusable lints would force us to translate them
+    # into ASCII, which loses the trace back to the paper.
+    "RUF001",  # string literal contains ambiguous unicode character
+    "RUF002",  # docstring contains ambiguous unicode character
+    "RUF003",  # comment contains ambiguous unicode character
 ]
 
 [tool.ruff.lint.per-file-ignores]

@@ -125,7 +125,9 @@ nav:
     - Executors: concepts/executors.md
     - MCP: concepts/mcp.md
     - Multi-modal providers: concepts/multi-modal-providers.md
-  - Reasoning: concepts/reasoning.md
+  - Reasoning:
+    - Overview: concepts/reasoning.md
+    - GSAR (typed grounding): concepts/gsar.md
   - Memory: concepts/checkpointers.md
   - Streaming & Server:
     - Streaming: concepts/streaming.md

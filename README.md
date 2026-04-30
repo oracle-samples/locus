@@ -31,7 +31,7 @@
   <a href="#one-run-end-to-end">A run, end to end</a> ·
   <a href="#quick-start">Quick start</a> ·
   <a href="#capabilities">Capabilities</a> ·
-  <a href="examples/">38 tutorials</a> ·
+  <a href="examples/">39 tutorials</a> ·
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
@@ -85,7 +85,7 @@ Oracle 26ai. Run against the live free-tier ADB it produces:
 
 | | |
 |---|---|
-| **🧠 Reasoning** | `reflexion=True` (self-evaluate) and `grounding=True` (LLM-as-judge claim verification) on `Agent(...)`. `CausalChain` is a separate graph builder for explicit cause-effect chains. |
+| **🧠 Reasoning** | `reflexion=True` (self-evaluate) and `grounding=True` (LLM-as-judge claim verification) on `Agent(...)`. `CausalChain` is a separate graph builder for explicit cause-effect chains. **GSAR** typed-grounding layer (`locus.reasoning.gsar`) for the regulated / safety-critical case — four-way claim partition, evidence-typed score, three-tier `{proceed, regenerate, replan}` decision (`arXiv:2604.23366`). |
 | **🤝 Multi-agent** | Pipelines · Orchestrator + Specialists · Swarm · Handoff · StateGraph · Functional — six in-process patterns sharing one event type, plus **A2A** for cross-process meshes. |
 | **🛡 Idempotent tools** | `@tool(idempotent=True)` — the ReAct loop dedupes repeat calls. The model can't double-charge, double-book, or double-page. |
 | **💾 Durable memory** | Four native checkpointers (OCI Object Storage, in-memory, file, HTTP) plus five storage backends (PostgreSQL, OpenSearch, Redis, SQLite, Oracle 26ai) auto-wrapped via `StorageBackendAdapter` or the `*_checkpointer()` factories. |
@@ -405,7 +405,7 @@ pip install "locus[all]"           # everything
 
 ## More examples
 
-[`examples/`](examples/) has 38 progressive tutorials, each a single runnable
+[`examples/`](examples/) has 39 progressive tutorials, each a single runnable
 file. Highlights:
 
 - [`tutorial_01_basic_agent.py`](examples/tutorial_01_basic_agent.py) — start here
@@ -418,6 +418,7 @@ file. Highlights:
 - [`tutorial_27_hooks_advanced.py`](examples/tutorial_27_hooks_advanced.py) — guardrails + steering
 - [`tutorial_34_a2a_protocol.py`](examples/tutorial_34_a2a_protocol.py) — Agent-to-Agent protocol
 - [`tutorial_38_multimodal_providers.py`](examples/tutorial_38_multimodal_providers.py) — web search, fetch, image, speech providers
+- [`tutorial_39_gsar_typed_grounding.py`](examples/tutorial_39_gsar_typed_grounding.py) — GSAR typed-grounding layer (`arXiv:2604.23366`)
 
 ## Repo layout
 
