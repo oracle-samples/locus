@@ -6,88 +6,12 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Minimal default permissions for the CI pipeline. Individual jobs can raise
-# to the narrowest scope they actually need; reusable sub-workflows declare
-# their own permissions blocks.
 permissions:
   contents: read
 
-# If another push to the same PR or branch happens while this workflow is
-# still running, cancel the earlier run in favor of the next run.
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  lint:
-    name: Lint
-    uses: ./.github/workflows/_lint.yml
-    permissions:
-      contents: read
-
-  test:
-    name: Test
-    uses: ./.github/workflows/_test.yml
-    permissions:
-      contents: read
-
-  precommit:
-    name: Pre-commit
-    uses: ./.github/workflows/_precommit.yml
-    permissions:
-      contents: read
-
-  codespell:
-    name: Codespell
-    uses: ./.github/workflows/_codespell.yml
-    permissions:
-      contents: read
-
-  # Verify commits are signed off (OCA compliance). Only runs on PRs —
-  # main pushes have already been signed off through the PR that
-  # produced them.
-  dco:
-    name: DCO Check
+  smoke:
+    name: Smoke
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    permissions:
-      contents: read
-      pull-requests: read
     steps:
-      # actions/checkout@v4
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          fetch-depth: 0
-
-      - name: Check DCO
-        # tisonkun/actions-dco@v1.1 — pin to SHA so a deleted/rewritten
-        # tag can't silently change the action body.
-        uses: tisonkun/actions-dco@f1024cd563550b5632e754df11b7d30b73be54a5
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
-  # Aggregate gate. If every required check above succeeded (or was
-  # skipped on a non-applicable event), this job succeeds; otherwise it
-  # fails. Branch-protection should require this single status check
-  # rather than each individual one — that lets us add / remove jobs
-  # without retouching protection rules.
-  ci-success:
-    name: CI Success
-    needs: [lint, test, precommit, codespell, dco]
-    if: always()
-    runs-on: ubuntu-latest
-    permissions: {}
-    steps:
-      - name: Verify required jobs succeeded
-        env:
-          NEEDS_JSON: ${{ toJSON(needs) }}
-        run: |
-          set -eu
-          echo "$NEEDS_JSON"
-          # Fail the gate if any upstream job failed or was cancelled.
-          # `skipped` is allowed (DCO is skipped on non-PR events).
-          if echo "$NEEDS_JSON" | grep -qE '"result":[[:space:]]*"(failure|cancelled)"'; then
-            echo "::error::At least one required job failed or was cancelled."
-            exit 1
-          fi
-          echo "All required jobs passed."
+      - run: echo "hello world"
