@@ -267,7 +267,7 @@ them in one process; stream events from any of them in the same
 
 | | |
 |---|---|
-| **🧠 Reasoning** | Reflexion + Grounding — one line on `Agent(...)` (`reflexion=True`, `grounding=True`). `CausalChain` is a separate graph builder. |
+| **🧠 Reasoning** | Reflexion + Grounding — one line on `Agent(...)` (`reflexion=True`, `grounding=True`). `CausalChain` for explicit cause-effect chains. **GSAR** typed-grounding layer for safety-critical pipelines: four-way claim partition + three-tier decision (`arXiv:2604.23366`). |
 | **🤝 Multi-agent** | Composition · Orchestrator · Swarm · Handoff · StateGraph · Functional — six in-process patterns, plus A2A for cross-process meshes. |
 | **🛡 Idempotent tools** | `@tool(idempotent=True)`. The model can't double-charge. |
 | **💾 Durable memory** | Four native checkpointers (OCI Object Storage, in-memory, file, HTTP) plus five storage-backed (PostgreSQL, OpenSearch, Redis, SQLite, Oracle 26ai) auto-wrapped via `*_checkpointer()` factories. |
@@ -350,7 +350,7 @@ Read the [concepts](concepts/agent.md) for the *why*; read the
 ## Learn locus in an afternoon
 
 The [`examples/`](https://github.com/oracle-samples/locus/tree/main/examples)
-tree is **38 tutorials** plus **3 end-to-end demos**. Every tutorial
+tree is **39 tutorials** plus **3 end-to-end demos**. Every tutorial
 is one runnable file and adds exactly one idea on top of the previous.
 
 ### Track 1 — basics (first hour)
@@ -394,7 +394,7 @@ The six in-process patterns plus A2A:
 [RAG agents](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_24_rag_agents.py) ·
 [Skills](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_32_skills.py).
 
-### Track 5 — production (12, 19–21, 26–30, 33, 35, 37–38)
+### Track 5 — production (12, 19–21, 26–30, 33, 35, 37–39)
 
 [MCP](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_12_mcp_integration.py) ·
 [Guardrails](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_19_guardrails_security.py) ·
@@ -409,7 +409,8 @@ The six in-process patterns plus A2A:
 [Steering](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_33_steering.py) ·
 [Graph advanced](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_35_graph_advanced.py) ·
 [Termination](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_37_termination.py) ·
-[Multi-modal providers](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_38_multimodal_providers.py).
+[Multi-modal providers](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_38_multimodal_providers.py) ·
+[GSAR typed grounding](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_39_gsar_typed_grounding.py).
 
 ### End-to-end demos
 

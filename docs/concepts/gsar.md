@@ -1,0 +1,148 @@
+# GSAR — typed grounding
+
+Locus's vanilla `Agent(grounding=True)` is a binary verdict: a single
+LLM-as-judge scalar, threshold it, replan if it falls below. That works
+for many tasks. For high-stakes pipelines — operational incident
+investigation, regulated diagnostics, anything where "the synthesis is
+loose but the evidence is fine" is a real failure mode — locus also
+ships **GSAR**.
+
+GSAR (Grounding-Stratified Adaptive Replanning) is the framework from
+[Kamelhar 2026](https://arxiv.org/abs/2604.23366). It replaces the
+binary judge with a **four-way claim partition**, a **typed-evidence
+weighted score**, and a **three-tier decision** function on a
+**bounded compute budget**. The math is small (one equation), the
+properties are formally provable (six of them), and the integration
+into the loop is one Pydantic type.
+
+## What it adds
+
+| | Vanilla grounding | GSAR |
+|---|---|---|
+| Output | `is_grounded ∈ {true, false}` + scalar `s ∈ [0, 1]` | Four-way partition `G ⊔ U ⊔ X ⊔ K`, scalar `S`, abstain channel |
+| Evidence weighting | Uniform | Per-type weights `w: T → [0, 1]` (tool_match weighted higher than inference) |
+| Recovery | Binary `{stop, replan}` | Three-tier `{proceed, regenerate, replan}` — middle tier rewrites the synthesis without re-running expensive tools |
+| Adversarial robustness | Score inflates if a contradicted claim is silently dropped | Asymmetric contradiction penalty `ρ` keeps `X` in the denominator |
+| Budget | Implicit | Explicit `K_max` replan budget, degraded flag on exhaustion |
+
+## The score
+
+For a partition `(G, U, X, K)` of a synthesis's claims, an evidence-type
+weight map `w`, and a contradiction penalty `ρ ∈ [0, 1]`, the GSAR
+score is:
+
+$$
+S = \frac{W(\mathcal G) + W(\mathcal K)}{W(\mathcal G) + W(\mathcal U) + \rho \cdot W(\mathcal X) + W(\mathcal K)}
+$$
+
+where `W(P) = Σ_{c ∈ P} w(type(c))`. On the empty partition `S = 0.5`
+(epistemic indifference). The score lives in `[0, 1]`; six monotonicity
+and adversarial-robustness properties are proven in Appendix A of the
+paper and locked under unit tests in `tests/unit/test_gsar.py`.
+
+## The decision
+
+```
+δ(s) = proceed     if s ≥ τ_proceed
+δ(s) = regenerate  if τ_regenerate ≤ s < τ_proceed
+δ(s) = replan      if s < τ_regenerate
+```
+
+The reference thresholds are `τ_proceed = 0.80`, `τ_regenerate = 0.65`
+(Appendix B); the paper recommends per-deployment recalibration on a
+small (100–200) human-graded held-out set. The `regenerate` tier is
+the critical middle band — it rewrites the synthesis without
+re-dispatching the specialists, catching the "evidence is fine,
+synthesis is loose" mode that dominates real production logs.
+
+## Wiring
+
+```python
+from locus.models.native.openai import OpenAIModel
+from locus.reasoning.gsar import GSARThresholds
+from locus.reasoning.gsar_evaluator import GSAREvaluator
+from locus.reasoning.gsar_judge import JudgeOutput, StructuredOutputGSARJudge
+
+judge = StructuredOutputGSARJudge(
+    model=OpenAIModel(model="gpt-4o-mini", max_tokens=2048),
+)
+
+async def regenerate(synthesis: str, judge_output: JudgeOutput) -> str:
+    """Cheap branch: rewrite synthesis from existing evidence."""
+    ...
+
+async def replan(synthesis: str, evidence: str, jo: JudgeOutput) -> tuple[str, str]:
+    """Expensive branch: revise plan, re-dispatch specialists."""
+    ...
+
+evaluator = GSAREvaluator(
+    judge=judge,
+    regenerate_fn=regenerate,
+    replan_fn=replan,
+    thresholds=GSARThresholds(),     # Appendix-B defaults
+    contradiction_penalty=0.5,        # ρ
+    k_max=2,                          # bounded replan budget
+)
+
+result = await evaluator.evaluate(
+    report_synthesis=initial_report,
+    evidence_corpus=evidence,
+)
+# result.final_report, result.final_score, result.final_decision,
+# result.trajectory  (every iteration logged for audit)
+# result.degraded    (True when the budget exhausted without proceed)
+```
+
+The evaluator runs Algorithm 1 from the paper to convergence
+(`δ = proceed`) or budget exhaustion (`degraded = True`, returning a
+"degraded but honest" report rather than looping indefinitely or
+silently shipping un-grounded claims).
+
+## Evidence taxonomy
+
+The default `EvidenceType` enum mirrors the paper's reference
+instantiation (Appendix B). Tool-side annotations populate it; in
+production you'd map your tool taxonomy onto these.
+
+| Evidence type | When to use it | Default weight |
+|---|---|---|
+| `tool_match` | Claim directly traceable to a tool output row | 1.00 |
+| `specific_data` | Cites a structured field of a step output | 0.95 |
+| `signal_match` | References the originating alert / signal | 0.90 |
+| `complementary_finding` | Non-redundant alternative perspective | 0.85 |
+| `synthesis` | Cross-specialist combination | 0.80 |
+| `neg_evidence` | Absence-of-signal observation | 0.70 |
+| `inference` | Model-internal inference, no tool support | 0.60 |
+| `domain` | Textbook / runbook fact | 0.60 |
+
+## When to use GSAR vs vanilla `grounding=True`
+
+- **Vanilla** is right for most tasks. Binary verdict, one scalar,
+  cheap. If you're not in a regulated / safety-critical setting, start
+  here.
+- **GSAR** is right when (a) the cost of a wrong "ship it" decision
+  outweighs the extra LLM judge call, (b) you want auditable per-claim
+  evidence-type provenance in your checkpoint stream, or (c) your
+  synthesis layer can plausibly be looser than the underlying evidence
+  (the regenerate tier earns its keep here).
+
+## Source and tests
+
+- [`src/locus/reasoning/gsar.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/reasoning/gsar.py)
+  — Pydantic types, `gsar_score`, `decide`, defaults from Appendix B.
+- [`src/locus/reasoning/gsar_judge.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/reasoning/gsar_judge.py)
+  — `BaseGSARJudge` Protocol, `JudgeOutput` schema (Appendix C),
+  `StructuredOutputGSARJudge` reference implementation.
+- [`src/locus/reasoning/gsar_evaluator.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/reasoning/gsar_evaluator.py)
+  — Algorithm-1 outer loop with `K_max` budget.
+- [`tests/unit/test_gsar.py`](https://github.com/oracle-samples/locus/blob/main/tests/unit/test_gsar.py)
+  — 54 tests verifying properties P1–P6 + Appendix-E worked example.
+- [`tests/unit/test_gsar_judge.py`](https://github.com/oracle-samples/locus/blob/main/tests/unit/test_gsar_judge.py)
+  — schema validation + structured-output fallback chain.
+- [`tests/unit/test_gsar_evaluator.py`](https://github.com/oracle-samples/locus/blob/main/tests/unit/test_gsar_evaluator.py)
+  — outer loop, abstain handling, budget exhaustion.
+- [`tests/integration/test_gsar_live.py`](https://github.com/oracle-samples/locus/blob/main/tests/integration/test_gsar_live.py)
+  — live LLM judge driving the full loop.
+- [`examples/tutorial_39_gsar_typed_grounding.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_39_gsar_typed_grounding.py)
+  — a runnable walkthrough of the four parts.
+- Paper: [arXiv:2604.23366](https://arxiv.org/abs/2604.23366).
