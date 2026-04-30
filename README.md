@@ -86,7 +86,7 @@ Oracle 26ai. Run against the live free-tier ADB it produces:
 | | |
 |---|---|
 | **🧠 Reasoning** | `reflexion=True` (self-evaluate) and `grounding=True` (LLM-as-judge claim verification) on `Agent(...)`. `CausalChain` is a separate graph builder for explicit cause-effect chains. |
-| **🤝 Multi-agent** | Pipelines · Orchestrator + Specialists · Swarm · Handoff · StateGraph · Functional · A2A. Seven coordination patterns sharing one event type. |
+| **🤝 Multi-agent** | Pipelines · Orchestrator + Specialists · Swarm · Handoff · StateGraph · Functional — six in-process patterns sharing one event type, plus **A2A** for cross-process meshes. |
 | **🛡 Idempotent tools** | `@tool(idempotent=True)` — the ReAct loop dedupes repeat calls. The model can't double-charge, double-book, or double-page. |
 | **💾 Durable memory** | Four native checkpointers (OCI Object Storage, in-memory, file, HTTP) plus five storage backends (PostgreSQL, OpenSearch, Redis, SQLite, Oracle 26ai) auto-wrapped via `StorageBackendAdapter` or the `*_checkpointer()` factories. |
 | **🔎 RAG on your data** | Seven vector stores, OCI Cohere + OpenAI embeddings, multimodal (PDF text + OCR, image OCR, audio transcription). Oracle 26ai is the day-1 native target. |
@@ -179,10 +179,11 @@ await agent.run("Continue where we left off.", thread_id="user-42")
 Source: [`src/locus/memory/`](src/locus/memory/) ·
 concept doc: [`docs/concepts/checkpointers.md`](docs/concepts/checkpointers.md).
 
-### Multi-agent — seven coordination patterns
+### Multi-agent — six in-process patterns plus A2A
 
 Locus does not pick a single multi-agent metaphor. Different problems want
-different shapes — locus ships seven, all sharing the same `Agent` and event types:
+different shapes — locus ships six in-process patterns and **A2A** for
+cross-process meshes, all sharing the same `Agent` and event types:
 
 | Pattern | What it's for | Where it lives |
 |---|---|---|

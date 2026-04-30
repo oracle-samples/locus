@@ -1,6 +1,6 @@
 # Multi-agent pattern diagrams
 
-The seven multi-agent pattern diagrams are now authored in
+The six in-process multi-agent + A2A pattern diagrams are now authored in
 **[draw.io](https://app.diagrams.net/) (diagrams.net)** for editing,
 and exported to SVG for the docs site.
 
