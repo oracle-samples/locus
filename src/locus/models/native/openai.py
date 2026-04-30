@@ -175,6 +175,23 @@ class OpenAIModel(BaseModel):
             name = rest
         return any(name.startswith(prefix) for prefix in ("o1", "o3", "gpt-5"))
 
+    @staticmethod
+    def _rejects_sampling_params(model: str) -> bool:
+        """Whether the model rejects ``temperature`` / ``top_p``.
+
+        OpenAI's ``*-search-preview`` chat-completions models perform their
+        own retrieval and refuse caller-supplied sampling controls with a
+        400 ``Model incompatible request arguments supplied: temperature,
+        top_p`` error. Treat them like reasoning models for the purposes
+        of building the request body, even though they still use plain
+        ``max_tokens``.
+        """
+        name = model.lower()
+        head, sep, rest = name.partition(".")
+        if sep and head.isalpha():
+            name = rest
+        return "search-preview" in name
+
     def _parse_response(self, response: Any) -> ModelResponse:
         """Parse OpenAI response to ModelResponse.
 
@@ -234,6 +251,7 @@ class OpenAIModel(BaseModel):
         openai_tools = self._convert_tools(tools)
 
         uses_completion_tokens = self._uses_max_completion_tokens(self.config.model)
+        rejects_sampling = self._rejects_sampling_params(self.config.model)
 
         max_tokens_value = kwargs.get("max_tokens", self.config.max_tokens)
 
@@ -247,19 +265,20 @@ class OpenAIModel(BaseModel):
             request_kwargs["max_completion_tokens"] = max_tokens_value
         else:
             request_kwargs["max_tokens"] = max_tokens_value
-            request_kwargs["temperature"] = kwargs.get("temperature", self.config.temperature)
-            request_kwargs["top_p"] = kwargs.get("top_p", self.config.top_p)
-            # Only send penalties when the user customized them. Some
-            # providers (Grok) reject the parameter outright, even at
-            # zero — server defaults are 0.0 anyway, so omitting the
-            # default value is functionally identical for those that
-            # accept it.
-            freq = kwargs.get("frequency_penalty", self.config.frequency_penalty)
-            if freq != 0.0:
-                request_kwargs["frequency_penalty"] = freq
-            pres = kwargs.get("presence_penalty", self.config.presence_penalty)
-            if pres != 0.0:
-                request_kwargs["presence_penalty"] = pres
+            if not rejects_sampling:
+                request_kwargs["temperature"] = kwargs.get("temperature", self.config.temperature)
+                request_kwargs["top_p"] = kwargs.get("top_p", self.config.top_p)
+                # Only send penalties when the user customized them. Some
+                # providers (Grok) reject the parameter outright, even at
+                # zero — server defaults are 0.0 anyway, so omitting the
+                # default value is functionally identical for those that
+                # accept it.
+                freq = kwargs.get("frequency_penalty", self.config.frequency_penalty)
+                if freq != 0.0:
+                    request_kwargs["frequency_penalty"] = freq
+                pres = kwargs.get("presence_penalty", self.config.presence_penalty)
+                if pres != 0.0:
+                    request_kwargs["presence_penalty"] = pres
 
         if openai_tools:
             request_kwargs["tools"] = openai_tools
@@ -300,6 +319,7 @@ class OpenAIModel(BaseModel):
         openai_tools = self._convert_tools(tools)
 
         uses_completion_tokens = self._uses_max_completion_tokens(self.config.model)
+        rejects_sampling = self._rejects_sampling_params(self.config.model)
 
         max_tokens_value = kwargs.get("max_tokens", self.config.max_tokens)
 
@@ -312,6 +332,8 @@ class OpenAIModel(BaseModel):
         # Use appropriate token parameter based on model
         if uses_completion_tokens:
             request_kwargs["max_completion_tokens"] = max_tokens_value
+        elif rejects_sampling:
+            request_kwargs["max_tokens"] = max_tokens_value
         else:
             request_kwargs["max_tokens"] = max_tokens_value
             request_kwargs["temperature"] = kwargs.get("temperature", self.config.temperature)

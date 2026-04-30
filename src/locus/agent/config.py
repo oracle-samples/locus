@@ -302,6 +302,45 @@ class AgentConfig(BaseModel):
             raise TypeError(f"output_schema must be a pydantic.BaseModel subclass, got: {v!r}")
         return v
 
+    # Multi-modal provider registry. Setting any of these wires a matching
+    # auto-registered ``@tool`` so the model can call the capability the
+    # same way it calls a hand-written tool.
+    web_search: Any | None = Field(
+        default=None,
+        description=(
+            "Optional ``locus.providers.web_search.BaseWebSearchProvider``. "
+            "When set, ``Agent`` registers a ``web_search(query, "
+            "max_results=5)`` tool that delegates to the provider."
+        ),
+    )
+
+    web_fetch: Any | None = Field(
+        default=None,
+        description=(
+            "Optional ``locus.providers.web_fetch.BaseWebFetchProvider``. "
+            "When set, ``Agent`` registers a ``web_fetch(url, "
+            "max_chars=50000)`` tool that delegates to the provider."
+        ),
+    )
+
+    image_generator: Any | None = Field(
+        default=None,
+        description=(
+            "Optional ``locus.providers.image.BaseImageGenerationProvider``. "
+            "When set, ``Agent`` registers a ``generate_image(prompt, "
+            "size, n)`` tool that delegates to the provider."
+        ),
+    )
+
+    speech_provider: Any | None = Field(
+        default=None,
+        description=(
+            "Optional ``locus.providers.speech.BaseSpeechProvider``. When "
+            "set, ``Agent`` registers ``speak`` and/or ``transcribe`` tools "
+            "depending on the provider's ``capabilities``."
+        ),
+    )
+
     # Playbook enforcement (optional). When set, a PlaybookEnforcerHook is
     # auto-installed during Agent initialization so the model is held to the
     # playbook's step sequence and tool constraints.

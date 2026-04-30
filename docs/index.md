@@ -18,9 +18,8 @@ Wire up a **state graph** that loops until confident. Mesh agents
 that knows when to stop.
 
 Six multi-agent shapes. One Oracle-native runtime. Every model on OCI
-the day it lands. Production-grade idempotent tools, durable
-checkpointing, and typed events — the agent stack built for the
-workloads Oracle customers actually run.
+the day it lands. The agent stack you'd actually let near a credit
+card.
 
 [See what you can build](#what-you-can-build){ .md-button .md-button--primary }
 [GitHub](https://github.com/oracle-samples/locus){ .md-button }
@@ -277,6 +276,7 @@ them in one process; stream events from any of them in the same
 | **📡 Streaming + Server** | Typed events for `match` consumers · SSE · drop-in FastAPI `AgentServer`. |
 | **🪝 Hooks** | Logging · Telemetry · ModelRetry · Guardrails · Steering. |
 | **🪙 MCP both ways** | `MCPClient` consumes external servers. `LocusMCPServer` exposes locus tools. |
+| **🌐 Multi-modal providers** | `web_search=`, `web_fetch=`, `image_generator=`, `speech_provider=` on `Agent(...)` auto-register matching tools. Built-in OpenAI + httpx implementations, four Protocols for bring-your-own. |
 | **📊 Evaluation** | `EvalCase` / `EvalRunner` / `EvalReport` regression suites. |
 | **🛂 Termination algebra** | Eight composable stop conditions. `Or` and `And` compose them. |
 | **🧰 Models** | OCI GenAI native (V1 + SDK) · OpenAI · Anthropic · Ollama. |
@@ -350,7 +350,7 @@ Read the [concepts](concepts/agent.md) for the *why*; read the
 ## Learn locus in an afternoon
 
 The [`examples/`](https://github.com/oracle-samples/locus/tree/main/examples)
-tree is **37 tutorials** plus **3 end-to-end demos**. Every tutorial
+tree is **38 tutorials** plus **3 end-to-end demos**. Every tutorial
 is one runnable file and adds exactly one idea on top of the previous.
 
 ### Track 1 — basics (first hour)
@@ -394,7 +394,7 @@ The six in-process patterns plus A2A:
 [RAG agents](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_24_rag_agents.py) ·
 [Skills](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_32_skills.py).
 
-### Track 5 — production (12, 19–21, 26–30, 33, 35, 37)
+### Track 5 — production (12, 19–21, 26–30, 33, 35, 37–38)
 
 [MCP](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_12_mcp_integration.py) ·
 [Guardrails](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_19_guardrails_security.py) ·
@@ -408,7 +408,8 @@ The six in-process patterns plus A2A:
 [Plugins](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_31_plugins.py) ·
 [Steering](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_33_steering.py) ·
 [Graph advanced](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_35_graph_advanced.py) ·
-[Termination](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_37_termination.py).
+[Termination](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_37_termination.py) ·
+[Multi-modal providers](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_38_multimodal_providers.py).
 
 ### End-to-end demos
 
