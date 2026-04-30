@@ -36,6 +36,89 @@ class GroundingConfig(BaseModel):
     model_config = {"extra": "forbid"}
 
 
+class GSARConfig(BaseModel):
+    """Configuration for the GSAR typed-grounding layer.
+
+    Wires the framework from `arXiv:2604.23366` onto an ``Agent``. When
+    set on :class:`AgentConfig`, the agent runs the configured judge
+    over its final assistant message + tool-execution history after
+    the loop completes; the resulting :class:`~locus.reasoning.gsar_judge.JudgeOutput`,
+    scalar score ``S``, and decision ``δ`` are surfaced on
+    :class:`~locus.agent.result.AgentResult`.
+
+    This is a single-pass v1 — the agent produces an answer, the judge
+    scores it, and the result is exposed for the caller to act on. The
+    full Algorithm-1 outer loop with regenerate / replan callbacks
+    lives separately in :mod:`locus.reasoning.gsar_evaluator`; wire it
+    explicitly when you want the loop dynamics.
+    """
+
+    judge: Any = Field(
+        default=None,
+        description=(
+            "A :class:`~locus.reasoning.gsar_judge.BaseGSARJudge` "
+            "instance. When ``None`` the agent constructs a default "
+            "``StructuredOutputGSARJudge`` over the agent's primary "
+            "model — that's almost never what you want for production "
+            "(the paper recommends a different model from the generator), "
+            "so prefer to pass an explicit judge."
+        ),
+    )
+
+    contradiction_penalty: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description="``ρ`` from Eq. 2. Default 0.5 (Appendix B reference).",
+    )
+
+    tau_proceed: float = Field(
+        default=0.80,
+        ge=0.0,
+        le=1.0,
+        description="``τ_proceed`` from Eq. 3. Default 0.80 (Appendix B).",
+    )
+
+    tau_regenerate: float = Field(
+        default=0.65,
+        ge=0.0,
+        le=1.0,
+        description="``τ_regenerate`` from Eq. 3. Default 0.65 (Appendix B).",
+    )
+
+    weight_map: dict[str, float] | None = Field(
+        default=None,
+        description=(
+            "Optional override of the Appendix-B reference weights. "
+            "Keys must be ``EvidenceType`` enum values "
+            "(``'tool_match'`` etc.). ``None`` uses the defaults."
+        ),
+    )
+
+    fail_on_low_score: bool = Field(
+        default=False,
+        description=(
+            "When True, an ``AgentResult`` whose GSAR decision is not "
+            "``proceed`` raises a ``GSARValidationError`` instead of "
+            "returning. Useful for pipelines that should refuse to "
+            "ship un-grounded summaries; off by default so callers "
+            "can inspect the judgment and decide."
+        ),
+    )
+
+    model_config = {"arbitrary_types_allowed": True, "extra": "forbid"}
+
+    @field_validator("tau_regenerate")
+    @classmethod
+    def _ordered(cls, v: float, info: Any) -> float:
+        proceed = getattr(info, "data", {}).get("tau_proceed", 0.80)
+        if v >= proceed:
+            raise ValueError(
+                f"tau_regenerate ({v}) must be strictly less than tau_proceed ({proceed})."
+            )
+        return v
+
+
 class AgentConfig(BaseModel):
     """
     Configuration for an Agent instance.
@@ -117,6 +200,20 @@ class AgentConfig(BaseModel):
     grounding: GroundingConfig | None = Field(
         default=None,
         description="Grounding evaluation configuration (None to disable)",
+    )
+
+    gsar: GSARConfig | None = Field(
+        default=None,
+        description=(
+            "GSAR typed-grounding layer config (`arXiv:2604.23366`). "
+            "When set, the agent runs the configured judge over its "
+            "final answer + tool-execution history after the loop "
+            "completes and surfaces the JudgeOutput / score / decision "
+            "on ``AgentResult``. Use for safety-critical pipelines "
+            "where typed-evidence partitioning earns its keep over the "
+            "binary ``grounding=True`` path. ``None`` (default) "
+            "disables GSAR."
+        ),
     )
 
     # Planning
