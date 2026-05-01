@@ -101,6 +101,25 @@ repos:
     stages: [manual]
 
   # ==========================================================================
+  # Spell-checking
+  # ==========================================================================
+- repo: https://github.com/codespell-project/codespell
+  rev: v2.3.0
+  hooks:
+  - id: codespell
+    args:
+        # Project-specific terms + identifiers + intentional typo-squat
+        # test fixtures that codespell otherwise mis-flags:
+        #   te          — loop variable for ``tool_execution``
+        #   whats       — test data string ("whats" stripped from query)
+        #   pres        — variable shorthand for ``presence_penalty``
+        #   reqeusts    — intentional typo-squat fixture for OSV malware test
+        #   unparseable — accepted English variant of ``unparsable``
+        #   re-use      — accepted hyphenation
+    - --ignore-words-list=oci,orcl,te,whats,re-use,pres,reqeusts,unparseable
+    - --skip=*.lock,*.json,*.yaml,*.yml,*.svg,*.gif,*.png,*.jpg,*.pdf
+
+  # ==========================================================================
   # Documentation
   # ==========================================================================
 - repo: https://github.com/pycqa/doc8
