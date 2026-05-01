@@ -164,6 +164,7 @@ nav:
   - Build a custom tool: how-to/custom-tools.md
   - Add a checkpointer backend: how-to/custom-checkpointer.md
   - OCI GenAI models: how-to/oci-models.md
+  - OCI Dedicated AI Cluster (DAC): how-to/oci-dac.md
 - API reference:
   - Agent: api/agent.md
   - Checkpointers: api/checkpointers.md

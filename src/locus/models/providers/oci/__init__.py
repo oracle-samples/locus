@@ -244,24 +244,93 @@ class OCIModel(BaseModel):
         tools: list[dict[str, Any]] | None = None,
         **kwargs: Any,
     ) -> AsyncIterator[ModelChunkEvent]:
-        """Stream a chat response.
+        """Stream a chat response via the OCI GenAI SDK.
 
-        Note: OCI GenAI streaming is limited. This implementation
-        falls back to non-streaming and yields the full response.
+        Sets ``is_stream=True`` on the chat request so the SDK returns
+        an SSE event stream. Each ``data:`` event carries a JSON chunk
+        with ``message.content`` deltas and (on the last event)
+        ``finishReason``. Works for both ``OnDemandServingMode``
+        (model id) and ``DedicatedServingMode`` (DAC endpoint OCID).
+
+        On any exception the stream falls back to the non-streaming
+        ``complete()`` path and yields a single chunk with the full
+        content — robust to providers that reject ``is_stream``.
         """
-        # OCI GenAI has limited streaming support
-        # Fall back to complete and yield in chunks
-        response = await self.complete(messages, tools, **kwargs)
+        import json as _json
 
-        if response.content:
-            # Yield content in chunks for better UX
-            chunk_size = 50
-            content = response.content
-            for i in range(0, len(content), chunk_size):
-                yield ModelChunkEvent(content=content[i : i + chunk_size])
+        from oci.generative_ai_inference import models
 
-        if response.tool_calls:
-            yield ModelChunkEvent(tool_calls=response.tool_calls)
+        # Build the same request shape as ``complete()`` but with
+        # ``is_stream=True`` so the SDK returns a streaming response.
+        converted_messages = self.provider.convert_messages(messages, model_id=self.config.model_id)
+        converted_tools = self.provider.convert_tools(tools)
+        request_kwargs = {
+            "max_tokens": self.config.max_tokens,
+            "temperature": self.config.temperature,
+            "top_p": self.config.top_p,
+            "model_id": self.config.model_id,
+            "is_stream": True,
+        }
+
+        chat_request = self.provider.build_request(
+            converted_messages,
+            converted_tools,
+            **request_kwargs,
+        )
+        # Some provider request builders (Cohere) take messages
+        # under a different field — they may have ignored is_stream
+        # in build_request. Set it on the resulting object as a
+        # belt-and-braces step.
+        if hasattr(chat_request, "is_stream"):
+            chat_request.is_stream = True
+
+        chat_details = models.ChatDetails(
+            compartment_id=self.client.compartment_id,
+            serving_mode=self.client.get_serving_mode(self.config.model_id),
+            chat_request=chat_request,
+        )
+
+        loop = asyncio.get_running_loop()
+        try:
+            response = await loop.run_in_executor(None, lambda: self.client.chat(chat_details))
+        except Exception:  # noqa: BLE001 — fall back on any provider error
+            # Some DAC endpoints / model versions reject is_stream.
+            # Hand the user a working stream by chunking the
+            # non-streaming response.
+            non_stream = await self.complete(messages, tools, **kwargs)
+            if non_stream.content:
+                yield ModelChunkEvent(content=non_stream.content)
+            if non_stream.tool_calls:
+                yield ModelChunkEvent(tool_calls=non_stream.tool_calls)
+            yield ModelChunkEvent(done=True)
+            return
+
+        # ``response.data`` is the raw streaming body. Iterate the SSE
+        # event stream synchronously in a worker thread so the asyncio
+        # loop stays responsive — each event is a small JSON delta.
+        events_iter = response.data.events()
+        sentinel = object()
+
+        def _next_event() -> Any:
+            return next(events_iter, sentinel)
+
+        while True:
+            event = await loop.run_in_executor(None, _next_event)
+            if event is sentinel:
+                break
+            data = getattr(event, "data", None)
+            if not data:
+                continue
+            try:
+                chunk = _json.loads(data)
+            except (ValueError, TypeError):
+                # Skip malformed deltas — keep the stream alive.
+                continue
+            content_delta, tool_calls_delta, _is_done = self.provider.parse_stream_chunk(chunk)
+            if content_delta:
+                yield ModelChunkEvent(content=content_delta)
+            if tool_calls_delta:
+                yield ModelChunkEvent(tool_calls=tool_calls_delta)
 
         yield ModelChunkEvent(done=True)
 
