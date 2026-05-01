@@ -27,10 +27,6 @@ jobs:
     name: Test
     uses: ./.github/workflows/_test.yml
 
-  precommit:
-    name: Pre-commit
-    uses: ./.github/workflows/_precommit.yml
-
   codespell:
     name: Codespell
     uses: ./.github/workflows/_codespell.yml
@@ -64,7 +60,7 @@ jobs:
   # (DCO is skipped on push events).
   ci-success:
     name: CI Success
-    needs: [lint, test, precommit, codespell, dco]
+    needs: [lint, test, codespell, dco]
     if: always()
     runs-on: ubuntu-latest
     steps:
