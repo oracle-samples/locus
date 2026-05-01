@@ -14,14 +14,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  smoke-1:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo one
-  smoke-2:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo two
   lint:
     name: Lint
     uses: ./.github/workflows/_lint.yml
+  test:
+    name: Test
+    uses: ./.github/workflows/_test.yml
