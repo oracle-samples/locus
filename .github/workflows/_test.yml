@@ -6,14 +6,12 @@ on:
 permissions:
   contents: read
 
-env:
-  HATCH_VERSION: "1.16.5"
-
 jobs:
   build:
-    name: "make test #${{ matrix.python-version }}"
+    name: "test #${{ matrix.python-version }}"
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version:
           - "3.11"
@@ -30,14 +28,24 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
+          cache: pip
 
-      - name: Install Hatch
-        run: pip install hatch==${{ env.HATCH_VERSION }}
+      # Install locus with every optional extra so tests that import
+      # ``oci``, ``openai``, ``fastmcp``, ``mcp``, ``redis``, etc. don't
+      # fail with ModuleNotFoundError. We bypass hatch here because
+      # ``hatch run test`` uses the default env which only carries
+      # ``[dev]`` deps; spinning up ``hatch -e test`` per matrix slot
+      # would re-resolve every dep into a per-Python virtualenv and
+      # dominate the CI wall-clock.
+      - name: Install locus + all extras
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,all]"
 
-      - name: Run core tests
-        run: hatch run test
+      - name: Run unit tests
+        run: pytest tests/unit/
 
-      - name: Ensure the tests did not create any additional files
+      - name: Ensure tests did not create stray files
         run: |
           set -eu
           STATUS="$(git status)"
