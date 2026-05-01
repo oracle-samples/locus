@@ -104,7 +104,7 @@ dev = [
     "pre-commit>=3.8",
     "ruff>=0.8",
     "mypy>=1.13",
-    "pytest>=8.3",
+    "pytest>=9.0.3",
     "pytest-asyncio>=0.24",
     "pytest-cov>=6.0",
     "pytest-xdist>=3.5",
@@ -115,7 +115,7 @@ dev = [
     # ``pip install -e ".[dev]"`` (used by CI and contributors) covers
     # the entire test surface.
     "aiosqlite>=0.22.1",  # used by SQLite checkpointer tests
-    "fastmcp>=2.14.5",    # MCP server tests in tests/unit/test_fastmcp.py
+    "fastmcp>=3.2.0",     # MCP server tests in tests/unit/test_fastmcp.py
     "pyyaml>=6.0.3",      # Playbook YAML loader tests
     "redis>=7.1.0",       # Redis checkpointer tests
     "sqlalchemy>=2.0.46", # PostgreSQL checkpointer schema tests
