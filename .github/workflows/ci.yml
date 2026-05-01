@@ -6,14 +6,9 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Minimal default permissions for the CI pipeline. Individual jobs can raise
-# to the narrowest scope they actually need; reusable sub-workflows declare
-# their own permissions blocks.
 permissions:
   contents: read
 
-# If another push to the same PR or branch happens while this workflow is still running,
-# cancel the earlier run in favor of the next run.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -22,56 +17,72 @@ jobs:
   lint:
     name: Lint
     uses: ./.github/workflows/_lint.yml
-    permissions:
-      contents: read
 
   test:
     name: Test
     uses: ./.github/workflows/_test.yml
-    permissions:
-      contents: read
 
-  codespell:
-    name: Codespell
-    uses: ./.github/workflows/_codespell.yml
-    permissions:
-      contents: read
+  precommit:
+    name: Pre-commit
+    uses: ./.github/workflows/_precommit.yml
 
-  # Verify commits are signed off (OCA compliance)
+  # Verify commits are signed off (OCA / DCO compliance). Inline bash
+  # check — replaces ``tisonkun/actions-dco`` which was deprecated by
+  # GitHub for using Node 16 (caused startup_failure on every CI run).
   dco:
     name: DCO Check
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     permissions:
       contents: read
-      pull-requests: read
     steps:
-      # actions/checkout@v4
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Verify every commit is signed off
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -eu
+          echo "Checking commits between $BASE_SHA and $HEAD_SHA"
+          missing=$(git log --no-merges --pretty='%H %s' "$BASE_SHA..$HEAD_SHA" \
+            | while read sha _subject; do
+                if ! git log -1 --pretty='%B' "$sha" \
+                    | grep -qE '^Signed-off-by: .+ <.+@.+>$'; then
+                  printf '%s\n' "$sha"
+                fi
+              done)
+          if [ -n "$missing" ]; then
+            echo "::error::The following commits are missing a Signed-off-by line:"
+            echo "$missing" | while read sha; do
+              echo "  - $(git log -1 --pretty='%h %s' "$sha")"
+            done
+            echo
+            echo "Add a sign-off with: git commit -s --amend --no-edit"
+            echo "and then force-push the branch."
+            exit 1
+          fi
+          echo "All commits are signed off."
 
-      - name: Check DCO
-        # tisonkun/actions-dco@v1.1 — v1.2 was deleted upstream; pin to SHA
-        # to avoid silently using a tag that disappears or is rewritten.
-        uses: tisonkun/actions-dco@f1024cd563550b5632e754df11b7d30b73be54a5
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-
+  # Aggregate gate. Branch-protection should require this single status
+  # check rather than each individual one — that lets us add / remove
+  # jobs without retouching protection rules.
   ci-success:
     name: CI Success
-    needs: [lint, test, codespell]
+    needs: [lint, test, precommit, dco]
     if: always()
     runs-on: ubuntu-latest
-    permissions: {}
-    env:
-      JOBS_JSON: ${{ toJSON(needs) }}
-      RESULTS_JSON: ${{ toJSON(needs.*.result) }}
-      EXIT_CODE: ${{!contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') && '0' || '1'}}
     steps:
-      - name: CI Success
+      - name: Verify required jobs succeeded
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
-          echo "$JOBS_JSON"
-          echo "$RESULTS_JSON"
-          echo "Exiting with $EXIT_CODE"
-          exit "$EXIT_CODE"
+          set -eu
+          echo "$NEEDS_JSON"
+          if echo "$NEEDS_JSON" | grep -qE '"result":[[:space:]]*"(failure|cancelled)"'; then
+            echo "::error::At least one required job failed or was cancelled."
+            exit 1
+          fi
+          echo "All required jobs passed."

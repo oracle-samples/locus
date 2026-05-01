@@ -62,9 +62,7 @@ def example_termination():
     print(f"  Both met: stop={stop4}, reason={reason4}")
 
     # Custom
-    custom = CustomCondition(
-        lambda state, **ctx: (state.iteration > 10, "too_many_iterations")
-    )
+    custom = CustomCondition(lambda state, **ctx: (state.iteration > 10, "too_many_iterations"))
     print(f"\nCustomCondition: {custom.check(AgentState(agent_id='t').with_iteration(11))}")
 
 
@@ -79,11 +77,14 @@ def example_output_key():
 
     model = get_model()
 
-    agent = Agent(config=AgentConfig(
-        system_prompt="Answer in one word.",
-        max_iterations=3, model=model,
-        output_key="answer",
-    ))
+    agent = Agent(
+        config=AgentConfig(
+            system_prompt="Answer in one word.",
+            max_iterations=3,
+            model=model,
+            output_key="answer",
+        )
+    )
 
     result = agent.run_sync("Capital of France?")
     print(f"Response: {result.message}")
@@ -107,10 +108,13 @@ def example_dynamic_prompt():
         language = context.get("metadata", {}).get("language", "English")
         return f"You are a {role}. Respond in {language}. Be concise."
 
-    agent = Agent(config=AgentConfig(
-        system_prompt=my_prompt,
-        max_iterations=3, model=model,
-    ))
+    agent = Agent(
+        config=AgentConfig(
+            system_prompt=my_prompt,
+            max_iterations=3,
+            model=model,
+        )
+    )
 
     # Different metadata → different behavior
     r1 = agent.run_sync("What is 7*8?", metadata={"role": "math teacher"})

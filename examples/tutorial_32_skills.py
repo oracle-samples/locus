@@ -44,11 +44,14 @@ def example_programmatic():
         ),
     )
 
-    agent = Agent(config=AgentConfig(
-        system_prompt="You are a security reviewer. Use available skills.",
-        max_iterations=5, model=model,
-        skills=[code_review],
-    ))
+    agent = Agent(
+        config=AgentConfig(
+            system_prompt="You are a security reviewer. Use available skills.",
+            max_iterations=5,
+            model=model,
+            skills=[code_review],
+        )
+    )
 
     result = agent.run_sync(
         "Review: def login(u,p): return db.query(f'SELECT * FROM users WHERE name={u}')"

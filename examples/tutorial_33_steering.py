@@ -47,12 +47,15 @@ def example_steering():
         policy="Only allow read operations. Never allow delete or write operations.",
     )
 
-    agent = Agent(config=AgentConfig(
-        system_prompt="You are a database assistant.",
-        max_iterations=5, model=model,
-        tools=[read_data, delete_data],
-        hooks=[steering],
-    ))
+    agent = Agent(
+        config=AgentConfig(
+            system_prompt="You are a database assistant.",
+            max_iterations=5,
+            model=model,
+            tools=[read_data, delete_data],
+            hooks=[steering],
+        )
+    )
 
     # This should be blocked by steering
     print("Attempt: Delete the users table")
@@ -68,12 +71,15 @@ def example_steering():
         model=model,
         policy="Only allow read operations. Never allow delete or write operations.",
     )
-    agent2 = Agent(config=AgentConfig(
-        system_prompt="You are a database assistant.",
-        max_iterations=5, model=model,
-        tools=[read_data, delete_data],
-        hooks=[steering2],
-    ))
+    agent2 = Agent(
+        config=AgentConfig(
+            system_prompt="You are a database assistant.",
+            max_iterations=5,
+            model=model,
+            tools=[read_data, delete_data],
+            hooks=[steering2],
+        )
+    )
     result2 = agent2.run_sync("Read all users from the database")
     print(f"Response: {result2.message[:150]}")
 

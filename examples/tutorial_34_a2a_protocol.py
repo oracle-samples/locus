@@ -31,10 +31,13 @@ def example_a2a_server():
 
     model = get_model()
 
-    agent = Agent(config=AgentConfig(
-        system_prompt="You are a research assistant. Answer concisely.",
-        max_iterations=3, model=model,
-    ))
+    agent = Agent(
+        config=AgentConfig(
+            system_prompt="You are a research assistant. Answer concisely.",
+            max_iterations=3,
+            model=model,
+        )
+    )
 
     server = A2AServer(
         agent=agent,
@@ -55,10 +58,13 @@ def example_a2a_server():
     print(f"Skills: {card['skills']}")
 
     # Invoke
-    r = client.post("/a2a/invoke", json={
-        "messages": [{"role": "user", "content": "What is quantum computing?", "metadata": {}}],
-        "metadata": {},
-    })
+    r = client.post(
+        "/a2a/invoke",
+        json={
+            "messages": [{"role": "user", "content": "What is quantum computing?", "metadata": {}}],
+            "metadata": {},
+        },
+    )
     data = r.json()
     print(f"\nInvoke: {data['messages'][0]['content'][:100]}...")
     print(f"Status: {data['status']}")

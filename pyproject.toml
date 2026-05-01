@@ -110,6 +110,15 @@ dev = [
     "pytest-xdist>=3.5",
     "respx>=0.21",  # Mock httpx
     "dirty-equals>=0.8",  # Pydantic test helpers
+    # Dev-time deps that some unit tests import directly. Living here
+    # rather than in ``[dependency-groups].dev`` so a plain
+    # ``pip install -e ".[dev]"`` (used by CI and contributors) covers
+    # the entire test surface.
+    "aiosqlite>=0.22.1",  # used by SQLite checkpointer tests
+    "fastmcp>=2.14.5",    # MCP server tests in tests/unit/test_fastmcp.py
+    "pyyaml>=6.0.3",      # Playbook YAML loader tests
+    "redis>=7.1.0",       # Redis checkpointer tests
+    "sqlalchemy>=2.0.46", # PostgreSQL checkpointer schema tests
 ]
 
 # Docs
@@ -148,14 +157,26 @@ dependencies = [
 ]
 
 [tool.hatch.envs.default.scripts]
-test = "pytest {args:tests}"
-test-cov = "pytest --cov=src/locus --cov-report=term-missing --cov-report=html {args:tests}"
-test-fast = "pytest -n auto {args:tests}"
-lint = "ruff check src tests"
-lint-fix = "ruff check --fix src tests"
-format = "ruff format src tests"
-format-check = "ruff format --check src tests"
+# Default test target = unit tests only (deterministic, no external deps).
+# Integration tests need credentials / live services and are run via
+# `test-integration` or `test-all` when those are available.
+test = "pytest {args:tests/unit}"
+test-integration = "pytest {args:tests/integration}"
+test-all = "pytest {args:tests}"
+test-cov = "pytest --cov=src/locus --cov-report=term-missing --cov-report=html {args:tests/unit}"
+test-fast = "pytest -n auto {args:tests/unit}"
+lint = "ruff check src tests examples"
+lint-fix = "ruff check --fix src tests examples"
+format = "ruff format src tests examples"
+format-check = "ruff format --check src tests examples"
 typecheck = "mypy src/locus"
+# CI gate: every check the project enforces, in one command. A clean run
+# of `hatch run check` is what `_lint.yml` runs.
+check = [
+    "format-check",
+    "lint",
+    "typecheck",
+]
 all = [
     "format",
     "lint-fix",
@@ -334,15 +355,21 @@ ignore = [
     "T201",     # print — tutorials/examples intentionally use print
     "DTZ005",   # datetime.now without tz — fine for demo UX
     "BLE001",   # blind except — simplified error handling in examples
+    "S108",     # /tmp/... demo paths — examples write to /tmp on purpose
     "S311",     # non-cryptographic random — demo data only
     "S501",     # httpx verify=False — only used in local-docker demo paths
     "PTH110",   # os.path.exists — keep examples accessible to readers
     "PTH111",   # os.path.expanduser — idiomatic for user-facing configs
+    "PTH118",   # os.path.join — pedagogical readability over Path / "x"
+    "PTH208",   # os.listdir — same; tutorials avoid pathlib import noise
     "A002",     # builtin arg shadowing — pedagogical clarity
     "B007",     # unused loop variable — counter patterns are pedagogical
     "SLF001",   # private-member access — examples illustrate internals
     "F401",     # unused imports — tutorials show available API surface
     "F541",     # f-string without placeholders — pedagogical scaffolding
+    "F841",     # unused local — tutorials demonstrate APIs that return
+                # values for inspection even when they're not consumed
+                # downstream.
     "ARG005",   # unused lambda arg — demo lambda signatures
     "ASYNC210", # blocking HTTP — tutorials may demo sync libs alongside async
     "ASYNC240", # os.path in async — examples favor stdlib readability
@@ -574,11 +601,8 @@ exclude_lines = [
 fail_under = 80
 show_missing = true
 
-[dependency-groups]
-dev = [
-    "aiosqlite>=0.22.1",
-    "fastmcp>=2.14.5",
-    "pyyaml>=6.0.3",
-    "redis>=7.1.0",
-    "sqlalchemy>=2.0.46",
-]
+# Note: ``[dependency-groups]`` (PEP 735) was previously used here but
+# ``pip install -e ".[dev]"`` doesn't pick those up — the same deps are
+# now in the ``[project.optional-dependencies].dev`` extra above. Kept
+# this comment as a marker so a future ``hatch sync`` doesn't reintroduce
+# the duplicate.
