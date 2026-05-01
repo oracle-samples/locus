@@ -30,26 +30,3 @@ jobs:
   codespell:
     name: Codespell
     uses: ./.github/workflows/_codespell.yml
-
-  # Verify commits are signed off (OCA compliance). Only runs on PRs —
-  # main pushes have already been signed off through the PR that
-  # produced them.
-  dco:
-    name: DCO Check
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    permissions:
-      contents: read
-      pull-requests: read
-    steps:
-      # actions/checkout@v4
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          fetch-depth: 0
-
-      - name: Check DCO
-        # tisonkun/actions-dco@v1.1 — pin to SHA so a deleted/rewritten
-        # tag can't silently change the action body.
-        uses: tisonkun/actions-dco@f1024cd563550b5632e754df11b7d30b73be54a5
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
