@@ -110,6 +110,15 @@ dev = [
     "pytest-xdist>=3.5",
     "respx>=0.21",  # Mock httpx
     "dirty-equals>=0.8",  # Pydantic test helpers
+    # Dev-time deps that some unit tests import directly. Living here
+    # rather than in ``[dependency-groups].dev`` so a plain
+    # ``pip install -e ".[dev]"`` (used by CI and contributors) covers
+    # the entire test surface.
+    "aiosqlite>=0.22.1",  # used by SQLite checkpointer tests
+    "fastmcp>=2.14.5",    # MCP server tests in tests/unit/test_fastmcp.py
+    "pyyaml>=6.0.3",      # Playbook YAML loader tests
+    "redis>=7.1.0",       # Redis checkpointer tests
+    "sqlalchemy>=2.0.46", # PostgreSQL checkpointer schema tests
 ]
 
 # Docs
@@ -592,11 +601,8 @@ exclude_lines = [
 fail_under = 80
 show_missing = true
 
-[dependency-groups]
-dev = [
-    "aiosqlite>=0.22.1",
-    "fastmcp>=2.14.5",
-    "pyyaml>=6.0.3",
-    "redis>=7.1.0",
-    "sqlalchemy>=2.0.46",
-]
+# Note: ``[dependency-groups]`` (PEP 735) was previously used here but
+# ``pip install -e ".[dev]"`` doesn't pick those up — the same deps are
+# now in the ``[project.optional-dependencies].dev`` extra above. Kept
+# this comment as a marker so a future ``hatch sync`` doesn't reintroduce
+# the duplicate.
