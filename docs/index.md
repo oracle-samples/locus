@@ -280,6 +280,7 @@ them in one process; stream events from any of them in the same
 | **📊 Evaluation** | `EvalCase` / `EvalRunner` / `EvalReport` regression suites. |
 | **🛂 Termination algebra** | Eight composable stop conditions. `Or` and `And` compose them. |
 | **🧰 Models** | OCI GenAI native (V1 + SDK) · OpenAI · Anthropic · Ollama. |
+| **🏗 OCI Dedicated AI Cluster** | Pass an `ocid1.generativeaiendpoint....` OCID, get `DedicatedServingMode` with real SSE streaming. Live-tested on Qwen / London. |
 
 ## Hello, agent
 
@@ -350,7 +351,7 @@ Read the [concepts](concepts/agent.md) for the *why*; read the
 ## Learn locus in an afternoon
 
 The [`examples/`](https://github.com/oracle-samples/locus/tree/main/examples)
-tree is **39 tutorials** plus **3 end-to-end demos**. Every tutorial
+tree is **40 tutorials** plus **3 end-to-end demos**. Every tutorial
 is one runnable file and adds exactly one idea on top of the previous.
 
 ### Track 1 — basics (first hour)
@@ -394,7 +395,7 @@ The six in-process patterns plus A2A:
 [RAG agents](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_24_rag_agents.py) ·
 [Skills](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_32_skills.py).
 
-### Track 5 — production (12, 19–21, 26–30, 33, 35, 37–39)
+### Track 5 — production (12, 19–21, 26–30, 33, 35, 37–40)
 
 [MCP](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_12_mcp_integration.py) ·
 [Guardrails](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_19_guardrails_security.py) ·
@@ -410,7 +411,8 @@ The six in-process patterns plus A2A:
 [Graph advanced](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_35_graph_advanced.py) ·
 [Termination](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_37_termination.py) ·
 [Multi-modal providers](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_38_multimodal_providers.py) ·
-[GSAR typed grounding](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_39_gsar_typed_grounding.py).
+[GSAR typed grounding](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_39_gsar_typed_grounding.py) ·
+[OCI Dedicated AI Cluster (DAC)](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_40_oci_dac.py).
 
 ### End-to-end demos
 

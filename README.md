@@ -103,6 +103,7 @@ the [documentation](https://oracle-samples.github.io/locus/).
 | **[📊 Evaluation](https://oracle-samples.github.io/locus/concepts/evaluation/)** | `EvalCase` / `EvalRunner` / `EvalReport` — regression suites, custom evaluators, pass / score / duration reporting. |
 | **[🛂 Termination algebra](https://oracle-samples.github.io/locus/concepts/termination/)** | Eight composable stop conditions on `Agent(termination=…)`: `MaxIterations \| TextMention("DONE") & ConfidenceMet(0.9)` is real Python (`__or__` / `__and__` overloads). |
 | **[🧰 Models](https://oracle-samples.github.io/locus/concepts/models/)** | OCI GenAI native (V1 + SDK transport, 90+ models, day-0) · OpenAI · Anthropic · Ollama. One auth surface for OCI: profile, session token, instance / resource principal. |
+| **[🏗 OCI Dedicated AI Cluster](https://oracle-samples.github.io/locus/how-to/oci-dac/)** | Pass an `ocid1.generativeaiendpoint.<region>....` OCID and locus auto-routes to `DedicatedServingMode` with real SSE streaming. Live-tested against Qwen on a London DAC. |
 
 ## The agent loop
 
@@ -206,7 +207,7 @@ print(agent.run_sync(
 
 ## Tutorials
 
-[`examples/`](examples/) has 39 progressive tutorials, each a single
+[`examples/`](examples/) has 40 progressive tutorials, each a single
 runnable file. The full set runs end-to-end in CI on every commit;
 each tutorial is a working program against a real model.
 
@@ -218,6 +219,7 @@ each tutorial is a working program against a real model.
 | **Multi-agent** | [`11_swarm_multiagent`](examples/tutorial_11_swarm_multiagent.py) · [`16_agent_handoff`](examples/tutorial_16_agent_handoff.py) · [`17_orchestrator_pattern`](examples/tutorial_17_orchestrator_pattern.py) · [`34_a2a_protocol`](examples/tutorial_34_a2a_protocol.py) |
 | **RAG** | [`22_rag_basics`](examples/tutorial_22_rag_basics.py) · [`24_rag_agents`](examples/tutorial_24_rag_agents.py) |
 | **Production** | [`19_guardrails_security`](examples/tutorial_19_guardrails_security.py) · [`20_checkpoint_backends`](examples/tutorial_20_checkpoint_backends.py) · [`28_agent_server`](examples/tutorial_28_agent_server.py) · [`37_termination`](examples/tutorial_37_termination.py) |
+| **OCI** | [`29_model_providers`](examples/tutorial_29_model_providers.py) · [`40_oci_dac`](examples/tutorial_40_oci_dac.py) — Dedicated AI Cluster endpoints |
 
 End-to-end demos:
 
