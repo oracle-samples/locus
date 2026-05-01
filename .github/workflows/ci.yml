@@ -10,8 +10,6 @@ permissions:
   contents: read
 
 jobs:
-  smoke:
-    name: Smoke
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "hello world"
+  lint:
+    name: Lint
+    uses: ./.github/workflows/_lint.yml
