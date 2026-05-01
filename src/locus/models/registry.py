@@ -104,22 +104,35 @@ def _register_defaults() -> None:
         pass
 
     # OCI GenAI — pick the right transport per model family.
-    # Cohere R-series (cohere.command-r-*) needs the OCI SDK's
-    # proprietary chat shape and is routed through OCIModel.
-    # Everything else (OpenAI / Meta / xAI / Mistral / Gemini and
-    # non-R Cohere) goes through OCIOpenAIModel against
-    # /openai/v1/chat/completions — real SSE streaming, day-0 model
-    # support, no Project OCID required. See
-    # docs/how-to/oci-models.md.
+    #
+    # Three transport rules, evaluated top-down:
+    #   1. Dedicated AI Cluster (DAC) endpoint OCIDs — strings starting
+    #      with ``ocid1.generativeaiendpoint.`` — go through ``OCIModel``
+    #      (SDK transport). The DAC endpoint OCID is passed verbatim to
+    #      ``DedicatedServingMode(endpoint_id=...)``; the V1 transport
+    #      doesn't speak that mode.
+    #   2. Cohere R-series (``cohere.command-r-*``) needs the OCI SDK's
+    #      proprietary chat shape — also ``OCIModel``.
+    #   3. Everything else (OpenAI / Meta / xAI / Mistral / Gemini and
+    #      non-R Cohere on-demand) goes through ``OCIOpenAIModel``
+    #      against ``/openai/v1/chat/completions`` — real SSE streaming,
+    #      day-0 model support, no Project OCID required.
+    #
+    # See docs/how-to/oci-models.md and docs/how-to/oci-dac.md.
     try:
         from locus.models.providers.oci import OCIModel, OCIOpenAIModel
 
         def _make_oci(m: str, **kw: Any) -> ModelProtocol:
-            if m.lower().startswith("cohere.command-r"):
+            lowered = m.lower()
+            # Rule 1: DAC endpoint OCID → SDK transport.
+            if lowered.startswith("ocid1.generativeaiendpoint."):
+                return OCIModel(model_id=m, **kw)
+            # Rule 2: Cohere R-series → SDK transport.
+            if lowered.startswith("cohere.command-r"):
                 # SDK transport: defaults to profile_name="DEFAULT" + API_KEY,
                 # so no env-var fallback needed for one-line ergonomics.
                 return OCIModel(model_id=m, **kw)
-            # V1 transport: strictly requires profile= or auth_type=.
+            # Rule 3: V1 transport. Strictly requires profile= or auth_type=.
             # Fall back to OCI_PROFILE env var so `Agent(model="oci:...")`
             # works in one line. Explicit kwargs always win.
             if "profile" not in kw and "auth_type" not in kw:

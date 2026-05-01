@@ -178,7 +178,13 @@ def _pick_oci_transport(model_id: str) -> str:
     forced = os.environ.get("LOCUS_OCI_TRANSPORT")
     if forced in ("v1", "sdk"):
         return forced
-    return "sdk" if model_id.lower().startswith("cohere.command-r") else "v1"
+    lowered = model_id.lower()
+    # DAC endpoint OCIDs and Cohere R-series both need the SDK
+    # transport (DedicatedServingMode for the former, the proprietary
+    # Cohere chat shape for the latter).
+    if lowered.startswith(("ocid1.generativeaiendpoint.", "cohere.command-r")):
+        return "sdk"
+    return "v1"
 
 
 def _get_oci_model(**kwargs: Any) -> Any:
