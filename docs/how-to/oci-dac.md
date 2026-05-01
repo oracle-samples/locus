@@ -36,6 +36,48 @@ get_model("oci:ocid1.generativeaiendpoint....")
   → SDK chat() routes to your DAC.
 ```
 
+## Confirmed working — Qwen on a London DAC
+
+Live-tested against a `uk-london-1` DAC endpoint running Qwen
+(Alibaba Cloud) on 2026-05-01. End-to-end results from the live run
+(see [`examples/tutorial_40_oci_dac.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_40_oci_dac.py)):
+
+```text
+=== Part 3: complete() against the DAC ===
+Reply:        'I am a large-scale language model developed by Alibaba Cloud, known as Qwen.'
+usage:        {'prompt_tokens': 17, 'completion_tokens': 18}
+stop_reason:  stop
+
+=== Part 4: stream() against the DAC ===
+Streaming reply (chunks shown inline):
+  1, 2, 3, 4, 5
+```
+
+What's proven by the run:
+
+- **Routing** — `oci:ocid1.generativeaiendpoint....` resolved to
+  `OCIModel`, not `OCIOpenAIModel`.
+- **Serving mode** — `DedicatedServingMode(endpoint_id=...)` was
+  accepted by the live endpoint.
+- **Real SSE** — chunks arrived as character-by-character deltas, not
+  the fallback path.
+- **Token accounting** — `usage` populated correctly (17 / 18 tokens).
+
+What's still model-specific (Qwen on this DAC, with the deployment as
+provisioned by Luigi's tenancy):
+
+- Tool calls come back as `<tool_call>{...}</tool_call>` text blocks
+  inside `message.content`, not as structured `tool_calls` array
+  entries. Locus's `GenericProvider.parse_response()` doesn't extract
+  them as `ToolCall`s. Two ways to fix:
+  1. **Deploy-side**: configure the DAC with a Qwen3-family flag like
+     `--enable-auto-tool-choice` so the model emits OpenAI-style
+     `tool_calls`. Locus picks them up automatically.
+  2. **Caller-side**: post-process `result.message` for
+     `<tool_call>{...}</tool_call>` blocks and re-issue them via
+     `agent.run_sync(...)` with the parsed call. A small regex
+     extraction; not built into locus today.
+
 ## Streaming
 
 `OCIModel.stream()` flips `is_stream=True` on the underlying
