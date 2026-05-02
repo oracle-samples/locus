@@ -64,4 +64,6 @@ class ToolContext(BaseModel):
         """Get current confidence score (if state available)."""
         if self.state is None:
             return 0.0
-        return self.state.confidence
+        # ``self.state`` is typed as ``Any`` upstream — narrow the return
+        # to ``float`` to satisfy strict mypy.
+        return float(self.state.confidence)

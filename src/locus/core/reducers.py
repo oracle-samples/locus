@@ -75,13 +75,28 @@ class AddMessages:
     def __call__(
         self,
         current: list[Message],
-        update: list[Message] | str,
+        update: list[Message] | Message | str,
     ) -> list[Message]:
-        """Merge message lists with deduplication."""
-        # Handle removal marker
-        if update == self.REMOVE_ALL:
-            return []
+        """Merge message lists with deduplication.
 
+        ``update`` accepts:
+
+        - a ``list[Message]`` — appended (with ID dedup);
+        - a single ``Message`` — wrapped in a one-element list;
+        - the ``REMOVE_ALL`` sentinel string — clears ``current``.
+
+        Any other string raises ``ValueError``.
+        """
+        # Handle the string-only sentinel up front so mypy can narrow
+        # ``update`` to a Message-shaped value for the rest of the function.
+        if isinstance(update, str):
+            if update == self.REMOVE_ALL:
+                return []
+            err = f"AddMessages received unsupported string sentinel: {update!r}"
+            raise ValueError(err)
+
+        # Single Message → one-element list; preserves the historical
+        # ergonomic of `add_messages(current, Message.user("hi"))`.
         if not isinstance(update, list):
             update = [update]
 
@@ -217,7 +232,10 @@ class MaxValue:
 
     def __call__(self, current: T, update: T) -> T:
         """Return maximum."""
-        return max(current, update)
+        # T is unbounded so mypy can't prove SupportsRichComparison; the
+        # Reducer Protocol contract is "current and update are the same
+        # type", so if one is comparable, the other is too.
+        return max(current, update)  # type: ignore[call-overload,no-any-return]
 
 
 class MinValue:
@@ -225,7 +243,8 @@ class MinValue:
 
     def __call__(self, current: T, update: T) -> T:
         """Return minimum."""
-        return min(current, update)
+        # See MaxValue.__call__ — same TypeVar-bound limitation.
+        return min(current, update)  # type: ignore[call-overload,no-any-return]
 
 
 class LastValue:
@@ -334,10 +353,12 @@ def get_reducer(annotation: Any) -> Reducer[Any] | None:
             if get_origin_typing(annotation) is Annotated:
                 args = get_args(annotation)
                 if len(args) >= 2:
-                    # Second arg should be the reducer
+                    # Second arg should be the reducer. ``get_args`` returns
+                    # ``tuple[Any, ...]`` so the callable narrowing isn't
+                    # visible to the type checker.
                     potential_reducer = args[1]
                     if callable(potential_reducer):
-                        return potential_reducer
+                        return potential_reducer  # type: ignore[no-any-return]
         except ImportError:
             pass
 

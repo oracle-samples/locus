@@ -31,7 +31,12 @@ class ModelProtocol(Protocol):
         """Complete a chat request."""
         ...
 
-    async def stream(
+    # NOTE: declared as ``def`` (not ``async def``) so the Protocol
+    # matches concrete async-generator implementations. An ``async def``
+    # function whose body contains ``yield`` returns ``AsyncIterator[X]``
+    # directly, not a coroutine — mypy types the Protocol that way only
+    # when the declaration is plain ``def`` returning ``AsyncIterator``.
+    def stream(
         self,
         messages: list[Message],
         tools: list[dict[str, Any]] | None = None,
