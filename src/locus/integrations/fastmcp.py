@@ -18,7 +18,7 @@ import inspect
 import json
 import re
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, create_model
 
@@ -68,7 +68,11 @@ def _json_schema_type_to_python(prop: dict[str, Any]) -> type[Any]:
         "boolean": bool,
     }
 
-    return mapping.get(schema_type, Any)
+    # ``Any`` is a typing-special-form, not a runtime type. Pydantic
+    # accepts it as a field type at runtime; mypy 1.13 (pre-commit) is
+    # stricter than the local dev mypy here, so the ignore is keyed
+    # only on the strict path.
+    return mapping.get(schema_type, Any)  # type: ignore[arg-type, unused-ignore]
 
 
 def build_args_model(tool_name: str, schema: dict[str, Any] | None) -> type[BaseModel] | None:
@@ -315,7 +319,7 @@ class LocusMCPServer(BaseModel):
         async def run_agent(prompt: str) -> str:
             """Run the Locus agent with a prompt and return the response."""
             result = agent.run_sync(prompt)
-            return result.message
+            return str(result.message)
 
         # Register a streaming version
         @mcp.tool()
@@ -327,17 +331,17 @@ class LocusMCPServer(BaseModel):
             # Return the final message from the last event
             for event in reversed(events):
                 if hasattr(event, "final_message") and event.final_message:
-                    return event.final_message
+                    return str(event.final_message)
             return "Agent completed without response"
 
         return mcp
 
-    def run(self, transport: str = "stdio") -> None:
+    def run(self, transport: Literal["stdio", "http", "sse", "streamable-http"] = "stdio") -> None:
         """
         Run the MCP server.
 
         Args:
-            transport: Transport type ("stdio" or "sse")
+            transport: Transport type ("stdio", "http", "sse", or "streamable-http").
         """
         if self._mcp is None:
             self._mcp = self._create_mcp()
@@ -491,6 +495,9 @@ class MCPClient(BaseModel):
 
     async def _connect_http(self) -> None:
         """Connect via HTTP/SSE transport."""
+        if self.base_url is None:
+            msg = "_connect_http called without base_url"
+            raise RuntimeError(msg)
         try:
             from mcp.client.session import ClientSession
             from mcp.client.streamable_http import streamablehttp_client
@@ -517,7 +524,9 @@ class MCPClient(BaseModel):
                 def __init__(self, token: str):
                     self.token = token
 
-                def auth_flow(self, request):
+                def auth_flow(  # type: ignore[no-untyped-def]
+                    self, request
+                ):  # httpx.Auth.auth_flow signature varies across SDK versions
                     request.headers["Authorization"] = f"Bearer {self.token}"
                     yield request
 
@@ -647,12 +656,17 @@ class MCPClient(BaseModel):
                 pass
             self._client_context = None
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> MCPClient:
         """Async context manager entry."""
         await self.connect()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
         """Async context manager exit."""
         await self.close()
 

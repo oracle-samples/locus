@@ -35,6 +35,7 @@ import json
 import logging
 import os
 import uuid
+from collections.abc import AsyncIterator
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -278,7 +279,7 @@ class AgentServer:
 
             scoped_id = scope_thread(principal, request.thread_id)
 
-            async def event_generator():
+            async def event_generator() -> AsyncIterator[str]:
                 correlation_id: str | None = None
                 try:
                     async for event in agent.run(
@@ -286,6 +287,10 @@ class AgentServer:
                         thread_id=scoped_id,
                         metadata=request.metadata,
                     ):
+                        # Each branch builds a JSON-serialisable payload.
+                        # Mixed value types (str, dict, list, None) so the
+                        # dict is annotated as ``dict[str, Any]``.
+                        data: dict[str, Any]
                         if isinstance(event, ThinkEvent):
                             data = {"type": "think", "content": event.reasoning or ""}
                         elif isinstance(event, ToolStartEvent):
