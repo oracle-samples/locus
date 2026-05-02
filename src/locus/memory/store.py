@@ -42,11 +42,11 @@ import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, Protocol, runtime_checkable
+from typing import Any
 
 
 # =============================================================================
-# Store Protocol
+# Capabilities + typed capability error
 # =============================================================================
 
 
@@ -67,95 +67,42 @@ class StoreCapabilities:
     transactions: bool = False  # Atomic transactions
 
 
-@runtime_checkable
-class StoreProtocol(Protocol):
+class StoreCapabilityError(NotImplementedError):
+    """Raised when a store operation is requested that the backend does not support.
+
+    Carries structured context (``capability``, ``store_class``, ``hint``)
+    so callers can branch on the capability or surface a clean message.
+
+    Subclasses :class:`NotImplementedError` so legacy ``except
+    NotImplementedError`` blocks continue to catch it — this is strictly
+    a richer payload, not a behaviour change.
+
+    Example::
+
+        try:
+            results = await store.search(("users", uid), query="...")
+        except StoreCapabilityError as exc:
+            log.info(
+                "store %s does not support %s; falling back",
+                exc.store_class,
+                exc.capability,
+            )
+            results = await store.list_keys(("users", uid))
     """
-    Protocol for cross-thread persistent storage.
 
-    Stores use namespaced keys for organization:
-    - namespace: tuple of strings defining the scope
-    - key: string identifier within the namespace
-
-    Example namespaces:
-    - ("users", user_id) - User-specific data
-    - ("users", user_id, "memories") - User memories
-    - ("global", "config") - Global configuration
-    - ("sessions", session_id) - Session-specific data
-    """
-
-    @property
-    def capabilities(self) -> StoreCapabilities:
-        """Return the capabilities of this store."""
-        ...
-
-    async def put(
+    def __init__(
         self,
-        namespace: tuple[str, ...],
-        key: str,
-        value: Any,
-        metadata: dict[str, Any] | None = None,
+        capability: str,
+        store_class: str,
+        hint: str | None = None,
     ) -> None:
-        """
-        Store a value.
-
-        Args:
-            namespace: Hierarchical namespace tuple
-            key: Key within the namespace
-            value: Value to store (must be JSON-serializable)
-            metadata: Optional metadata for search/filtering
-        """
-        ...
-
-    async def get(
-        self,
-        namespace: tuple[str, ...],
-        key: str,
-    ) -> Any | None:
-        """
-        Retrieve a value.
-
-        Args:
-            namespace: Hierarchical namespace tuple
-            key: Key within the namespace
-
-        Returns:
-            Stored value or None if not found
-        """
-        ...
-
-    async def delete(
-        self,
-        namespace: tuple[str, ...],
-        key: str,
-    ) -> bool:
-        """
-        Delete a value.
-
-        Args:
-            namespace: Hierarchical namespace tuple
-            key: Key to delete
-
-        Returns:
-            True if deleted, False if not found
-        """
-        ...
-
-    async def list_keys(
-        self,
-        namespace: tuple[str, ...],
-        limit: int = 100,
-    ) -> list[str]:
-        """
-        List keys in a namespace.
-
-        Args:
-            namespace: Hierarchical namespace tuple
-            limit: Maximum keys to return
-
-        Returns:
-            List of keys in the namespace
-        """
-        ...
+        self.capability = capability
+        self.store_class = store_class
+        self.hint = hint
+        msg = f"{store_class} does not support {capability!r}"
+        if hint:
+            msg = f"{msg}. {hint}"
+        super().__init__(msg)
 
 
 # =============================================================================
@@ -323,7 +270,10 @@ class BaseStore(ABC):
         """
         Search for items in namespace.
 
-        Requires: capabilities.search = True
+        Optional method — backends advertise support via
+        ``capabilities.search``. Subclasses that support search must
+        override this method; the default raises
+        :class:`StoreCapabilityError`.
 
         Args:
             namespace: Namespace to search in
@@ -332,10 +282,18 @@ class BaseStore(ABC):
 
         Returns:
             List of matching items
+
+        Raises:
+            StoreCapabilityError: If the backend does not support search.
         """
-        if not self.capabilities.search:
-            raise NotImplementedError(f"{self.__class__.__name__} does not support search")
-        raise NotImplementedError("search not implemented")
+        raise StoreCapabilityError(
+            capability="search",
+            store_class=type(self).__name__,
+            hint=(
+                "Choose a backend that advertises capabilities.search "
+                "(e.g., InMemoryStore, OpenSearch, Oracle 26ai)."
+            ),
+        )
 
     # -------------------------------------------------------------------------
     # Semantic Search Methods (Vector/Embedding-based)
@@ -352,7 +310,9 @@ class BaseStore(ABC):
         """
         Store a value with its embedding vector for semantic search.
 
-        Requires: capabilities.semantic_search = True
+        Optional method — backends advertise support via
+        ``capabilities.semantic_search``. Subclasses that support
+        semantic search must override this method.
 
         Args:
             namespace: Hierarchical namespace tuple
@@ -360,6 +320,10 @@ class BaseStore(ABC):
             value: Value to store (must be JSON-serializable)
             embedding: Vector embedding (e.g., from OpenAI, Cohere, etc.)
             metadata: Optional metadata for filtering
+
+        Raises:
+            StoreCapabilityError: If the backend does not support
+                semantic search.
 
         Example:
             # Get embedding from your provider
@@ -373,12 +337,11 @@ class BaseStore(ABC):
                 metadata={"category": "preferences"}
             )
         """
-        if not self.capabilities.semantic_search:
-            raise NotImplementedError(
-                f"{self.__class__.__name__} does not support semantic search. "
-                "Use put() instead or choose a backend with vector support."
-            )
-        raise NotImplementedError("put_with_embedding not implemented")
+        raise StoreCapabilityError(
+            capability="semantic_search",
+            store_class=type(self).__name__,
+            hint="Use put() for plain storage, or pick a vector-capable backend.",
+        )
 
     async def search_by_embedding(
         self,
@@ -391,7 +354,7 @@ class BaseStore(ABC):
         """
         Search for similar items using vector similarity.
 
-        Requires: capabilities.semantic_search = True
+        Optional method — see ``capabilities.semantic_search``.
 
         Args:
             namespace: Namespace to search in
@@ -403,23 +366,15 @@ class BaseStore(ABC):
         Returns:
             List of SemanticSearchResult, sorted by similarity (highest first)
 
-        Example:
-            # Get embedding for query
-            query_vec = await embedder.embed("What does the user like?")
-
-            results = await store.search_by_embedding(
-                ("users", user_id, "memories"),
-                query_embedding=query_vec,
-                limit=5,
-                threshold=0.7,  # Only return if >70% similar
-            )
-
-            for result in results:
-                print(f"{result.item.key}: {result.score:.2f}")
+        Raises:
+            StoreCapabilityError: If the backend does not support
+                semantic search.
         """
-        if not self.capabilities.semantic_search:
-            raise NotImplementedError(f"{self.__class__.__name__} does not support semantic search")
-        raise NotImplementedError("search_by_embedding not implemented")
+        raise StoreCapabilityError(
+            capability="semantic_search",
+            store_class=type(self).__name__,
+            hint="Pick a vector-capable backend (e.g., Oracle 26ai, pgvector, Qdrant).",
+        )
 
     async def get_embedding(
         self,
@@ -429,37 +384,45 @@ class BaseStore(ABC):
         """
         Get the embedding vector for a stored item.
 
-        Requires: capabilities.semantic_search = True
+        Optional method — see ``capabilities.semantic_search``.
 
         Args:
             namespace: Hierarchical namespace tuple
             key: Key within the namespace
 
         Returns:
-            Embedding vector or None if not found/no embedding
+            Embedding vector or None if not found / no embedding stored.
+
+        Raises:
+            StoreCapabilityError: If the backend does not support
+                semantic search.
         """
-        if not self.capabilities.semantic_search:
-            raise NotImplementedError(f"{self.__class__.__name__} does not support semantic search")
-        raise NotImplementedError("get_embedding not implemented")
+        raise StoreCapabilityError(
+            capability="semantic_search",
+            store_class=type(self).__name__,
+        )
 
     async def put_batch(
         self,
         items: list[tuple[tuple[str, ...], str, Any, dict[str, Any] | None]],
     ) -> None:
         """
-        Store multiple items atomically.
+        Store multiple items.
 
-        Requires: capabilities.batch_operations = True
+        Backends that advertise ``capabilities.batch_operations`` should
+        override this method to dispatch atomically. The default falls
+        back to sequential ``put()`` calls so callers always get
+        functional batching, just without atomicity guarantees.
 
         Args:
             items: List of (namespace, key, value, metadata) tuples
         """
-        if not self.capabilities.batch_operations:
-            # Fall back to sequential puts
-            for namespace, key, value, metadata in items:
-                await self.put(namespace, key, value, metadata)
-            return
-        raise NotImplementedError("put_batch not implemented")
+        # Sequential fallback — works for every backend, even those that
+        # don't advertise batch_operations. Backends that *do* advertise
+        # the capability override this method to dispatch in one
+        # transaction / round-trip.
+        for namespace, key, value, metadata in items:
+            await self.put(namespace, key, value, metadata)
 
     async def get_batch(
         self,
@@ -489,7 +452,7 @@ class BaseStore(ABC):
         """
         List all namespaces.
 
-        Requires: capabilities.list_namespaces = True
+        Optional method — see ``capabilities.list_namespaces``.
 
         Args:
             prefix: Optional prefix to filter namespaces
@@ -497,10 +460,15 @@ class BaseStore(ABC):
 
         Returns:
             List of namespace tuples
+
+        Raises:
+            StoreCapabilityError: If the backend does not support
+                namespace listing.
         """
-        if not self.capabilities.list_namespaces:
-            raise NotImplementedError(f"{self.__class__.__name__} does not support list_namespaces")
-        raise NotImplementedError("list_namespaces not implemented")
+        raise StoreCapabilityError(
+            capability="list_namespaces",
+            store_class=type(self).__name__,
+        )
 
     async def clear_namespace(
         self,
