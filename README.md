@@ -221,12 +221,6 @@ each tutorial is a working program against a real model.
 | **Production** | [`19_guardrails_security`](examples/tutorial_19_guardrails_security.py) · [`20_checkpoint_backends`](examples/tutorial_20_checkpoint_backends.py) · [`28_agent_server`](examples/tutorial_28_agent_server.py) · [`37_termination`](examples/tutorial_37_termination.py) |
 | **OCI** | [`29_model_providers`](examples/tutorial_29_model_providers.py) · [`40_oci_dac`](examples/tutorial_40_oci_dac.py) — Dedicated AI Cluster endpoints |
 
-End-to-end demos:
-
-- [`examples/demos/po_approval/`](examples/demos/po_approval) — three agents (Procurement / Compliance / Approval Officer) debate a vendor PO against a live Oracle 26ai catalogue. Idempotent writes. Human consent gate.
-- [`examples/demos/oracle_26ai/`](examples/demos/oracle_26ai) — full Oracle stack: OCI GenAI + Oracle 26ai vectors + skills + Reflexion + idempotent submit + checkpoints to OCI Object Storage.
-- [`examples/demos/trip_team/`](examples/demos/trip_team) — same multi-agent shape on a Tokyo travel corpus.
-
 ## Repo layout
 
 ```text

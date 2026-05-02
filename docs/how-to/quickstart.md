@@ -198,9 +198,9 @@ anywhere FastAPI runs — see [Deploy](deploy.md).
 
 - **Read deeper.** [Agent Loop](../concepts/agent-loop.md) is the
   architectural reference for how all of this fits together.
-- **Browse examples.** Thirty-seven progressive tutorials at
-  [`examples/`](https://github.com/oracle-samples/locus/tree/main/examples)
-  and three end-to-end demos under
-  [`examples/demos/`](https://github.com/oracle-samples/locus/tree/main/examples/demos).
+- **Browse examples.** Forty progressive tutorials at
+  [`examples/`](https://github.com/oracle-samples/locus/tree/main/examples).
+  Each is a single runnable file that adds one idea on top of the
+  previous.
 - **Steer it.** [Hooks](../concepts/hooks.md) give you logging,
   telemetry, retry, guardrails, and steering as one-line additions.
