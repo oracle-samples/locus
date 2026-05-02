@@ -1,0 +1,20 @@
+apiVersion: v2
+name: locus-agent
+description: |
+  A locus AgentServer deployment. Wraps any locus.Agent in a FastAPI app
+  with /invoke, /stream (SSE), /threads/{id}, and /health endpoints, plus
+  per-principal thread isolation when api_key is configured.
+type: application
+version: 0.1.0
+appVersion: 0.1.0
+home: https://github.com/oracle-samples/locus
+sources:
+- https://github.com/oracle-samples/locus
+keywords:
+- oci
+- agent
+- llm
+- generative-ai
+maintainers:
+- name: locus contributors
+  url: https://github.com/oracle-samples/locus
