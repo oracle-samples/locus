@@ -106,7 +106,35 @@ Set `OCI_AUTH_TYPE=instance_principal` in the container env.
 ## OKE — Kubernetes for production
 
 Best for multi-replica, autoscaled, multi-region production. The
-shape is the same as any FastAPI app.
+quickest path is the **bundled Helm chart** at
+[`deploy/helm/locus-agent/`](https://github.com/oracle-samples/locus/tree/main/deploy/helm/locus-agent):
+
+```bash
+helm install locus-agent ./deploy/helm/locus-agent \
+  --set image.repository=iad.ocir.io/$NAMESPACE/locus-concierge \
+  --set image.tag=0.1.0 \
+  --set auth.apiKey=$(openssl rand -hex 16) \
+  --set ociBucket.enabled=true \
+  --set ociBucket.bucketName=locus-threads-prod \
+  --set ociBucket.namespace=$NAMESPACE \
+  --set autoscaling.enabled=true \
+  --set autoscaling.minReplicas=2 \
+  --set autoscaling.maxReplicas=10
+```
+
+The chart ships a Deployment, Service, ServiceAccount (with workload-
+identity annotation hooks), Secret, HPA, and Ingress, all driven by
+`values.yaml`. See [`deploy/helm/locus-agent/README.md`](https://github.com/oracle-samples/locus/blob/main/deploy/helm/locus-agent/README.md)
+for the full value reference.
+
+The container image is built from the [root `Dockerfile`](https://github.com/oracle-samples/locus/blob/main/Dockerfile) — multi-stage, non-root user, `HEALTHCHECK` on `/health`. Build it with:
+
+```bash
+docker build -t iad.ocir.io/$NAMESPACE/locus-concierge:0.1.0 .
+docker push    iad.ocir.io/$NAMESPACE/locus-concierge:0.1.0
+```
+
+If you need raw YAML instead of Helm, the equivalent is:
 
 ```yaml
 apiVersion: apps/v1
