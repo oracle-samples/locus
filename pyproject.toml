@@ -529,7 +529,6 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = [
     "locus.rag.*",
-    "locus.memory.*",
     # ``locus.hooks.builtin.*`` is held back: the module-level migration
     # surfaces a real runtime bug — the LoggingHook / GuardrailsHook /
     # TelemetryHook signatures pre-date the event-based ``HookProvider``

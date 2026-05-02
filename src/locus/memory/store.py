@@ -227,31 +227,6 @@ class SemanticSearchResult:
     score: float  # Normalized similarity (0-1)
     distance: float | None = None  # Raw distance (cosine, L2, etc.)
 
-    def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary."""
-        return {
-            "namespace": list(self.namespace),
-            "key": self.key,
-            "value": self.value,
-            "metadata": self.metadata,
-            "created_at": self.created_at.isoformat(),
-            "updated_at": self.updated_at.isoformat(),
-            "version": self.version,
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> StoreItem:
-        """Create from dictionary."""
-        return cls(
-            namespace=tuple(data["namespace"]),
-            key=data["key"],
-            value=data["value"],
-            metadata=data.get("metadata", {}),
-            created_at=datetime.fromisoformat(data["created_at"]),
-            updated_at=datetime.fromisoformat(data["updated_at"]),
-            version=data.get("version", 1),
-        )
-
 
 # =============================================================================
 # Base Store

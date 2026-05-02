@@ -301,7 +301,8 @@ class OracleBackend(BaseModel):
         # oracledb might already return JSON as dict
         if isinstance(data, dict):
             return data
-        return json.loads(data)
+        parsed: dict[str, Any] = json.loads(data)
+        return parsed
 
     async def delete(self, thread_id: str) -> bool:
         """Delete checkpoint from Oracle Database."""
@@ -313,7 +314,7 @@ class OracleBackend(BaseModel):
                 f"DELETE FROM {self._full_table_name} WHERE thread_id = :thread_id",
                 {"thread_id": thread_id},
             )
-            deleted = cursor.rowcount > 0
+            deleted: bool = cursor.rowcount > 0
             await conn.commit()
 
         return deleted
@@ -508,10 +509,10 @@ class OracleBackend(BaseModel):
                     """,
                 {"days": older_than_days},
             )
-            deleted = cursor.rowcount
+            deleted_count: int = cursor.rowcount
             await conn.commit()
 
-        return deleted
+        return deleted_count
 
     async def count(self, pattern: str = "%") -> int:
         """Count checkpoints matching pattern."""

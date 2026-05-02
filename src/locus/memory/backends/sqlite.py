@@ -125,7 +125,8 @@ class SQLiteBackend(BaseModel):
         if row is None:
             return None
 
-        return json.loads(row[0])
+        data: dict[str, Any] = json.loads(row[0])
+        return data
 
     async def delete(self, thread_id: str) -> bool:
         """Delete checkpoint from SQLite."""
@@ -139,7 +140,8 @@ class SQLiteBackend(BaseModel):
                 (thread_id,),
             )
             await db.commit()
-            return cursor.rowcount > 0
+            deleted: bool = cursor.rowcount > 0
+            return deleted
 
     async def exists(self, thread_id: str) -> bool:
         """Check if checkpoint exists."""

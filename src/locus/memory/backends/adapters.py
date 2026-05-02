@@ -214,7 +214,7 @@ class StorageBackendAdapter(BaseCheckpointer):
         if checkpoint_id:
             # Delete specific checkpoint
             storage_key = f"{thread_id}:{checkpoint_id}"
-            result = await self._backend.delete(storage_key)
+            result: bool = await self._backend.delete(storage_key)
 
             # Update index
             await self._remove_from_index(thread_id, checkpoint_id)
@@ -273,7 +273,8 @@ class StorageBackendAdapter(BaseCheckpointer):
         else:
             storage_key = f"{thread_id}:latest"
 
-        return await self._backend.exists(storage_key)
+        present: bool = await self._backend.exists(storage_key)
+        return present
 
     # =========================================================================
     # Extended Methods - Delegate to Backend
@@ -286,7 +287,8 @@ class StorageBackendAdapter(BaseCheckpointer):
     ) -> list[dict[str, Any]]:
         """Delegate to backend search."""
         self._require_capability("search")
-        return await self._backend.search(query, limit=limit)
+        results: list[dict[str, Any]] = await self._backend.search(query, limit=limit)
+        return results
 
     async def query_by_metadata(
         self,
@@ -297,9 +299,15 @@ class StorageBackendAdapter(BaseCheckpointer):
         """Delegate to backend metadata query."""
         self._require_capability("metadata_query")
         if hasattr(self._backend, "query_by_metadata"):
-            return await self._backend.query_by_metadata(key, value, limit=limit)
-        elif hasattr(self._backend, "get_by_metadata"):
-            return await self._backend.get_by_metadata(key, value, limit=limit)
+            results: list[dict[str, Any]] = await self._backend.query_by_metadata(
+                key, value, limit=limit
+            )
+            return results
+        if hasattr(self._backend, "get_by_metadata"):
+            via_get: list[dict[str, Any]] = await self._backend.get_by_metadata(
+                key, value, limit=limit
+            )
+            return via_get
         raise NotImplementedError("Backend has no metadata query method")
 
     async def get_metadata(
@@ -311,7 +319,8 @@ class StorageBackendAdapter(BaseCheckpointer):
         # First try the backend's native method
         if hasattr(self._backend, "get_metadata"):
             storage_key = f"{thread_id}:{checkpoint_id}" if checkpoint_id else f"{thread_id}:latest"
-            return await self._backend.get_metadata(storage_key)
+            meta: dict[str, Any] | None = await self._backend.get_metadata(storage_key)
+            return meta
 
         # Fallback to checkpoint index
         index_key = f"{thread_id}:_checkpoints"
@@ -324,11 +333,12 @@ class StorageBackendAdapter(BaseCheckpointer):
         if checkpoint_id:
             for cp in checkpoints:
                 if cp.get("checkpoint_id") == checkpoint_id:
-                    return cp
+                    matched: dict[str, Any] = cp
+                    return matched
             return None
-        else:
-            # Return latest
-            return checkpoints[0] if checkpoints else None
+        # Return latest
+        latest: dict[str, Any] | None = checkpoints[0] if checkpoints else None
+        return latest
 
     async def vacuum(
         self,
@@ -336,7 +346,8 @@ class StorageBackendAdapter(BaseCheckpointer):
     ) -> int:
         """Delegate to backend vacuum."""
         self._require_capability("vacuum")
-        return await self._backend.vacuum(older_than_days)
+        deleted: int = await self._backend.vacuum(older_than_days)
+        return deleted
 
     async def copy_thread(
         self,
@@ -375,9 +386,12 @@ class StorageBackendAdapter(BaseCheckpointer):
 
             sig = inspect.signature(self._backend.list_threads)
             if "pattern" in sig.parameters:
-                return await self._backend.list_threads(pattern=pattern, limit=limit)
-            elif "limit" in sig.parameters:
-                threads = await self._backend.list_threads(limit=limit)
+                with_pattern: list[str] = await self._backend.list_threads(
+                    pattern=pattern, limit=limit
+                )
+                return with_pattern
+            if "limit" in sig.parameters:
+                threads: list[str] = await self._backend.list_threads(limit=limit)
             else:
                 threads = await self._backend.list_threads()
 
@@ -397,7 +411,8 @@ class StorageBackendAdapter(BaseCheckpointer):
     ) -> list[dict[str, Any]]:
         """Delegate to backend list_with_metadata."""
         self._require_capability("list_with_metadata")
-        return await self._backend.list_with_metadata(limit=limit)
+        items: list[dict[str, Any]] = await self._backend.list_with_metadata(limit=limit)
+        return items
 
     async def close(self) -> None:
         """Close the underlying backend if it supports it."""

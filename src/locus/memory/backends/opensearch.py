@@ -173,7 +173,8 @@ class OpenSearchBackend(BaseModel):
                 index=self.config.index_name,
                 id=thread_id,
             )
-            return result["_source"]["data"]
+            data: dict[str, Any] = result["_source"]["data"]
+            return data
         except Exception:  # noqa: BLE001 — missing document == None by design
             return None
 
@@ -197,10 +198,11 @@ class OpenSearchBackend(BaseModel):
         await self._ensure_index()
         client = await self._get_client()
 
-        return await client.exists(
+        present: bool = await client.exists(
             index=self.config.index_name,
             id=thread_id,
         )
+        return present
 
     async def list_threads(
         self,

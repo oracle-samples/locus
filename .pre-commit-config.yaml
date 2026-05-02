@@ -85,6 +85,7 @@ repos:
     - fastapi>=0.110
     - fastmcp>=3.2.0
     - mcp>=1.0
+    - aiosqlite>=0.20
     pass_filenames: false
     entry: mypy src/locus
 

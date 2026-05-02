@@ -112,6 +112,7 @@ class HTTPCheckpointer(BaseCheckpointer):
         state: AgentState,
         thread_id: str,
         checkpoint_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """
         Save agent state via HTTP POST.
@@ -120,6 +121,7 @@ class HTTPCheckpointer(BaseCheckpointer):
             state: Current agent state
             thread_id: Thread identifier
             checkpoint_id: Optional specific checkpoint ID
+            metadata: Optional metadata for querying/filtering checkpoints
 
         Returns:
             Checkpoint ID for the saved state
@@ -136,6 +138,7 @@ class HTTPCheckpointer(BaseCheckpointer):
             "thread_id": thread_id,
             "created_at": datetime.now(UTC).isoformat(),
             "state": state.to_checkpoint(),
+            "metadata": metadata or {},
         }
 
         response = await client.post(
@@ -145,8 +148,9 @@ class HTTPCheckpointer(BaseCheckpointer):
         response.raise_for_status()
 
         # Extract checkpoint_id from response if provided
-        result = response.json()
-        return result.get("checkpoint_id", checkpoint_id)
+        result: dict[str, Any] = response.json()
+        returned_id: str = result.get("checkpoint_id", checkpoint_id)
+        return returned_id
 
     async def load(
         self,
@@ -228,7 +232,8 @@ class HTTPCheckpointer(BaseCheckpointer):
             # Wrapped response
             checkpoints = data.get("checkpoints", data.get("data", []))
             if checkpoints and isinstance(checkpoints[0], str):
-                return checkpoints[:limit]
+                truncated: list[str] = checkpoints[:limit]
+                return truncated
             if checkpoints and isinstance(checkpoints[0], dict):
                 return [cp["checkpoint_id"] for cp in checkpoints[:limit]]
 
@@ -278,7 +283,8 @@ class HTTPCheckpointer(BaseCheckpointer):
 
         try:
             response = await client.get("/health")
-            return response.status_code < 400
+            ok: bool = response.status_code < 400
+            return ok
         except Exception:  # noqa: BLE001 — health check is a boolean probe
             return False
 
