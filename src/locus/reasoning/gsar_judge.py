@@ -26,7 +26,7 @@ This module ships:
 
 from __future__ import annotations
 
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol, cast, runtime_checkable
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -317,7 +317,9 @@ class StructuredOutputGSARJudge(BaseModel):
         content = response.message.content or "{}"
         parsed = parse_structured(content, JudgeOutput, strict=False)
         if parsed.success and parsed.parsed is not None:
-            return parsed.parsed
+            # ``parse_structured`` returns ``BaseModel | None``; the schema
+            # we passed in pins the dynamic type to ``JudgeOutput``.
+            return cast("JudgeOutput", parsed.parsed)
         return safe_default_judge_output(f"judge output parse failed: {parsed.error or 'unknown'}")
 
 

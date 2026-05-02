@@ -229,9 +229,10 @@ class ConditionalRouter(Router):
             try:
                 result = condition(state)
                 if result is not None:
-                    return result.model_copy(
+                    updated: RouteDecision = result.model_copy(
                         update={"metadata": {**result.metadata, "custom_condition": name}}
                     )
+                    return updated
             except Exception:  # noqa: BLE001
                 # Custom condition failed, continue with others
                 continue

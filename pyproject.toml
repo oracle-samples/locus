@@ -530,9 +530,13 @@ ignore_missing_imports = true
 module = [
     "locus.rag.*",
     "locus.memory.*",
-    "locus.loop.*",
+    # ``locus.hooks.builtin.*`` is held back: the module-level migration
+    # surfaces a real runtime bug — the LoggingHook / GuardrailsHook /
+    # TelemetryHook signatures pre-date the event-based ``HookProvider``
+    # Protocol and would TypeError when called through ``HookRegistry``.
+    # That is a behavioural fix, not a typing one, so it's tracked on
+    # its own issue and migrated in a follow-up PR.
     "locus.hooks.builtin.*",
-    "locus.reasoning.*",
 ]
 ignore_errors = true
 

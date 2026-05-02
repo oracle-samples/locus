@@ -164,7 +164,10 @@ class ExecuteNode(Node):
         from locus.tools.executor import ToolResult
 
         tool_calls = state.last_tool_calls
-        events: list[ToolStartEvent | ToolCompleteEvent] = []
+        # ``NodeResult.events`` is invariantly typed as the broader event
+        # union; declare the local list with that union so the eventual
+        # ``return NodeResult(events=events)`` type-checks.
+        events: list[ThinkEvent | ToolStartEvent | ToolCompleteEvent | ReflectEvent] = []
 
         if not tool_calls:
             return NodeResult(state=state, events=[])
