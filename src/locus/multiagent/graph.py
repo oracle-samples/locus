@@ -745,11 +745,19 @@ class StateGraph(BaseModel):
         # Check if executor is a subgraph
         is_subgraph = isinstance(executor, StateGraph)
 
+        # When ``is_subgraph`` is True, ``executor`` is a StateGraph
+        # instance; mypy can't narrow the union without an isinstance
+        # check, but the precondition is enforced upstream.
+        node_executor: Callable[..., Any] = (
+            executor.execute  # type: ignore[union-attr]
+            if is_subgraph
+            else executor  # type: ignore[assignment]
+        )
         node = Node(
             id=node_id,
             name=node_id,
             description=description,
-            executor=executor.execute if is_subgraph else executor,
+            executor=node_executor,
             condition=condition,
             max_retries=max_retries,
             timeout_ms=timeout_ms,
@@ -1084,9 +1092,12 @@ class StateGraph(BaseModel):
 
             # Process results and determine next nodes
             for node_id in [n for n in current_nodes if n != END]:
-                result = node_results.get(node_id)
-                if not result:
+                # Use a different name from the earlier ``result`` so mypy
+                # doesn't widen the previously narrowed type.
+                node_result = node_results.get(node_id)
+                if not node_result:
                     continue
+                result = node_result
 
                 # Handle interrupt
                 if result.status == NodeStatus.INTERRUPTED:
@@ -1100,7 +1111,7 @@ class StateGraph(BaseModel):
                     # Save to checkpointer if available
                     if cfg.checkpointer and cfg.thread_id:
                         await cfg.checkpointer.save(
-                            state=None,  # type: ignore
+                            state=None,
                             thread_id=cfg.thread_id,
                             metadata={
                                 "graph_state": state,
@@ -1234,7 +1245,10 @@ class StateGraph(BaseModel):
         if tasks:
             task_results = await asyncio.gather(*tasks, return_exceptions=True)
             for (send_id, node_id), result in zip(send_ids, task_results, strict=True):
-                if isinstance(result, Exception):
+                # ``return_exceptions=True`` widens to NodeResult |
+                # BaseException; narrow on BaseException so mypy can
+                # treat the else branch as NodeResult.
+                if isinstance(result, BaseException):
                     results.append(
                         SendResult(
                             send_id=send_id,

@@ -100,7 +100,12 @@ class PlaybookEnforcerHook(HookProvider):
 
     async def on_before_tool_call(self, event: BeforeToolCallEvent) -> None:
         """Validate the call against the current step; cancel on violation."""
-        result = self._enforcer.validate_tool_call(event.tool_name)
+        # ``ProtectedEvent`` (the base class for hook events) sets fields
+        # via ``self._init(name, value)`` rather than class-level annotations,
+        # so mypy can't see ``.tool_name`` / ``.error`` statically. They
+        # exist at runtime; the ignore is the standard pattern for this
+        # protocol.
+        result = self._enforcer.validate_tool_call(event.tool_name)  # type: ignore[attr-defined]
         if result.allowed:
             return
         # Build a useful cancel message that the agent loop will turn into
@@ -120,13 +125,16 @@ class PlaybookEnforcerHook(HookProvider):
         before-hook cancelled the call, so anything reaching this method
         actually executed.
         """
-        if event.error:
+        # ``ProtectedEvent`` sets ``.error`` / ``.tool_name`` via
+        # ``self._init(...)`` not class-level fields — see note in
+        # ``on_before_tool_call``.
+        if event.error:  # type: ignore[attr-defined]
             # Failed calls don't advance the step (the model will likely
             # retry); they're still recorded for the violation log.
-            self._enforcer.record_tool_call(event.tool_name)
+            self._enforcer.record_tool_call(event.tool_name)  # type: ignore[attr-defined]
             return
 
-        self._enforcer.record_tool_call(event.tool_name)
+        self._enforcer.record_tool_call(event.tool_name)  # type: ignore[attr-defined]
 
         step = self._enforcer.current_step
         if step is None:

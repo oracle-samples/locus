@@ -79,6 +79,12 @@ repos:
     - pydantic-settings>=2.0
     - httpx>=0.27
     - typing-extensions>=4.0
+        # Optional-extra deps required so the now-strictly-checked modules
+        # under ``locus.a2a``, ``locus.integrations``, ``locus.server`` etc.
+        # resolve their third-party imports.
+    - fastapi>=0.110
+    - fastmcp>=3.2.0
+    - mcp>=1.0
     pass_filenames: false
     entry: mypy src/locus
 
