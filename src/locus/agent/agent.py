@@ -7,10 +7,11 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 import time
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, PrivateAttr
 
@@ -28,16 +29,21 @@ from locus.core.events import (
 )
 from locus.core.messages import Message, Role, ToolCall, ToolResult
 from locus.core.state import AgentState, ReasoningStep, ToolExecution
-from locus.models import get_model
+from locus.models import get_model  # noqa: F401 — re-exported for test monkey-patches
 from locus.models.base import ModelResponse
 from locus.tools.decorator import Tool
 from locus.tools.executor import (
-    ConcurrentExecutor,
-    SequentialExecutor,
     ToolContextFactory,
     ToolExecutor,
 )
 from locus.tools.registry import ToolRegistry
+
+
+if TYPE_CHECKING:
+    from locus.agent.hook_orchestrator import HookOrchestrator
+    from locus.memory.conversation import ConversationManager
+    from locus.reasoning.grounding import GroundingEvaluator
+    from locus.reasoning.reflexion import Reflector
 
 
 _VALID_STOP_REASONS: frozenset[str] = frozenset(
@@ -111,24 +117,32 @@ class Agent(BaseModel):
     # Configuration
     config: AgentConfig = Field(..., description="Agent configuration")
 
-    # Private attributes (not serialized)
-    _model: Any = PrivateAttr(default=None)
+    # Private attributes (not serialized).
+    #
+    # Concrete model / hook / reasoning types are forward-referenced via
+    # ``TYPE_CHECKING`` because their modules are loaded lazily inside
+    # ``initialize_agent`` to avoid pulling in optional dependencies at
+    # import time.
+    _model: Any = PrivateAttr(default=None)  # ModelProtocol — provider-specific concrete type
     _tool_registry: ToolRegistry = PrivateAttr(default_factory=ToolRegistry)
     _executor: ToolExecutor = PrivateAttr(default=None)  # type: ignore[assignment]
+    # ``list[Any]``: heterogeneous by design — holds both ``HookProvider``
+    # subclasses and ``PluginAdapter`` (duck-typed via ``__getattr__``).
+    # The orchestrator uses the same widened type.
     _hooks: list[Any] = PrivateAttr(default_factory=list)
-    _hook_orchestrator: Any = PrivateAttr(default=None)
-    _conversation_manager: Any = PrivateAttr(default=None)
-    _reflector: Any = PrivateAttr(default=None)
-    _grounding_evaluator: Any = PrivateAttr(default=None)
-    _grounding_model: Any = PrivateAttr(default=None)
-    _auxiliary_model: Any = PrivateAttr(default=None)
+    _hook_orchestrator: HookOrchestrator | None = PrivateAttr(default=None)
+    _conversation_manager: ConversationManager | None = PrivateAttr(default=None)
+    _reflector: Reflector | None = PrivateAttr(default=None)
+    _grounding_evaluator: GroundingEvaluator | None = PrivateAttr(default=None)
+    _grounding_model: Any = PrivateAttr(default=None)  # ModelProtocol
+    _auxiliary_model: Any = PrivateAttr(default=None)  # ModelProtocol
     _last_run_state: AgentState | None = PrivateAttr(default=None)
-    _interrupt_state: Any = PrivateAttr(default=None)
+    _interrupt_state: AgentState | None = PrivateAttr(default=None)
     _interrupt_prompt: str | None = PrivateAttr(default=None)
     _has_unverified_writes: bool = PrivateAttr(default=False)
     _interrupt_thread_id: str | None = PrivateAttr(default=None)
-    _interrupt_metadata: dict | None = PrivateAttr(default=None)
-    _cancel_signal: Any = PrivateAttr(default=None)
+    _interrupt_metadata: dict[str, Any] | None = PrivateAttr(default=None)
+    _cancel_signal: threading.Event | None = PrivateAttr(default=None)
     _initialized: bool = PrivateAttr(default=False)
 
     def __init__(
@@ -196,198 +210,17 @@ class Agent(BaseModel):
         self._initialize()
 
     def _initialize(self) -> None:
-        """Initialize model, tools, and executor."""
-        if self._initialized:
-            return
+        """Resolve model, tools, executor, hooks, plugins, skills.
 
-        # Initialize model
-        if isinstance(self.config.model, str):
-            self._model = get_model(self.config.model)
-        else:
-            self._model = self.config.model
+        Delegates to :func:`locus.agent.initializer.initialize_agent` so
+        the public-facade class stays focused on the runtime loop. The
+        method is kept on ``Agent`` (rather than removed) because
+        ``run()`` calls ``self._initialize()`` early to lazy-init when
+        the user constructs the agent without driving setup eagerly.
+        """
+        from locus.agent.initializer import initialize_agent
 
-        # Register tools
-        self._tool_registry = ToolRegistry()
-        for t in self.config.tools:
-            if isinstance(t, Tool):
-                self._tool_registry.register(t)
-            else:
-                raise TypeError(f"Expected Tool instance, got {type(t)}")
-
-        # Add task_complete built-in tool in explicit completion mode
-        if self.config.completion_mode == "explicit":
-            self._register_builtin_tools()
-
-        # Initialize executor
-        if self.config.tool_execution == "concurrent":
-            self._executor = ConcurrentExecutor(max_concurrency=self.config.max_concurrency)
-        else:
-            self._executor = SequentialExecutor()
-
-        # Store hooks + the orchestrator that dispatches lifecycle events
-        # to them. The orchestrator holds a reference to the same list
-        # so plugin/skill hooks appended below are picked up at dispatch.
-        self._hooks = list(self.config.hooks)
-        from locus.agent.hook_orchestrator import HookOrchestrator
-
-        self._hook_orchestrator = HookOrchestrator(self._hooks)
-
-        # Register plugins (bundles of hooks + tools)
-        for plugin in self.config.plugins:
-            from locus.hooks.plugin import Plugin, PluginAdapter
-
-            if isinstance(plugin, Plugin):
-                plugin.init_agent(self)
-                # Add plugin hooks as an adapter
-                self._hooks.append(PluginAdapter(plugin))
-                # Add plugin tools
-                for plugin_tool in plugin.get_tools():
-                    self._tool_registry.register(plugin_tool)
-
-        # Register skills (AgentSkills.io)
-        if self.config.skills:
-            from locus.hooks.plugin import PluginAdapter
-            from locus.skills.plugin import SkillsPlugin
-
-            skills_plugin = SkillsPlugin(skills=self.config.skills)
-            skills_plugin.init_agent(self)
-            self._hooks.append(PluginAdapter(skills_plugin))
-            self._tool_registry.register(skills_plugin.get_activation_tool())
-
-        # Auto-register multi-modal provider tools (web_search, web_fetch,
-        # generate_image, speak/transcribe) when the config carries the
-        # corresponding providers.
-        if (
-            self.config.web_search is not None
-            or self.config.web_fetch is not None
-            or self.config.image_generator is not None
-            or self.config.speech_provider is not None
-        ):
-            from locus.providers.tools import auto_register
-
-            auto_register(
-                tool_registry=self._tool_registry,
-                web_search=self.config.web_search,
-                web_fetch=self.config.web_fetch,
-                image_generator=self.config.image_generator,
-                speech_provider=self.config.speech_provider,
-            )
-
-        # Auto-install the PlaybookEnforcerHook when ``playbook`` is set
-        # so the README claim ("PlaybookEnforcer validates tool calls
-        # against step constraints") is real instead of aspirational.
-        if self.config.playbook is not None:
-            from locus.playbooks.hook import PlaybookEnforcerHook
-
-            self._hooks.append(PlaybookEnforcerHook(self.config.playbook))
-
-        # Initialize conversation manager
-        if self.config.conversation_manager is not None:
-            self._conversation_manager = self.config.conversation_manager
-        elif self.config.max_iterations > 10:
-            from locus.memory.conversation import SlidingWindowManager
-
-            window = max(20, self.config.max_iterations * 2)
-            self._conversation_manager = SlidingWindowManager(window_size=window)
-
-        # Initialize Reflector if reflexion is enabled
-        if self.config.reflexion and self.config.reflexion.enabled:
-            from locus.reasoning.reflexion import Reflector
-
-            self._reflector = Reflector(
-                loop_threshold=self.config.tool_loop_threshold,
-                diminishing_returns=self.config.reflexion.diminishing_returns,
-            )
-
-        # Resolve the auxiliary (cheap/fast) model once. Used for
-        # grounding eval, structured-output repair, and the max-iterations
-        # final-summary call so those side calls don't burn primary-model
-        # budget. Falls back to the primary model when ``auxiliary_model``
-        # isn't set on the config.
-        if self.config.auxiliary_model is not None:
-            aux_cfg = self.config.auxiliary_model
-            if isinstance(aux_cfg, str):
-                self._auxiliary_model = get_model(aux_cfg)
-            else:
-                self._auxiliary_model = aux_cfg
-        else:
-            self._auxiliary_model = self._model
-
-        # Initialize Grounding evaluator if enabled
-        if self.config.grounding and self.config.grounding.enabled:
-            from locus.reasoning.grounding import GroundingEvaluator
-
-            self._grounding_evaluator = GroundingEvaluator(
-                replan_threshold=self.config.grounding.threshold,
-            )
-            # Precedence: grounding.model > auxiliary_model > primary.
-            if self.config.grounding.model:
-                self._grounding_model = get_model(self.config.grounding.model)
-            else:
-                self._grounding_model = self._auxiliary_model
-
-        self._initialized = True
-
-    def _register_builtin_tools(self) -> None:
-        """Register built-in tools for explicit completion mode."""
-        from locus.tools.decorator import tool as tool_decorator
-
-        agent_ref = self  # Closure over agent instance
-
-        @tool_decorator(
-            name="task_complete",
-            description=(
-                "Signal that the current task is complete. "
-                "Call this ONLY when you have verified your work "
-                "(e.g., tests pass, output is correct). "
-                "If you wrote files, you MUST run tests/commands first. "
-                "Provide a summary of what was accomplished."
-            ),
-        )
-        def task_complete(summary: str, status: str = "success") -> str:
-            """Signal task completion with a summary."""
-            if agent_ref.config.require_verification and agent_ref._has_unverified_writes:
-                agent_ref._has_unverified_writes = False  # Reset so it doesn't loop
-                return (
-                    "BLOCKED: You have unverified changes. "
-                    "You wrote files but haven't run tests or verification commands yet. "
-                    "Run tests first (e.g., run_command with pytest), then call task_complete again."
-                )
-            return f"Task completed ({status}): {summary}"
-
-        @tool_decorator(
-            name="ask_user",
-            description=(
-                "Ask the user a question and wait for their response. "
-                "Use this when you need clarification, approval, or a decision "
-                "from the user before proceeding."
-            ),
-        )
-        def ask_user(question: str, options: str | None = None) -> str:
-            """Ask the user a question. Pauses execution until they respond.
-
-            Args:
-                question: The question to ask
-                options: Comma-separated list of options (e.g., "JWT,session,OAuth")
-
-            Returns:
-                A special marker that triggers an interrupt in the agent loop
-            """
-            import json
-
-            option_list = [o.strip() for o in options.split(",")] if options else None
-            return json.dumps(
-                {
-                    "__interrupt__": True,
-                    "question": question,
-                    "options": option_list,
-                }
-            )
-
-        if "task_complete" not in self._tool_registry.tools:
-            self._tool_registry.register(task_complete)
-        if "ask_user" not in self._tool_registry.tools:
-            self._tool_registry.register(ask_user)
+        initialize_agent(self)
 
     async def run(
         self,
@@ -1150,8 +983,6 @@ class Agent(BaseModel):
             agent.cancel()  # Stop from main thread
             t.join()
         """
-        import threading
-
         if self._cancel_signal is None:
             self._cancel_signal = threading.Event()
         self._cancel_signal.set()
@@ -2040,35 +1871,43 @@ class Agent(BaseModel):
 
     # Hook lifecycle dispatch is delegated to HookOrchestrator; these
     # thin wrappers preserve the original method names so internal
-    # callers don't need to change.
+    # callers don't need to change. They all run after ``_initialize`` so
+    # ``_hook_orchestrator`` is non-None — assert once via a helper.
+
+    def _orch(self) -> HookOrchestrator:
+        """Return the hook orchestrator, asserting it has been initialised."""
+        assert self._hook_orchestrator is not None, (
+            "Agent._hook_orchestrator accessed before initialize_agent() ran"
+        )
+        return self._hook_orchestrator
 
     async def _run_before_invocation_hooks(
         self,
         prompt: str,
         state: AgentState,
     ) -> AgentState:
-        return await self._hook_orchestrator.run_before_invocation(prompt, state)  # type: ignore[no-any-return]
+        return await self._orch().run_before_invocation(prompt, state)
 
     async def _run_after_invocation_hooks(
         self,
         state: AgentState,
         success: bool,
     ) -> None:
-        await self._hook_orchestrator.run_after_invocation(state, success)
+        await self._orch().run_after_invocation(state, success)
 
     async def _run_before_model_hooks(
         self,
         messages: list[Any],
         tools: list[dict[str, Any]] | None,
     ) -> list[Any]:
-        return await self._hook_orchestrator.run_before_model(messages, tools)  # type: ignore[no-any-return]
+        return await self._orch().run_before_model(messages, tools)
 
     async def _run_after_model_hooks(
         self,
         response: Any,
         messages: list[Any],
     ) -> Any:
-        return await self._hook_orchestrator.run_after_model(response, messages)
+        return await self._orch().run_after_model(response, messages)
 
     async def _run_before_tool_hooks(
         self,
@@ -2076,7 +1915,7 @@ class Agent(BaseModel):
         tool_call_id: str,
         arguments: dict[str, Any],
     ) -> Any:
-        return await self._hook_orchestrator.run_before_tool(
+        return await self._orch().run_before_tool(
             tool_name,
             tool_call_id,
             arguments,
@@ -2088,7 +1927,7 @@ class Agent(BaseModel):
         result: Any,
         error: str | None,
     ) -> Any:
-        return await self._hook_orchestrator.run_after_tool(tool_name, result, error)
+        return await self._orch().run_after_tool(tool_name, result, error)
 
     # Properties for easy access
     @property

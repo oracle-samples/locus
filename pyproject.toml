@@ -402,6 +402,10 @@ ignore = [
 "src/locus/agent/agent.py" = [
     "SLF001",  # Private attr access for internal state (_has_unverified_writes)
 ]
+"src/locus/agent/initializer.py" = [
+    "SLF001",  # Extracted constructor body — its job is to populate
+               # ``Agent._*`` private attrs in place.
+]
 "src/locus/integrations/fastmcp.py" = [
     # S102 (exec) was formerly required for the MCP tool wrapper; the
     # closure-based implementation in _create_tool_wrapper no longer uses
