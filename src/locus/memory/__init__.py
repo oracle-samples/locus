@@ -58,9 +58,9 @@ from locus.memory.store import (
     NamespacedStore,
     SemanticSearchResult,
     StoreCapabilities,
+    StoreCapabilityError,
     StoreContext,
     StoreItem,
-    StoreProtocol,
 )
 
 
@@ -88,7 +88,7 @@ __all__ = [
     "NamespacedStore",
     "SemanticSearchResult",
     "StoreCapabilities",
+    "StoreCapabilityError",
     "StoreContext",
     "StoreItem",
-    "StoreProtocol",
 ]

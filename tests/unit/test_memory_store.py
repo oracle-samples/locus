@@ -452,27 +452,77 @@ class TestBaseStoreDefaultImplementations:
 
     @pytest.mark.asyncio
     async def test_search_without_capability(self, minimal_store):
-        """Test search raises NotImplementedError without capability."""
-        with pytest.raises(NotImplementedError, match="does not support search"):
+        """Search on an unsupporting backend raises a typed capability error."""
+        from locus.memory.store import StoreCapabilityError
+
+        with pytest.raises(StoreCapabilityError) as exc_info:
             await minimal_store.search(("ns",), query="test")
+        # Old code caught NotImplementedError — preserved via inheritance.
+        assert isinstance(exc_info.value, NotImplementedError)
+        assert exc_info.value.capability == "search"
+        assert exc_info.value.store_class == "MinimalStore"
 
     @pytest.mark.asyncio
     async def test_put_with_embedding_without_capability(self, minimal_store):
-        """Test put_with_embedding raises NotImplementedError."""
-        with pytest.raises(NotImplementedError, match="does not support semantic search"):
+        """put_with_embedding raises StoreCapabilityError."""
+        from locus.memory.store import StoreCapabilityError
+
+        with pytest.raises(StoreCapabilityError) as exc_info:
             await minimal_store.put_with_embedding(("ns",), "key", "value", [0.1, 0.2, 0.3])
+        assert exc_info.value.capability == "semantic_search"
+        assert isinstance(exc_info.value, NotImplementedError)
 
     @pytest.mark.asyncio
     async def test_search_by_embedding_without_capability(self, minimal_store):
-        """Test search_by_embedding raises NotImplementedError."""
-        with pytest.raises(NotImplementedError, match="does not support semantic search"):
+        """search_by_embedding raises StoreCapabilityError."""
+        from locus.memory.store import StoreCapabilityError
+
+        with pytest.raises(StoreCapabilityError) as exc_info:
             await minimal_store.search_by_embedding(("ns",), [0.1, 0.2, 0.3])
+        assert exc_info.value.capability == "semantic_search"
 
     @pytest.mark.asyncio
     async def test_get_embedding_without_capability(self, minimal_store):
-        """Test get_embedding raises NotImplementedError."""
-        with pytest.raises(NotImplementedError, match="does not support semantic search"):
+        """get_embedding raises StoreCapabilityError."""
+        from locus.memory.store import StoreCapabilityError
+
+        with pytest.raises(StoreCapabilityError) as exc_info:
             await minimal_store.get_embedding(("ns",), "key")
+        assert exc_info.value.capability == "semantic_search"
+
+
+class TestStoreCapabilityError:
+    """Direct tests for the StoreCapabilityError shape (#33)."""
+
+    def test_carries_structured_payload(self):
+        """The exception exposes capability/store_class/hint as attributes."""
+        from locus.memory.store import StoreCapabilityError
+
+        err = StoreCapabilityError(
+            capability="semantic_search",
+            store_class="StubStore",
+            hint="Use a vector-capable backend.",
+        )
+        assert err.capability == "semantic_search"
+        assert err.store_class == "StubStore"
+        assert err.hint == "Use a vector-capable backend."
+        assert "StubStore does not support 'semantic_search'" in str(err)
+        assert "Use a vector-capable backend." in str(err)
+
+    def test_subclasses_not_implemented_error_for_back_compat(self):
+        """Legacy ``except NotImplementedError`` paths still catch it."""
+        from locus.memory.store import StoreCapabilityError
+
+        err = StoreCapabilityError(capability="search", store_class="StubStore")
+        assert isinstance(err, NotImplementedError)
+
+    def test_hint_is_optional(self):
+        """Constructed without a hint, the message is just capability + class."""
+        from locus.memory.store import StoreCapabilityError
+
+        err = StoreCapabilityError(capability="search", store_class="StubStore")
+        assert err.hint is None
+        assert str(err) == "StubStore does not support 'search'"
 
 
 class TestInMemoryStoreBatchOperations:
