@@ -119,6 +119,47 @@ class TestProfileMode:
             model = OCIOpenAIModel(model="openai.gpt-5.5", profile="MISSING")
         assert model.config.compartment_id is None
 
+    def test_env_var_overrides_profile_tenancy(self, monkeypatch):
+        """``OCI_COMPARTMENT`` env var beats the profile-tenancy fallback.
+
+        Common case: BOAT-OC1's home tenancy lacks GenAI policy, but the
+        user has access to GenAI inference in saasobservai's compartment.
+        Setting ``OCI_COMPARTMENT`` should make the model target the
+        compartment with the policy.
+        """
+        env_compartment = "ocid1.compartment.oc1..env-set"
+        monkeypatch.setenv("OCI_COMPARTMENT", env_compartment)
+        with patch(
+            "locus.models.providers.oci.openai_compat._load_profile_config",
+            return_value={"tenancy": "ocid1.tenancy.oc1..from-profile"},
+        ) as mock_load:
+            model = OCIOpenAIModel(model="openai.gpt-4o-mini", profile="ANY")
+        # Env var takes precedence; profile load is short-circuited.
+        mock_load.assert_not_called()
+        assert model.config.compartment_id == env_compartment
+
+    def test_compartment_id_arg_beats_env_var(self, monkeypatch):
+        """Explicit ``compartment_id=`` arg wins over ``OCI_COMPARTMENT`` env."""
+        monkeypatch.setenv("OCI_COMPARTMENT", "ocid1.compartment.oc1..env-set")
+        explicit = "ocid1.compartment.oc1..explicit"
+        model = OCIOpenAIModel(
+            model="openai.gpt-4o-mini",
+            profile="ANY",
+            compartment_id=explicit,
+        )
+        assert model.config.compartment_id == explicit
+
+    def test_oci_compartment_id_env_alias(self, monkeypatch):
+        """Both ``OCI_COMPARTMENT`` and ``OCI_COMPARTMENT_ID`` work."""
+        monkeypatch.delenv("OCI_COMPARTMENT", raising=False)
+        monkeypatch.setenv("OCI_COMPARTMENT_ID", "ocid1.compartment.oc1..alias")
+        with patch(
+            "locus.models.providers.oci.openai_compat._load_profile_config",
+            return_value={"tenancy": "ocid1.tenancy.oc1..ignored"},
+        ):
+            model = OCIOpenAIModel(model="openai.gpt-4o-mini", profile="ANY")
+        assert model.config.compartment_id == "ocid1.compartment.oc1..alias"
+
     def test_client_uses_signer_http_client(self):
         with patch(
             "locus.models.providers.oci.openai_compat._load_profile_config",
