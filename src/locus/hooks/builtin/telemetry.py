@@ -11,7 +11,12 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
-from locus.hooks.provider import HookPriority, HookProvider
+from locus.hooks.provider import (
+    AfterToolCallEvent,
+    BeforeToolCallEvent,
+    HookPriority,
+    HookProvider,
+)
 
 
 if TYPE_CHECKING:
@@ -28,8 +33,8 @@ except ImportError:
     trace = None  # type: ignore[assignment]
     metrics = None  # type: ignore[assignment]
     Span = None  # type: ignore[assignment,misc]
-    Status = None  # type: ignore[assignment]
-    StatusCode = None  # type: ignore[assignment]
+    Status = None  # type: ignore[assignment,misc]
+    StatusCode = None  # type: ignore[assignment,misc]
 
 
 class TelemetryHook(HookProvider):
@@ -225,27 +230,21 @@ class TelemetryHook(HookProvider):
                 },
             )
 
-    async def on_before_tool_call(
-        self,
-        tool_name: str,
-        arguments: dict[str, Any],
-    ) -> dict[str, Any]:
+    async def on_before_tool_call(self, event: BeforeToolCallEvent) -> None:
         """Start tool call span.
 
         Args:
-            tool_name: Name of the tool
-            arguments: Tool arguments
-
-        Returns:
-            Unchanged arguments
+            event: Write-protected event carrying ``tool_name`` and
+                ``arguments``. The hook only inspects them.
         """
+        tool_name = event.tool_name
         span_attrs: dict[str, Any] = {
             "locus.tool_name": tool_name,
         }
 
         if self._record_arguments:
             # Sanitize arguments for span attributes
-            for key, value in arguments.items():
+            for key, value in event.arguments.items():
                 attr_key = f"locus.tool.arg.{key}"
                 try:
                     span_attrs[attr_key] = str(value)[:1000]  # Limit length
@@ -256,21 +255,17 @@ class TelemetryHook(HookProvider):
         self._tool_spans[tool_name] = (span, time.perf_counter())
 
         self._tool_call_counter.add(1, {"tool_name": tool_name})
-        return arguments
 
-    async def on_after_tool_call(
-        self,
-        tool_name: str,
-        result: Any,
-        error: str | None,
-    ) -> None:
+    async def on_after_tool_call(self, event: AfterToolCallEvent) -> None:
         """End tool call span.
 
         Args:
-            tool_name: Name of the tool
-            result: Tool result
-            error: Error message if failed
+            event: Write-protected event carrying ``tool_name``,
+                ``result``, and ``error``.
         """
+        tool_name = event.tool_name
+        error = event.error
+        result = event.result
         if tool_name in self._tool_spans:
             span, start_time = self._tool_spans.pop(tool_name)
             duration_ms = (time.perf_counter() - start_time) * 1000

@@ -15,7 +15,21 @@ from locus.hooks.builtin.telemetry import (
     TelemetryHook,
     create_telemetry_hook,
 )
-from locus.hooks.provider import HookPriority
+from locus.hooks.provider import (
+    AfterToolCallEvent,
+    BeforeToolCallEvent,
+    HookPriority,
+)
+
+
+def _before(tool_name: str, arguments: dict) -> BeforeToolCallEvent:
+    return BeforeToolCallEvent(
+        tool_name=tool_name, tool_call_id=f"{tool_name}-call", arguments=arguments
+    )
+
+
+def _after(tool_name: str, *, result, error: str | None) -> AfterToolCallEvent:
+    return AfterToolCallEvent(tool_name=tool_name, result=result, error=error)
 
 
 class TestNoOpTelemetryHook:
@@ -134,9 +148,11 @@ class TestTelemetryHook:
     async def test_on_before_tool_call(self, hook):
         """Test on_before_tool_call starts span."""
         args = {"query": "test", "limit": 10}
-        result = await hook.on_before_tool_call("search", args)
+        event = _before("search", args)
+        await hook.on_before_tool_call(event)
 
-        assert result == args
+        # Hook is observe-only — event.arguments is unmodified.
+        assert event.arguments == args
         assert "search" in hook._tool_spans
 
     @pytest.mark.asyncio
@@ -144,27 +160,28 @@ class TestTelemetryHook:
         """Test on_before_tool_call without recording arguments."""
         hook = TelemetryHook(record_arguments=False)
         args = {"query": "test"}
-        result = await hook.on_before_tool_call("search", args)
+        event = _before("search", args)
+        await hook.on_before_tool_call(event)
 
-        assert result == args
+        assert event.arguments == args
         assert "search" in hook._tool_spans
 
     @pytest.mark.asyncio
     async def test_on_after_tool_call_success(self, hook):
         """Test on_after_tool_call with success."""
         # Start tool span
-        await hook.on_before_tool_call("search", {})
+        await hook.on_before_tool_call(_before("search", {}))
 
         # End tool span
-        await hook.on_after_tool_call("search", result="Found 5 items", error=None)
+        await hook.on_after_tool_call(_after("search", result="Found 5 items", error=None))
 
         assert "search" not in hook._tool_spans
 
     @pytest.mark.asyncio
     async def test_on_after_tool_call_with_error(self, hook):
         """Test on_after_tool_call with error."""
-        await hook.on_before_tool_call("search", {})
-        await hook.on_after_tool_call("search", result=None, error="Connection failed")
+        await hook.on_before_tool_call(_before("search", {}))
+        await hook.on_after_tool_call(_after("search", result=None, error="Connection failed"))
 
         assert "search" not in hook._tool_spans
 
@@ -172,15 +189,15 @@ class TestTelemetryHook:
     async def test_on_after_tool_call_no_span(self, hook):
         """Test on_after_tool_call when no span exists."""
         # Call without starting span
-        await hook.on_after_tool_call("missing_tool", result="data", error=None)
+        await hook.on_after_tool_call(_after("missing_tool", result="data", error=None))
         # Should not raise
 
     @pytest.mark.asyncio
     async def test_on_after_tool_call_no_record_results(self):
         """Test on_after_tool_call without recording results."""
         hook = TelemetryHook(record_results=False)
-        await hook.on_before_tool_call("search", {})
-        await hook.on_after_tool_call("search", result="Result data", error=None)
+        await hook.on_before_tool_call(_before("search", {}))
+        await hook.on_after_tool_call(_after("search", result="Result data", error=None))
 
         assert "search" not in hook._tool_spans
 
@@ -221,8 +238,9 @@ class TestTelemetryHook:
 
         args = {"obj": NonSerializable()}
         # Should not raise
-        result = await hook.on_before_tool_call("test_tool", args)
-        assert result == args
+        event = _before("test_tool", args)
+        await hook.on_before_tool_call(event)
+        assert event.arguments == args
 
 
 class TestCreateTelemetryHook:

@@ -533,17 +533,9 @@ ignore_missing_imports = true
 # ``# type: ignore[code]`` for genuine SDK-stub gaps, or (b) retained here
 # until its module-level migration PR lands. The lifted set is enforced by
 # the strict block above.
-[[tool.mypy.overrides]]
-module = [
-    # ``locus.hooks.builtin.*`` is held back: the module-level migration
-    # surfaces a real runtime bug — the LoggingHook / GuardrailsHook /
-    # TelemetryHook signatures pre-date the event-based ``HookProvider``
-    # Protocol and would TypeError when called through ``HookRegistry``.
-    # That is a behavioural fix, not a typing one, so it's tracked on
-    # its own issue and migrated in a follow-up PR.
-    "locus.hooks.builtin.*",
-]
-ignore_errors = true
+# All ``locus.*`` modules are now type-checked under the strict block
+# above. The ``[[tool.mypy.overrides]]`` ``ignore_errors`` block has been
+# removed — see #34 for the migration history.
 
 [tool.pydantic-mypy]
 init_forbid_extra = true

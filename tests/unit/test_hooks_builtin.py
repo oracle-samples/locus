@@ -10,7 +10,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from locus.hooks.builtin.logging import LoggingHook
-from locus.hooks.provider import HookPriority
+from locus.hooks.provider import (
+    AfterToolCallEvent,
+    BeforeToolCallEvent,
+    HookPriority,
+)
 
 
 class TestLoggingHook:
@@ -68,21 +72,24 @@ class TestLoggingHook:
         """Test before_tool_call logging."""
         hook = LoggingHook()
         args = {"key": "value"}
+        event = BeforeToolCallEvent(tool_name="test_tool", tool_call_id="t1", arguments=args)
 
         with patch.object(hook._logger, "log") as mock_log:
-            result = await hook.on_before_tool_call("test_tool", args)
+            await hook.on_before_tool_call(event)
 
         mock_log.assert_called_once()
-        assert result == args
+        # Hook is observe-only — event.arguments is unmodified.
+        assert event.arguments == args
 
     @pytest.mark.asyncio
     async def test_on_before_tool_call_with_arguments(self):
         """Test logging with arguments enabled."""
         hook = LoggingHook(log_arguments=True)
         args = {"key": "value"}
+        event = BeforeToolCallEvent(tool_name="test_tool", tool_call_id="t1", arguments=args)
 
         with patch.object(hook._logger, "log") as mock_log:
-            await hook.on_before_tool_call("test_tool", args)
+            await hook.on_before_tool_call(event)
 
         # Should include arguments in log
         mock_log.assert_called_once()
@@ -93,9 +100,10 @@ class TestLoggingHook:
     async def test_on_after_tool_call(self):
         """Test after_tool_call logging."""
         hook = LoggingHook()
+        event = AfterToolCallEvent(tool_name="test_tool", result="result", error=None)
 
         with patch.object(hook._logger, "log") as mock_log:
-            await hook.on_after_tool_call("test_tool", "result", None)
+            await hook.on_after_tool_call(event)
 
         mock_log.assert_called_once()
 
@@ -103,9 +111,10 @@ class TestLoggingHook:
     async def test_on_after_tool_call_with_error(self):
         """Test after_tool_call logging with error."""
         hook = LoggingHook()
+        event = AfterToolCallEvent(tool_name="test_tool", result=None, error="Error message")
 
         with patch.object(hook._logger, "log") as mock_log:
-            await hook.on_after_tool_call("test_tool", None, "Error message")
+            await hook.on_after_tool_call(event)
 
         mock_log.assert_called_once()
 
@@ -156,3 +165,30 @@ class TestLoggingHook:
         assert hooks["on_after_tool_call"] is True
         assert hooks["on_iteration_start"] is True
         assert hooks["on_iteration_end"] is True
+
+
+class TestBuiltinHooksThroughRegistry:
+    """End-to-end: register a built-in hook through HookRegistry and
+    dispatch a tool call. This is the contract the README documents
+    (`registry.add_provider(LoggingHook())`); regression-pinning it
+    here prevents the kind of signature drift tracked in #45 from
+    re-emerging silently. The unit tests above only call the hook
+    methods directly — they don't exercise the dispatch path."""
+
+    @pytest.mark.asyncio
+    async def test_logging_hook_dispatches_through_registry(self):
+        """LoggingHook registered via HookRegistry routes correctly."""
+        from locus.hooks.registry import HookRegistry
+
+        registry = HookRegistry()
+        hook = LoggingHook()
+        registry.add_provider(hook)
+
+        with patch.object(hook._logger, "log") as mock_log:
+            modified = await registry.emit_before_tool_call("search", {"q": "test"})
+            await registry.emit_after_tool_call("search", "ok", None)
+
+        # Two log calls: one before, one after.
+        assert mock_log.call_count == 2
+        # Modified args round-trip cleanly (LoggingHook is observe-only).
+        assert modified == {"q": "test"}

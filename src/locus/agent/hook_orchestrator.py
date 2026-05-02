@@ -91,7 +91,7 @@ class HookOrchestrator:
         for hook in self._hooks:
             if hasattr(hook, "on_before_model_call"):
                 await hook.on_before_model_call(event)
-        messages_out: list[Any] = event.messages  # type: ignore[attr-defined]
+        messages_out: list[Any] = event.messages
         return messages_out
 
     async def run_after_model(

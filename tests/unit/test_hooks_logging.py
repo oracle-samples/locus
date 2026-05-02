@@ -11,6 +11,7 @@ import pytest
 
 from locus.core.state import AgentState
 from locus.hooks.builtin.logging import LoggingHook, StructuredLoggingHook
+from locus.hooks.provider import AfterToolCallEvent, BeforeToolCallEvent
 
 
 class TestLoggingHook:
@@ -55,18 +56,23 @@ class TestLoggingHook:
     async def test_on_before_tool_call(self, hook, mock_logger):
         """Log before tool call with arguments."""
         hook._log_arguments = True
+        event = BeforeToolCallEvent(
+            tool_name="search", tool_call_id="t1", arguments={"query": "test"}
+        )
 
-        result = await hook.on_before_tool_call("search", {"query": "test"})
+        await hook.on_before_tool_call(event)
 
-        assert result == {"query": "test"}
+        # Hook is observe-only — event.arguments is unmodified.
+        assert event.arguments == {"query": "test"}
         mock_logger.log.assert_called()
 
     @pytest.mark.asyncio
     async def test_on_after_tool_call_success(self, hook, mock_logger):
         """Log successful tool call."""
         hook._log_results = True
+        event = AfterToolCallEvent(tool_name="search", result="Found 5 results", error=None)
 
-        await hook.on_after_tool_call("search", "Found 5 results", None)
+        await hook.on_after_tool_call(event)
 
         mock_logger.log.assert_called()
         call_args = mock_logger.log.call_args
@@ -79,14 +85,16 @@ class TestLoggingHook:
 
         # Long result that should be truncated
         long_result = "x" * 300
-        await hook.on_after_tool_call("search", long_result, None)
+        event = AfterToolCallEvent(tool_name="search", result=long_result, error=None)
+        await hook.on_after_tool_call(event)
 
         mock_logger.log.assert_called()
 
     @pytest.mark.asyncio
     async def test_on_after_tool_call_error(self, hook, mock_logger):
         """Log tool call error."""
-        await hook.on_after_tool_call("search", None, "Connection failed")
+        event = AfterToolCallEvent(tool_name="search", result=None, error="Connection failed")
+        await hook.on_after_tool_call(event)
 
         mock_logger.log.assert_called()
 
