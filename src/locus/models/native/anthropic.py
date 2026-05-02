@@ -29,6 +29,15 @@ class AnthropicConfig(ModelConfig):
     top_p: float = 0.9
     api_key: str | None = Field(default=None, description="Anthropic API key")
     base_url: str | None = Field(default=None, description="Custom API base URL")
+    prompt_cache: bool = Field(
+        default=False,
+        description=(
+            "When True, mark the system prompt and tool catalog with "
+            "Anthropic's `cache_control: ephemeral` so subsequent turns "
+            "reuse the cached input at ~1/10x cost. Default False for "
+            "backward compatibility."
+        ),
+    )
 
 
 class AnthropicModel(BaseModel):
@@ -53,6 +62,7 @@ class AnthropicModel(BaseModel):
         base_url: str | None = None,
         max_tokens: int = 4096,
         temperature: float = 0.7,
+        prompt_cache: bool = False,
         **kwargs: Any,
     ) -> None:
         config = AnthropicConfig(
@@ -61,6 +71,7 @@ class AnthropicModel(BaseModel):
             base_url=base_url,
             max_tokens=max_tokens,
             temperature=temperature,
+            prompt_cache=prompt_cache,
             **kwargs,
         )
         super().__init__(config=config)
@@ -195,7 +206,20 @@ class AnthropicModel(BaseModel):
             "temperature": kwargs.get("temperature", self.config.temperature),
         }
         if system_prompt:
-            params["system"] = system_prompt
+            # When prompt-caching is enabled, send the system prompt as a
+            # block list with ``cache_control: ephemeral`` so subsequent
+            # turns reuse the cached input at ~1/10x cost (Anthropic
+            # ephemeral cache TTL is ~5 min).
+            if self.config.prompt_cache:
+                params["system"] = [
+                    {
+                        "type": "text",
+                        "text": system_prompt,
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ]
+            else:
+                params["system"] = system_prompt
 
         # Structured-output mode: emulate ``response_format`` via tool-use.
         response_format = kwargs.get("response_format")
@@ -211,6 +235,17 @@ class AnthropicModel(BaseModel):
             }
 
         if anthropic_tools:
+            # Cache the tool catalog too — it's typically the same across
+            # turns and can be large. Anthropic walks the cache_control
+            # markers in order; tagging the last tool covers the catalog.
+            if self.config.prompt_cache and anthropic_tools:
+                anthropic_tools = [
+                    *anthropic_tools[:-1],
+                    {
+                        **anthropic_tools[-1],
+                        "cache_control": {"type": "ephemeral"},
+                    },
+                ]
             params["tools"] = anthropic_tools
 
         response = await self.client.messages.create(**params)
@@ -240,12 +275,21 @@ class AnthropicModel(BaseModel):
         if structured_mode and structured_payload is not None:
             content = _json.dumps(structured_payload)
 
-        usage = {}
+        usage: dict[str, int] = {}
         if response.usage:
             usage = {
                 "prompt_tokens": response.usage.input_tokens,
                 "completion_tokens": response.usage.output_tokens,
             }
+            # Anthropic returns these only when prompt caching is in play.
+            # Surface them on usage so AgentResult.metrics can show
+            # cache hits/misses and cost-saved estimates.
+            cache_creation = getattr(response.usage, "cache_creation_input_tokens", None)
+            cache_read = getattr(response.usage, "cache_read_input_tokens", None)
+            if cache_creation is not None:
+                usage["cache_creation_input_tokens"] = cache_creation
+            if cache_read is not None:
+                usage["cache_read_input_tokens"] = cache_read
 
         return ModelResponse(
             message=Message.assistant(content=content, tool_calls=tool_calls),
