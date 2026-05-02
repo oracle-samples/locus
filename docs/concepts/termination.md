@@ -43,7 +43,7 @@ from locus import Agent
 from locus.core.termination import MaxIterations
 
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[search, summarise],
     termination=MaxIterations(8),
 )
