@@ -44,8 +44,9 @@ jobs:
 
       - name: Run unit tests with coverage
         # ``--cov-fail-under`` is set in pyproject.toml ([tool.coverage.report].fail_under).
-        # Generates ``coverage.json`` for the per-file ratchet step below
-        # plus ``coverage.xml`` for any external coverage uploader.
+        # ``coverage.json`` feeds the per-file ratchet step below.
+        # ``coverage.xml`` is uploaded as an artifact so reviewers can
+        # pull it into any local viewer.
         run: |
           pytest tests/unit/ \
             --cov=src/locus \
