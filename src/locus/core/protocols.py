@@ -63,7 +63,11 @@ class ModelProtocol(Protocol):
         """
         ...
 
-    async def stream(
+    # Declared as ``def`` (not ``async def``) so the Protocol matches
+    # concrete async-generator implementations: an ``async def`` body
+    # containing ``yield`` returns ``AsyncIterator[X]`` directly, not
+    # ``Coroutine[..., AsyncIterator[X]]``.
+    def stream(
         self,
         messages: list[Message],
         tools: list[dict[str, Any]] | None = None,

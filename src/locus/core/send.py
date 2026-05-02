@@ -188,7 +188,10 @@ def normalize_sends(value: Any) -> list[Send] | None:
     if isinstance(value, Send):
         return [value]
     if is_send_list(value):
-        return value
+        # ``is_send_list`` is a custom TypeGuard-style check; mypy can't
+        # propagate the narrowing back to ``value`` here, so the return
+        # would be Any otherwise.
+        return value  # type: ignore[no-any-return]
     return None
 
 

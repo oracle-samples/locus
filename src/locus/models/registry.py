@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 
 if TYPE_CHECKING:
@@ -76,7 +76,11 @@ def _register_defaults() -> None:
 
         register_provider(
             "openai",
-            lambda m, **kw: OpenAIModel(model=m, **kw),
+            # The Pydantic model classes satisfy ``ModelProtocol``
+            # structurally, but mypy's Callable-variance check on
+            # _PROVIDERS doesn't propagate that structural narrowing —
+            # cast at the registration boundary.
+            lambda m, **kw: cast("ModelProtocol", OpenAIModel(model=m, **kw)),
         )
     except ImportError:
         pass
@@ -87,7 +91,7 @@ def _register_defaults() -> None:
 
         register_provider(
             "anthropic",
-            lambda m, **kw: AnthropicModel(model=m, **kw),
+            lambda m, **kw: cast("ModelProtocol", AnthropicModel(model=m, **kw)),
         )
     except ImportError:
         pass
@@ -98,7 +102,7 @@ def _register_defaults() -> None:
 
         register_provider(
             "ollama",
-            lambda m, **kw: OllamaModel(model=m, **kw),
+            lambda m, **kw: cast("ModelProtocol", OllamaModel(model=m, **kw)),
         )
     except ImportError:
         pass
@@ -126,12 +130,12 @@ def _register_defaults() -> None:
             lowered = m.lower()
             # Rule 1: DAC endpoint OCID → SDK transport.
             if lowered.startswith("ocid1.generativeaiendpoint."):
-                return OCIModel(model_id=m, **kw)
+                return cast("ModelProtocol", OCIModel(model_id=m, **kw))
             # Rule 2: Cohere R-series → SDK transport.
             if lowered.startswith("cohere.command-r"):
                 # SDK transport: defaults to profile_name="DEFAULT" + API_KEY,
                 # so no env-var fallback needed for one-line ergonomics.
-                return OCIModel(model_id=m, **kw)
+                return cast("ModelProtocol", OCIModel(model_id=m, **kw))
             # Rule 3: V1 transport. Strictly requires profile= or auth_type=.
             # Fall back to OCI_PROFILE env var so `Agent(model="oci:...")`
             # works in one line. Explicit kwargs always win.
@@ -139,7 +143,7 @@ def _register_defaults() -> None:
                 env_profile = os.environ.get("OCI_PROFILE")
                 if env_profile:
                     kw["profile"] = env_profile
-            return OCIOpenAIModel(model=m, **kw)
+            return cast("ModelProtocol", OCIOpenAIModel(model=m, **kw))
 
         register_provider("oci", _make_oci)
     except ImportError:

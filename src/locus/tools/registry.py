@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -69,7 +70,11 @@ class ToolRegistry(BaseModel):
         """Number of registered tools."""
         return len(self.tools)
 
-    def __iter__(self):
+    # Pydantic's BaseModel.__iter__ yields ``(field_name, value)`` tuples
+    # for each model field — this override changes the semantic to
+    # iterate over registered Tool instances. The Liskov mismatch is
+    # intentional and predates strict typing in this module.
+    def __iter__(self) -> Iterator[Tool]:  # type: ignore[override]
         """Iterate over tools."""
         return iter(self.tools.values())
 

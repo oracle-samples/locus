@@ -514,7 +514,13 @@ module = [
 ]
 ignore_missing_imports = true
 
-# Modules with dynamic types from external SDKs — relaxed checking
+# Modules with dynamic types from external SDKs — relaxed checking.
+#
+# Migration in progress (issue #34): each module has been audited and either
+# (a) lifted out of this list and back into strict checking, with per-line
+# ``# type: ignore[code]`` for genuine SDK-stub gaps, or (b) retained here
+# until its module-level migration PR lands. The lifted set is enforced by
+# the strict block above.
 [[tool.mypy.overrides]]
 module = [
     "locus.rag.*",
@@ -524,14 +530,9 @@ module = [
     "locus.loop.*",
     "locus.playbooks.*",
     "locus.server.*",
-    "locus.core.reducers",
-    "locus.core.send",
     "locus.multiagent.graph",
     "locus.hooks.builtin.*",
     "locus.reasoning.*",
-    "locus.tools.context",
-    "locus.tools.registry",
-    "locus.models.registry",
     "locus.skills.*",
     "locus.a2a.*",
 ]
