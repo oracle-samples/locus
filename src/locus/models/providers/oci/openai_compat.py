@@ -242,9 +242,17 @@ class OCIOpenAIModel(OpenAIModel):
         ):
             kwargs.pop(explicit, None)
 
-        # Auto-derive compartment from the profile's tenancy when the user
-        # didn't pass one explicitly. Same fallback OCIClient uses for the
-        # OCI-SDK transport.
+        # Resolve compartment_id with this precedence:
+        #   1. explicit ``compartment_id=`` arg
+        #   2. ``OCI_COMPARTMENT`` env var (matches OCIModel + the test
+        #      conftest convention so a single export drives every test)
+        #   3. profile's tenancy (last-resort default; may not have GenAI
+        #      policy if the profile lives in a different home tenancy than
+        #      the GenAI compartment, which is the BOAT-OC1 / observai case)
+        if compartment_id is None:
+            import os
+
+            compartment_id = os.getenv("OCI_COMPARTMENT") or os.getenv("OCI_COMPARTMENT_ID")
         if compartment_id is None and profile is not None:
             try:
                 profile_cfg = _load_profile_config(profile, config_file)

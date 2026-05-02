@@ -47,6 +47,19 @@ def get_test_compartment() -> str | None:
     return os.environ.get("OCI_COMPARTMENT")
 
 
+def get_test_auth_type():
+    """Resolve the auth type from ``OCI_AUTH_TYPE`` env (default api_key).
+
+    Lets the same test file work against api_key, security_token,
+    instance_principal, or resource_principal profiles. Tests that
+    *specifically* exercise a single auth type (e.g. SECURITY_TOKEN)
+    should still hardcode that.
+    """
+    from locus.models.providers.oci.client import OCIAuthType
+
+    return OCIAuthType(os.environ.get("OCI_AUTH_TYPE", "api_key"))
+
+
 # Skip all tests if no OCI credentials
 pytestmark = [
     pytest.mark.integration,
@@ -58,12 +71,12 @@ class TestOCIClientIntegration:
     """Integration tests for OCIClient."""
 
     def test_api_key_config_loading(self):
-        """Test loading OCI config with API key auth."""
-        from locus.models.providers.oci.client import OCIAuthType, OCIClient, OCIClientConfig
+        """Test loading OCI config with whichever auth the active profile uses."""
+        from locus.models.providers.oci.client import OCIClient, OCIClientConfig
 
         config = OCIClientConfig(
             profile_name=get_test_profile(),
-            auth_type=OCIAuthType.API_KEY,
+            auth_type=get_test_auth_type(),
         )
         client = OCIClient(config)
 
@@ -74,11 +87,11 @@ class TestOCIClientIntegration:
 
     def test_compartment_id_resolution(self):
         """Test compartment ID is resolved correctly."""
-        from locus.models.providers.oci.client import OCIAuthType, OCIClient, OCIClientConfig
+        from locus.models.providers.oci.client import OCIClient, OCIClientConfig
 
         config = OCIClientConfig(
             profile_name=get_test_profile(),
-            auth_type=OCIAuthType.API_KEY,
+            auth_type=get_test_auth_type(),
         )
         client = OCIClient(config)
 
@@ -88,26 +101,32 @@ class TestOCIClientIntegration:
 
     def test_explicit_compartment_id(self):
         """Test explicit compartment ID is used."""
-        from locus.models.providers.oci.client import OCIAuthType, OCIClient, OCIClientConfig
+        from locus.models.providers.oci.client import OCIClient, OCIClientConfig
 
         explicit_compartment = get_test_compartment() or "ocid1.compartment.oc1..explicit"
 
         config = OCIClientConfig(
             profile_name=get_test_profile(),
-            auth_type=OCIAuthType.API_KEY,
+            auth_type=get_test_auth_type(),
             compartment_id=explicit_compartment,
         )
         client = OCIClient(config)
 
         assert client.compartment_id == explicit_compartment
 
-    def test_client_creation_api_key(self):
-        """Test creating OCI client with API key auth."""
-        from locus.models.providers.oci.client import OCIAuthType, OCIClient, OCIClientConfig
+    def test_client_creation(self):
+        """Test creating OCI client with whichever auth the active profile uses.
+
+        Uses ``OCI_AUTH_TYPE`` from the environment so the test works with
+        api-key, security-token, instance-principal, or resource-principal
+        profiles. The previous version hardcoded ``API_KEY`` and failed with
+        ``InvalidConfig: 'user': 'missing'`` against session-token profiles.
+        """
+        from locus.models.providers.oci.client import OCIClient, OCIClientConfig
 
         config = OCIClientConfig(
             profile_name=get_test_profile(),
-            auth_type=OCIAuthType.API_KEY,
+            auth_type=get_test_auth_type(),
             service_endpoint=get_test_endpoint(),
         )
         client = OCIClient(config)
@@ -154,28 +173,29 @@ class TestOCIModelIntegration:
     @pytest.mark.asyncio
     async def test_model_initialization(self):
         """Test OCIModel initializes correctly."""
-        from locus.models.providers.oci import OCIAuthType, OCIModel
+        from locus.models.providers.oci import OCIModel
 
         model_id = os.environ.get("OCI_MODEL_ID")
         if not model_id:
             pytest.skip("OCI_MODEL_ID environment variable not set")
 
+        auth = get_test_auth_type()
         model = OCIModel(
             model_id=model_id,
             profile_name=get_test_profile(),
-            auth_type=OCIAuthType.API_KEY,
+            auth_type=auth,
             service_endpoint=get_test_endpoint(),
             compartment_id=get_test_compartment(),
         )
 
         assert model.config.model_id == model_id
-        assert model.config.auth_type == OCIAuthType.API_KEY
+        assert model.config.auth_type == auth
 
     @pytest.mark.asyncio
     async def test_model_complete_simple(self):
         """Test simple completion with OCIModel."""
         from locus.core.messages import Message
-        from locus.models.providers.oci import OCIAuthType, OCIModel
+        from locus.models.providers.oci import OCIModel
 
         model_id = os.environ.get("OCI_MODEL_ID")
         if not model_id:
@@ -188,7 +208,7 @@ class TestOCIModelIntegration:
         model = OCIModel(
             model_id=model_id,
             profile_name=get_test_profile(),
-            auth_type=OCIAuthType.API_KEY,
+            auth_type=get_test_auth_type(),
             service_endpoint=get_test_endpoint(),
             compartment_id=compartment,
             max_tokens=50,
@@ -211,7 +231,7 @@ class TestOCIModelIntegration:
     async def test_model_stream(self):
         """Test streaming with OCIModel."""
         from locus.core.messages import Message
-        from locus.models.providers.oci import OCIAuthType, OCIModel
+        from locus.models.providers.oci import OCIModel
 
         model_id = os.environ.get("OCI_MODEL_ID")
         if not model_id:
@@ -224,7 +244,7 @@ class TestOCIModelIntegration:
         model = OCIModel(
             model_id=model_id,
             profile_name=get_test_profile(),
-            auth_type=OCIAuthType.API_KEY,
+            auth_type=get_test_auth_type(),
             service_endpoint=get_test_endpoint(),
             compartment_id=compartment,
             max_tokens=50,

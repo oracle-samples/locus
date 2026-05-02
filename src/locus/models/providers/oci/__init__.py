@@ -94,7 +94,7 @@ class OCIModel(BaseModel):
         model_id: str = "cohere.command-r-plus",
         compartment_id: str | None = None,
         profile_name: str = "DEFAULT",
-        auth_type: str | OCIAuthType = OCIAuthType.API_KEY,
+        auth_type: str | OCIAuthType | None = None,
         config_file: str = "~/.oci/config",
         service_endpoint: str | None = None,
         max_tokens: int = 4096,
@@ -105,17 +105,33 @@ class OCIModel(BaseModel):
 
         Args:
             model_id: OCI model identifier (e.g., "openai.gpt-oss-20b", "cohere.command-r-plus")
-            compartment_id: OCI compartment OCID (defaults to tenancy from profile)
+            compartment_id: OCI compartment OCID (defaults to ``OCI_COMPARTMENT`` /
+                ``OCI_COMPARTMENT_ID`` env var, then to the tenancy from profile)
             profile_name: OCI config profile name from ~/.oci/config
-            auth_type: Authentication type (api_key, security_token, instance_principal)
+            auth_type: Authentication type (api_key, security_token,
+                instance_principal). When ``None`` (default), reads
+                ``OCI_AUTH_TYPE`` from env, falling back to ``api_key``.
             config_file: Path to OCI config file
             service_endpoint: Full OCI GenAI service endpoint URL
             max_tokens: Maximum tokens for response
             temperature: Model temperature (0.0-1.0)
             **kwargs: Additional model parameters
         """
+        if auth_type is None:
+            import os
+
+            auth_type = os.getenv("OCI_AUTH_TYPE", "api_key")
         if isinstance(auth_type, str):
             auth_type = OCIAuthType(auth_type)
+
+        # Resolve compartment_id with this precedence:
+        #   1. explicit ``compartment_id=`` arg
+        #   2. ``OCI_COMPARTMENT`` / ``OCI_COMPARTMENT_ID`` env var
+        #   3. tenancy from the profile (handled inside OCIClient)
+        if compartment_id is None:
+            import os
+
+            compartment_id = os.getenv("OCI_COMPARTMENT") or os.getenv("OCI_COMPARTMENT_ID")
 
         config = OCIConfig(
             model_id=model_id,
