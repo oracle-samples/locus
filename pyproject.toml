@@ -159,8 +159,13 @@ include = [
 
 # Environments
 [tool.hatch.envs.default]
+# Pull in ``server`` (fastapi) and ``mcp`` so the strict mypy pass
+# under ``hatch run check`` has the right type stubs available for
+# ``locus.server.*``, ``locus.a2a.*``, and ``locus.integrations.*``.
+# Without these, mypy reports "Untyped decorator makes function ..."
+# on every FastAPI ``@app.get/.post`` and on MCP imports.
 dependencies = [
-    "locus[dev]",
+    "locus[dev,server,mcp]",
 ]
 
 [tool.hatch.envs.default.scripts]
