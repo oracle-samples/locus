@@ -34,7 +34,7 @@ skill = Skill(
 )
 
 agent = Agent(config=AgentConfig(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     system_prompt="You are a security reviewer. Use available skills.",
     skills=[skill],
 ))

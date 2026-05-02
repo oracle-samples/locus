@@ -38,7 +38,7 @@ from locus.memory.backends.file import FileCheckpointer
 from locus.server import AgentServer
 
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[search, summarise],
     checkpointer=FileCheckpointer(directory="./threads"),
 )

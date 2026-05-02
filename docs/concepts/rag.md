@@ -29,7 +29,7 @@ await retriever.add_documents([
 ])
 
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[create_rag_tool(retriever)],
 )
 ```

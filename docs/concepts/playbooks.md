@@ -38,7 +38,7 @@ incident_triage = Playbook(
 )
 
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[read_file, search_logs, analyze_logs, count_errors],
     hooks=[PlaybookEnforcerHook(playbook=incident_triage)],
 )
@@ -138,7 +138,7 @@ steps:
 from locus.playbooks import PlaybookEnforcerHook
 
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[lookup_customer, lookup_order, refund],
     hooks=[PlaybookEnforcerHook(playbook=refund)],
 )

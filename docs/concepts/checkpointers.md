@@ -16,7 +16,7 @@ from locus import Agent
 from locus.memory.backends import oci_bucket_checkpointer
 
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[search, summarise],
     checkpointer=oci_bucket_checkpointer(
         bucket_name="my-app-checkpoints",
