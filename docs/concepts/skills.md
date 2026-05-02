@@ -1,70 +1,170 @@
 # Skills
 
-Skills are filesystem-first capability disclosure — the
-[AgentSkills.io](https://agentskills.io) pattern. Drop a folder with a
-`SKILL.md`, a few example files, and a tool definition; the agent
-loads it on demand.
+Skills are **filesystem-first capability bundles** — drop a folder
+with a `SKILL.md`, point your agent at the parent directory, and the
+agent loads each skill on demand using progressive disclosure:
 
-```text
-my_skill/
-├── SKILL.md         # frontmatter + body — what the skill is, when to use it
-├── examples/
-│   ├── one.md
-│   └── two.md
-└── tools/
-    └── analyse.py
+- **L1 — catalog.** Names + one-line descriptions live in the system
+  prompt. Cheap, always loaded.
+- **L2 — instructions.** When the model decides a skill is relevant,
+  the full `SKILL.md` body loads into the conversation.
+- **L3 — resources.** Scripts, references, and assets in
+  `scripts/`, `references/`, `assets/` subfolders only enter context
+  when the agent reaches for them.
+
+This is the [AgentSkills.io](https://agentskills.io) spec. It's how
+you compose **broad agents** (one model, many domain skills) without
+blowing the context budget on capabilities the run won't use.
+
+```python
+from locus import Agent
+from locus.agent import AgentConfig
+from locus.skills import Skill
+
+skill = Skill(
+    name="code-review",
+    description="Use when reviewing code for bugs and security issues.",
+    instructions=(
+        "# Code Review Checklist\n"
+        "1. Check for SQL injection\n"
+        "2. Check for hardcoded credentials\n"
+        "3. Check error handling\n"
+        "Report findings as: FINDING: <description>"
+    ),
+)
+
+agent = Agent(config=AgentConfig(
+    model="oci:openai.gpt-5",
+    system_prompt="You are a security reviewer. Use available skills.",
+    skills=[skill],
+))
 ```
+
+## When to reach for skills
+
+| Situation | Skills? |
+|---|---|
+| One agent that handles many domains (research / coding / triage) — context budget would explode if every domain's prompt is always loaded | **yes — progressive disclosure earns its keep here** |
+| Capability written and edited by non-engineers (markdown, not code) | **yes** |
+| Reusable across agents and projects (clone the skill folder) | **yes** |
+| Single-domain agent with a fixed system prompt | no — just put the prompt in `system_prompt=` |
+| Strict compliance workflow with audit-able steps | use [Playbooks](playbooks.md) instead — skills are *recommendations*, playbooks *enforce* |
+
+## Getting started
+
+### Programmatic — define a skill in code
 
 ```python
 from locus.skills import Skill
 
-researcher = Skill.from_file("./my_skill/SKILL.md")
-agent = Agent(model=..., skills=[researcher])
+researcher = Skill(
+    name="vendor-research",
+    description="Use when the task is a sourcing decision (vendor, price, RFP).",
+    instructions=(
+        "# Vendor Research\n\n"
+        "1. Look up vendors with `vendor_lookup`.\n"
+        "2. Quote each option with `quote_price`.\n"
+        "3. Compare on (price, lead-time, vendor-rating).\n"
+        "4. Return a recommendation with reasoning.\n"
+    ),
+    allowed_tools=["vendor_lookup", "quote_price"],
+)
 ```
 
-The agent reads the `SKILL.md` body when the skill seems relevant
-(progressive disclosure — the model doesn't load everything at every
-turn). Tools defined inside the skill folder become available when the
-skill is loaded.
+`allowed_tools` scopes which tools the skill may invoke when active —
+enforced at the loop level. A skill with `allowed_tools=None` can use
+any tool registered with the agent.
 
-## Why filesystem-first
+### Filesystem — drop a `SKILL.md`
 
-- Agent capabilities are version-controllable like any other code.
-- Non-engineers can edit a skill (it's mostly markdown).
-- Skills are sharable across projects via plain `git clone`.
-- Easy to grep, easy to diff, easy to remove.
-
-## SKILL.md shape
+```text
+skills/vendor-research/
+├── SKILL.md
+├── scripts/
+│   └── compare.py
+└── references/
+    └── pricing-tiers.md
+```
 
 ```markdown
 ---
 name: vendor-research
-description: Read the vendor catalogue and quote prices. Use when the task is a sourcing decision.
-when_to_use: When the prompt names "vendor", "price", "RFP", or asks for sourcing options.
-tools: ["./tools/lookup.py", "./tools/quote.py"]
+description: Use when the task is a sourcing decision (vendor, price, RFP).
+allowed-tools: vendor_lookup quote_price
+metadata:
+  author: ops-team
+  version: 1.0
 ---
 
 # Vendor Research
 
-Long-form context the agent reads when the skill loads. Examples,
-constraints, error patterns to avoid, escalation rules.
+Look up vendors, quote each, compare on price / lead-time /
+vendor-rating. Reference `references/pricing-tiers.md` for the
+internal tier-to-discount mapping. Use `scripts/compare.py` if you
+need a structured comparison spreadsheet.
 ```
 
-Frontmatter is structured (loaded as metadata); the body is what the
-agent reads.
+### Load and attach
 
-## When to use
+```python
+from pathlib import Path
+from locus.skills import Skill
 
-- A reusable capability that crosses agents (research, summarisation,
-  bug-triage).
-- Knowledge that's easier to write in markdown than to encode in a
-  system prompt.
-- Capabilities that need their own tools.
+skills = Skill.from_directory(Path("./skills"))   # all SKILL.md folders
+# …or one at a time:
+single = Skill.from_file("./skills/vendor-research")
 
-## Tutorial
+agent = Agent(config=AgentConfig(model=..., skills=skills))
+```
 
-[`tutorial_32_skills.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_32_skills.py).
+## Why progressive disclosure earns its keep
 
-## Source
+A naive "stuff every capability into the system prompt" approach
+costs you tokens on every turn for skills the run never uses. With
+progressive disclosure:
 
-`src/locus/skills/`.
+- The catalog is ~1 line per skill — fits 50+ skills in a few hundred
+  tokens.
+- The full instructions only load when the model decides the skill is
+  relevant.
+- Resource files (`scripts/`, `references/`, `assets/`) load only
+  when the agent explicitly opens them — typically once or twice per
+  run, not every turn.
+
+For an agent with 30 skills, that's the difference between **30k
+tokens of system prompt every turn** and **~600 tokens catalog +
+2-3k of one skill's instructions when it's the right call**.
+
+## Skill vs Playbook vs Tool
+
+Easy to confuse. Quick disambiguation:
+
+| Primitive | What it is | When to use |
+|---|---|---|
+| **Tool** | A typed function the model can call | The atomic unit — every primitive bottoms out in tools |
+| **Skill** | A markdown bundle the model loads when relevant | Reusable capability with prose instructions |
+| **Playbook** | An ordered, enforced execution plan | Compliance / audit / exact-sequence requirements |
+
+A skill *suggests*; a playbook *enforces*. A tool is the verb both
+of them call.
+
+## Common gotchas
+
+| Symptom | Likely cause |
+|---|---|
+| Skill never activates | `description` doesn't match how the user phrases the request. Rewrite it as a "use when…" sentence with the user's vocabulary. |
+| All skills load every turn | Progressive disclosure only kicks in if `skills=[...]` is set — passing skills as raw text in `system_prompt=` defeats it. |
+| `allowed_tools` is silently ignored | Tools must also be registered on the agent (`tools=[...]`). The skill's `allowed_tools` is a *subset* filter, not a registration. |
+| Skill resource file isn't read | The model has to ask for it. If a reference is mandatory, inline its key bullets in `instructions=` instead. |
+
+## Source and tutorial
+
+- [`tutorial_32_skills.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_32_skills.py) — programmatic and filesystem-loaded skills end-to-end.
+- [`locus.skills`](https://github.com/oracle-samples/locus/tree/main/src/locus/skills) — `Skill`, `SkillsPlugin`.
+- [AgentSkills.io specification](https://agentskills.io) — the format locus implements.
+
+## See also
+
+- [Playbooks](playbooks.md) — ordered, enforced plans (compliance-grade).
+- [Tools](tools.md) — what skills ultimately call.
+- [Prompts](prompts.md) — for single-domain agents, a system prompt is simpler.

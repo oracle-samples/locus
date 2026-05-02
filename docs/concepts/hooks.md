@@ -61,7 +61,7 @@ no-op defaults from the base class.
 
 ```python
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[search, book_flight],
     hooks=[AuditHook()],
 )
@@ -86,7 +86,7 @@ from locus.hooks.builtin import (
 )
 
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[...],
     hooks=[
         StructuredLoggingHook(),       # JSON logs at every phase
@@ -132,7 +132,7 @@ call is higher than the cost of a second model round-trip.
 ```python
 agent = Agent(
     ...,
-    hooks=[SteeringHook(approver="oci:openai.gpt-5.5")],
+    hooks=[SteeringHook(approver="oci:openai.gpt-5")],
 )
 ```
 

@@ -50,7 +50,7 @@ stdin/stdout, and discovers what tools the server exposes.
 from locus import Agent
 
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[*fs.tools()],          # MCP tools become locus tools
     system_prompt="You can read files in /data.",
 )
@@ -136,7 +136,7 @@ analytics = LocusMCPServer(              # producer side
 analytics.run_http(port=7400, in_background=True)
 
 agent_a = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[*fs.tools(), summarise_csv, plot_histogram],
 )
 ```
