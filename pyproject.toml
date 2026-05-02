@@ -175,7 +175,13 @@ dependencies = [
 test = "pytest {args:tests/unit}"
 test-integration = "pytest {args:tests/integration}"
 test-all = "pytest {args:tests}"
-test-cov = "pytest --cov=src/locus --cov-report=term-missing --cov-report=html {args:tests/unit}"
+test-cov = "pytest --cov=src/locus --cov-report=term-missing --cov-report=html --cov-report=json {args:tests/unit}"
+# Refresh the per-file coverage baseline (commit the resulting
+# ``scripts/coverage_baseline.json``).
+cov-baseline-update = [
+    "pytest --cov=src/locus --cov-report=json {args:tests/unit}",
+    "python scripts/coverage_ratchet.py --update",
+]
 test-fast = "pytest -n auto {args:tests/unit}"
 lint = "ruff check src tests examples"
 lint-fix = "ruff check --fix src tests examples"
@@ -609,7 +615,7 @@ exclude_lines = [
     "class .*\\bProtocol\\):",
     "@overload",
 ]
-fail_under = 80
+fail_under = 90
 show_missing = true
 
 # Note: ``[dependency-groups]`` (PEP 735) was previously used here but

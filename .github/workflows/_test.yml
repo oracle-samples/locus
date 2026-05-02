@@ -42,8 +42,37 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev,all]"
 
-      - name: Run unit tests
-        run: pytest tests/unit/
+      - name: Run unit tests with coverage
+        # ``--cov-fail-under`` is set in pyproject.toml ([tool.coverage.report].fail_under).
+        # Generates ``coverage.json`` for the per-file ratchet step below
+        # plus ``coverage.xml`` for any external coverage uploader.
+        run: |
+          pytest tests/unit/ \
+            --cov=src/locus \
+            --cov-report=term-missing \
+            --cov-report=json \
+            --cov-report=xml
+
+      # Per-file regression gate: fail if any tracked file's coverage
+      # dropped below the value committed in scripts/coverage_baseline.json
+      # (refreshed with `python scripts/coverage_ratchet.py --update`).
+      # Only runs on the highest-supported Python so we don't double-fail
+      # the matrix when an older runtime emits slightly different branch
+      # counts.
+      - name: Coverage ratchet (per-file regression gate)
+        if: matrix.python-version == '3.14'
+        run: python scripts/coverage_ratchet.py --check
+
+      # actions/upload-artifact@v4
+      - name: Upload coverage artifact
+        if: matrix.python-version == '3.14'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: coverage-report
+          path: |
+            coverage.xml
+            coverage.json
+          retention-days: 14
 
       - name: Ensure tests did not create stray files
         run: |
