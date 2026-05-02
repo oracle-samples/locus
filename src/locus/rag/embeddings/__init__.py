@@ -9,6 +9,8 @@ Available providers:
 - OpenAIEmbeddings: OpenAI text-embedding models
 """
 
+from typing import Any
+
 from locus.rag.embeddings.base import (
     BaseEmbedding,
     EmbeddingConfig,
@@ -29,7 +31,7 @@ __all__ = [
 ]
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     """Lazy import providers to avoid requiring all dependencies."""
     if name == "OCIEmbeddings":
         from locus.rag.embeddings.oci import OCIEmbeddings

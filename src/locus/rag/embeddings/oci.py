@@ -182,15 +182,19 @@ class OCIEmbeddings(BaseModel, BaseEmbedding):
 
             config_file = os.path.expanduser(config_file)
 
-        self._oci_config_dict = oci.config.from_file(
+        # ``oci.config.from_file`` returns the parsed config dict; the
+        # ``_oci_config_dict`` field is declared as ``... | None`` to
+        # represent the pre-init state, so bind to a local before use.
+        config_dict: dict[str, Any] = oci.config.from_file(
             config_file,
             self.oci_config.profile_name,
         )
+        self._oci_config_dict = config_dict
 
         # Determine service endpoint
         endpoint = self.oci_config.service_endpoint
         if endpoint is None:
-            region = self._oci_config_dict.get("region", "us-chicago-1")
+            region = config_dict.get("region", "us-chicago-1")
             endpoint = f"https://inference.generativeai.{region}.oci.oraclecloud.com"
 
         # Determine auth type - respect explicit setting, only auto-detect if needed
@@ -202,21 +206,21 @@ class OCIEmbeddings(BaseModel, BaseEmbedding):
         # 3. Config doesn't have user field (api_key profiles have user)
         if (
             auth_type != "api_key"
-            and "security_token_file" in self._oci_config_dict
-            and "user" not in self._oci_config_dict
+            and "security_token_file" in config_dict
+            and "user" not in config_dict
         ):
             auth_type = "security_token"
 
         # Create client based on auth type
         if auth_type == "security_token":
-            token_file = self._oci_config_dict.get("security_token_file")
+            token_file = config_dict.get("security_token_file")
             if token_file:
                 import os as os_module
 
                 token_file = os_module.path.expanduser(token_file)
                 with open(token_file) as f:
                     token = f.read().strip()
-                key_file = os_module.path.expanduser(self._oci_config_dict["key_file"])
+                key_file = os_module.path.expanduser(config_dict["key_file"])
                 private_key = oci.signer.load_private_key_from_file(key_file)
                 signer = oci.auth.signers.SecurityTokenSigner(token, private_key)
                 self._client = GenerativeAiInferenceClient(
@@ -259,7 +263,8 @@ class OCIEmbeddings(BaseModel, BaseEmbedding):
         if self.oci_config.compartment_id:
             return self.oci_config.compartment_id
         if self._oci_config_dict:
-            return self._oci_config_dict.get("tenancy", "")
+            tenancy: str = self._oci_config_dict.get("tenancy", "")
+            return tenancy
         return ""
 
     async def embed(self, text: str) -> EmbeddingResult:

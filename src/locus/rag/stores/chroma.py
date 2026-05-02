@@ -229,9 +229,11 @@ class ChromaVectorStore(BaseModel, BaseVectorStore):
             },
         }
 
+        # chromadb's typed shapes ask for ``Sequence[Sequence[float]]``;
+        # we pass the wider ``list[list[float]]`` we have at hand.
         collection.upsert(
             ids=[doc_id],
-            embeddings=[document.embedding],
+            embeddings=[document.embedding],  # type: ignore[arg-type, unused-ignore]
             documents=[document.content],
             metadatas=[metadata],
         )
@@ -269,9 +271,9 @@ class ChromaVectorStore(BaseModel, BaseVectorStore):
         if ids:
             collection.upsert(
                 ids=ids,
-                embeddings=embeddings,
+                embeddings=embeddings,  # type: ignore[arg-type, unused-ignore]
                 documents=docs,
-                metadatas=metadatas,
+                metadatas=metadatas,  # type: ignore[arg-type, unused-ignore]
             )
 
         return ids
@@ -291,7 +293,7 @@ class ChromaVectorStore(BaseModel, BaseVectorStore):
         if not result["ids"]:
             return None
 
-        metadata = result["metadatas"][0] if result["metadatas"] else {}
+        metadata: dict[str, Any] = dict(result["metadatas"][0]) if result["metadatas"] else {}
         created_at_str = metadata.pop("created_at", None)
         created_at = datetime.fromisoformat(created_at_str) if created_at_str else datetime.now(UTC)
 
@@ -303,7 +305,7 @@ class ChromaVectorStore(BaseModel, BaseVectorStore):
         return Document(
             id=result["ids"][0],
             content=result["documents"][0] if result["documents"] else "",
-            embedding=embedding,
+            embedding=embedding,  # type: ignore[arg-type, unused-ignore]
             metadata=metadata,
             created_at=created_at,
         )
@@ -334,7 +336,7 @@ class ChromaVectorStore(BaseModel, BaseVectorStore):
         collection = self._get_collection()
 
         # Build where filter for metadata
-        where = None
+        where: dict[str, Any] | None = None
         if metadata_filter:
             if len(metadata_filter) == 1:
                 key, value = next(iter(metadata_filter.items()))
@@ -343,7 +345,7 @@ class ChromaVectorStore(BaseModel, BaseVectorStore):
                 where = {"$and": [{k: {"$eq": v}} for k, v in metadata_filter.items()]}
 
         result = collection.query(
-            query_embeddings=[query_embedding],
+            query_embeddings=[query_embedding],  # type: ignore[arg-type, unused-ignore]
             n_results=limit,
             where=where,
             include=["embeddings", "documents", "metadatas", "distances"],
@@ -374,7 +376,7 @@ class ChromaVectorStore(BaseModel, BaseVectorStore):
             if threshold is not None and score < threshold:
                 continue
 
-            metadata = metadatas[i] if i < len(metadatas) else {}
+            metadata: dict[str, Any] = dict(metadatas[i]) if i < len(metadatas) else {}
             created_at_str = metadata.pop("created_at", None)
             created_at = (
                 datetime.fromisoformat(created_at_str) if created_at_str else datetime.now(UTC)
@@ -383,7 +385,7 @@ class ChromaVectorStore(BaseModel, BaseVectorStore):
             doc = Document(
                 id=doc_id,
                 content=documents[i] if i < len(documents) else "",
-                embedding=embeddings[i] if i < len(embeddings) else None,
+                embedding=embeddings[i] if i < len(embeddings) else None,  # type: ignore[arg-type, unused-ignore]
                 metadata=metadata,
                 created_at=created_at,
             )
@@ -401,12 +403,13 @@ class ChromaVectorStore(BaseModel, BaseVectorStore):
     async def count(self) -> int:
         """Count documents."""
         collection = self._get_collection()
-        return collection.count()
+        n: int = collection.count()
+        return n
 
     async def clear(self) -> int:
         """Delete all documents."""
         collection = self._get_collection()
-        count = collection.count()
+        count: int = collection.count()
 
         # Delete collection and recreate
         client = self._get_client()

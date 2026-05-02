@@ -363,7 +363,7 @@ class AudioProcessor:
     ):
         self.use_whisper = use_whisper
         self.whisper_model = whisper_model
-        self._whisper = None
+        self._whisper: Any = None
 
     def supports(self, content_type: ContentType) -> bool:
         return content_type == ContentType.AUDIO
@@ -448,8 +448,9 @@ class AudioProcessor:
                 temp_path = f.name
 
             try:
-                result = self._whisper.transcribe(temp_path)
-                return result["text"].strip()
+                result: dict[str, Any] = self._whisper.transcribe(temp_path)
+                text: str = result["text"].strip()
+                return text
             finally:
                 os.unlink(temp_path)
 
@@ -476,7 +477,7 @@ class MultimodalProcessor:
         use_ocr: bool = True,
         use_whisper: bool = True,
     ):
-        self.processors = {
+        self.processors: dict[ContentType, ContentProcessor] = {
             ContentType.TEXT: TextProcessor(),
             ContentType.MARKDOWN: TextProcessor(),
             ContentType.HTML: TextProcessor(),

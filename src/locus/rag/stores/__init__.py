@@ -14,6 +14,8 @@ Available stores:
 - InMemoryVectorStore: In-memory store (testing)
 """
 
+from typing import Any
+
 from locus.rag.stores.base import (
     BaseVectorStore,
     Document,
@@ -41,7 +43,7 @@ __all__ = [
 ]
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     """Lazy import stores to avoid requiring all dependencies."""
     if name == "OracleVectorStore":
         from locus.rag.stores.oracle import OracleVectorStore

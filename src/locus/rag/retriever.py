@@ -204,7 +204,8 @@ class RAGRetriever(BaseModel):
             documents.append(doc)
 
         # Store all documents
-        return await self.store.add_batch(documents)
+        added: list[str] = await self.store.add_batch(documents)
+        return added
 
     async def add_documents(
         self,
@@ -307,7 +308,8 @@ class RAGRetriever(BaseModel):
             )
             documents.append(doc)
 
-        return await self.store.add_batch(documents)
+        added: list[str] = await self.store.add_batch(documents)
+        return added
 
     async def add_image(
         self,
@@ -345,7 +347,8 @@ class RAGRetriever(BaseModel):
             raw_content=result.raw_content,
         )
 
-        return await self.store.add(doc)
+        doc_added: str = await self.store.add(doc)
+        return doc_added
 
     async def add_pdf(
         self,
@@ -412,7 +415,8 @@ class RAGRetriever(BaseModel):
             raw_content=result.raw_content,
         )
 
-        return await self.store.add(doc)
+        doc_added: str = await self.store.add(doc)
+        return doc_added
 
     async def retrieve(
         self,
@@ -495,21 +499,24 @@ class RAGRetriever(BaseModel):
 
     async def delete_document(self, doc_id: str) -> bool:
         """Delete a document by ID."""
-        return await self.store.delete(doc_id)
+        deleted: bool = await self.store.delete(doc_id)
+        return deleted
 
     async def clear(self) -> int:
         """Delete all documents."""
-        return await self.store.clear()
+        cleared: int = await self.store.clear()
+        return cleared
 
     async def count(self) -> int:
         """Count documents in store."""
-        return await self.store.count()
+        n: int = await self.store.count()
+        return n
 
     async def close(self) -> None:
         """Close resources."""
         await self.store.close()
 
-    def as_tool(self, name: str = "search_knowledge", description: str | None = None):
+    def as_tool(self, name: str = "search_knowledge", description: str | None = None) -> Any:
         """
         Create a tool function for agent use.
 

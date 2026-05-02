@@ -516,6 +516,13 @@ module = [
     "fastapi.*",
     "uvicorn.*",
     "whisper.*",
+    # Optional deps for ``locus.rag.multimodal`` — only loaded inside
+    # try/except for users who want OCR / PDF / image / audio extraction.
+    "pytesseract.*",
+    "PIL.*",
+    "pypdf.*",
+    "PyPDF2.*",
+    "pdf2image.*",
 ]
 ignore_missing_imports = true
 
@@ -528,7 +535,6 @@ ignore_missing_imports = true
 # the strict block above.
 [[tool.mypy.overrides]]
 module = [
-    "locus.rag.*",
     # ``locus.hooks.builtin.*`` is held back: the module-level migration
     # surfaces a real runtime bug — the LoggingHook / GuardrailsHook /
     # TelemetryHook signatures pre-date the event-based ``HookProvider``
