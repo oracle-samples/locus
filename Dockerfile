@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1.7
-#
 # Multi-stage Dockerfile for a locus AgentServer deployment.
 #
 # Build:

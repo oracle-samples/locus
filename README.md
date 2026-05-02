@@ -221,6 +221,31 @@ each tutorial is a working program against a real model.
 | **Production** | [`19_guardrails_security`](examples/tutorial_19_guardrails_security.py) · [`20_checkpoint_backends`](examples/tutorial_20_checkpoint_backends.py) · [`28_agent_server`](examples/tutorial_28_agent_server.py) · [`37_termination`](examples/tutorial_37_termination.py) |
 | **OCI** | [`29_model_providers`](examples/tutorial_29_model_providers.py) · [`40_oci_dac`](examples/tutorial_40_oci_dac.py) — Dedicated AI Cluster endpoints |
 
+## Deploy
+
+`AgentServer` is a drop-in FastAPI app. The repo ships a turn-key
+deployment story:
+
+- Multi-stage [`Dockerfile`](Dockerfile) — non-root user, `HEALTHCHECK`
+  on `/health`, `pip install ".[oci,server,checkpoints]"`.
+- Helm chart at [`deploy/helm/locus-agent/`](deploy/helm/locus-agent/) —
+  Deployment, Service, ServiceAccount (with workload-identity hooks),
+  Secret, HPA, Ingress, all driven by `values.yaml`.
+- `pip install "locus[oci,server]"` for production installs.
+
+```bash
+docker build -t iad.ocir.io/$NAMESPACE/locus-agent:0.1.0 .
+helm install locus-agent ./deploy/helm/locus-agent \
+  --set image.repository=iad.ocir.io/$NAMESPACE/locus-agent \
+  --set image.tag=0.1.0 \
+  --set auth.apiKey=$(openssl rand -hex 16) \
+  --set ociBucket.enabled=true \
+  --set ociBucket.bucketName=locus-threads \
+  --set ociBucket.namespace=$NAMESPACE
+```
+
+[Full deploy guide →](https://oracle-samples.github.io/locus/how-to/deploy/)
+
 ## Repo layout
 
 ```text
