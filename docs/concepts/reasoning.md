@@ -1,59 +1,141 @@
 # Reasoning
 
-A model that loops without thinking is a model that pays you to be
-wrong faster. locus ships three reasoning add-ons that are each a
-single argument on `Agent(...)`.
+A model that loops without thinking just pays you to be wrong faster.
+locus ships three reasoning add-ons that catch wrong premises *before*
+the next tool call, not in the post-mortem:
+
+- **Reflexion** — after each turn, the agent self-evaluates and
+  re-plans if the last step was wrong.
+- **Grounding** — every factual claim is checked against tool results
+  by an LLM-as-judge before the answer goes out.
+- **Causal reasoning** — a running cause-effect graph that surfaces
+  contradictions linear chat history hides.
+
+Each is a single argument on `Agent(...)`. You can combine them.
+
+## When to pick which
+
+| Situation | Add-on |
+|---|---|
+| Agent loops endlessly or stacks tool calls on a wrong premise | `reflexion=True` |
+| Customer-facing answers where hallucinated facts cost money (drug names, prices, account numbers) | `grounding=True` |
+| Multi-step diagnosis or root-cause analysis where one bad assumption poisons the chain | `causal=True` |
+| All three apply — production research agent, compliance-sensitive answer | turn them all on |
+| Quick prototype, low-stakes Q&A | leave them off — extra model calls are wasted |
+
+The cost is more model round-trips. The win is fewer wrong answers.
+For short tasks the math doesn't pencil out. For runs of 5+ tool calls
+or anything that ships to a customer, it almost always does.
+
+## Getting started
+
+### Reflexion
+
+Self-evaluate per turn.
+
+```python
+from locus import Agent
+
+agent = Agent(
+    model="oci:openai.gpt-5",
+    tools=[search, summarise],
+    reflexion=True,
+)
+
+result = agent.run_sync("Find Q3 revenue and explain the YoY change.")
+print(result.metrics.reflexion_iterations)
+```
+
+After each tool result, the agent is asked: *given this, was the last
+step right?* If the answer is "no", the next turn rewrites the plan
+instead of stacking another tool call on top. Streamed as
+`ReflectEvent` — render it in your UI and the user can literally watch
+the agent change its mind.
+
+### Grounding
+
+Verify claims before answering.
 
 ```python
 agent = Agent(
     model="oci:openai.gpt-5",
-    tools=[search, summarise, validate_claim],
-    reflexion=True,    # self-evaluate per turn
-    grounding=True,    # LLM-as-judge claim verification
-    causal=True,       # cause-effect chain analysis
+    tools=[search_pricing, lookup_inventory],
+    grounding=True,
 )
+
+result = agent.run_sync("What's the cheapest GPU instance with 80GB?")
+for claim in result.grounding_report.unsupported:
+    print(f"DROPPED: {claim.text}")
 ```
-
-## Reflexion
-
-After each tool result, the agent is asked: *"given this, was your
-last step right?"* If the answer is "no", the next turn rewrites the
-plan instead of stacking another tool call on top of a wrong premise.
-
-Source: [Shinn et al., 2023](https://arxiv.org/abs/2303.11366) plus a
-locus-native execution loop. Implementation in
-`src/locus/reasoning/reflexion.py`. Streamed as `ReflectEvent`.
-
-## Grounding
 
 Before the agent finalises an answer, every factual claim is checked
 against the conversation's tool results. A second model — the judge —
-reads each claim and the supporting tool output and emits "supported /
-unsupported / partially supported". Unsupported claims are removed or
-sent back for re-research.
+reads each claim and the supporting tool output and emits *supported /
+unsupported / partially supported*. Unsupported claims are dropped or
+sent back for re-research. Streamed as `GroundingEvent`.
 
-Source: `src/locus/reasoning/grounding.py`.
+### Causal
 
-## Causal
+Track cause-effect chains.
 
-The agent maintains a running cause-effect chain — *"did X because Y;
-Y because Z"* — and checks new conclusions against it. Surfaces
-contradictions that the linear chat history hides.
+```python
+agent = Agent(
+    model="oci:openai.gpt-5",
+    tools=[fetch_logs, query_metrics, traceback],
+    causal=True,
+)
 
-Source: `src/locus/reasoning/causal.py`.
+result = agent.run_sync("Why is checkout p99 latency up 4x since 14:00?")
+print(result.causal_chain.root_causes)
+```
 
-## When to use
+The agent maintains a running cause-effect graph — *X happened
+because Y; Y because Z* — and validates new conclusions against it.
+Cycles, contradictions, and unsupported jumps surface as the chain
+grows. Particularly useful for incident triage where the linear chat
+log doesn't show that turn 3's "fix" contradicts turn 1's "root
+cause".
 
-- **Reflexion** — agents that loop, especially research and
-  long-running planning.
-- **Grounding** — anything customer-facing where hallucinated facts
-  are bad. Drug names. Account numbers. Prices.
-- **Causal** — multi-step explanations where a wrong root assumption
-  silently poisons everything downstream.
+## Combining them
 
-You can combine all three. The cost is more model calls; the win is
-fewer wrong answers.
+```python
+agent = Agent(
+    model="oci:openai.gpt-5",
+    tools=[...],
+    reflexion=True,
+    grounding=True,
+    causal=True,
+)
+```
 
-## Tutorial
+The order is fixed: reflect first (was the last step right?), build
+the causal graph as you go, ground only at the end (don't waste
+judge tokens on intermediate claims). All three are observable as
+their own event types.
 
-[`tutorial_14_reasoning_patterns.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_14_reasoning_patterns.py).
+## Common gotchas
+
+| Symptom | Likely cause |
+|---|---|
+| Reflexion loops forever | The model can't agree with itself. Cap with `MaxIterations` in your termination condition. |
+| Grounding flags everything as unsupported | The judge model is stricter than the answerer. Use the same model for both, or lower the threshold. |
+| Causal graph has many disconnected nodes | The model isn't naming entities consistently across turns. Sharpen the system prompt to name entities the same way each time. |
+| Reasoning add-ons feel slow | They're extra model calls — that's the trade. Keep them for runs that ship to a human, drop them for hot paths. |
+
+## Source and tutorial
+
+- [`tutorial_14_reasoning_patterns.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_14_reasoning_patterns.py) — all three add-ons end-to-end.
+- [`locus.reasoning.reflexion`](https://github.com/oracle-samples/locus/blob/main/src/locus/reasoning/reflexion.py)
+- [`locus.reasoning.grounding`](https://github.com/oracle-samples/locus/blob/main/src/locus/reasoning/grounding.py)
+- [`locus.reasoning.causal`](https://github.com/oracle-samples/locus/blob/main/src/locus/reasoning/causal.py)
+- [`ReflectNode`](https://github.com/oracle-samples/locus/blob/main/src/locus/loop/nodes.py) in the ReAct loop — where reflection plugs in.
+
+Reflexion: [Shinn et al., 2023](https://arxiv.org/abs/2303.11366).
+Grounding-Stratified Adaptive Replanning: see [GSAR](gsar.md) for the
+typed-evidence variant locus also ships.
+
+## See also
+
+- [GSAR](gsar.md) — typed-grounding layer with weighted scoring and tiered replanning.
+- [Events](events.md) — `ReflectEvent`, `GroundingEvent`, causal node/edge events.
+- [Termination](termination.md) — combine `ConfidenceMet` with reflexion to early-stop on high-confidence answers.
