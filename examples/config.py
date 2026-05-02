@@ -37,7 +37,7 @@ Examples:
 
     # Run with OCI GenAI (V1 transport, OpenAI-compatible endpoint):
     export LOCUS_MODEL_PROVIDER=oci
-    export LOCUS_MODEL_ID=openai.gpt-5.5
+    export LOCUS_MODEL_ID=openai.gpt-5
     export LOCUS_OCI_PROFILE=MY_PROFILE
     python examples/tutorial_01_basic_agent.py
 
@@ -50,7 +50,7 @@ Examples:
 
     # Run with OCI on an OCI VM / OKE node (workload identity):
     export LOCUS_MODEL_PROVIDER=oci
-    export LOCUS_MODEL_ID=openai.gpt-5.5
+    export LOCUS_MODEL_ID=openai.gpt-5
     export LOCUS_OCI_AUTH_TYPE=instance_principal
     export LOCUS_OCI_COMPARTMENT=ocid1.compartment.oc1...
 
@@ -189,7 +189,7 @@ def _pick_oci_transport(model_id: str) -> str:
 
 def _get_oci_model(**kwargs: Any) -> Any:
     """Get an OCI GenAI model — picks V1 vs SDK transport per model family."""
-    model_id = os.environ.get("LOCUS_MODEL_ID", "openai.gpt-5.5")
+    model_id = os.environ.get("LOCUS_MODEL_ID", "openai.gpt-5")
     transport = _pick_oci_transport(model_id)
     if transport == "v1":
         return _get_oci_v1_model(model_id, **kwargs)

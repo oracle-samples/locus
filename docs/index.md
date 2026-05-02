@@ -53,7 +53,7 @@ def book_flight(flight_id: str, customer_id: str) -> dict:
     return billing.charge_and_book(flight_id, customer_id)
 
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[search_flights, book_flight],
     system_prompt="You are a travel concierge. Find a flight, then book it.",
     reflexion=True,                                 # self-correct mid-run
@@ -294,7 +294,7 @@ def book_flight(flight_id: str, customer_id: str) -> dict:
     return billing.charge_and_book(flight_id, customer_id)
 
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[book_flight],
     system_prompt="You are a travel concierge. Book the flight the user asks for.",
 )

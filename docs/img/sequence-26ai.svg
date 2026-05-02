@@ -54,7 +54,7 @@
   <g filter="url(#card)">
     <rect x="700" y="148" width="140" height="44" rx="8" fill="#312D2A"/>
     <text x="770" y="169" text-anchor="middle" font-size="13" font-weight="700" fill="#FFFFFF">OCI GenAI</text>
-    <text x="770" y="184" text-anchor="middle" font-size="10" fill="#D6D3D1" font-family="ui-monospace, monospace">gpt-5.5 · cohere-embed</text>
+    <text x="770" y="184" text-anchor="middle" font-size="10" fill="#D6D3D1" font-family="ui-monospace, monospace">gpt-5 · cohere-embed</text>
   </g>
 
   <g filter="url(#card)">

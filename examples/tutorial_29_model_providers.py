@@ -36,7 +36,7 @@ def example_providers():
 
     print("\nUsage:")
     print('  model = get_model("openai:gpt-4o")')
-    print('  model = get_model("oci:openai.gpt-5.5", profile="DEFAULT")  # → OCIOpenAIModel')
+    print('  model = get_model("oci:openai.gpt-5", profile="DEFAULT")  # → OCIOpenAIModel')
     print(
         '  model = get_model("oci:cohere.command-r-plus", '
         'profile_name="DEFAULT", auth_type="api_key")  # → OCIModel'
@@ -61,11 +61,11 @@ def example_direct():
     # OCI GenAI — V1 transport (recommended for OpenAI/Meta/xAI/Mistral/Gemini)
     print("OCI GenAI — V1 (/openai/v1):")
     print("  from locus.models import OCIOpenAIModel")
-    print('  model = OCIOpenAIModel(model="openai.gpt-5.5", profile="DEFAULT")')
+    print('  model = OCIOpenAIModel(model="openai.gpt-5", profile="DEFAULT")')
     print()
     print("  # Workload identity on OCI VM / OKE / Functions:")
     print("  model = OCIOpenAIModel(")
-    print('      model="openai.gpt-5.5",')
+    print('      model="openai.gpt-5",')
     print('      auth_type="instance_principal",   # or "resource_principal"')
     print('      compartment_id="ocid1.compartment.oc1...",')
     print("  )")

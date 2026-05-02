@@ -94,6 +94,7 @@ class OCIBucketBackend(BaseCheckpointer):
         profile_name: str = "DEFAULT",
         auth_type: str = "api_key",
         region: str | None = None,
+        retry_strategy: Any = None,
         **kwargs: Any,
     ) -> None:
         self.config = OCIBucketConfig(
@@ -107,6 +108,22 @@ class OCIBucketBackend(BaseCheckpointer):
         )
         self._client: ObjectStorageClient | None = None
         self._initialized = False
+        # Override the default retry strategy by passing one explicitly.
+        # Default (None) resolves to ``oci.retry.DEFAULT_RETRY_STRATEGY`` at
+        # first call — exponential backoff with jitter on 429 / 5xx /
+        # transport errors. Pass ``oci.retry.NoneRetryStrategy()`` to
+        # disable retries (e.g. for tests).
+        self._retry_strategy: Any = retry_strategy
+
+    def _get_retry_strategy(self) -> Any:
+        """Return the OCI retry strategy used for every transient-prone call."""
+        if self._retry_strategy is not None:
+            return self._retry_strategy
+        try:
+            import oci
+        except ImportError:  # pragma: no cover
+            return None
+        return oci.retry.DEFAULT_RETRY_STRATEGY
 
     # ------------------------------------------------------------------
     # Capabilities
@@ -173,10 +190,12 @@ class OCIBucketBackend(BaseCheckpointer):
 
         def check_bucket():
             client = self._get_client()
+            retry = self._get_retry_strategy()
             try:
                 client.get_bucket(
                     namespace_name=self.config.namespace,
                     bucket_name=self.config.bucket_name,
+                    retry_strategy=retry,
                 )
             except Exception as e:
                 if "BucketNotFound" in str(e) and self.config.compartment_id:
@@ -190,6 +209,7 @@ class OCIBucketBackend(BaseCheckpointer):
                             storage_tier="Standard",
                             public_access_type="NoPublicAccess",
                         ),
+                        retry_strategy=retry,
                     )
                 else:
                     raise
@@ -223,6 +243,7 @@ class OCIBucketBackend(BaseCheckpointer):
 
     async def _put_bytes(self, object_name: str, body: bytes, content_type: str) -> None:
         client = self._get_client()
+        retry = self._get_retry_strategy()
 
         def _put():
             client.put_object(
@@ -231,6 +252,7 @@ class OCIBucketBackend(BaseCheckpointer):
                 object_name=object_name,
                 put_object_body=body,
                 content_type=content_type,
+                retry_strategy=retry,
             )
 
         await asyncio.to_thread(_put)
@@ -243,6 +265,7 @@ class OCIBucketBackend(BaseCheckpointer):
 
     async def _get_bytes(self, object_name: str) -> bytes | None:
         client = self._get_client()
+        retry = self._get_retry_strategy()
 
         def _get() -> bytes | None:
             try:
@@ -250,6 +273,7 @@ class OCIBucketBackend(BaseCheckpointer):
                     namespace_name=self.config.namespace,
                     bucket_name=self.config.bucket_name,
                     object_name=object_name,
+                    retry_strategy=retry,
                 )
                 return response.data.content
             except Exception as e:
@@ -261,6 +285,7 @@ class OCIBucketBackend(BaseCheckpointer):
 
     async def _delete_object(self, object_name: str) -> bool:
         client = self._get_client()
+        retry = self._get_retry_strategy()
 
         def _delete() -> bool:
             try:
@@ -268,6 +293,7 @@ class OCIBucketBackend(BaseCheckpointer):
                     namespace_name=self.config.namespace,
                     bucket_name=self.config.bucket_name,
                     object_name=object_name,
+                    retry_strategy=retry,
                 )
                 return True
             except Exception as e:
@@ -285,6 +311,7 @@ class OCIBucketBackend(BaseCheckpointer):
     ) -> tuple[list[Any], list[str]]:
         """Return (objects, prefixes) from a ListObjects call."""
         client = self._get_client()
+        retry = self._get_retry_strategy()
 
         def _list():
             kwargs: dict[str, Any] = {
@@ -293,6 +320,7 @@ class OCIBucketBackend(BaseCheckpointer):
                 "prefix": prefix,
                 "limit": min(limit, 1000),
                 "fields": "name,timeModified,size",
+                "retry_strategy": retry,
             }
             if delimiter is not None:
                 kwargs["delimiter"] = delimiter

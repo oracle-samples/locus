@@ -36,7 +36,7 @@ checkpointer = OCIBucketBackend(
 )
 
 agent = Agent(
-    model="oci:openai.gpt-5.5",   # any OCI model — see how-to/oci-models.md
+    model="oci:openai.gpt-5",   # any OCI model — see how-to/oci-models.md
     tools=[...],
     checkpointer=checkpointer,
 )
@@ -50,7 +50,7 @@ from locus.memory.backends import postgresql_checkpointer
 checkpointer = postgresql_checkpointer(
     dsn="postgresql://locus:locus@db.example.com:5432/locus",
 )
-agent = Agent(model="oci:openai.gpt-5.5", tools=[...], checkpointer=checkpointer)
+agent = Agent(model="oci:openai.gpt-5", tools=[...], checkpointer=checkpointer)
 ```
 
 If you build a storage backend directly (`RedisBackend(...)`,

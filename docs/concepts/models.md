@@ -4,7 +4,7 @@ A model is a string. Pick the provider's prefix; locus picks the
 client.
 
 ```python
-agent = Agent(model="oci:openai.gpt-5.5",                ...)  # OCI → V1
+agent = Agent(model="oci:openai.gpt-5",                ...)  # OCI → V1
 agent = Agent(model="oci:cohere.command-r-plus",         ...)  # OCI → SDK
 agent = Agent(model="oci:meta.llama-3.3-70b-instruct",   ...)  # OCI → V1
 agent = Agent(model="openai:gpt-4o",                     ...)  # OpenAI direct
@@ -96,7 +96,7 @@ from locus.models.pooled import PooledModel
 
 agent = Agent(
     model=PooledModel(
-        primary="oci:openai.gpt-5.5",
+        primary="oci:openai.gpt-5",
         fallbacks=["openai:gpt-4o", "anthropic:claude-sonnet"],
     ),
     ...,

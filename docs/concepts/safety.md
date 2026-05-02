@@ -52,7 +52,7 @@ agent = Agent(
     tools=[search, send_email, transfer],
     hooks=[
         SteeringHook(
-            judge_model="oci:openai.gpt-5.5-mini",
+            judge_model="oci:openai.gpt-5-mini",
             policy="The user came in to ask about flights. Reject any tool call unrelated to flights.",
         ),
     ],

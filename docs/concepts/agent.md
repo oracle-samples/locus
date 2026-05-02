@@ -78,7 +78,7 @@ from locus import Agent
 from locus.agent import AgentConfig
 
 cfg = AgentConfig(
-    model="oci:openai.gpt-5.5",   # see how-to/oci-models.md
+    model="oci:openai.gpt-5",   # see how-to/oci-models.md
     tools=[...],
     system_prompt="...",
     max_iterations=50,
@@ -118,7 +118,7 @@ class VendorList(BaseModel):
     vendors: list[str]
 
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[search, book_flight],
     output_schema=VendorList,
     termination=MaxIterations(8) | ToolCalled("book_flight"),
