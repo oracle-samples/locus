@@ -164,7 +164,7 @@ class OpenAIModel(BaseModel):
 
         Detects the o1 / o3 / gpt-5* families. Tolerates a leading
         purely-alphabetic namespace segment so OCI-style model ids
-        (``openai.gpt-5.5``, ``meta.llama-3.3-…``) are treated the same as
+        (``openai.gpt-5``, ``meta.llama-3.3-…``) are treated the same as
         native OpenAI names (``gpt-5.1-chat-latest``). Native ids start
         with a token containing digits/hyphens (``gpt-5``, ``o1-…``) so
         the namespace strip is a no-op for them.

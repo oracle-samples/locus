@@ -23,7 +23,7 @@ Usage:
 
     # OCI GenAI — V1 transport (recommended)
     from locus.models import OCIOpenAIModel
-    model = OCIOpenAIModel(model="openai.gpt-5.5", profile="DEFAULT")
+    model = OCIOpenAIModel(model="openai.gpt-5", profile="DEFAULT")
 
     # OCI GenAI — Cohere R-series
     from locus.models import OCIModel
@@ -35,7 +35,7 @@ Usage:
 
     # String factory — auto-routes to the right transport
     from locus.models import get_model
-    model = get_model("oci:openai.gpt-5.5", profile="DEFAULT")
+    model = get_model("oci:openai.gpt-5", profile="DEFAULT")
 """
 
 from locus.models.base import (

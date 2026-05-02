@@ -51,7 +51,7 @@ from locus import Agent
 from locus.a2a.protocol import A2AServer, AgentCard
 
 research_agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[search_corpus, summarise, cite],
     system_prompt="You read the vendor catalogue and quote prices.",
     checkpointer=OCIBucketBackend(bucket_name="research-threads"),

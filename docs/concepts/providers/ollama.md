@@ -138,7 +138,7 @@ swap one line to point at OCI / OpenAI / Anthropic for production.
 agent = Agent(model="ollama:llama3.3", tools=[...], system_prompt="...")
 
 # Production — same agent, swap the model id:
-agent = Agent(model="oci:openai.gpt-5.5", tools=[...], system_prompt="...")
+agent = Agent(model="oci:openai.gpt-5", tools=[...], system_prompt="...")
 ```
 
 Everything else — tools, hooks, checkpointers, termination, RAG —

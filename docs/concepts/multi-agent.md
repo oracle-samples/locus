@@ -76,7 +76,7 @@ compliance  = Specialist(name="compliance",  agent=compliance_agent,
                          description="Vets vendors against SOC2 / ISO posture.")
 
 orchestrator = Orchestrator(
-    coordinator_model="oci:openai.gpt-5.5",
+    coordinator_model="oci:openai.gpt-5",
     specialists=[procurement, compliance],
     system_prompt="You are the procurement lead. Delegate to the right specialist.",
 )
