@@ -308,7 +308,7 @@ class QdrantVectorStore(BaseModel, BaseVectorStore):
         return Document(
             id=payload.get("doc_id", str(point.id)),
             content=payload.get("content", ""),
-            embedding=list(point.vector) if point.vector else None,
+            embedding=list(point.vector) if point.vector else None,  # type: ignore[arg-type, unused-ignore]
             metadata=payload.get("metadata", {}),
             created_at=datetime.fromisoformat(payload["created_at"])
             if payload.get("created_at")
@@ -358,15 +358,19 @@ class QdrantVectorStore(BaseModel, BaseVectorStore):
             except ImportError:
                 pass
             else:
-                conditions = []
-                for key, value in metadata_filter.items():
-                    conditions.append(
-                        FieldCondition(
-                            key=f"metadata.{key}",
-                            match=MatchValue(value=value),
-                        )
+                # ``Filter.must`` is typed as the broad union of all possible
+                # condition kinds; ``list[FieldCondition]`` is invariant and
+                # would be rejected. Sequence is covariant and accepted.
+                from collections.abc import Sequence
+
+                conditions: Sequence[FieldCondition] = [
+                    FieldCondition(
+                        key=f"metadata.{key}",
+                        match=MatchValue(value=value),
                     )
-                query_filter = Filter(must=conditions)
+                    for key, value in metadata_filter.items()
+                ]
+                query_filter = Filter(must=list(conditions))
 
         # Search using query_points (newer API)
 
@@ -378,8 +382,18 @@ class QdrantVectorStore(BaseModel, BaseVectorStore):
             with_vectors=True,
         )
 
-        # Get points from result
-        points = search_result.points if hasattr(search_result, "points") else search_result
+        # ``query_points`` returns a ``QueryResponse`` whose ``.points`` is
+        # ``list[ScoredPoint]``; older builds fall through to the bare
+        # response object. Either way, the loop body below uses
+        # ScoredPoint-shape attributes.
+        from typing import cast as _cast
+
+        from qdrant_client.models import ScoredPoint as _ScoredPoint
+
+        points: list[_ScoredPoint] = _cast(
+            "list[_ScoredPoint]",
+            search_result.points if hasattr(search_result, "points") else search_result,
+        )
 
         results = []
         for point in points:
@@ -394,7 +408,7 @@ class QdrantVectorStore(BaseModel, BaseVectorStore):
             doc = Document(
                 id=payload.get("doc_id", str(point.id)),
                 content=payload.get("content", ""),
-                embedding=list(point.vector) if point.vector else None,
+                embedding=list(point.vector) if point.vector else None,  # type: ignore[arg-type, unused-ignore]
                 metadata=payload.get("metadata", {}),
                 created_at=datetime.fromisoformat(payload["created_at"])
                 if payload.get("created_at")

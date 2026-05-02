@@ -39,7 +39,7 @@ def create_rag_tool(
     description: str | None = None,
     limit: int = 5,
     threshold: float | None = 0.5,
-):
+) -> Any:
     """
     Create a RAG search tool for agent use.
 
@@ -125,7 +125,7 @@ def create_rag_context_tool(
     name: str = "get_context",
     description: str | None = None,
     limit: int = 3,
-):
+) -> Any:
     """
     Create a RAG tool that returns context as formatted text.
 
@@ -207,7 +207,7 @@ class RAGToolkit:
         self.retriever = retriever
         self.prefix = prefix
 
-    def get_tools(self) -> list:
+    def get_tools(self) -> list[Any]:
         """Get all RAG tools."""
         return [
             self.search_tool(),
@@ -215,7 +215,7 @@ class RAGToolkit:
             self.lookup_tool(),
         ]
 
-    def search_tool(self):
+    def search_tool(self) -> Any:
         """Get the search tool."""
         return create_rag_tool(
             self.retriever,
@@ -223,7 +223,7 @@ class RAGToolkit:
             description="Search the knowledge base for relevant documents.",
         )
 
-    def context_tool(self):
+    def context_tool(self) -> Any:
         """Get the context tool."""
         return create_rag_context_tool(
             self.retriever,
@@ -231,7 +231,7 @@ class RAGToolkit:
             description="Get formatted context from the knowledge base.",
         )
 
-    def lookup_tool(self):
+    def lookup_tool(self) -> Any:
         """Get the lookup tool."""
         from locus.tools import tool as tool_decorator
 

@@ -376,7 +376,7 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
                 f"DELETE FROM {self._full_table_name} WHERE id = :id",
                 {"id": doc_id},
             )
-            deleted = cursor.rowcount > 0
+            deleted: bool = cursor.rowcount > 0
             await conn.commit()
 
         return deleted

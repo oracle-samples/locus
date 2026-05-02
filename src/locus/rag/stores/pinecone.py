@@ -380,9 +380,11 @@ class PineconeVectorStore(BaseModel, BaseVectorStore):
 
         if self.pinecone_config.namespace:
             ns_stats = stats.namespaces.get(self.pinecone_config.namespace, {})
-            return ns_stats.get("vector_count", 0)
+            ns_count: int = ns_stats.get("vector_count", 0)
+            return ns_count
 
-        return stats.total_vector_count
+        total: int = stats.total_vector_count
+        return total
 
     async def clear(self) -> int:
         """Delete all documents."""

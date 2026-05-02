@@ -217,7 +217,9 @@ class OpenSearchVectorStore(BaseModel, BaseVectorStore):
         await self._ensure_index()
         client = await self._get_client()
 
-        actions = []
+        # The OpenSearch bulk API alternates control headers and source bodies;
+        # both shapes are dicts with disparate value types, so widen to ``Any``.
+        actions: list[dict[str, Any]] = []
         ids = []
 
         for doc in documents:
@@ -273,7 +275,7 @@ class OpenSearchVectorStore(BaseModel, BaseVectorStore):
         client = await self._get_client()
 
         try:
-            result = await client.delete(
+            result: dict[str, Any] = await client.delete(
                 index=self.os_config.index_name,
                 id=doc_id,
                 refresh=True,
@@ -304,8 +306,9 @@ class OpenSearchVectorStore(BaseModel, BaseVectorStore):
         }
 
         # Add metadata filter if provided
+        query: dict[str, Any]
         if metadata_filter:
-            must_clauses = [knn_query]
+            must_clauses: list[dict[str, Any]] = [knn_query]
             for key, value in metadata_filter.items():
                 must_clauses.append({"term": {f"metadata.{key}": value}})
             query = {"bool": {"must": must_clauses}}
@@ -364,7 +367,8 @@ class OpenSearchVectorStore(BaseModel, BaseVectorStore):
         client = await self._get_client()
 
         result = await client.count(index=self.os_config.index_name)
-        return result["count"]
+        n: int = result["count"]
+        return n
 
     async def clear(self) -> int:
         """Delete all documents."""

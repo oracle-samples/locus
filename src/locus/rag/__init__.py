@@ -62,6 +62,8 @@ Example with agent:
     ... )
 """
 
+from typing import Any
+
 # Embeddings
 from locus.rag.embeddings.base import (
     BaseEmbedding,
@@ -128,7 +130,7 @@ __all__ = [
 ]
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     """Lazy import providers and stores."""
     # Embedding providers
     if name == "OCIEmbeddings":

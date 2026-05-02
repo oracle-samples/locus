@@ -370,7 +370,7 @@ class PgVectorStore(BaseModel, BaseVectorStore):
         pool = await self._get_pool()
 
         async with pool.acquire() as conn:
-            result = await conn.execute(
+            result: str = await conn.execute(
                 f"""
                 DELETE FROM {self._full_table_name}
                 WHERE id = $1
@@ -590,12 +590,13 @@ class PgVectorStore(BaseModel, BaseVectorStore):
         table_name = self.pgvector_config.table_name
 
         async with pool.acquire() as conn:
-            return await conn.fetchval(f"""
+            exists: bool = await conn.fetchval(f"""
                 SELECT EXISTS (
                     SELECT 1 FROM pg_indexes
                     WHERE indexname = 'idx_{table_name}_embedding'
                 )
             """)
+            return exists
 
     async def close(self) -> None:
         """Close connection pool."""
