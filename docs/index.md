@@ -311,8 +311,9 @@ charges once. The agent stops.
 
 A three-agent vendor PO approval workflow against a live Oracle 26ai
 catalogue — Procurement and Compliance debate, hand off to an Approval
-Officer, the human approves, idempotent writes fire — is in
-[`examples/demos/po_approval/`](https://github.com/oracle-samples/locus/tree/main/examples/demos/po_approval).
+Officer, the human approves, idempotent writes fire — runs end-to-end
+in the multi-agent and idempotency tutorials under
+[`examples/`](https://github.com/oracle-samples/locus/tree/main/examples).
 
 ## Introspect
 
@@ -351,8 +352,8 @@ Read the [concepts](concepts/agent.md) for the *why*; read the
 ## Learn locus in an afternoon
 
 The [`examples/`](https://github.com/oracle-samples/locus/tree/main/examples)
-tree is **40 tutorials** plus **3 end-to-end demos**. Every tutorial
-is one runnable file and adds exactly one idea on top of the previous.
+tree is **40 progressive tutorials**. Every tutorial is one runnable
+file and adds exactly one idea on top of the previous.
 
 ### Track 1 — basics (first hour)
 
@@ -413,14 +414,6 @@ The six in-process patterns plus A2A:
 [Multi-modal providers](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_38_multimodal_providers.py) ·
 [GSAR typed grounding](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_39_gsar_typed_grounding.py) ·
 [OCI Dedicated AI Cluster (DAC)](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_40_oci_dac.py).
-
-### End-to-end demos
-
-| Demo | What it shows |
-|---|---|
-| [`po_approval/`](https://github.com/oracle-samples/locus/tree/main/examples/demos/po_approval) | Three agents (Procurement / Compliance / Approval Officer) debate a vendor PO against a live Oracle 26ai catalogue. Idempotent writes. Human consent gate. |
-| [`oracle_26ai/`](https://github.com/oracle-samples/locus/tree/main/examples/demos/oracle_26ai) | Full Oracle stack — OCI GenAI + Oracle 26ai vectors + skills + Reflexion + idempotent submit + checkpoints to OCI Object Storage. |
-| [`trip_team/`](https://github.com/oracle-samples/locus/tree/main/examples/demos/trip_team) | Same multi-agent shape on a Tokyo travel corpus — three personas, one orchestrator, one durable thread. |
 
 ## Then deploy
 

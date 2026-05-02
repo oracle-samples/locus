@@ -52,5 +52,5 @@ call and the body runs.
 ## Source and tutorials
 
 - `src/locus/tools/decorator.py` — the `@tool` decorator and idempotency hook.
-- Demo: [`examples/demos/po_approval/`](https://github.com/oracle-samples/locus/tree/main/examples/demos/po_approval)
-  shows idempotent `submit_po` and `email_cfo` deduping under retries.
+- Tutorial: [`tutorial_03_tools_and_state.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_03_tools_and_state.py)
+  walks through `@tool(idempotent=True)` end-to-end.
