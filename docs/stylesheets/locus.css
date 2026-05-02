@@ -198,10 +198,17 @@
   grid-template-columns: 1.05fr 1fr;
   gap: 2.4rem;
   align-items: start;          /* both columns top-align — no dead vertical space */
-  margin: 1rem 0 1.4rem;
-  padding: 1.6rem 0 0.8rem;
+  margin: -0.4rem 0 1.4rem;
+  padding: 0.4rem 0 0.8rem;
   isolation: isolate;
   overflow: hidden;
+}
+/* Tighten the gap between the tabs strip and the hero on the home page —
+   the default Material content padding leaves dead space above the H1. */
+.md-content__inner:has(> .locus-hero),
+.md-content__inner:has(> div > .locus-hero) {
+  padding-top: 0.2rem;
+  margin-top: 0;
 }
 /* Oracle-red soft glow behind the H1 — the warm spotlight */
 .md-typeset .locus-hero::before {
@@ -238,7 +245,7 @@
   font-weight: 800;
   text-transform: lowercase;
   color: var(--locus-ink);
-  margin: 0 0 1.4rem;
+  margin: 0 0 0.6rem;
 }
 .md-typeset .locus-hero h1 .accent {
   color: var(--or-red);
@@ -693,6 +700,35 @@
 }
 
 /* ---------------------------------------------------------------------------
+   Oracle-distinctive callout — used on the Capabilities page to highlight
+   wedge features. Oracle-red border + warm sand tint, red star icon.
+   Trigger with: `!!! oracle-distinctive "Distinctive to locus"`
+   --------------------------------------------------------------------------- */
+:root {
+  --md-admonition-icon--oracle-distinctive: url('data:image/svg+xml;charset=utf-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>');
+}
+.md-typeset .admonition.oracle-distinctive,
+.md-typeset details.oracle-distinctive {
+  border-color: var(--or-red);
+  background: linear-gradient(135deg,
+    rgba(199, 70, 52, 0.04) 0%,
+    rgba(240, 204, 113, 0.04) 100%);
+}
+.md-typeset .oracle-distinctive > .admonition-title,
+.md-typeset .oracle-distinctive > summary {
+  background-color: rgba(199, 70, 52, 0.08);
+  color: var(--or-red-deep);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.md-typeset .oracle-distinctive > .admonition-title::before,
+.md-typeset .oracle-distinctive > summary::before {
+  background-color: var(--or-red);
+  -webkit-mask-image: var(--md-admonition-icon--oracle-distinctive);
+          mask-image: var(--md-admonition-icon--oracle-distinctive);
+}
+
+/* ---------------------------------------------------------------------------
    Diagrams — responsive sizing for the agent-loop SVG and similar.
    --------------------------------------------------------------------------- */
 .md-typeset img[src*="agent-loop"],
@@ -707,6 +743,22 @@
 }
 .md-typeset img[src*="multi-agent-patterns"] {
   max-width: 920px;
+}
+
+/* The architecture diagrams (agent-loop, multi-agent-patterns, the
+   per-pattern SVGs under img/patterns/, and the architecture / sequence
+   topologies) are authored against a light background. In dark mode the
+   dark-grey strokes and labels vanish, so render them on a near-white
+   card. */
+[data-md-color-scheme="slate"] .md-typeset img[src*="agent-loop"],
+[data-md-color-scheme="slate"] .md-typeset img[src*="multi-agent-patterns"],
+[data-md-color-scheme="slate"] .md-typeset img[src*="img/patterns/"],
+[data-md-color-scheme="slate"] .md-typeset img[src*="architecture"],
+[data-md-color-scheme="slate"] .md-typeset img[src*="sequence-26ai"],
+[data-md-color-scheme="slate"] .md-typeset img.diagram {
+  background-color: #FBF9F8;
+  padding: 1rem;
+  border-radius: 0.5rem;
 }
 
 /* ---------------------------------------------------------------------------

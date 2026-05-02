@@ -7,21 +7,23 @@ hide:
 <div class="locus-hero" markdown>
 <div class="locus-hero__copy" markdown>
 
-# Build AI workflows that <span class="accent">actually ship</span>
+# Build agents that reason and <span class="accent">solve together.</span>
 
-**Oracle Generative AI · Multi-Agent · Reasoning · Orchestrator SDK.**
+**The Oracle Gen AI Multi-Agent Reasoning SDK.**
 
-Spin up a **swarm** of specialists. Hand a conversation off across an
-**escalation desk**. Run an **orchestrator** of experts in parallel.
-Wire up a **state graph** that loops until confident. Mesh agents
-**across processes** with A2A. Or just ship one self-correcting agent
-that knows when to stop.
+Reasoning lives inside the loop. **Reflexion** evaluates every turn.
+**Grounding** verifies every claim against its source. **Causal**
+traces root cause from symptom.
 
-Six multi-agent shapes. One Oracle-native runtime. Every model on OCI
-the day it lands. The agent stack you'd actually let near a credit
-card.
+Six shapes for six problems. **Compose** linear pipelines.
+**Orchestrate** specialists in parallel. **Swarm** for peer-to-peer
+research. **Handoff** for escalation desks. **StateGraph** loops
+until confident. **Functional** maps across agents. **A2A** meshes
+across processes.
 
-[See what you can build](#what-you-can-build){ .md-button .md-button--primary }
+Every model on Oracle Generative AI the day it lands.
+
+[See what you can build](#six-things-you-can-ship){ .md-button .md-button--primary }
 [GitHub](https://github.com/oracle-samples/locus){ .md-button }
 
 ```bash
@@ -34,7 +36,7 @@ pip install "locus[oci]"
 
 <div class="locus-hero__code" markdown>
 
-```python title="travel_concierge.py"
+```python
 from locus import Agent
 from locus.tools.decorator import tool
 from locus.memory.backends import OCIBucketBackend
@@ -53,7 +55,7 @@ def book_flight(flight_id: str, customer_id: str) -> dict:
     return billing.charge_and_book(flight_id, customer_id)
 
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[search_flights, book_flight],
     system_prompt="You are a travel concierge. Find a flight, then book it.",
     reflexion=True,                                 # self-correct mid-run
@@ -77,70 +79,220 @@ print(result.message)
 </div>
 </div>
 
-## What you can build
+## Six things you can ship
 
-Six concrete workflows. All of them ship in production with locus
-today. None of them require a graph editor, a YAML DAG, or a
-separate orchestration platform.
+### Claims grounded. Citations real. Hallucinations dropped
 
-### Approval workflows that don't double-fire
-
-A vendor PO comes in. Procurement and Compliance debate it against
-your live Oracle 26ai catalogue. They reach a recommendation. A human
-clicks `[y/N]`. The Approval Officer fires `submit_po` and
-`email_cfo` — once, even if the model retries the same call three
-times.
-
-> *Procurement and Compliance disagree on three of nine vendors. The
-> human approves two. Submit + email fire exactly once. Your CFO is
-> happy.*
-
-### Research crews that catch their own mistakes
-
-An agent reads, summarises, and fact-checks. **Grounding**
-auto-verifies every claim against the source it cited. When a claim
-fails grounding the agent goes back and re-reads. **Reflexion**
-spots loops on wrong premises before they cost you ten turns of
-tokens. You get cited, grounded answers — not hallucinated narratives.
-
-### Customer support that survives every deploy
-
-Triage decides whether the conversation needs Billing or Shipping.
-The whole transcript hands over. The customer sees one continuous
-reply. The conversation thread is checkpointed to OCI Object Storage,
-so a redeploy mid-chat doesn't lose context. The customer doesn't
-have to re-explain.
-
-### Autonomous workflows that stop when they should
-
-Compose stop conditions like algebra:
+**Reflexion** evaluates every turn and feeds the next Think a sharper
+plan. **Grounding** scores each claim against the tool result it came
+from; below-threshold claims get dropped or sent back for re-research.
+**Causal** traces root cause from symptom in incident-triage runs.
 
 ```python
-terminate = (ToolCalled("submit") & ConfidenceMet(0.9)) | MaxIterations(15)
+from locus import Agent
+from locus.tools.decorator import tool
+
+@tool
+def search_web(query: str) -> str:
+    """Search the web for facts."""
+    return search_api.query(query)
+
+@tool
+def read_url(url: str) -> str:
+    """Fetch and clean text from a URL."""
+    return http.fetch_text(url)
+
+agent = Agent(
+    model="oci:openai.gpt-5",
+    tools=[search_web, read_url],
+    reflexion=True,    # self-evaluate every turn
+    grounding=True,    # verify claims against tool results
+)
+
+result = agent.run_sync("Summarise the Q3 earnings call. Cite every number.")
+print(result.message)
+print(f"grounding score: {result.grounding_score:.2f}")
+# → grounding score: 0.94 — three claims grounded, one dropped (revenue mix)
 ```
 
-The loop stops when the work is actually done — not when the budget
-runs out, not when the agent gives up halfway. Inspect, unit-test,
-audit; termination is just data.
+→ [Reasoning inside the loop](concepts/reasoning.md) ·
+[Turn on Reflexion + Grounding in one line](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_14_reasoning_patterns.py)
 
-### Multi-agent meshes across teams and processes
+### Side effects fire once. Even when the model retries
 
-Your research agent calls a finance agent on another team's service
-over **A2A**. They share one event stream. Each agent advertises an
-`AgentCard` that lists its capability tags; the calling agent fetches
-the card from a known URL and decides whether to delegate. You ship
-one agent at a time, on your team's schedule, in your team's repo —
-and they still talk.
+The model can re-emit the same call after seeing an ambiguous result,
+after a network glitch, after a checkpointed restart. With
+**`@tool(idempotent=True)`** the body fires exactly once per
+`(name, arguments)` hash. Booking, billing, paging — safe by design.
 
-### Agents that ship to your users on day one
+```python
+from locus import Agent
+from locus.tools.decorator import tool
 
-`AgentServer` is a drop-in FastAPI app: `POST /invoke` for synchronous
-runs, `POST /stream` for SSE-streamed events, `GET` / `DELETE
-/threads/{id}` for per-thread persistence (scoped to the bearer
-principal so two API keys can't read each other's conversations).
-Native to Oracle Generative AI — every model the day OCI ships it.
-Two transports, one auth surface, zero glue between laptop and
-production.
+@tool(idempotent=True)
+def submit_po(vendor_id: str, line_items: list[dict]) -> dict:
+    """Submit the PO. Re-fires within the run return the cached receipt."""
+    return procurement.submit(vendor_id, line_items)
+
+@tool(idempotent=True)
+def email_cfo(po_id: str, body: str) -> str:
+    """Send the CFO note. Same arguments → same delivery."""
+    return mail.send(to="cfo@org.com", subject=f"PO {po_id}", body=body)
+
+agent = Agent(
+    model="oci:openai.gpt-5",
+    tools=[search_vendors, submit_po, email_cfo],
+    system_prompt="Approve a vendor; submit the PO; email the CFO.",
+)
+
+result = agent.run_sync("Approve Acme for the $42k laptop refresh.")
+# → PO-2847 submitted. CFO emailed once. Three model retries deduped on
+#   the (name, kwargs) hash inside the ReAct loop's Execute node.
+```
+
+→ [Idempotent tools in the ReAct loop](concepts/idempotency.md) ·
+[Walk through a vendor PO with human approval](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_09_human_in_the_loop.py)
+
+### One conversation, many specialists
+
+**Handoff** transfers context, tool history, and confidence from
+specialist to specialist. The customer sees one continuous reply;
+each team ships their specialist on its own schedule, in its own repo.
+
+```python
+from locus.multiagent.handoff import (
+    create_handoff_agent, create_handoff_manager, HandoffReason,
+)
+
+triage = create_handoff_agent(
+    name="Triage",
+    description="Routes incoming customer issues",
+    system_prompt="Decide: Billing or Shipping. Then hand off.",
+)
+billing = create_handoff_agent(
+    name="Billing",
+    description="Resolves invoices, refunds, charges",
+    system_prompt="Resolve the billing issue end-to-end.",
+)
+shipping = create_handoff_agent(
+    name="Shipping",
+    description="Tracks orders, reroutes shipments",
+    system_prompt="Resolve the shipping issue end-to-end.",
+)
+triage.can_delegate_to = [billing.id, shipping.id]
+
+desk = create_handoff_manager(
+    agents=[triage, billing, shipping],
+    max_chain=5,
+)
+# → [Triage → Billing] "Refunded $129. Confirmation RF-19340."
+```
+
+→ [Handoff with chain-of-custody](concepts/multi-agent/handoff.md) ·
+[Wire a Triage / Billing / Shipping handoff desk](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_16_agent_handoff.py)
+
+### Agent meshes across teams and processes
+
+Each agent publishes an **`AgentCard`** at `/agent-card`. Your research
+agent fetches the card from the Finance team's URL, reads the skills
+list, and decides whether to delegate. HTTP+SSE under the hood, no
+shared infrastructure required.
+
+```python
+import asyncio
+from locus.a2a import A2AClient
+
+async def main():
+    # The Finance team publishes their agent at this URL.
+    finance = A2AClient(url="https://finance.example.com")
+
+    # Discover capabilities (name, description, skills).
+    card = await finance.get_agent_card()
+    print(f"Calling {card.name} — {card.description}")
+    print(f"Skills: {card.skills}")
+
+    # Delegate.
+    answer = await finance.invoke(
+        "Pull Q3 OPEX vs forecast for line items 4100-4250."
+    )
+    print(answer)
+    # → Q3 OPEX: $47M vs forecast $51M (-8%, supply-chain delays).
+
+asyncio.run(main())
+```
+
+→ [A2A — agents across processes](concepts/multi-agent/a2a.md) ·
+[Call another team's agent over A2A](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_34_a2a_protocol.py)
+
+### Stop conditions you can compose
+
+Compose stop conditions with Python's `&` and `|` operators on typed
+classes — `__and__` / `__or__` overloads. Inspectable, unit-testable,
+serialisable. You can grep your codebase for *exactly when* an agent
+decides to stop. The loop ends when the work is done.
+
+```python
+from locus import Agent
+from locus.core.termination import (
+    MaxIterations, ToolCalled, ConfidenceMet, TextMention,
+)
+
+termination = (
+    (ToolCalled("submit_po") & ConfidenceMet(0.9))   # work done + confident
+    | TextMention(r"\bDONE\b")                         # …or model says DONE
+    | MaxIterations(15)                                # …or safety cap
+)
+
+agent = Agent(
+    model="oci:openai.gpt-5",
+    tools=[search_vendors, submit_po],
+    termination=termination,
+)
+
+result = agent.run_sync("Approve and submit the laptop PO.")
+print(result.termination_reason)
+# → ToolCalled('submit_po') and ConfidenceMet(0.92)
+```
+
+→ [Termination algebra](concepts/termination.md) ·
+[Compose stop conditions like algebra](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_37_termination.py)
+
+### Day-one production deployment
+
+**`AgentServer`** wraps any agent as a FastAPI app: `POST /invoke`,
+`POST /stream` for SSE, `GET`/`DELETE /threads/{id}` with per-principal
+persistence — two API keys can't read each other's threads. Ship to
+OKE, Container Instances, OCI Functions, or anywhere FastAPI runs.
+
+```python
+import os
+from locus import Agent
+from locus.memory.backends import oci_bucket_checkpointer
+from locus.server import AgentServer
+
+agent = Agent(
+    model="oci:openai.gpt-5",
+    tools=[lookup_invoice, refund],
+    checkpointer=oci_bucket_checkpointer(
+        bucket_name="support-threads",
+        namespace="<your-tenancy>",
+    ),
+)
+
+server = AgentServer(
+    agent=agent,
+    api_key=os.environ["LOCUS_SERVER_API_KEY"],
+)
+server.run(host="0.0.0.0", port=8080)
+
+# $ curl -X POST http://localhost:8080/invoke \
+#       -H "Authorization: Bearer $LOCUS_SERVER_API_KEY" \
+#       -d '{"prompt":"Refund order ORD-42","thread_id":"user-c42"}'
+# → {"message": "Refunded $129. Confirmation RF-19340.", "thread_id": "user-c42"}
+```
+
+→ [Agent Server — drop-in FastAPI app](concepts/server.md) ·
+[Deploy a locus agent as a FastAPI service](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_28_agent_server.py)
 
 ## The locus agent loop
 
@@ -294,7 +446,7 @@ def book_flight(flight_id: str, customer_id: str) -> dict:
     return billing.charge_and_book(flight_id, customer_id)
 
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[book_flight],
     system_prompt="You are a travel concierge. Book the flight the user asks for.",
 )
