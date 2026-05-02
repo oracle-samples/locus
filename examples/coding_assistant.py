@@ -112,7 +112,7 @@ def get_model():
     """
     profile = os.getenv("OCI_PROFILE")
     if profile:
-        model_id = os.getenv("OCI_MODEL_ID", "openai.gpt-5.5")
+        model_id = os.getenv("OCI_MODEL_ID", "openai.gpt-5")
         if model_id.lower().startswith("cohere.command-r"):
             from locus.models import OCIModel
 

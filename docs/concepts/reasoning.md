@@ -37,7 +37,7 @@ Self-evaluate per turn.
 from locus import Agent
 
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[search, summarise],
     reflexion=True,
 )
@@ -58,7 +58,7 @@ Verify claims before answering.
 
 ```python
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[search_pricing, lookup_inventory],
     grounding=True,
 )
@@ -80,7 +80,7 @@ Track cause-effect chains.
 
 ```python
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[fetch_logs, query_metrics, traceback],
     causal=True,
 )
@@ -100,7 +100,7 @@ cause".
 
 ```python
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[...],
     reflexion=True,
     grounding=True,

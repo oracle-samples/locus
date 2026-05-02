@@ -25,7 +25,7 @@ def submit_po(vendor_id: str, amount_usd: float) -> dict:
     return finance.submit(vendor_id, amount_usd)
 
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[search_vendors, request_human_approval, submit_po],
     system_prompt=(
         "You are a procurement officer. "
@@ -78,7 +78,7 @@ from locus.hooks.builtin.steering import SteeringHook
 agent = Agent(
     ...,
     hooks=[SteeringHook(
-        judge_model="oci:openai.gpt-5.5-mini",
+        judge_model="oci:openai.gpt-5-mini",
         policy="Reject any tool call that doesn't match the user's stated request.",
     )],
 )

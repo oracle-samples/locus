@@ -66,6 +66,13 @@ telemetry = [
 # MCP support
 mcp = ["mcp>=1.0"]
 
+# Drop-in HTTP server (FastAPI app for AgentServer + SSE streaming).
+# Pulled in production deployments via ``pip install "locus[oci,server]"``.
+server = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+]
+
 # Checkpoint backends — one extra per backend under
 # src/locus/memory/backends/ that needs a runtime dep. Keep in sync.
 sqlite = ["aiosqlite>=0.20"]
@@ -95,7 +102,7 @@ rag = [
 # All providers and backends — what most consumers installing for prod
 # will want. Every optional subsystem Locus ships is reachable from here.
 all = [
-    "locus[models,telemetry,mcp,checkpoints,rag]",
+    "locus[models,telemetry,mcp,server,checkpoints,rag]",
 ]
 
 # Development

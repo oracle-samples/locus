@@ -1,11 +1,36 @@
 # Idempotency
 
-The single most important word in production agents is **once**. The
-model is allowed to retry; the side-effect isn't. locus makes that a
-one-keyword decision on the tool.
+> The single most important word in production agents is **once**.
+
+The model is *allowed* to retry. The side effect *isn't*. locus
+makes that distinction a one-keyword decision on the tool, enforced
+inside the ReAct loop. This is a locus-specific primitive — none of
+LangChain / LangGraph / CrewAI / Strands ship it.
+
+If you ever plan to run an agent that **books**, **charges**,
+**emails**, **pages**, or **writes**, this is the most important
+single page on the docs site.
+
+## When to use `idempotent=True`
+
+| Situation | `idempotent=True`? |
+|---|---|
+| Side-effecting tool with real-world cost (charge, email, page, book) | **yes — always** |
+| Database write you can't trivially roll back | **yes** |
+| External service that's already idempotent on its end | yes — locus dedupes the round-trip too |
+| Read-only catalogue lookup | no — re-reads are cheap, leave it to the model |
+| Tool that *intentionally* generates a new entity each call (e.g. `mint_uuid`) | no — that breaks the contract |
+
+## How it works
+
+Inside a single agent run, locus hashes the tool's
+`(name, arguments)` tuple as the model emits each call. **The first
+call with a given key hits the function body** and the result is
+recorded. **Every subsequent call with the same key short-circuits
+to the cached response** without invoking the body.
 
 ```python
-from locus.tools.decorator import tool
+from locus import tool
 
 @tool(idempotent=True)
 def transfer(from_acct: str, to_acct: str, amount: float) -> dict:
@@ -13,44 +38,103 @@ def transfer(from_acct: str, to_acct: str, amount: float) -> dict:
     return ledger.transfer(from_acct, to_acct, amount)
 ```
 
-Inside a single agent run, locus hashes the tool's `(name, kwargs)`
-tuple. The first call hits the body and the result is cached. Every
-subsequent call with identical arguments — whether the model retried,
-got confused, or asked again on a later turn — short-circuits to the
-cached response.
+The argument hash is the trust boundary:
+
+- **Same call**: the model re-emits `transfer("A", "B", 100)` after
+  seeing the receipt → cache hit, body skipped.
+- **Different call**: the model emits `transfer("A", "B", 200)` →
+  different key, body runs.
+
+Caching is keyed on the **canonical JSON form** of the arguments, so
+key order, default values, and whitespace don't matter.
 
 ## Why this matters
 
-- **Booking, billing, payments.** The model that calls `book_flight`
-  twice is more common than you think. Without idempotency you have a
-  duplicate charge and an angry customer.
-- **Outbound side-effects.** `email_cfo`, `page_oncall`, `submit_po` —
-  one and done.
-- **Database writes you can't easily roll back.**
+### Booking, billing, payments
 
-The argument hash is the trust boundary: if the model re-issues the
-*same* call, you fire once. If it changes any argument, that's a new
-call and the body runs.
+The model that calls `book_flight` twice in one run is more common
+than you think. Sometimes it sees an ambiguous tool result and tries
+again "to be sure". Sometimes the network glitches and the model
+believes the call failed. Without idempotency, you charge the
+customer twice and they're on the phone with their bank.
 
-## When to use it
+```python
+@tool(idempotent=True)
+def book_flight(flight_id: str, customer_id: str) -> dict:
+    return billing.charge_and_book(flight_id, customer_id)
+```
 
-| Situation | `idempotent=True`? |
+The customer gets billed once. Always.
+
+### Outbound side-effects
+
+`email_cfo`, `page_oncall`, `submit_po`, `slack_alert` — anything
+that touches a human or a downstream system. **One and done**.
+
+### Database writes you can't roll back
+
+Insert into a journal table, append to a Kafka topic, sign a JWT —
+operations where retrying isn't free. Idempotent tools turn the
+"exactly once" problem into a "not-our-problem-after-the-first-call"
+guarantee.
+
+### Replays after checkpoint resume
+
+When a checkpointer resumes a stalled run, the model may decide to
+re-issue tool calls it's already seen. Idempotent tools see the
+cache pre-populated from the checkpoint and skip the side effect on
+replay. (This requires `tool_executions` to be restored from the
+checkpoint; locus's [native checkpointers](checkpointers.md) handle
+it.)
+
+## What it is *not*
+
+| Concept | Idempotency is… | Idempotency is *not*… |
+|---|---|---|
+| Scope | within a single agent run | cross-run — restart and the cache is gone (use a [checkpointer](checkpointers.md)) |
+| Failure | one fire per identical call | retry — if the body raises, the exception propagates as the cached "result" |
+| Boundary | per-agent | network — two different agents both calling `transfer(a, b, 100)` each fire once |
+
+If you need cross-run idempotency, configure a checkpointer + an
+idempotent server-side endpoint. The combo gives you "the side
+effect runs at most once across all replays of all agents".
+
+## Practical recipe — vendor PO approval
+
+A canonical multi-agent idempotency shape: an agent (or three of
+them, debating) loops over a vendor decision, then writes once.
+
+```python
+@tool(idempotent=True)
+def submit_po(vendor_id: str, line_items: list[dict]) -> dict:
+    return procurement.submit(vendor_id, line_items)
+
+@tool(idempotent=True)
+def email_cfo(po_id: str, summary: str) -> str:
+    return mail.send(to="cfo@org.com", subject=f"PO {po_id}", body=summary)
+```
+
+The agent can iterate ten times reasoning about whether to approve.
+The PO ships once. The CFO email lands once. The model can fail
+mid-run and a checkpointer-backed resume re-issues the same calls;
+the side effects still fire exactly once.
+
+## Common gotchas
+
+| Symptom | Likely cause |
 |---|---|
-| Side-effecting tool with a real-world cost (charge, email, page) | **yes** |
-| Read-only catalogue lookup | no — caching the model's reads is its problem, not yours |
-| Tool that *intentionally* generates a new entity each call (e.g. `mint_uuid`) | no |
-| External service that's already idempotent | yes anyway — locus dedupes the round-trip too |
+| Tool re-fires despite `idempotent=True` | Argument changed between calls. Check that the model isn't mutating ids / amounts between turns. |
+| Idempotent cache survives across runs unexpectedly | It shouldn't — only the checkpointer persists state. If you're seeing this, you're loading state from a checkpoint and don't want to. |
+| Body raised first time, cache returns the exception | This is by design — the failure is part of the "result" of the first call. The model sees the failure and can react. To re-attempt, the model must change an argument. |
+| Read-only lookup tagged `idempotent=True` | Harmless but wasteful — the cache hit savings are negligible vs the read itself. Leave it off. |
 
-## What it is not
+## Source and tutorial
 
-- It's not idempotency *across runs*. Restart the agent and the cache
-  is gone — that's what your **checkpointer** is for.
-- It's not retry. If the body raises, the exception propagates.
-- It's not a network-layer cache. Two different agents calling
-  `transfer(a, b, 100)` each fire once.
+- [`@tool` decorator with idempotency hook](https://github.com/oracle-samples/locus/blob/main/src/locus/tools/decorator.py)
+- [`_find_matching_execution`](https://github.com/oracle-samples/locus/blob/main/src/locus/loop/nodes.py#L114) — where the dedup actually happens, in the ReAct loop's Execute node.
+- [`tutorial_03_tools_and_state.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_03_tools_and_state.py) — walks through `@tool(idempotent=True)` end-to-end.
 
-## Source and tutorials
+## See also
 
-- `src/locus/tools/decorator.py` — the `@tool` decorator and idempotency hook.
-- Tutorial: [`tutorial_03_tools_and_state.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_03_tools_and_state.py)
-  walks through `@tool(idempotent=True)` end-to-end.
+- [Tools](tools.md) — the full `@tool` decorator surface.
+- [Checkpointers](checkpointers.md) — durable runs where idempotency interacts with replay.

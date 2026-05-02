@@ -81,6 +81,17 @@ class OpenAIModel(BaseModel):
 
     model_config = {"arbitrary_types_allowed": True}
 
+    @property
+    def supports_structured_output(self) -> bool:
+        """Native ``response_format={"type":"json_schema",...}`` support.
+
+        OpenAI's chat-completions API accepts a JSON-schema response_format
+        and guarantees a parseable instance. The agent loop uses this
+        property to skip the prompted-JSON fallback when the provider
+        ships native structured output.
+        """
+        return True
+
     def __init__(
         self,
         model: str = "gpt-4o",
@@ -164,7 +175,7 @@ class OpenAIModel(BaseModel):
 
         Detects the o1 / o3 / gpt-5* families. Tolerates a leading
         purely-alphabetic namespace segment so OCI-style model ids
-        (``openai.gpt-5.5``, ``meta.llama-3.3-…``) are treated the same as
+        (``openai.gpt-5``, ``meta.llama-3.3-…``) are treated the same as
         native OpenAI names (``gpt-5.1-chat-latest``). Native ids start
         with a token containing digits/hyphens (``gpt-5``, ``o1-…``) so
         the namespace strip is a no-op for them.

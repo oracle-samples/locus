@@ -109,7 +109,7 @@ result = agent.run_sync("This page is broken!")
 print(result.parsed)        # Triage(severity='high', needs_human=True)
 ```
 
-### Prompt caching — automatic for long prompts
+### Prompt caching — opt in for long prompts
 
 This is the biggest cost saver if your system prompt or tool block is
 long (skills, playbooks, RAG context). Anthropic's prompt-caching
@@ -117,24 +117,42 @@ mechanism marks a span of the request as cacheable; subsequent turns
 within the cache window pay **1/10th** the input cost on the cached
 span.
 
-locus reads the request shape and applies `cache_control` to anything
-beyond a small threshold automatically. You don't opt in.
+Opt in with `prompt_cache=True` on `AnthropicModel`. Locus then sends
+the system prompt as a block list with `cache_control: ephemeral` and
+tags the last entry of the tool catalog the same way (Anthropic walks
+markers in order — the last tag anchors the cache point).
 
 ```python
-# Force or suppress caching explicitly:
+from locus import Agent
+from locus.models.native.anthropic import AnthropicModel
+
 agent = Agent(
-    model="anthropic:claude-sonnet-4-20250514",
-    model_config={"prompt_cache": True},   # or False to opt out
+    model=AnthropicModel(
+        model="claude-sonnet-4-20250514",
+        prompt_cache=True,
+    ),
+    tools=[...],
+    system_prompt="<a long system prompt — skills, playbooks, RAG context>",
 )
+
+result = agent.run_sync("...")
+print(f"cache writes: {result.metrics.cache_creation_input_tokens}")
+print(f"cache reads:  {result.metrics.cache_read_input_tokens}")
+# → cache writes: 4092      (turn 1, written once)
+# → cache reads:  4092       (turn 2 — same prefix, ~10× cheaper input)
 ```
 
 When it kicks in:
 
-- A 5-minute "ephemeral" cache (rolling window) — the default.
+- A 5-minute "ephemeral" cache (rolling window).
 - Subsequent turns reusing the same prefix pay `0.1× input rate` on
   the cached portion.
-- Effective when system prompts > ~1024 tokens, or you've loaded a
-  big skill / playbook / RAG block.
+- Most effective when system prompts ≥ ~1024 tokens, or you've loaded
+  a big skill / playbook / RAG block.
+
+`cache_creation_input_tokens` and `cache_read_input_tokens` surface
+on `AgentResult.metrics` so observability hooks can chart cache hits
+and the cost saved.
 
 ### Extended thinking — visible reasoning
 

@@ -2,8 +2,8 @@
 
 OCI GenAI exposes two serving modes:
 
-- **On-demand** — pay-per-token against a shared model id (`openai.gpt-5.5`,
-  `cohere.command-r-plus-08-2024`, …). What `Agent(model="oci:openai.gpt-5.5")`
+- **On-demand** — pay-per-token against a shared model id (`openai.gpt-5`,
+  `cohere.command-r-plus-08-2024`, …). What `Agent(model="oci:openai.gpt-5")`
   has been using by default.
 - **Dedicated AI Cluster (DAC)** — provisioned capacity exposed as a
   *generative AI endpoint* OCID

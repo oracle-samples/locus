@@ -189,7 +189,7 @@ class OCIOpenAIModel(OpenAIModel):
         """Initialize the OCI OpenAI-compat model.
 
         Args:
-            model: OCI model identifier (e.g. ``openai.gpt-5.5``,
+            model: OCI model identifier (e.g. ``openai.gpt-5``,
                 ``meta.llama-3.3-70b-instruct``).
             profile: OCI config profile name from ``config_file``. Mutually
                 exclusive with ``auth_type``.
