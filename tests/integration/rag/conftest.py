@@ -125,13 +125,22 @@ def qdrant_config():
 
     config = get_qdrant_config()
 
-    # Check if Qdrant server is reachable
-    try:
-        from qdrant_client import QdrantClient
+    # Probe the port directly with a short-timeout TCP connect instead of
+    # constructing a QdrantClient. ``QdrantClient(...).get_collections()``
+    # spawns a background ``_check_compatibility`` thread whose exception
+    # leaks past ``pytest.skip()`` and surfaces as
+    # ``PytestUnhandledThreadExceptionWarning`` during teardown when no
+    # server is reachable.
+    import socket
+    from urllib.parse import urlparse
 
-        client = QdrantClient(url=config["url"], api_key=config["api_key"])
-        client.get_collections()  # Simple health check
-    except Exception as e:
+    parsed = urlparse(config["url"])
+    host = parsed.hostname or "localhost"
+    port = parsed.port or (443 if parsed.scheme == "https" else 6333)
+    try:
+        with socket.create_connection((host, port), timeout=1.0):
+            pass
+    except (OSError, TimeoutError) as e:
         pytest.skip(f"Qdrant server not reachable at {config['url']}: {e}")
 
     return config
