@@ -89,6 +89,13 @@ class BeforeModelCallEvent(ProtectedEvent):
 
     _writable = {"messages"}
 
+    # Class-level annotations make the dynamically-set fields visible to
+    # mypy. The actual values are bound by ``self._init(...)`` in
+    # ``__init__``; ``ProtectedEvent.__setattr__`` enforces the
+    # writable / read-only split at runtime.
+    messages: list[Any]
+    tools: list[Any] | None
+
     def __init__(self, messages: list[Any], tools: list[Any] | None) -> None:
         self._init("messages", messages)
         self._init("tools", tools)
@@ -111,6 +118,10 @@ class AfterModelCallEvent(ProtectedEvent):
     """
 
     _writable = {"retry", "response"}
+
+    response: Any
+    messages: list[Any]
+    retry: bool
 
     def __init__(self, response: Any, messages: list[Any]) -> None:
         self._init("response", response)
@@ -137,6 +148,11 @@ class BeforeToolCallEvent(ProtectedEvent):
 
     _writable = {"arguments", "cancel"}
 
+    tool_name: str
+    tool_call_id: str
+    arguments: dict[str, Any]
+    cancel: bool | str
+
     def __init__(self, tool_name: str, tool_call_id: str, arguments: dict[str, Any]) -> None:
         self._init("tool_name", tool_name)
         self._init("tool_call_id", tool_call_id)
@@ -162,6 +178,11 @@ class AfterToolCallEvent(ProtectedEvent):
     """
 
     _writable = {"retry", "result"}
+
+    tool_name: str
+    result: Any
+    error: str | None
+    retry: bool
 
     def __init__(self, tool_name: str, result: Any, error: str | None) -> None:
         self._init("tool_name", tool_name)

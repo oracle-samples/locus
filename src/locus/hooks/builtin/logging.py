@@ -9,7 +9,12 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from locus.hooks.provider import HookPriority, HookProvider
+from locus.hooks.provider import (
+    AfterToolCallEvent,
+    BeforeToolCallEvent,
+    HookPriority,
+    HookProvider,
+)
 
 
 if TYPE_CHECKING:
@@ -129,51 +134,37 @@ class LoggingHook(HookProvider):
             duration_ms=duration_ms,
         )
 
-    async def on_before_tool_call(
-        self,
-        tool_name: str,
-        arguments: dict[str, Any],
-    ) -> dict[str, Any]:
+    async def on_before_tool_call(self, event: BeforeToolCallEvent) -> None:
         """Log tool call start.
 
         Args:
-            tool_name: Name of the tool
-            arguments: Tool arguments
-
-        Returns:
-            Unchanged arguments
+            event: Write-protected event carrying ``tool_name`` and
+                ``arguments``. The hook only inspects them.
         """
-        log_data: dict[str, Any] = {"tool_name": tool_name}
+        log_data: dict[str, Any] = {"tool_name": event.tool_name}
         if self._log_arguments:
-            log_data["arguments"] = arguments
+            log_data["arguments"] = event.arguments
         else:
-            log_data["argument_keys"] = list(arguments.keys())
+            log_data["argument_keys"] = list(event.arguments.keys())
 
         self._log("Tool call starting", **log_data)
-        return arguments
 
-    async def on_after_tool_call(
-        self,
-        tool_name: str,
-        result: Any,
-        error: str | None,
-    ) -> None:
+    async def on_after_tool_call(self, event: AfterToolCallEvent) -> None:
         """Log tool call completion.
 
         Args:
-            tool_name: Name of the tool
-            result: Tool result
-            error: Error message if failed
+            event: Write-protected event carrying ``tool_name``,
+                ``result``, and ``error``. The hook only inspects them.
         """
         log_data: dict[str, Any] = {
-            "tool_name": tool_name,
-            "success": error is None,
+            "tool_name": event.tool_name,
+            "success": event.error is None,
         }
 
-        if error:
-            log_data["error"] = error
-        elif self._log_results and result is not None:
-            result_str = str(result)
+        if event.error:
+            log_data["error"] = event.error
+        elif self._log_results and event.result is not None:
+            result_str = str(event.result)
             log_data["result_preview"] = (
                 result_str[:200] + "..." if len(result_str) > 200 else result_str
             )

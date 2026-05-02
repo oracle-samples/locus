@@ -7,11 +7,17 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
-from locus.hooks.provider import HookPriority, HookProvider
+from locus.hooks.provider import (
+    AfterToolCallEvent,
+    BeforeToolCallEvent,
+    HookPriority,
+    HookProvider,
+)
 
 
 if TYPE_CHECKING:
@@ -150,7 +156,7 @@ class GuardrailsHook(HookProvider):
     def __init__(
         self,
         config: GuardrailConfig | None = None,
-        on_violation: callable | None = None,
+        on_violation: Callable[[GuardrailViolation], None] | None = None,
         priority: int = HookPriority.SECURITY_DEFAULT,
     ) -> None:
         """Initialize guardrails hook.
@@ -352,23 +358,20 @@ class GuardrailsHook(HookProvider):
 
         return state
 
-    async def on_before_tool_call(
-        self,
-        tool_name: str,
-        arguments: dict[str, Any],
-    ) -> dict[str, Any]:
+    async def on_before_tool_call(self, event: BeforeToolCallEvent) -> None:
         """Validate tool call.
 
         Args:
-            tool_name: Name of the tool
-            arguments: Tool arguments
-
-        Returns:
-            Potentially modified arguments
+            event: Write-protected event. The hook may mutate
+                ``event.arguments`` (PII redaction) or set
+                ``event.cancel`` to short-circuit a blocked tool.
 
         Raises:
             ValueError: If tool is blocked
         """
+        tool_name = event.tool_name
+        arguments = event.arguments
+
         # Check tool blocklist
         if tool_name in self._config.block_dangerous_tools:
             violation = GuardrailViolation(
@@ -407,30 +410,24 @@ class GuardrailsHook(HookProvider):
         # Check for and optionally redact PII in arguments
         pii_violations = self._check_pii(args_str, "tool_args")
         if pii_violations and any(v.action == GuardrailAction.REDACT for v in pii_violations):
-            # Redact PII from string arguments
-            redacted_args = {}
+            # Redact PII from string arguments — write back to the event
+            # so downstream hooks and the executor see the redacted form.
+            redacted_args: dict[str, Any] = {}
             for key, value in arguments.items():
                 if isinstance(value, str):
                     redacted_args[key] = self._redact_pii(value)
                 else:
                     redacted_args[key] = value
-            return redacted_args
+            event.arguments = redacted_args
 
-        return arguments
-
-    async def on_after_tool_call(
-        self,
-        tool_name: str,
-        result: Any,
-        error: str | None,
-    ) -> None:
+    async def on_after_tool_call(self, event: AfterToolCallEvent) -> None:
         """Validate tool result.
 
         Args:
-            tool_name: Name of the tool
-            result: Tool result
-            error: Error message if failed
+            event: Write-protected event carrying ``tool_name``,
+                ``result``, and ``error``.
         """
+        result = event.result
         if result is None:
             return
 
@@ -739,27 +736,18 @@ class ContentFilterHook(HookProvider):
 
         return state
 
-    async def on_before_tool_call(
-        self,
-        tool_name: str,
-        arguments: dict[str, Any],
-    ) -> dict[str, Any]:
+    async def on_before_tool_call(self, event: BeforeToolCallEvent) -> None:
         """Filter tool arguments.
 
         Args:
-            tool_name: Tool name
-            arguments: Tool arguments
-
-        Returns:
-            Unchanged arguments
+            event: Write-protected event carrying ``tool_name`` and
+                ``arguments``.
 
         Raises:
             ValueError: If content is blocked
         """
-        args_str = str(arguments)
+        args_str = str(event.arguments)
         error = self._check_content(args_str)
         if error:
             msg = f"Tool arguments blocked: {error}"
             raise ValueError(msg)
-
-        return arguments

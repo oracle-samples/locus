@@ -15,7 +15,21 @@ from locus.hooks.builtin.guardrails import (
     GuardrailsHook,
     GuardrailViolation,
 )
-from locus.hooks.provider import HookPriority
+from locus.hooks.provider import (
+    AfterToolCallEvent,
+    BeforeToolCallEvent,
+    HookPriority,
+)
+
+
+def _before(tool_name: str, arguments: dict) -> BeforeToolCallEvent:
+    return BeforeToolCallEvent(
+        tool_name=tool_name, tool_call_id=f"{tool_name}-call", arguments=arguments
+    )
+
+
+def _after(tool_name: str, result, error: str | None) -> AfterToolCallEvent:
+    return AfterToolCallEvent(tool_name=tool_name, result=result, error=error)
 
 
 class TestGuardrailAction:
@@ -221,7 +235,7 @@ class TestGuardrailsHook:
     async def test_on_before_tool_call_blocked(self, hook):
         """Test tool blocking for dangerous tools."""
         with pytest.raises(ValueError, match="blocked by guardrails"):
-            await hook.on_before_tool_call("eval", {"code": "print(1)"})
+            await hook.on_before_tool_call(_before("eval", {"code": "print(1)"}))
         # Should record violation
         assert len(hook.violations) >= 1
         assert any("blocked_tool" in v.rule_name for v in hook.violations)
@@ -230,8 +244,10 @@ class TestGuardrailsHook:
     async def test_on_before_tool_call_allowed(self, hook):
         """Test tool allowed for safe tools."""
         args = {"query": "test"}
-        result = await hook.on_before_tool_call("search", args)
-        assert result == args
+        event = _before("search", args)
+        await hook.on_before_tool_call(event)
+        # Hook is observe-only for safe tools — event.arguments is unmodified.
+        assert event.arguments == args
         # No blocked_tool violations
         blocked_violations = [v for v in hook.violations if "blocked_tool" in v.rule_name]
         assert len(blocked_violations) == 0
@@ -243,12 +259,13 @@ class TestGuardrailsHook:
         hook = GuardrailsHook(config)
 
         # Allowed tool should pass
-        result = await hook.on_before_tool_call("allowed_tool", {"arg": "value"})
-        assert result == {"arg": "value"}
+        event = _before("allowed_tool", {"arg": "value"})
+        await hook.on_before_tool_call(event)
+        assert event.arguments == {"arg": "value"}
 
         # Non-allowed tool should fail
         with pytest.raises(ValueError, match="not allowed"):
-            await hook.on_before_tool_call("other_tool", {"arg": "value"})
+            await hook.on_before_tool_call(_before("other_tool", {"arg": "value"}))
 
     @pytest.mark.asyncio
     async def test_on_before_invocation(self, hook):
@@ -272,16 +289,17 @@ class TestGuardrailsHook:
         hook = GuardrailsHook(config)
 
         args = {"message": "Contact me at test@example.com"}
-        result = await hook.on_before_tool_call("send_message", args)
-        # Email should be redacted
-        assert "test@example.com" not in result["message"]
-        assert "REDACTED" in result["message"]
+        event = _before("send_message", args)
+        await hook.on_before_tool_call(event)
+        # Email should be redacted in-place on the event.
+        assert "test@example.com" not in event.arguments["message"]
+        assert "REDACTED" in event.arguments["message"]
 
     @pytest.mark.asyncio
     async def test_on_after_tool_call(self, hook):
         """Test after tool call hook."""
         # Should not raise for normal results
-        await hook.on_after_tool_call("search", "Found 5 results", None)
+        await hook.on_after_tool_call(_after("search", "Found 5 results", None))
 
     @pytest.mark.asyncio
     async def test_on_after_invocation(self, hook):
@@ -364,15 +382,16 @@ class TestContentFilterHook:
     async def test_on_before_tool_call_allowed(self, hook):
         """Test allowed tool args pass."""
         args = {"query": "safe query"}
-        result = await hook.on_before_tool_call("search", args)
-        assert result == args
+        event = _before("search", args)
+        await hook.on_before_tool_call(event)
+        assert event.arguments == args
 
     @pytest.mark.asyncio
     async def test_on_before_tool_call_blocked(self, hook):
         """Test blocked tool args are rejected."""
         args = {"message": "This is banned content"}
         with pytest.raises(ValueError, match="Tool arguments blocked"):
-            await hook.on_before_tool_call("send", args)
+            await hook.on_before_tool_call(_before("send", args))
 
     def test_case_insensitive_matching(self):
         """Test case insensitive matching."""
@@ -461,7 +480,7 @@ class TestGuardrailsEdgeCases:
         args = {"query": "DROP TABLE users; SELECT * FROM secrets"}
 
         with pytest.raises(ValueError, match="blocked"):
-            await hook.on_before_tool_call("database_query", args)
+            await hook.on_before_tool_call(_before("database_query", args))
 
     @pytest.mark.asyncio
     async def test_non_string_tool_arg_passes_through(self):
@@ -475,13 +494,14 @@ class TestGuardrailsEdgeCases:
             "data": {"nested": True},  # Dict, should pass through unchanged
         }
 
-        result = await hook.on_before_tool_call("send_message", args)
+        event = _before("send_message", args)
+        await hook.on_before_tool_call(event)
 
         # Email should be redacted in string
-        assert "test@example.com" not in result.get("message", "")
+        assert "test@example.com" not in event.arguments.get("message", "")
         # Non-strings should be unchanged
-        assert result["count"] == 42
-        assert result["data"] == {"nested": True}
+        assert event.arguments["count"] == 42
+        assert event.arguments["data"] == {"nested": True}
 
     @pytest.mark.asyncio
     async def test_on_after_tool_call_none_result(self):
@@ -489,7 +509,7 @@ class TestGuardrailsEdgeCases:
         hook = GuardrailsHook()
 
         # Should not raise when result is None
-        await hook.on_after_tool_call("search", None, None)
+        await hook.on_after_tool_call(_after("search", None, None))
 
     @pytest.mark.asyncio
     async def test_tool_result_exceeds_max_length(self):
@@ -501,7 +521,7 @@ class TestGuardrailsEdgeCases:
 
         long_result = "x" * 200  # Exceeds max_tool_result_length
 
-        await hook.on_after_tool_call("search", long_result, None)
+        await hook.on_after_tool_call(_after("search", long_result, None))
 
         # Should have recorded a violation
         length_violations = [v for v in hook.violations if "max_tool_result_length" in v.rule_name]

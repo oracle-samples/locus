@@ -201,7 +201,7 @@ class HookRegistry:
                     provider.name,
                 )
                 raise
-        modified_arguments: dict[str, Any] = event.arguments  # type: ignore[attr-defined]
+        modified_arguments: dict[str, Any] = event.arguments
         return modified_arguments
 
     async def emit_after_tool_call(
@@ -297,7 +297,7 @@ class HookRegistry:
                     provider.name,
                 )
                 raise
-        messages_out: list[Any] = event.messages  # type: ignore[attr-defined]
+        messages_out: list[Any] = event.messages
         return messages_out
 
     async def emit_after_model_call(
@@ -328,7 +328,7 @@ class HookRegistry:
                     provider.name,
                 )
                 raise
-        return event.response  # type: ignore[attr-defined]
+        return event.response
 
     async def emit(
         self,
