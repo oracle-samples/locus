@@ -1,39 +1,137 @@
 # OpenAI
 
-Direct calls to `api.openai.com` via `OpenAIModel`.
+The OpenAI provider connects locus directly to OpenAI's API
+(`api.openai.com`). It's what you reach for when you want **the latest
+OpenAI model the day it ships** without going through any gateway,
+translation layer, or middleware.
 
-```python
-agent = Agent(model="openai:gpt-5.5", ...)
-agent = Agent(model="openai:o3", ...)             # reasoning model
-```
+It's also the **fastest way to try locus** — one env var, one line of
+code, you're talking to GPT-5 or the o-series reasoning models.
+
+## When to pick OpenAI
+
+| You want… | This is the right provider |
+|---|---|
+| GPT-5, GPT-4o, or any latest OpenAI release | ✓ |
+| The o-series reasoning models (`o3`, `o4-mini`) | ✓ |
+| To go through Azure / Portkey / LiteLLM / vLLM | ✓ — same class, different `base_url` |
+| Claude or Llama | use [Anthropic](anthropic.md) or [OCI](oci.md) instead |
+| To run on Oracle infrastructure | use [OCI](oci.md) — you'll get the same OpenAI models without a separate key |
+
+## Getting started
+
+### 1. Set your API key
 
 ```bash
 export OPENAI_API_KEY=sk-...
 ```
 
-## Capabilities
+That's the only setup. locus reads the env var automatically.
 
-```text
-openai:
-│
-├── chat completions   — gpt-* family (vision, audio, structured output)
-├── reasoning models   — o-series (adds reasoning_effort: low | medium | high)
-├── streaming          — real SSE, token-level
-├── tool calling       — OpenAI tool-call protocol
-├── structured output  — response_model / JSON schema
-│
-└── base_url override  — any OpenAI-compatible gateway
-    ├─ Azure OpenAI
-    ├─ Portkey
-    ├─ LiteLLM proxy
-    ├─ vLLM (self-hosted)
-    └─ together.ai · fireworks · groq · any /v1-shaped endpoint
+### 2. Pick a model
+
+```python
+from locus import Agent
+
+agent = Agent(model="openai:gpt-5.5", system_prompt="You are helpful.")
 ```
 
-## Custom base URL — Azure, Portkey, LiteLLM, vLLM
+The string `"openai:gpt-5.5"` does two things: tells locus to use the
+OpenAI provider (`openai:` prefix), and which model id to call
+(`gpt-5.5`). Any model id OpenAI accepts, locus accepts.
 
-`base_url` overrides the API endpoint. Any OpenAI-compatible gateway
-works under the same `OpenAIModel` class:
+### 3. Run it
+
+```python
+result = agent.run_sync("What is two plus two?")
+print(result.message)
+# → 'Four.'
+```
+
+Done. Streaming, tool calls, structured output — all of it works
+without further configuration.
+
+## What you get out of the box
+
+### Chat completions across the GPT family
+
+Every chat-shaped OpenAI model: `gpt-4o`, `gpt-4.1`, `gpt-5`, `gpt-5.5`,
+`gpt-image-1`. Vision input (image URLs / base64), audio input, and
+function calling work the same way you'd use them on the OpenAI SDK
+directly — locus just normalises the events the model emits.
+
+### Reasoning models — the o-series
+
+`o1`, `o3`, `o4-mini` route through the same `Agent(model="openai:o3")`
+call. They're slower and more expensive but think before they answer.
+locus surfaces the model's thinking blocks as `ThinkEvent`s so your
+UI can show "thinking…" without parsing the response yourself.
+
+```python
+agent = Agent(
+    model="openai:o3",
+    model_config={"reasoning_effort": "high"},   # low | medium | high
+)
+```
+
+`reasoning_effort` is OpenAI's knob for how long the model spends
+thinking. Default is `medium`.
+
+### Real SSE streaming
+
+Token-level streaming over Server-Sent Events. The model emits
+deltas, locus turns them into `ModelChunkEvent`s, your `async for`
+loop reads them as they arrive — no buffering, no fake chunking.
+
+```python
+async for event in agent.run("Write a haiku about latency."):
+    if isinstance(event, ModelChunkEvent) and event.content:
+        print(event.content, end="", flush=True)
+```
+
+### Tool calling — the OpenAI protocol
+
+`@tool` functions are converted to OpenAI's tool-call schema and
+the structured `tool_calls` field in the response is parsed back into
+locus `ToolCall` objects. Parallel tool calls are supported (the
+model can request multiple tools per turn; locus runs them
+concurrently via the `ConcurrentExecutor`).
+
+### Structured output — Pydantic models in, validated objects out
+
+```python
+from pydantic import BaseModel
+
+class Answer(BaseModel):
+    summary: str
+    confidence: float
+
+agent = Agent(
+    model="openai:gpt-5.5",
+    output_schema=Answer,
+    system_prompt="Reply as JSON matching the schema.",
+)
+result = agent.run_sync("Was the meeting productive?")
+print(result.parsed)        # Answer(summary='...', confidence=0.83)
+```
+
+Under the hood, locus sends an OpenAI `response_format` with the
+schema and a strict-mode flag; if the model produces invalid JSON,
+locus retries with the validation errors in the prompt
+(`output_schema_retries=2` by default).
+
+## Going through a gateway
+
+A `base_url` override turns `OpenAIModel` into a client for any
+OpenAI-compatible endpoint:
+
+| Gateway | When to use it | `base_url` |
+|---|---|---|
+| **Azure OpenAI** | Enterprise / regulated workloads, Azure billing | `https://<resource>.openai.azure.com/openai/deployments/<deployment-id>` |
+| **Portkey** | Virtual keys, request routing across providers, retries | `https://api.portkey.ai/v1` |
+| **LiteLLM Proxy** | Self-hosted control plane in front of N providers | `https://<your-litellm-host>/v1` |
+| **vLLM** | Self-hosted inference for open models with the OpenAI shape | `http://localhost:8000/v1` |
+| **together.ai / fireworks / groq** | Hosted open-model inference at OpenAI-shape | their published `/v1` |
 
 ```python
 agent = Agent(
@@ -42,36 +140,26 @@ agent = Agent(
 )
 ```
 
-| Gateway | `base_url` |
+The `api_key` your `OPENAI_API_KEY` provides is forwarded — for Azure
+that's the Azure resource key, for Portkey it's the Portkey virtual
+key, etc.
+
+## Common gotchas
+
+| Symptom | Likely cause |
 |---|---|
-| Azure OpenAI | `https://<resource>.openai.azure.com/openai/deployments/<deployment-id>` |
-| Portkey | `https://api.portkey.ai/v1` |
-| LiteLLM Proxy | `https://<your-litellm-host>/v1` |
-| vLLM (self-hosted) | `http://localhost:8000/v1` |
-| together.ai / fireworks / groq | their published `/v1` URL |
-
-For Azure, `api_key` carries the Azure key. For Portkey and LiteLLM,
-their virtual-key system applies.
-
-## Reasoning models
-
-Reasoning models (`o1`, `o3`, `o4-mini`) route through the same
-class. locus adds `reasoning_effort` to the request when set:
-
-```python
-agent = Agent(
-    model="openai:o3",
-    model_config={"reasoning_effort": "high"},
-)
-```
-
-The model's thinking blocks come through as `ThinkEvent`s in the
-event stream so you can show "thinking…" in your UI.
+| `401 Unauthorized` | `OPENAI_API_KEY` not set, or set to the wrong project's key |
+| `429 Rate limit exceeded` | OpenAI quota; locus retries automatically with `ModelRetryHook` if installed |
+| `model_not_found` | Model id doesn't exist for your tier — check `https://platform.openai.com/docs/models` |
+| Empty `tool_calls` | Model decided not to call a tool; check the system prompt |
+| `reasoning_effort` rejected | Only valid for o-series models, not GPT-4o / GPT-5 |
 
 ## Source
 
-[`OpenAIModel` in `models/native/openai.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/models/native/openai.py).
+[`OpenAIModel` in `src/locus/models/native/openai.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/models/native/openai.py)
 
 ## See also
 
 - [Models overview](../models.md) — the full provider tree.
+- [Anthropic](anthropic.md) — Claude family direct.
+- [OCI Generative AI](oci.md) — same OpenAI models without a separate key, on Oracle infrastructure.

@@ -1,71 +1,186 @@
 # Anthropic
 
-Direct calls to `api.anthropic.com` via `AnthropicModel`.
+The Anthropic provider connects locus directly to Anthropic's API
+(`api.anthropic.com`). Use it when you want **the Claude family** —
+Opus for the hardest problems, Sonnet as the everyday workhorse,
+Haiku for high-volume cheap calls — and want to talk to Anthropic
+without going through an intermediary.
 
-```python
-agent = Agent(model="anthropic:claude-sonnet", ...)
-```
+Two things make this provider distinct: **prompt caching** (long
+system prompts and tool blocks pay 1/10th the input cost on repeat
+turns) and **extended thinking** (Claude 4 surfaces its reasoning as
+a stream of typed events your UI can render).
+
+## When to pick Anthropic
+
+| You want… | This is the right provider |
+|---|---|
+| Claude Opus / Sonnet / Haiku from Anthropic directly | ✓ |
+| Long system prompts amortised across many turns | ✓ — automatic prompt caching |
+| Extended-thinking models with visible reasoning | ✓ — `ThinkEvent` stream |
+| Claude on Oracle infrastructure (no separate API key) | use [OCI](oci.md) — `oci:anthropic.claude-sonnet` |
+| GPT or Llama | use [OpenAI](openai.md) or [OCI](oci.md) instead |
+
+## Getting started
+
+### 1. Set your API key
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-## Capabilities
+### 2. Pick a Claude model
 
-```text
-anthropic:
-│
-├── Claude family       — opus · sonnet · haiku
-├── streaming           — real SSE, token-level
-├── tool calling        — Anthropic tool-use protocol
-├── structured output   — tool-as-schema pattern
-│
-├── prompt caching      — long system + tool blocks marked cacheable;
-│                         subsequent turns pay 1/10th input cost
-│
-└── extended thinking   — passes thinking blocks through as ThinkEvent
+```python
+from locus import Agent
+
+agent = Agent(
+    model="anthropic:claude-sonnet-4-20250514",
+    system_prompt="You are a helpful assistant.",
+)
 ```
 
-## Prompt caching
+The string `"anthropic:claude-sonnet-4-20250514"` tells locus the
+provider (`anthropic:`) and the exact model id. Any model id
+Anthropic accepts, locus accepts — including the dated revision
+suffixes (`-20250514`).
 
-locus marks long system prompts and tool blocks as cacheable
-automatically. Subsequent turns within the cache window pay 1/10th
-the input cost.
+### 3. Run it
 
-You don't have to opt in — locus reads the request shape and applies
-`cache_control` to anything beyond a small threshold. To force or
-suppress it, set `prompt_cache=True|False` on the model config.
+```python
+result = agent.run_sync("Summarise the design doc in three bullets.")
+print(result.message)
+```
 
-## Extended thinking
+That's the full setup. Streaming, tool calling, prompt caching, and
+extended thinking work without extra configuration.
 
-When the model returns thinking blocks (Claude 4 models with
-`thinking_enabled`), locus emits a `ThinkEvent` per block in the
-event stream. Pipe it straight to your UI:
+## What you get out of the box
+
+### The whole Claude family
+
+Whatever Anthropic ships, you can address by name:
+
+| Model | When to pick it |
+|---|---|
+| `claude-opus-4-…` | Hardest problems — code archaeology, deep research, multi-step reasoning |
+| `claude-sonnet-4-…` | Everyday workhorse — fast enough, smart enough, cheap enough |
+| `claude-haiku-4-…` | High-volume cheap calls — classification, routing, simple summaries |
+
+### Real SSE streaming
+
+Token-level streaming. The model emits content deltas; locus
+converts them to `ModelChunkEvent`s; your `async for` loop reads
+them as they arrive.
+
+```python
+async for event in agent.run("Write a haiku about latency."):
+    if isinstance(event, ModelChunkEvent) and event.content:
+        print(event.content, end="", flush=True)
+```
+
+### Tool calling — the Anthropic tool-use protocol
+
+`@tool` functions are translated into Anthropic's `tools` schema; the
+model's structured `tool_use` blocks are parsed back into locus
+`ToolCall`s. Parallel tool calls are supported (the model can
+request multiple tools per turn; locus runs them concurrently via
+the `ConcurrentExecutor`).
+
+### Structured output — tool-as-schema
+
+Anthropic doesn't expose a `response_format` field, so locus uses
+the standard "single-tool" trick: define the schema as a tool, force
+the model to call it. From your side, the API is identical to the
+other providers:
+
+```python
+from pydantic import BaseModel
+
+class Triage(BaseModel):
+    severity: str
+    needs_human: bool
+
+agent = Agent(
+    model="anthropic:claude-sonnet-4-20250514",
+    output_schema=Triage,
+)
+result = agent.run_sync("This page is broken!")
+print(result.parsed)        # Triage(severity='high', needs_human=True)
+```
+
+### Prompt caching — automatic for long prompts
+
+This is the biggest cost saver if your system prompt or tool block is
+long (skills, playbooks, RAG context). Anthropic's prompt-caching
+mechanism marks a span of the request as cacheable; subsequent turns
+within the cache window pay **1/10th** the input cost on the cached
+span.
+
+locus reads the request shape and applies `cache_control` to anything
+beyond a small threshold automatically. You don't opt in.
+
+```python
+# Force or suppress caching explicitly:
+agent = Agent(
+    model="anthropic:claude-sonnet-4-20250514",
+    model_config={"prompt_cache": True},   # or False to opt out
+)
+```
+
+When it kicks in:
+
+- A 5-minute "ephemeral" cache (rolling window) — the default.
+- Subsequent turns reusing the same prefix pay `0.1× input rate` on
+  the cached portion.
+- Effective when system prompts > ~1024 tokens, or you've loaded a
+  big skill / playbook / RAG block.
+
+### Extended thinking — visible reasoning
+
+Claude 4 models with `thinking_enabled` think before answering, the
+way the OpenAI o-series does. Anthropic surfaces those thinking
+blocks in the response; locus emits a `ThinkEvent` for each one so
+your UI can show what the model is working on:
 
 ```python
 async for event in agent.run("..."):
     match event:
         case ThinkEvent(reasoning=r) if r:
             print(f"💭 {r}")
+        case ModelChunkEvent(content=c) if c:
+            print(c, end="", flush=True)
 ```
 
-## Claude on OCI
+## Claude on OCI — same model, different provider
 
-For Claude without a separate Anthropic API key, use the OCI
-transport instead — same `Agent`, different prefix:
+Don't have an Anthropic API key? Want Claude billed through your
+Oracle account on Oracle infrastructure? Switch the prefix:
 
 ```python
 agent = Agent(model="oci:anthropic.claude-sonnet", ...)
 ```
 
-This routes through `OCIOpenAIModel` and inherits OCI auth, so no
-`ANTHROPIC_API_KEY` is needed.
+That routes through `OCIOpenAIModel` against the OCI Generative AI
+endpoint (uses `OCI_PROFILE` for auth, no `ANTHROPIC_API_KEY` needed).
+Same model behind it; different billing surface.
+
+## Common gotchas
+
+| Symptom | Likely cause |
+|---|---|
+| `401 authentication_error` | `ANTHROPIC_API_KEY` not set, or set to a key without console access |
+| `404 not_found_error` on the model id | Dated revision suffix is wrong; check `https://docs.anthropic.com/en/docs/about-claude/models/all-models` |
+| `429 overloaded_error` | Anthropic capacity; the `ModelRetryHook` re-tries with backoff if installed |
+| Prompt caching not visible in usage stats | Cache window expired (5 min ephemeral) or prompt below the threshold |
+| `ThinkEvent`s never fire | Model not in the extended-thinking subset, or `thinking_enabled` not set in `model_config` |
 
 ## Source
 
-[`AnthropicModel` in `models/native/anthropic.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/models/native/anthropic.py).
+[`AnthropicModel` in `src/locus/models/native/anthropic.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/models/native/anthropic.py)
 
 ## See also
 
 - [Models overview](../models.md) — the full provider tree.
 - [OCI Generative AI](oci.md) — Claude via OCI.
+- [OpenAI](openai.md) — GPT family direct.
