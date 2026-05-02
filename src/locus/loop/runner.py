@@ -238,7 +238,7 @@ class StreamingCollector(BaseModel):
         elif event.event_type == "reflect":
             self.reflect_events.append(event)
         elif event.event_type == "terminate":
-            self.terminate_event = event  # type: ignore[assignment]
+            self.terminate_event = event
 
     @property
     def is_complete(self) -> bool:

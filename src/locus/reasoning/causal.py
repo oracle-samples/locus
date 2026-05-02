@@ -504,7 +504,8 @@ class CausalChain:
             if not edge.is_causal:
                 continue
 
-            pair = tuple(sorted([edge.source_id, edge.target_id]))
+            ordered = sorted([edge.source_id, edge.target_id])
+            pair: tuple[str, str] = (ordered[0], ordered[1])
             if pair in checked:
                 continue
             checked.add(pair)
