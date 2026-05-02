@@ -46,6 +46,15 @@ class AnthropicModel(BaseModel):
 
     model_config = {"arbitrary_types_allowed": True}
 
+    @property
+    def supports_structured_output(self) -> bool:
+        """Anthropic doesn't ship OpenAI-style ``response_format``.
+
+        The agent loop falls back to the prompted-JSON path with
+        post-hoc parsing for Anthropic models.
+        """
+        return False
+
     def __init__(
         self,
         model: str = "claude-sonnet-4-20250514",

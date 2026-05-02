@@ -1625,16 +1625,37 @@ class Agent(BaseModel):
         # Pre-model hooks: allow hooks to modify messages before model call
         messages = await self._run_before_model_hooks(messages, tool_schemas or None)
 
+        # When ``output_schema`` is set AND the provider ships native
+        # structured output (OpenAI's ``response_format`` shape), pass
+        # the JSON schema through directly. The provider parses + returns
+        # a typed response without the prompted-JSON fallback. Otherwise
+        # the schema only lives in the system prompt (see
+        # ``_create_initial_state``) and is parsed post-hoc.
+        native_response_format: dict[str, Any] | None = None
+        if self.config.output_schema is not None and getattr(
+            self._model, "supports_structured_output", False
+        ):
+            from locus.core.structured import build_response_format
+
+            native_response_format = build_response_format(
+                self.config.output_schema,
+                strict=self.config.output_schema_strict,
+            )
+
         # Call model with hook-driven retry support
         # Hooks can request retries via event.retry = True
         max_model_retries = 5
         for _model_attempt in range(max_model_retries):
-            response = await self._model.complete(
-                messages=messages,
-                tools=tool_schemas or None,
-                temperature=self.config.temperature,
-                max_tokens=self.config.max_tokens,
-            )
+            complete_kwargs: dict[str, Any] = {
+                "messages": messages,
+                "tools": tool_schemas or None,
+                "temperature": self.config.temperature,
+                "max_tokens": self.config.max_tokens,
+            }
+            if native_response_format is not None:
+                complete_kwargs["response_format"] = native_response_format
+
+            response = await self._model.complete(**complete_kwargs)
 
             # Post-model hooks: event.retry = True to re-call
             after_event = await self._run_after_model_hooks(response, messages)

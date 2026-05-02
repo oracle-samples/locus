@@ -82,6 +82,13 @@ class OCIModel(BaseModel):
 
     model_config = {"arbitrary_types_allowed": True}
 
+    @property
+    def supports_structured_output(self) -> bool:
+        """OCI's native SDK transport (Cohere R-series) doesn't expose
+        OpenAI-style ``response_format``. Use the V1 transport
+        (``OCIOpenAIModel``) for that."""
+        return False
+
     def __init__(
         self,
         model_id: str = "cohere.command-r-plus",
