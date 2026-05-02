@@ -520,7 +520,7 @@ class DeltaCheckpointer:
 
         # Decompress data
         json_data = zlib.decompress(checkpoint.data)
-        data = json.loads(json_data.decode("utf-8"))
+        data: dict[str, Any] = json.loads(json_data.decode("utf-8"))
 
         if not checkpoint.is_delta:
             # Full checkpoint - return directly

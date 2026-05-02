@@ -86,6 +86,7 @@ class FileCheckpointer(BaseCheckpointer):
         state: AgentState,
         thread_id: str,
         checkpoint_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """
         Save agent state to a JSON file.
@@ -94,6 +95,7 @@ class FileCheckpointer(BaseCheckpointer):
             state: Current agent state
             thread_id: Thread identifier
             checkpoint_id: Optional specific checkpoint ID
+            metadata: Optional metadata for querying/filtering checkpoints
 
         Returns:
             Checkpoint ID for the saved state
@@ -112,6 +114,7 @@ class FileCheckpointer(BaseCheckpointer):
                 "thread_id": thread_id,
                 "created_at": datetime.now(UTC).isoformat(),
                 "state": state.to_checkpoint(),
+                "metadata": metadata or {},
             }
 
             # Write to file (run in executor to not block)
@@ -133,7 +136,8 @@ class FileCheckpointer(BaseCheckpointer):
         if not path.exists():
             return None
         with open(path, encoding="utf-8") as f:
-            return json.load(f)
+            data: dict[str, Any] = json.load(f)
+            return data
 
     async def load(
         self,

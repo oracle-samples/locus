@@ -88,20 +88,22 @@ class RedisBackend(BaseModel):
         if value is None:
             return None
 
-        return json.loads(value)
+        data: dict[str, Any] = json.loads(value)
+        return data
 
     async def delete(self, thread_id: str) -> bool:
         """Delete checkpoint from Redis."""
         client = await self._get_client()
         key = self._key(thread_id)
-        result = await client.delete(key)
+        result: int = await client.delete(key)
         return result > 0
 
     async def exists(self, thread_id: str) -> bool:
         """Check if checkpoint exists."""
         client = await self._get_client()
         key = self._key(thread_id)
-        return await client.exists(key) > 0
+        existing: int = await client.exists(key)
+        return existing > 0
 
     async def list_threads(
         self,

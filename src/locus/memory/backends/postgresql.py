@@ -244,7 +244,8 @@ class PostgreSQLBackend(BaseModel):
         if row is None:
             return None
 
-        return json.loads(row["data"])
+        data: dict[str, Any] = json.loads(row["data"])
+        return data
 
     async def delete(self, thread_id: str) -> bool:
         """Delete checkpoint from PostgreSQL."""
@@ -252,7 +253,7 @@ class PostgreSQLBackend(BaseModel):
         pool = await self._get_pool()
 
         async with pool.acquire() as conn:
-            result = await conn.execute(
+            result: str = await conn.execute(
                 f"DELETE FROM {self._full_table_name} WHERE thread_id = $1",
                 thread_id,
             )

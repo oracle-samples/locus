@@ -188,7 +188,7 @@ class OCIBucketBackend(BaseCheckpointer):
         if self._initialized:
             return
 
-        def check_bucket():
+        def check_bucket() -> None:
             client = self._get_client()
             retry = self._get_retry_strategy()
             try:
@@ -245,7 +245,7 @@ class OCIBucketBackend(BaseCheckpointer):
         client = self._get_client()
         retry = self._get_retry_strategy()
 
-        def _put():
+        def _put() -> None:
             client.put_object(
                 namespace_name=self.config.namespace,
                 bucket_name=self.config.bucket_name,
@@ -261,7 +261,8 @@ class OCIBucketBackend(BaseCheckpointer):
         body = await self._get_bytes(object_name)
         if body is None:
             return None
-        return json.loads(body.decode("utf-8"))
+        data: dict[str, Any] = json.loads(body.decode("utf-8"))
+        return data
 
     async def _get_bytes(self, object_name: str) -> bytes | None:
         client = self._get_client()
@@ -275,7 +276,8 @@ class OCIBucketBackend(BaseCheckpointer):
                     object_name=object_name,
                     retry_strategy=retry,
                 )
-                return response.data.content
+                content: bytes = response.data.content
+                return content
             except Exception as e:
                 if "ObjectNotFound" in str(e) or "404" in str(e):
                     return None
@@ -313,7 +315,7 @@ class OCIBucketBackend(BaseCheckpointer):
         client = self._get_client()
         retry = self._get_retry_strategy()
 
-        def _list():
+        def _list() -> tuple[list[Any], list[str]]:
             kwargs: dict[str, Any] = {
                 "namespace_name": self.config.namespace,
                 "bucket_name": self.config.bucket_name,
