@@ -22,7 +22,15 @@ pytestmark = [
 
 
 def has_oracle_available() -> bool:
-    """Check if Oracle ADB is available."""
+    """Check if Oracle ADB is available.
+
+    Requires both a wallet on disk *and* an ``ORACLE_PASSWORD`` in the
+    environment. Without the password ``oracledb.connect()`` prompts for
+    a PEM passphrase on stdin and fails with ``DPY-6005`` instead of
+    skipping cleanly.
+    """
+    if not os.environ.get("ORACLE_PASSWORD"):
+        return False
     wallet_path = Path(
         os.environ.get("ORACLE_WALLET", str(Path.home() / ".oci/wallets/deepresearch"))
     )
