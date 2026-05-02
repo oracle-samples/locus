@@ -510,8 +510,15 @@ class Agent(BaseModel):
                         )
                         prompt_toks = response.usage.get("prompt_tokens", 0)
                         completion_toks = response.usage.get("completion_tokens", 0)
+                        cache_creation_toks = response.usage.get("cache_creation_input_tokens", 0)
+                        cache_read_toks = response.usage.get("cache_read_input_tokens", 0)
                         _total_tokens += prompt_toks + completion_toks
-                        state = state.with_token_usage(prompt_toks, completion_toks)
+                        state = state.with_token_usage(
+                            prompt_toks,
+                            completion_toks,
+                            cache_creation_tokens=cache_creation_toks,
+                            cache_read_tokens=cache_read_toks,
+                        )
 
                         summary = (
                             response.message.content
@@ -579,8 +586,15 @@ class Agent(BaseModel):
                 response, state = await self._get_model_response(state)
                 prompt_toks = response.usage.get("prompt_tokens", 0)
                 completion_toks = response.usage.get("completion_tokens", 0)
+                cache_creation_toks = response.usage.get("cache_creation_input_tokens", 0)
+                cache_read_toks = response.usage.get("cache_read_input_tokens", 0)
                 _total_tokens += prompt_toks + completion_toks
-                state = state.with_token_usage(prompt_toks, completion_toks)
+                state = state.with_token_usage(
+                    prompt_toks,
+                    completion_toks,
+                    cache_creation_tokens=cache_creation_toks,
+                    cache_read_tokens=cache_read_toks,
+                )
                 _last_assistant_content = response.message.content
                 # Track for the user-supplied termination condition. Updated again
                 # below if a Cohere-style text tool call is parsed out of the body.
@@ -1064,6 +1078,8 @@ class Agent(BaseModel):
                 total_tokens=state.total_tokens_used,
                 prompt_tokens=state.prompt_tokens_used,
                 completion_tokens=state.completion_tokens_used,
+                cache_creation_input_tokens=state.cache_creation_tokens_used,
+                cache_read_input_tokens=state.cache_read_tokens_used,
                 duration_ms=elapsed_ms,
             )
 
@@ -1322,8 +1338,15 @@ class Agent(BaseModel):
                 response, state = await self._get_model_response(state)
                 prompt_toks = response.usage.get("prompt_tokens", 0)
                 completion_toks = response.usage.get("completion_tokens", 0)
+                cache_creation_toks = response.usage.get("cache_creation_input_tokens", 0)
+                cache_read_toks = response.usage.get("cache_read_input_tokens", 0)
                 _total_tokens += prompt_toks + completion_toks
-                state = state.with_token_usage(prompt_toks, completion_toks)
+                state = state.with_token_usage(
+                    prompt_toks,
+                    completion_toks,
+                    cache_creation_tokens=cache_creation_toks,
+                    cache_read_tokens=cache_read_toks,
+                )
                 _last_assistant_content = response.message.content
                 _last_no_tool_calls = not response.message.tool_calls
 

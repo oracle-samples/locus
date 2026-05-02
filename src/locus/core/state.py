@@ -86,6 +86,11 @@ class AgentState(BaseModel):
     total_tokens_used: int = 0
     prompt_tokens_used: int = 0
     completion_tokens_used: int = 0
+    # Anthropic prompt-cache token counts. Populated only when an
+    # AnthropicModel is configured with prompt_cache=True. Zero on
+    # other providers.
+    cache_creation_tokens_used: int = 0
+    cache_read_tokens_used: int = 0
     token_budget: int | None = None
 
     # Completion mode
@@ -202,13 +207,29 @@ class AgentState(BaseModel):
             }
         )
 
-    def with_token_usage(self, prompt_tokens: int, completion_tokens: int) -> AgentState:
-        """Record token usage from a model response."""
+    def with_token_usage(
+        self,
+        prompt_tokens: int,
+        completion_tokens: int,
+        cache_creation_tokens: int = 0,
+        cache_read_tokens: int = 0,
+    ) -> AgentState:
+        """Record token usage from a model response.
+
+        ``cache_creation_tokens`` and ``cache_read_tokens`` are populated
+        only when Anthropic returns prompt-cache stats on the response
+        usage (i.e., the AnthropicModel was configured with
+        ``prompt_cache=True``). Default 0 for other providers.
+        """
         return self.model_copy(
             update={
                 "total_tokens_used": self.total_tokens_used + prompt_tokens + completion_tokens,
                 "prompt_tokens_used": self.prompt_tokens_used + prompt_tokens,
                 "completion_tokens_used": self.completion_tokens_used + completion_tokens,
+                "cache_creation_tokens_used": (
+                    self.cache_creation_tokens_used + cache_creation_tokens
+                ),
+                "cache_read_tokens_used": self.cache_read_tokens_used + cache_read_tokens,
                 "updated_at": datetime.now(UTC),
             }
         )
