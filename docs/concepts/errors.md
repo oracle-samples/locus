@@ -1,60 +1,148 @@
 # Errors
 
-Every exception raised from within Locus subclasses a single root
-`LocusError`. One handler catches any Locus-originated failure:
+Every exception raised from inside locus subclasses a single root —
+`LocusError`. One handler catches any locus-originated failure; a
+stable `kind` attribute on each subclass keeps your structured logs
+and metrics dashboards portable across releases.
 
 ```python
 from locus.core.errors import LocusError
 
 try:
-    await agent.run(prompt, thread_id=thread_id)
+    result = agent.run_sync(prompt, thread_id=thread_id)
 except LocusError as exc:
-    logger.exception("agent run failed", extra={"kind": exc.kind})
+    logger.exception(
+        "agent run failed",
+        extra={"kind": exc.kind, "thread_id": thread_id},
+    )
     raise
 ```
+
+## When you'll catch which
+
+| Situation | Catch |
+|---|---|
+| Anything from locus — single sweep handler at your service boundary | `LocusError` |
+| A specific tool blew up; want to retry / skip / re-route | `ToolError` (or one of its three subtypes) |
+| Provider auth or quota issue; want to escalate or back off | `ModelError` (or `ModelAuthError` / `ModelThrottledError`) |
+| Checkpoint resume failed; thread is corrupt or missing | `CheckpointError` |
+| Vector store / embeddings call failed | `RAGError` |
+| Bad config or invalid input at the public-API boundary | `ConfigError` / `ValidationError` |
+
+Outside this hierarchy, nothing locus emits will leak through —
+unwrapped third-party exceptions are wrapped at the boundary.
 
 ## Hierarchy
 
 ```
-LocusError
-├── ToolError
-│   ├── ToolNotFoundError
-│   ├── ToolValidationError
-│   └── ToolExecutionError
-├── ModelError
-│   ├── ModelAuthError
-│   ├── ModelThrottledError
-│   └── ModelResponseError
-├── CheckpointError
-│   ├── CheckpointNotFoundError
-│   └── CheckpointSerializationError
-├── RAGError
-│   ├── EmbeddingError
-│   └── VectorStoreError
-├── ValidationError          (public-API boundary input)
-└── ConfigError              (invalid/missing configuration)
+LocusError                       kind="locus_error"
+├── ToolError                    kind="tool_error"
+│   ├── ToolNotFoundError        kind="tool_not_found"
+│   ├── ToolValidationError      kind="tool_validation"
+│   └── ToolExecutionError       kind="tool_execution"
+├── ModelError                   kind="model_error"
+│   ├── ModelAuthError           kind="model_auth"
+│   ├── ModelThrottledError      kind="model_throttled"
+│   └── ModelResponseError       kind="model_response"
+├── CheckpointError              kind="checkpoint_error"
+│   ├── CheckpointNotFoundError  kind="checkpoint_not_found"
+│   └── CheckpointSerializationError  kind="checkpoint_serialization"
+├── RAGError                     kind="rag_error"
+│   ├── EmbeddingError           kind="embedding"
+│   └── VectorStoreError         kind="vector_store"
+├── ValidationError              kind="validation"     (public-API input)
+└── ConfigError                  kind="config"         (invalid/missing config)
 ```
 
-Each subclass carries a stable snake_case `kind` string for
-structured logging and metrics — the class name may change, the
-`kind` won't. Full reference lands once MR !54 merges.
+Class names may evolve; `kind` strings are part of the stable contract.
+Key your dashboards on `kind`.
 
-## `kind` for metrics
+## Idiomatic patterns
+
+### One handler, structured logs
 
 ```python
+import logging
+
+logger = logging.getLogger(__name__)
+
+try:
+    result = agent.run_sync(prompt)
+except LocusError as exc:
+    logger.exception("agent failed", extra={"kind": exc.kind})
+    return error_response(exc.kind)
+```
+
+### Metric on `kind`
+
+```python
+from locus.core.errors import LocusError
+
+try:
+    result = agent.run_sync(prompt)
 except LocusError as exc:
     metrics.counter("agent.errors", tags={"kind": exc.kind}).increment()
     raise
 ```
 
-## Chained causes
+Use `kind` instead of the class name — the string never changes; the
+class name might.
 
-Every constructor accepts a `cause=...` keyword so the original
-exception is preserved as `__cause__`:
+### Differentiated retry policy
 
 ```python
-raise CheckpointSerializationError(
-    f"failed to serialize state for {thread_id}",
-    cause=underlying_exc,
+from locus.core.errors import (
+    ModelThrottledError, ModelAuthError, ToolExecutionError, LocusError,
 )
+
+for attempt in range(3):
+    try:
+        return agent.run_sync(prompt)
+    except ModelThrottledError:
+        time.sleep(2 ** attempt)         # 429 — exponential back-off
+    except ModelAuthError:
+        raise                            # auth issues never recover with retry
+    except ToolExecutionError:
+        return fallback_path(prompt)     # tool went south — degrade gracefully
+    except LocusError:
+        raise                            # everything else: no retry
 ```
+
+### Chained causes
+
+Every constructor accepts a `cause=` keyword so the original exception
+is preserved as `__cause__`:
+
+```python
+from locus.core.errors import CheckpointSerializationError
+
+try:
+    blob = json.dumps(state)
+except (TypeError, ValueError) as exc:
+    raise CheckpointSerializationError(
+        f"failed to serialize state for {thread_id}",
+        cause=exc,
+    )
+```
+
+The full chain shows up in `traceback.format_exc()` and structured-
+log adapters — you don't lose context.
+
+## Common gotchas
+
+| Symptom | Likely cause |
+|---|---|
+| Catching `Exception` instead of `LocusError` | You'll silently swallow `KeyboardInterrupt` and provider SDK bugs. Catch the concrete locus base. |
+| `ModelThrottledError` retries forever | Cap the loop with a max attempt count or a deadline; don't rely on the provider giving up. |
+| `ToolValidationError` keeps firing for the same call | The model isn't reading the schema error. Tighten the system prompt or reduce the tool's surface. |
+| Cause chain lost in logs | Use `logger.exception(...)`, not `logger.error(str(exc))`. |
+
+## Source
+
+- [`locus.core.errors`](https://github.com/oracle-samples/locus/blob/main/src/locus/core/errors.py) — every exception class.
+
+## See also
+
+- [Retry](retry.md) — built-in retry hook keyed on `ModelThrottledError`.
+- [Hooks](hooks.md) — `AfterToolCallEvent` carries any exception raised by the body.
+- [Tools](tools.md) — when `ToolValidationError` and `ToolExecutionError` fire.
