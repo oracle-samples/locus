@@ -369,7 +369,7 @@ def submit_po(vendor_id: str, amount_usd: float) -> dict:
     return finance.submit(vendor_id, amount_usd)
 
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[search_vendors, submit_po],
     system_prompt="You are a procurement officer.",
     reflexion=True,                    # turn Reflect on

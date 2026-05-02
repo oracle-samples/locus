@@ -1,51 +1,166 @@
-# MCP (both ways)
+# MCP — Model Context Protocol
 
 The [Model Context Protocol](https://modelcontextprotocol.io) is an
-Anthropic-spec interop standard for tools. locus speaks MCP in both
-directions.
+Anthropic-spec interop standard for tools. Define a tool once,
+expose it over MCP, and any MCP-compatible client (Claude Desktop,
+Cline, Strands, another locus agent) can call it. Or consume tools
+from existing MCP servers (filesystem, git, postgres, github,
+sequential-thinking) without writing any glue.
 
-## Consume MCP servers
+**locus speaks MCP both ways**. That's a deliberate differentiator —
+most agent frameworks consume MCP servers but don't expose their own
+tools as MCP. Round-trip means an agent built with locus can be
+either side of the conversation.
 
-`MCPClient` wraps an external MCP server's tools so the agent can call
-them as if they were native locus tools.
+## When to use MCP
+
+| You want… | Use MCP |
+|---|---|
+| Your locus agent to use Anthropic's published filesystem / git / postgres servers | ✓ — `MCPClient` |
+| Your `@tool` library to be callable by Claude Desktop / Cline / other agents | ✓ — `LocusMCPServer` |
+| Two locus agents to share tools across processes / machines | ✓ — works, but [A2A](multi-agent/a2a.md) is the better protocol |
+| In-process multi-agent — share tools by importing | use the [tools](tools.md) directly, not MCP |
+| Deterministic tests | use [Ollama](providers/ollama.md) + plain `@tool` — MCP adds I/O |
+
+## Getting started — consume an MCP server
+
+### 1. Install the MCP extras
+
+```bash
+pip install "locus[mcp]"
+```
+
+### 2. Spawn the server and wrap it with `MCPClient`
 
 ```python
 from locus.integrations.fastmcp import MCPClient
 
-# spawn the MCP server as a subprocess (stdio transport)
-fs = MCPClient.stdio(command=["npx", "-y", "@modelcontextprotocol/server-filesystem", "/data"])
-
-agent = Agent(model=..., tools=[*fs.tools()])  # MCP tools become locus tools
+# Spawn Anthropic's filesystem server as a subprocess (stdio transport):
+fs = MCPClient.stdio(
+    command=["npx", "-y", "@modelcontextprotocol/server-filesystem", "/data"],
+)
 ```
 
-The client registers every MCP tool with locus's tool registry, with
-schema, descriptions, and call-through plumbing intact.
+`MCPClient.stdio` runs the subprocess, opens an MCP session over its
+stdin/stdout, and discovers what tools the server exposes.
 
-## Expose locus tools as MCP
+### 3. Pass the tools straight into an Agent
 
-`LocusMCPServer` turns a set of locus tools into an MCP server other
-agents can consume.
+```python
+from locus import Agent
+
+agent = Agent(
+    model="oci:openai.gpt-5.5",
+    tools=[*fs.tools()],          # MCP tools become locus tools
+    system_prompt="You can read files in /data.",
+)
+result = agent.run_sync("Summarise the README in /data.")
+```
+
+`fs.tools()` returns a list of locus `Tool` objects with full
+schemas, descriptions, and call-through plumbing. The agent doesn't
+know they're MCP — they look like any other `@tool`.
+
+## Getting started — expose your tools as MCP
+
+### 1. Wrap a tool list in `LocusMCPServer`
 
 ```python
 from locus.integrations.fastmcp import LocusMCPServer
 
 server = LocusMCPServer(tools=[search_vendors, submit_po])
-server.run_stdio()        # or .run_http(port=7400)
 ```
 
-Anthropic Claude, Strands, or any MCP-spec client can now call your
-locus tools.
+### 2. Pick a transport
+
+```python
+server.run_stdio()                    # for desktop clients
+server.run_http(port=7400)            # for HTTP MCP clients
+```
+
+`run_stdio()` is what Claude Desktop, Cline, and most MCP clients
+expect. `run_http()` runs an HTTP MCP server (transport + JSON-RPC)
+that any HTTP MCP client can reach.
+
+### 3. Point a client at it
+
+For Claude Desktop, edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "my-locus-tools": {
+      "command": "python",
+      "args": ["-m", "my_package.mcp_server"]
+    }
+  }
+}
+```
+
+Restart Claude Desktop. Your `search_vendors` and `submit_po` tools
+appear in the model's tool list.
+
+## What you get out of the box
+
+### Schema preservation
+
+`@tool`'s docstring + type hints become the MCP tool's name,
+description, and JSON schema — losslessly. The MCP client sees the
+same parameter types, defaults, and descriptions a locus agent
+would.
+
+### Both transports
+
+| Transport | Use case |
+|---|---|
+| **stdio** — process pipes | Desktop clients (Claude Desktop, Cline). The MCP server is spawned as a subprocess. |
+| **HTTP** — JSON-RPC over POST | Browser-side or networked clients. Good for shared tool servers. |
+
+### Idempotency carries through
+
+A tool tagged `@tool(idempotent=True)` keeps that semantic when
+exposed via MCP. The dedup happens locus-side; the MCP client
+doesn't need to know.
 
 ## Round-trip example
 
-A common shape: locus agent A consumes an MCP filesystem server, plus
-a locus agent B exposed as MCP that A can also call. Same client API,
-different transports.
+A common shape: a locus agent A consumes a filesystem MCP server,
+*and* exposes its own tools as MCP for another agent B to consume:
 
-## Tutorial
+```python
+# Agent A — consumes filesystem, exposes its own analytics tools
+fs = MCPClient.stdio(command=[...])      # consumer side
+analytics = LocusMCPServer(              # producer side
+    tools=[summarise_csv, plot_histogram],
+)
+analytics.run_http(port=7400, in_background=True)
 
-[`tutorial_12_mcp_integration.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_12_mcp_integration.py).
+agent_a = Agent(
+    model="oci:openai.gpt-5.5",
+    tools=[*fs.tools(), summarise_csv, plot_histogram],
+)
+```
 
-## Source
+Same `MCPClient` API on the consumer side, same `LocusMCPServer` on
+the producer side, same tool definitions. The transport is an
+implementation detail.
 
-`src/locus/integrations/fastmcp.py` — built on FastMCP.
+## Common gotchas
+
+| Symptom | Likely cause |
+|---|---|
+| `MCP server failed to start` | The MCP server subprocess crashed before establishing the session. Run the command manually to see the error. |
+| `Tool 'X' not found in MCP discovery` | The server exposes a different name than you expected. Print `[t.name for t in fs.tools()]` to see the actual list. |
+| `Schema validation failed on call` | MCP tool returned an arg type that doesn't match its declared schema. Common with hand-written MCP servers; the standard ones are fine. |
+| Claude Desktop doesn't show your locus tools | `claude_desktop_config.json` not picked up — check the file lives at the right path and Claude has been restarted. |
+| Hangs on `MCPClient.stdio` startup | The MCP subprocess is waiting for input on stdin (some servers expect a handshake). Pass `wait_for_init=True` and a timeout. |
+
+## Source and tutorial
+
+- [`locus.integrations.fastmcp`](https://github.com/oracle-samples/locus/blob/main/src/locus/integrations/fastmcp.py) — built on FastMCP.
+- [`tutorial_12_mcp_integration.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_12_mcp_integration.py) — consumer + producer end-to-end.
+
+## See also
+
+- [Tools](tools.md) — the `@tool` decorator MCP wraps.
+- [A2A](multi-agent/a2a.md) — purpose-built protocol for cross-process locus-to-locus agent meshes.

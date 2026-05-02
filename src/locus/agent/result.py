@@ -30,6 +30,12 @@ class ExecutionMetrics(BaseModel):
     duration_ms: float = 0.0
     reflexion_evaluations: int = 0
     grounding_evaluations: int = 0
+    # Anthropic prompt-caching token counts. Populated only when the
+    # AnthropicModel is configured with `prompt_cache=True` and the
+    # provider returns cache_creation_input_tokens / cache_read_input_tokens
+    # on the response usage. Zero on other providers.
+    cache_creation_input_tokens: int = 0
+    cache_read_input_tokens: int = 0
 
     model_config = {"frozen": True}
 

@@ -12,7 +12,7 @@ from locus import Agent
 from locus.memory.backends import OCIBucketBackend
 
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[...],
     checkpointer=OCIBucketBackend(
         bucket_name="locus-threads",

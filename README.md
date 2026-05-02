@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  <strong>Build AI workflows that actually ship.</strong><br>
-  Oracle Generative AI · Multi-Agent · Reasoning · Orchestrator SDK.
+  <strong>Build agents that reason and solve together.</strong><br>
+  The Oracle Gen AI Multi-Agent Reasoning SDK.
 </p>
 
 <p align="center">
@@ -26,14 +26,17 @@
 
 ---
 
-Spin up a **swarm** of specialists. Hand a conversation off across an
-**escalation desk**. Run an **orchestrator** of experts in parallel.
-Wire up a **state graph** that loops until confident. Mesh agents
-**across processes** with A2A. Or just ship one self-correcting agent
-that knows when to stop.
+Reasoning lives inside the loop. **Reflexion** evaluates every turn.
+**Grounding** verifies every claim against its source. **Causal**
+traces root cause from symptom.
 
-Six multi-agent shapes plus A2A. One Oracle-native runtime. Every
-model on OCI the day it lands.
+Six shapes for six problems. **Compose** linear pipelines.
+**Orchestrate** specialists in parallel. **Swarm** for peer-to-peer
+research. **Handoff** for escalation desks. **StateGraph** loops
+until confident. **Functional** maps across agents. **A2A** meshes
+across processes.
+
+Every model on Oracle Generative AI the day it lands.
 
 ```bash
 pip install "locus[oci]"
@@ -58,7 +61,7 @@ def book_flight(flight_id: str, customer_id: str) -> dict:
     return billing.charge_and_book(flight_id, customer_id)
 
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[search_flights, book_flight],
     system_prompt="You are a travel concierge. Find a flight, then book it.",
     reflexion=True,                                      # self-correct mid-run
@@ -191,7 +194,7 @@ def book_meeting(date: str, attendees: list[str]) -> dict:
     return calendar.book(date, attendees)
 
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[get_today_date, book_meeting],
     system_prompt="You are a scheduling assistant.",
 )
@@ -220,6 +223,31 @@ each tutorial is a working program against a real model.
 | **RAG** | [`22_rag_basics`](examples/tutorial_22_rag_basics.py) · [`24_rag_agents`](examples/tutorial_24_rag_agents.py) |
 | **Production** | [`19_guardrails_security`](examples/tutorial_19_guardrails_security.py) · [`20_checkpoint_backends`](examples/tutorial_20_checkpoint_backends.py) · [`28_agent_server`](examples/tutorial_28_agent_server.py) · [`37_termination`](examples/tutorial_37_termination.py) |
 | **OCI** | [`29_model_providers`](examples/tutorial_29_model_providers.py) · [`40_oci_dac`](examples/tutorial_40_oci_dac.py) — Dedicated AI Cluster endpoints |
+
+## Deploy
+
+`AgentServer` is a drop-in FastAPI app. The repo ships a turn-key
+deployment story:
+
+- Multi-stage [`Dockerfile`](Dockerfile) — non-root user, `HEALTHCHECK`
+  on `/health`, `pip install ".[oci,server,checkpoints]"`.
+- Helm chart at [`deploy/helm/locus-agent/`](deploy/helm/locus-agent/) —
+  Deployment, Service, ServiceAccount (with workload-identity hooks),
+  Secret, HPA, Ingress, all driven by `values.yaml`.
+- `pip install "locus[oci,server]"` for production installs.
+
+```bash
+docker build -t iad.ocir.io/$NAMESPACE/locus-agent:0.1.0 .
+helm install locus-agent ./deploy/helm/locus-agent \
+  --set image.repository=iad.ocir.io/$NAMESPACE/locus-agent \
+  --set image.tag=0.1.0 \
+  --set auth.apiKey=$(openssl rand -hex 16) \
+  --set ociBucket.enabled=true \
+  --set ociBucket.bucketName=locus-threads \
+  --set ociBucket.namespace=$NAMESPACE
+```
+
+[Full deploy guide →](https://oracle-samples.github.io/locus/how-to/deploy/)
 
 ## Repo layout
 

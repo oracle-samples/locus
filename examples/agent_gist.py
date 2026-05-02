@@ -18,7 +18,7 @@ from locus.models import OCIOpenAIModel
 
 def main():
     model = OCIOpenAIModel(
-        model="openai.gpt-5.5",
+        model="openai.gpt-5",
         profile=os.environ.get("OCI_PROFILE", "DEFAULT"),
     )
 

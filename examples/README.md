@@ -7,7 +7,7 @@ from locus import Agent
 from locus.models import OCIOpenAIModel
 
 model = OCIOpenAIModel(
-    model="openai.gpt-5.5",
+    model="openai.gpt-5",
     profile="MY_PROFILE",  # any profile in ~/.oci/config
 )
 

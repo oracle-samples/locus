@@ -30,7 +30,7 @@ from locus import Agent
 from locus.models import OCIOpenAIModel
 
 model = OCIOpenAIModel(
-    model="openai.gpt-5.5",
+    model="openai.gpt-5",
     profile="DEFAULT",        # any [profile] in ~/.oci/config
 )
 
@@ -51,7 +51,7 @@ import os
 from locus.models import OCIOpenAIModel
 
 model = OCIOpenAIModel(
-    model="openai.gpt-5.5",
+    model="openai.gpt-5",
     auth_type="instance_principal",     # or "resource_principal"
     compartment_id=os.environ["OCI_COMPARTMENT_ID"],
 )
@@ -68,7 +68,7 @@ identity.
 - **Real SSE streaming** — `agent.run(...)` yields events as the model
   produces tokens, not after the full response arrives.
 - **Day-0 model coverage** — when OCI publishes a new model id (e.g.
-  `openai.gpt-5.5` on launch day), it works immediately. No `oci`
+  `openai.gpt-5` on launch day), it works immediately. No `oci`
   package release needed.
 - **Standard OpenAI request shape** — tool calls, system messages,
   multimodal content, and seed/penalty/top_p knobs work the same way as
@@ -101,7 +101,7 @@ an OCI-side limitation of the legacy endpoint, not a locus issue.
 from locus.models import get_model
 
 # Uses OCIOpenAIModel
-m1 = get_model("oci:openai.gpt-5.5", profile="DEFAULT")
+m1 = get_model("oci:openai.gpt-5", profile="DEFAULT")
 
 # Uses OCIModel (Cohere R-series)
 m2 = get_model("oci:cohere.command-r-plus", profile_name="DEFAULT", auth_type="api_key")
@@ -131,9 +131,9 @@ side-by-side.
 - **OpenAI Responses API on OCI.** Locus deliberately stays on
   chat/completions — the Responses API is built around server-side
   conversation state which conflicts with locus's own memory and tool
-  layers. Practical consequence: `openai.gpt-5.5-pro` (Responses-only on
+  layers. Practical consequence: `openai.gpt-5-pro` (Responses-only on
   OCI per the day-0 announcement) is not reachable from locus today.
-  Regular `openai.gpt-5.5` works fine on V1.
+  Regular `openai.gpt-5` works fine on V1.
 - **Cohere R-series on V1.** OCI's `/openai/v1` returns `400 Unsupported
   OpenAI operation` for these. Use `OCIModel`.
 - **GenAI API key auth (Bearer token).** A "create an API key in the
@@ -148,7 +148,7 @@ side-by-side.
 # V1 path (any non-Cohere-R model)
 OCI_PROFILE=DEFAULT \
 OCI_REGION=us-chicago-1 \
-OCI_MODEL_ID=openai.gpt-5.5 \
+OCI_MODEL_ID=openai.gpt-5 \
 pytest tests/integration/test_oci_openai_compat_integration.py
 
 # SDK path (Cohere R-series)

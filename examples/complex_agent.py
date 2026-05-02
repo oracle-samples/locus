@@ -454,7 +454,7 @@ async def run_complex_agent():
 
     # Create model
     model = OCIOpenAIModel(
-        model="openai.gpt-5.5",
+        model="openai.gpt-5",
         profile=os.environ.get("OCI_PROFILE", "DEFAULT"),
         region=os.environ.get("OCI_REGION", "us-chicago-1"),
         max_tokens=2048,
@@ -542,7 +542,7 @@ async def run_structured_output_demo():
     print()
 
     model = OCIOpenAIModel(
-        model="openai.gpt-5.5",
+        model="openai.gpt-5",
         profile=os.environ.get("OCI_PROFILE", "DEFAULT"),
         region=os.environ.get("OCI_REGION", "us-chicago-1"),
     )

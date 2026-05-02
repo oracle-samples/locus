@@ -6,7 +6,7 @@ single argument on `Agent(...)`.
 
 ```python
 agent = Agent(
-    model="oci:openai.gpt-5.5",
+    model="oci:openai.gpt-5",
     tools=[search, summarise, validate_claim],
     reflexion=True,    # self-evaluate per turn
     grounding=True,    # LLM-as-judge claim verification
