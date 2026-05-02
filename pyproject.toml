@@ -525,16 +525,11 @@ ignore_missing_imports = true
 module = [
     "locus.rag.*",
     "locus.memory.*",
-    "locus.integrations.*",
-    "locus.streaming.*",
     "locus.loop.*",
-    "locus.playbooks.*",
     "locus.server.*",
     "locus.multiagent.graph",
     "locus.hooks.builtin.*",
     "locus.reasoning.*",
-    "locus.skills.*",
-    "locus.a2a.*",
 ]
 ignore_errors = true
 

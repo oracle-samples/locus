@@ -29,7 +29,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-import yaml
+import yaml  # type: ignore[import-untyped]  # PyYAML ships no inline types
 
 
 # AgentSkills.io name validation: kebab-case, 1-64 chars, no consecutive hyphens

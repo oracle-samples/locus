@@ -126,7 +126,7 @@ class PlaybookLoader:
             PlaybookLoadError: If YAML is invalid or playbook validation fails
         """
         try:
-            import yaml
+            import yaml  # type: ignore[import-untyped]  # PyYAML ships no inline types
         except ImportError as e:
             raise PlaybookLoadError(
                 "PyYAML is required for YAML support. Install with: pip install pyyaml"

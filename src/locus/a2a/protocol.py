@@ -30,6 +30,7 @@ import json
 import logging
 import os
 import uuid
+from collections.abc import AsyncIterator
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -238,7 +239,7 @@ class A2AServer:
             user_msgs = [m for m in request.messages if m.role == "user"]
             prompt = user_msgs[-1].content if user_msgs else ""
 
-            async def event_generator():
+            async def event_generator() -> AsyncIterator[str]:
                 try:
                     async for event in agent.run(prompt):
                         if isinstance(event, ThinkEvent):

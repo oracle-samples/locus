@@ -184,7 +184,8 @@ class SSEHandler(BaseStreamHandler):
             Dictionary representation of the event
         """
         if self.custom_serializer:
-            return self.custom_serializer(event)
+            # User-supplied callable; mypy can't narrow its return.
+            return self.custom_serializer(event)  # type: ignore[no-any-return]
 
         # Use Pydantic's model_dump
         data = event.model_dump()
