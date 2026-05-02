@@ -81,6 +81,17 @@ class OpenAIModel(BaseModel):
 
     model_config = {"arbitrary_types_allowed": True}
 
+    @property
+    def supports_structured_output(self) -> bool:
+        """Native ``response_format={"type":"json_schema",...}`` support.
+
+        OpenAI's chat-completions API accepts a JSON-schema response_format
+        and guarantees a parseable instance. The agent loop uses this
+        property to skip the prompted-JSON fallback when the provider
+        ships native structured output.
+        """
+        return True
+
     def __init__(
         self,
         model: str = "gpt-4o",
