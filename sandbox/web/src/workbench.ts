@@ -102,11 +102,15 @@ function renderList(filter: string) {
     const item = document.createElement("div");
     item.className = `side__item${current?.id === t.id ? " side__item--active" : ""}`;
     item.dataset.testid = `tutorial-${t.id}`;
+    const stdinBadge = t.needs_stdin
+      ? `<span class="needs-stdin-badge" title="uses interrupt() — needs human input, not yet supported in workbench" data-testid="needs-stdin-badge">↩</span>`
+      : "";
     item.innerHTML = `
       <span style="font-family: var(--mono); font-size: 0.7rem; color: var(--or-text-mute); min-width: 1.6rem">${String(
         t.number,
       ).padStart(2, "0")}</span>
-      <span style="font-size: 0.82rem">${t.title.replace(/^Tutorial \d+:\s*/i, "")}</span>
+      <span style="font-size: 0.82rem; flex: 1">${t.title.replace(/^Tutorial \d+:\s*/i, "")}</span>
+      ${stdinBadge}
     `;
     item.addEventListener("click", () => void selectTutorial(t.id));
     sideTutorials.appendChild(item);
@@ -271,6 +275,19 @@ async function runEdited() {
   const source = getEditorContent();
   if (!source.trim()) {
     wbStatus.textContent = "editor is empty.";
+    return;
+  }
+  if (current?.needs_stdin) {
+    wbOutput.innerHTML = "";
+    appendOutput(
+      `This tutorial pauses for human input via locus.core.interrupt(). ` +
+        `The workbench can't supply stdin to the subprocess. ` +
+        `Run it locally:\n\n  python examples/${current.filename}`,
+      "error",
+    );
+    wbOutputPill.style.display = "inline-flex";
+    wbOutputPill.className = "pill pill--down";
+    wbOutputPill.innerHTML = `<span class="pill__dot"></span>needs human input`;
     return;
   }
   wbOutput.innerHTML = "";

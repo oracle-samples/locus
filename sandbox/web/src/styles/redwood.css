@@ -924,3 +924,14 @@ code, pre { font-family: var(--mono); }
   font-size: 0.86rem;
   line-height: 1.6;
 }
+
+/* ----- Tutorials sidebar: human-in-the-loop badge ----- */
+.needs-stdin-badge {
+  font-size: 0.78rem;
+  color: var(--or-sand);
+  margin-left: 0.4rem;
+  cursor: help;
+  user-select: none;
+  font-weight: 600;
+  line-height: 1;
+}

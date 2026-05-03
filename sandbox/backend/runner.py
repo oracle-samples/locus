@@ -809,6 +809,12 @@ TUTORIAL_BLOCKLIST = {
     40,  # OCI DAC
 }
 
+# Tutorials that pause for human input via locus.core.interrupt(). The
+# subprocess has no stdin attached, so these would hang until the
+# harness timeout. Surfaced in the catalog (needs_stdin: true) so the
+# UI can flag them and /api/tutorials/run can reject early.
+TUTORIAL_NEEDS_STDIN = {9, 45, 46, 47, 48}
+
 _TUTORIAL_DIR = (Path(__file__).resolve().parents[2] / "examples").resolve()
 
 
@@ -840,6 +846,7 @@ def _parse_tutorial(path: Path) -> dict[str, Any]:
         "summary": summary,
         "filename": path.name,
         "source": src,
+        "needs_stdin": number in TUTORIAL_NEEDS_STDIN,
     }
 
 
@@ -924,6 +931,67 @@ def _provider_env(cfg: ProviderConfig) -> dict[str, str]:
     return env
 
 
+_INTERRUPT_PATTERN = re.compile(
+    r"(from\s+locus(\.core)?\s+import\s+[^\n]*\binterrupt\b|locus\.core\.interrupt\s*\()"
+)
+
+
+def _looks_like_needs_stdin(source: str) -> bool:
+    """Heuristic — does the user source call locus.core.interrupt()?"""
+    return bool(_INTERRUPT_PATTERN.search(source))
+
+
+def _split_future_imports(source: str) -> tuple[str, str]:
+    """Pull the shebang + license header + module docstring + any
+    ``from __future__`` imports off the front of *source* so they stay
+    at the top of the generated file. Python's parser requires
+    ``from __future__`` imports to precede every other statement.
+
+    Returns ``(preamble, rest)``. If the source contains no future
+    imports we return ``("", source)`` so the bootstrap goes on top
+    unchanged.
+    """
+    lines = source.splitlines(keepends=True)
+    n = len(lines)
+    i = 0
+    # 1. Optional shebang.
+    if i < n and lines[i].startswith("#!"):
+        i += 1
+    # 2. Skip blank + `#` comment lines (license header etc.).
+    while i < n and (lines[i].strip() == "" or lines[i].lstrip().startswith("#")):
+        i += 1
+    # 3. Optional module docstring (single or triple quoted).
+    if i < n:
+        stripped = lines[i].lstrip()
+        for q in ('"""', "'''"):
+            if stripped.startswith(q):
+                rest_after_q = stripped[len(q):]
+                if q in rest_after_q:  # one-liner
+                    i += 1
+                else:
+                    i += 1
+                    while i < n and q not in lines[i]:
+                        i += 1
+                    if i < n:
+                        i += 1
+                break
+    # 4. More blanks / comments / future imports.
+    last_future = i
+    while i < n:
+        s = lines[i].strip()
+        if s == "" or s.startswith("#"):
+            i += 1
+            continue
+        if s.startswith("from __future__"):
+            i += 1
+            last_future = i
+            continue
+        break
+    if last_future == 0:
+        return "", source
+    return "".join(lines[:last_future]), "".join(lines[last_future:])
+
+
 @app.post("/api/tutorials/run")
 async def run_tutorial(req: WorkbenchRunRequest) -> StreamingResponse:
     """Execute user-edited tutorial source in a subprocess; stream stdout/stderr as SSE.
@@ -931,7 +999,18 @@ async def run_tutorial(req: WorkbenchRunRequest) -> StreamingResponse:
     Each output line is wrapped in an SSE ``data:`` envelope with type
     ``stdout``, ``stderr``, ``exit``, or ``error``. The frontend renders a
     terminal-shaped log.
+
+    Reject early when the source uses ``locus.core.interrupt()`` — those
+    tutorials pause for human input on stdin which we can't supply from
+    the workbench. Caller gets a 400 with a hint to run them locally.
     """
+    if _looks_like_needs_stdin(req.source):
+        raise HTTPException(
+            400,
+            "this tutorial uses locus.core.interrupt() to pause for human "
+            "input — the workbench can't provide stdin to the subprocess. "
+            "Run it locally instead: python examples/tutorial_NN_*.py",
+        )
     repo_root = _TUTORIAL_DIR.parent
     examples_dir = _TUTORIAL_DIR
     src_dir = repo_root / "src"
@@ -1018,7 +1097,11 @@ except Exception:
     tmp_dir = Path(tempfile.mkdtemp(prefix="locus-wb-"))
     tmp_file = tmp_dir / "tutorial_workbench.py"
     rendered = bootstrap.replace("__SB_PROVIDER_VALUE__", _describe_provider(req.provider))
-    tmp_file.write_text(rendered + req.source)
+    # `from __future__` imports MUST be the first executable statement in
+    # the file. If the tutorial has any, split them out and place them
+    # at the very top, with the bootstrap after.
+    user_preamble, user_rest = _split_future_imports(req.source)
+    tmp_file.write_text(user_preamble + rendered + user_rest)
 
     env = {
         **os.environ,

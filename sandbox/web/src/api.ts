@@ -12,6 +12,7 @@ export type Tutorial = {
   title: string;
   summary: string;
   filename: string;
+  needs_stdin?: boolean;
 };
 
 export type TutorialDetail = Tutorial & { source: string };
