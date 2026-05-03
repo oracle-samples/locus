@@ -507,3 +507,60 @@ code, pre { font-family: var(--mono); }
   0%, 50% { opacity: 1; }
   51%, 100% { opacity: 0; }
 }
+
+/* ----- Mode switch (Patterns / Workbench) ----- */
+.side__mode {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  background: var(--or-bg-soft);
+  border-radius: var(--radius);
+  margin: 0 0.5rem 1rem;
+}
+.mode__btn {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--or-text-soft);
+  border-radius: var(--radius-sm);
+}
+.mode__btn:hover { color: var(--or-red); }
+.mode__btn--active {
+  background: var(--or-surface);
+  color: var(--or-red-deep);
+  box-shadow: var(--shadow-1);
+}
+
+/* ----- Workbench editor + output ----- */
+.wb-editor {
+  height: 60vh;
+  min-height: 360px;
+  border: 1px solid var(--or-rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #1f1d1a;
+}
+.wb-editor .cm-editor { height: 100%; }
+.wb-output {
+  background: #1b1a18;
+  color: #e8e2da;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  margin: 0;
+  max-height: 50vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.wb-output .ln { display: block; }
+.wb-output .ln--stderr { color: #f0b8a8; }
+.wb-output .ln--exit { color: #86b596; font-weight: 600; }
+.wb-output .ln--error { color: #c74634; font-weight: 600; }

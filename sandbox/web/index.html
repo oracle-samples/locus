@@ -26,8 +26,19 @@
       </header>
 
       <aside class="app__side">
-        <div class="side__title">Patterns</div>
-        <div id="side-patterns"></div>
+        <div class="side__mode">
+          <button class="mode__btn mode__btn--active" id="mode-patterns" data-testid="mode-patterns">Patterns</button>
+          <button class="mode__btn" id="mode-workbench" data-testid="mode-workbench">Workbench</button>
+        </div>
+        <div id="side-patterns-section">
+          <div class="side__title">Patterns</div>
+          <div id="side-patterns"></div>
+        </div>
+        <div id="side-tutorials-section" style="display:none">
+          <div class="side__title">Tutorials</div>
+          <input type="search" class="input" id="tutorial-search" placeholder="filter…" style="margin: 0 0.5rem 0.5rem; width: calc(100% - 1rem)" />
+          <div id="side-tutorials" data-testid="side-tutorials"></div>
+        </div>
       </aside>
 
       <main class="app__main">
@@ -50,6 +61,33 @@
             and <em>OCI</em> profile names from <code>~/.oci/config</code> (session token or
             API-key auth — instance / resource principals are intentionally unsupported).
           </p>
+        </div>
+
+        <div id="workbench" style="display: none">
+          <div class="card">
+            <div class="card__header">
+              <div>
+                <h2 class="card__title" id="wb-title">…</h2>
+                <div class="card__sub" id="wb-sub">Edit the source. Hit Run to execute as a python subprocess against the configured provider.</div>
+              </div>
+              <span class="pill" id="wb-provider-pill"></span>
+            </div>
+            <div id="wb-editor" data-testid="wb-editor" class="wb-editor"></div>
+            <div class="form-row" style="margin-top: 0.6rem">
+              <span class="card__sub" id="wb-status"></span>
+              <div style="flex: 1"></div>
+              <button class="btn" id="wb-reset-btn">Reset to original</button>
+              <button class="btn" id="wb-stop-btn" style="display:none">Stop</button>
+              <button class="btn btn--primary" id="wb-run-btn" data-testid="wb-run-btn">Run</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card__header">
+              <h2 class="card__title">Output</h2>
+              <span class="pill" id="wb-output-pill" style="display:none"></span>
+            </div>
+            <pre id="wb-output" class="wb-output" data-testid="wb-output"></pre>
+          </div>
         </div>
 
         <div id="playground" style="display: none">

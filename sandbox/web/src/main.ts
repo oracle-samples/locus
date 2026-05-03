@@ -1,6 +1,7 @@
 import { listModels, listPatterns, runPattern, streamPattern } from "./api";
 import { defaultModelFor, defaultsFor, describeProvider, loadProvider, saveProvider } from "./settings";
 import type { Pattern, ProviderConfig, ProviderType, RunEvent } from "./types";
+import { initWorkbench, refreshWorkbenchProvider } from "./workbench";
 
 // ---------------------------------------------------------------------------
 // DOM helpers
@@ -96,10 +97,11 @@ function selectPattern(p: Pattern) {
   promptArea.value = defaultPromptFor(p.id);
   responseEl.innerHTML = `<div class="reply__empty">Hit <strong>Run</strong> to send the prompt to the agent.</div>`;
   responsePill.style.display = "none";
-  // Show streaming toggle only for stream-capable patterns; reset to off
-  // when switching to a non-streamable pattern.
+  // Show streaming toggle only for stream-capable patterns. Default it
+  // to ON for streamable patterns so the user gets token-level streaming
+  // out of the box without remembering to flip a checkbox.
   streamToggleRow.style.display = p.streamable ? "flex" : "none";
-  if (!p.streamable) streamToggle.checked = false;
+  streamToggle.checked = p.streamable;
   renderPatterns();
   renderProviderPill();
 }
@@ -304,7 +306,8 @@ async function runSelected() {
   try {
     const result = await runPattern(selected.id, promptArea.value, provider);
     responsePill.className = "pill pill--up";
-    responsePill.innerHTML = `<span class="pill__dot"></span>${result.events.length} events`;
+    const tag = result.model ? ` · via ${result.model}` : "";
+    responsePill.innerHTML = `<span class="pill__dot"></span>${result.events.length} events${tag}`;
     result.events.forEach((e: RunEvent) => appendEvent(e));
     if (result.reply) appendFinal(result.reply);
   } catch (err) {
@@ -396,3 +399,48 @@ void (async () => {
   }
   renderProviderPill();
 })();
+
+// Mode switch — Patterns vs Workbench. Workbench is initialised lazily so
+// CodeMirror only loads when the user actually opens it.
+const modePatterns = $<HTMLButtonElement>("#mode-patterns");
+const modeWorkbench = $<HTMLButtonElement>("#mode-workbench");
+const sidePatternsSection = $("#side-patterns-section");
+const sideTutorialsSection = $("#side-tutorials-section");
+const playgroundEl = $("#playground");
+const workbenchEl = $("#workbench");
+const providerWarningEl = $("#provider-warning");
+let workbenchReady = false;
+
+function setMode(mode: "patterns" | "workbench") {
+  const isWb = mode === "workbench";
+  modePatterns.classList.toggle("mode__btn--active", !isWb);
+  modeWorkbench.classList.toggle("mode__btn--active", isWb);
+  sidePatternsSection.style.display = isWb ? "none" : "block";
+  sideTutorialsSection.style.display = isWb ? "block" : "none";
+  if (isWb) {
+    playgroundEl.style.display = "none";
+    providerWarningEl.style.display = "none";
+    workbenchEl.style.display = "block";
+    pageTitle.textContent = "Workbench";
+    pageLede.textContent = "Pick a tutorial, edit the source, run it as a Python subprocess against your configured provider.";
+    crumbs.textContent = "Sandbox · Workbench";
+    if (!workbenchReady) {
+      initWorkbench();
+      workbenchReady = true;
+    } else {
+      refreshWorkbenchProvider();
+    }
+  } else {
+    workbenchEl.style.display = "none";
+    if (selected) {
+      playgroundEl.style.display = "block";
+    }
+    if (!provider) providerWarningEl.style.display = "block";
+    pageTitle.textContent = selected?.title ?? "Pick a pattern";
+    pageLede.textContent = selected?.summary ?? "";
+    crumbs.textContent = selected ? `Sandbox · Tutorial ${selected.tutorial}` : "Sandbox";
+  }
+}
+
+modePatterns.addEventListener("click", () => setMode("patterns"));
+modeWorkbench.addEventListener("click", () => setMode("workbench"));

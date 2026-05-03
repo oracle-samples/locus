@@ -26,4 +26,6 @@ export type RunEvent = {
 export type RunResponse = {
   reply: string;
   events: RunEvent[];
+  model?: string;
+  provider?: string;
 };

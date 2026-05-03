@@ -117,6 +117,8 @@ class RunEvent(BaseModel):
 class RunResponse(BaseModel):
     reply: str
     events: list[RunEvent] = Field(default_factory=list)
+    model: str = ""
+    provider: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -620,11 +622,16 @@ async def run(pattern_id: str, req: RunRequest) -> RunResponse:
     if not runner:
         raise HTTPException(404, f"unknown pattern: {pattern_id}")
     try:
-        return await runner(req)
+        out = await runner(req)
     except HTTPException:
         raise
     except Exception as exc:
         raise HTTPException(500, f"{type(exc).__name__}: {exc}") from exc
+    # Echo back the exact model id the request asked for so the UI can
+    # show "via openai.gpt-5.5" instead of relying on stale localStorage.
+    out.model = req.provider.model or ""
+    out.provider = req.provider.provider
+    return out
 
 
 @app.post("/api/run/{pattern_id}/stream")
@@ -735,6 +742,222 @@ async def list_models(req: ListModelsRequest) -> dict[str, Any]:
         return {"provider": p, "models": [], "error": f"{type(exc).__name__}: {exc}"}
 
 
+# ---------------------------------------------------------------------------
+# Workbench — list every model-only tutorial under examples/, serve its
+# source code, and run user-edited copies in a subprocess with streamed
+# stdout/stderr over SSE.
+# ---------------------------------------------------------------------------
+
+import re
+import shutil
+import subprocess
+import tempfile
+from pathlib import Path
+
+# Tutorials kept out of the workbench because they require infra beyond
+# the model (Postgres, vector store, MCP server, multi-process A2A,
+# multimodal providers, dedicated AI cluster, etc.).
+TUTORIAL_BLOCKLIST = {
+    12,  # MCP integration
+    20,  # checkpoint backends — Redis/Postgres
+    21,  # SSE streaming — needs FastAPI server
+    22,
+    23,
+    24,  # RAG suite
+    28,  # agent server
+    34,  # A2A protocol — needs separate process
+    38,  # multimodal providers
+    40,  # OCI DAC
+}
+
+_TUTORIAL_DIR = (Path(__file__).resolve().parents[2] / "examples").resolve()
+
+
+def _parse_tutorial(path: Path) -> dict[str, Any]:
+    """Pull (id, number, title, summary, source) out of a tutorial file."""
+    src = path.read_text()
+    # Extract the leading triple-quoted docstring; first line is the
+    # title, everything else up to "This tutorial covers:" is the summary.
+    m = re.search(r'^"""(.*?)"""', src, re.DOTALL | re.MULTILINE)
+    docstring = m.group(1).strip() if m else ""
+    title = path.stem.replace("_", " ").title()
+    summary = ""
+    if docstring:
+        lines = docstring.splitlines()
+        title = lines[0].strip().rstrip(".")
+        # Take the next non-empty narrative paragraph as summary.
+        for ln in lines[1:]:
+            if ln.strip().lower().startswith(("this tutorial covers", "prerequisites", "difficulty")):
+                break
+            if ln.strip():
+                summary = ln.strip()
+                break
+    num_match = re.match(r"tutorial_(\d+)_", path.name)
+    number = int(num_match.group(1)) if num_match else 0
+    return {
+        "id": path.stem,
+        "number": number,
+        "title": title,
+        "summary": summary,
+        "filename": path.name,
+        "source": src,
+    }
+
+
+def _list_tutorials() -> list[dict[str, Any]]:
+    if not _TUTORIAL_DIR.is_dir():
+        return []
+    out: list[dict[str, Any]] = []
+    for p in sorted(_TUTORIAL_DIR.glob("tutorial_*.py")):
+        m = re.match(r"tutorial_(\d+)_", p.name)
+        if not m:
+            continue
+        n = int(m.group(1))
+        if n in TUTORIAL_BLOCKLIST:
+            continue
+        try:
+            out.append(_parse_tutorial(p))
+        except Exception:  # pragma: no cover
+            continue
+    return out
+
+
+@app.get("/api/tutorials")
+def list_tutorials() -> list[dict[str, Any]]:
+    return [{k: v for k, v in t.items() if k != "source"} for t in _list_tutorials()]
+
+
+@app.get("/api/tutorials/{tid}")
+def tutorial_source(tid: str) -> dict[str, Any]:
+    for t in _list_tutorials():
+        if t["id"] == tid:
+            return t
+    raise HTTPException(404, f"unknown tutorial: {tid}")
+
+
+class WorkbenchRunRequest(BaseModel):
+    source: str
+    provider: ProviderConfig
+    timeout_seconds: int = 120
+
+
+def _provider_env(cfg: ProviderConfig) -> dict[str, str]:
+    """Translate a UI provider config into the env vars examples/config.py expects."""
+    env: dict[str, str] = {}
+    if cfg.provider == "openai":
+        env["LOCUS_MODEL_PROVIDER"] = "openai"
+        env["LOCUS_MODEL_ID"] = cfg.model or "gpt-5"
+        if cfg.api_key:
+            env["OPENAI_API_KEY"] = cfg.api_key
+    elif cfg.provider == "anthropic":
+        env["LOCUS_MODEL_PROVIDER"] = "anthropic"
+        env["LOCUS_MODEL_ID"] = cfg.model or "claude-sonnet-4-6"
+        if cfg.api_key:
+            env["ANTHROPIC_API_KEY"] = cfg.api_key
+    elif cfg.provider in ("oci-session", "oci-apikey"):
+        env["LOCUS_MODEL_PROVIDER"] = "oci"
+        env["LOCUS_MODEL_ID"] = cfg.model or "openai.gpt-5.5"
+        if cfg.profile:
+            env["LOCUS_OCI_PROFILE"] = cfg.profile
+        if cfg.region:
+            env["LOCUS_OCI_REGION"] = cfg.region
+        if cfg.compartment_id:
+            env["LOCUS_OCI_COMPARTMENT"] = cfg.compartment_id
+    return env
+
+
+@app.post("/api/tutorials/run")
+async def run_tutorial(req: WorkbenchRunRequest) -> StreamingResponse:
+    """Execute user-edited tutorial source in a subprocess; stream stdout/stderr as SSE.
+
+    Each output line is wrapped in an SSE ``data:`` envelope with type
+    ``stdout``, ``stderr``, ``exit``, or ``error``. The frontend renders a
+    terminal-shaped log.
+    """
+    repo_root = _TUTORIAL_DIR.parent
+    examples_dir = _TUTORIAL_DIR
+    src_dir = repo_root / "src"
+
+    # Write the user's source to a tmp file. Keep it inside examples/ so
+    # tutorials' relative imports (`from config import get_model`) resolve.
+    tmp_dir = Path(tempfile.mkdtemp(prefix="locus-wb-"))
+    tmp_file = tmp_dir / "tutorial_workbench.py"
+    tmp_file.write_text(req.source)
+
+    env = {
+        **os.environ,
+        **_provider_env(req.provider),
+        "PYTHONPATH": f"{src_dir}{os.pathsep}{examples_dir}",
+        "PYTHONUNBUFFERED": "1",
+    }
+
+    async def gen() -> _AI[str]:
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                "python",
+                str(tmp_file),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env=env,
+                cwd=str(examples_dir),
+            )
+        except Exception as exc:
+            yield _sse({"type": "error", "text": f"spawn failed: {exc}"})
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+            return
+
+        async def pump(reader: asyncio.StreamReader | None, kind: str) -> None:
+            if reader is None:
+                return
+            while True:
+                line = await reader.readline()
+                if not line:
+                    return
+                queue.put_nowait((kind, line.decode(errors="replace").rstrip("\n")))
+
+        queue: asyncio.Queue[tuple[str, str] | None] = asyncio.Queue()
+
+        async def gather() -> None:
+            await asyncio.gather(pump(proc.stdout, "stdout"), pump(proc.stderr, "stderr"))
+            await queue.put(None)
+
+        gather_task = asyncio.create_task(gather())
+
+        try:
+            timeout = max(5, req.timeout_seconds)
+            deadline = asyncio.get_event_loop().time() + timeout
+            while True:
+                try:
+                    item = await asyncio.wait_for(
+                        queue.get(),
+                        timeout=max(0.1, deadline - asyncio.get_event_loop().time()),
+                    )
+                except asyncio.TimeoutError:
+                    proc.kill()
+                    yield _sse({"type": "error", "text": f"killed after {timeout}s"})
+                    break
+                if item is None:
+                    break
+                kind, text = item
+                yield _sse({"type": kind, "text": text})
+            rc = await proc.wait()
+            yield _sse({"type": "exit", "code": rc})
+        finally:
+            gather_task.cancel()
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    return StreamingResponse(
+        gen(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
 @app.get("/api/health")
 def health() -> dict[str, Any]:
-    return {"ok": True, "patterns": [p["id"] for p in PATTERNS], "streamable": sorted(STREAMABLE)}
+    return {
+        "ok": True,
+        "patterns": [p["id"] for p in PATTERNS],
+        "streamable": sorted(STREAMABLE),
+        "tutorials": len(_list_tutorials()),
+    }

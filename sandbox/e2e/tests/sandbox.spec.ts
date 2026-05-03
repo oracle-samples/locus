@@ -140,6 +140,41 @@ test.describe("locus sandbox · OpenAI", () => {
   });
 });
 
+test.describe("locus sandbox · Workbench", () => {
+  test("workbench loads tutorials and runs edited source against OCI", async ({ page }) => {
+    test.setTimeout(240_000);
+    await configureOCI(page);
+    await page.getByTestId("mode-workbench").click();
+    // Sidebar populated.
+    await expect(page.getByTestId("side-tutorials").locator(".side__item").first()).toBeVisible({
+      timeout: 30_000,
+    });
+    const items = page.getByTestId("side-tutorials").locator(".side__item");
+    expect(await items.count()).toBeGreaterThan(20);
+    // Wait for the workbench to finish auto-loading tutorial 01 — the
+    // testing hook is set after each setEditorContent call, so polling
+    // for window.__wb tells us the editor's stable to write to.
+    await expect.poll(async () => page.evaluate(() => Boolean((window as any).__wb)), { timeout: 10_000 }).toBe(true);
+    // Wait until the editor doc isn't empty (auto-load completed).
+    await expect.poll(
+      async () => page.evaluate(() => ((window as any).__wb?.getSource?.() ?? "").length),
+      { timeout: 15_000 },
+    ).toBeGreaterThan(100);
+    await page.evaluate(() => {
+      const wb = (window as any).__wb as { setSource: (s: string) => void };
+      // Replace the tutorial source with a one-liner so we don't have to
+      // wait for the full tutorial to drive several real OCI calls.
+      wb.setSource("print('locus-workbench-marker-7421')\n");
+    });
+    await page.getByTestId("wb-run-btn").click();
+    // Output panel must contain our marker → proves edited source actually ran.
+    await expect(page.getByTestId("wb-output")).toContainText("locus-workbench-marker-7421", {
+      timeout: 60_000,
+    });
+    await expect(page.getByTestId("wb-output")).toContainText(/exited with code 0/i, { timeout: 60_000 });
+  });
+});
+
 const anthropicTest = ANTHROPIC_KEY ? test : test.skip;
 test.describe("locus sandbox · Anthropic", () => {
   anthropicTest("runs basic agent against Anthropic", async ({ page }) => {
