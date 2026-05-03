@@ -246,6 +246,12 @@ async function runEdited() {
   wbOutputPill.style.display = "inline-flex";
   wbOutputPill.className = "pill pill--busy";
   wbOutputPill.innerHTML = `<span class="pill__dot"></span>running…`;
+  // Auto-enter full-screen so the user has the editor + streaming output
+  // edge-to-edge for the duration of the run. Esc still exits.
+  const wbRoot = document.getElementById("workbench");
+  wbRoot?.classList.add("wb--full");
+  document.body.classList.add("body--full");
+  setTimeout(() => editor?.requestMeasure(), 0);
   setRunning(true);
 
   let stdoutLines = 0;

@@ -140,6 +140,19 @@ print(agent.run_sync("ping").message)
     expect(Math.abs(persisted - after)).toBeLessThan(24);
   });
 
+  test("clicking Run auto-enters full-screen", async ({ page }) => {
+    await configureOCI(page);
+    await expect.poll(async () => page.evaluate(() => Boolean((window as any).__wb)), { timeout: 10_000 }).toBe(true);
+    await page.evaluate(() => {
+      const wb = (window as any).__wb as { setSource: (s: string) => void };
+      wb.setSource("print('autofs-marker')\n");
+    });
+    await page.getByTestId("wb-run-btn").click();
+    // Workbench should immediately go full-screen.
+    await expect(page.getByTestId("wb-root")).toHaveClass(/wb--full/);
+    await expect(page.getByTestId("wb-output")).toContainText("autofs-marker", { timeout: 60_000 });
+  });
+
   test("workbench full-screen toggles via icon button + Escape", async ({ page }) => {
     await page.goto("/");
     const root = page.getByTestId("wb-root");
