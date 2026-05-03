@@ -17,12 +17,6 @@ parallel. **Swarm** for peer-to-peer research. **Handoff** for
 escalation desks. **StateGraph** loops until confident. **Functional**
 maps across agents. **A2A** meshes across processes.
 
-The boring stuff is built in: **Reflexion** catches a bad turn before
-the next one. **Grounding** verifies claims against their source.
-**Idempotent tools** dedupe side effects. **Checkpointing** survives
-every restart. The 90+ models on Oracle Generative AI, the day they
-land.
-
 [See what you can build](#six-things-you-can-ship){ .md-button .md-button--primary }
 [GitHub](https://github.com/oracle-samples/locus){ .md-button }
 

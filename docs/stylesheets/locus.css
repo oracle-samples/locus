@@ -239,9 +239,9 @@
   pointer-events: none;
 }
 .md-typeset .locus-hero h1 {
-  font-size: 3.6rem;
-  line-height: 1.04;
-  letter-spacing: -0.05em;
+  font-size: 2.9rem;
+  line-height: 1.05;
+  letter-spacing: -0.045em;
   font-weight: 800;
   text-transform: lowercase;
   color: var(--locus-ink);
@@ -275,7 +275,8 @@
   font-size: 0.85rem;
 }
 .md-typeset .locus-hero pre {
-  font-size: 0.78rem;
+  font-size: 0.68rem;
+  line-height: 1.45;
 }
 .md-typeset .locus-hero .locus-hero__code .highlight {
   border-radius: 8px;
