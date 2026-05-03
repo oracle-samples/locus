@@ -1,5 +1,5 @@
-import { listPatterns, runPattern } from "./api";
-import { defaultModelFor, describeProvider, loadProvider, saveProvider } from "./settings";
+import { listPatterns, runPattern, streamPattern } from "./api";
+import { defaultModelFor, defaultsFor, describeProvider, loadProvider, saveProvider } from "./settings";
 import type { Pattern, ProviderConfig, ProviderType, RunEvent } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -34,6 +34,8 @@ const rowCompartment = $("#row-compartment");
 const promptArea = $<HTMLTextAreaElement>("#prompt");
 const sendBtn = $<HTMLButtonElement>("#send-btn");
 const clearBtn = $<HTMLButtonElement>("#clear-btn");
+const streamToggle = $<HTMLInputElement>("#stream-toggle");
+const streamToggleRow = $("#stream-toggle-row");
 const responseEl = $("#response");
 const responsePill = $("#response-pill");
 const patternTitle = $("#pattern-title");
@@ -93,6 +95,10 @@ function selectPattern(p: Pattern) {
   promptArea.value = defaultPromptFor(p.id);
   responseEl.innerHTML = `<div class="reply__empty">Hit <strong>Run</strong> to send the prompt to the agent.</div>`;
   responsePill.style.display = "none";
+  // Show streaming toggle only for stream-capable patterns; reset to off
+  // when switching to a non-streamable pattern.
+  streamToggleRow.style.display = p.streamable ? "flex" : "none";
+  if (!p.streamable) streamToggle.checked = false;
   renderPatterns();
   renderProviderPill();
 }
@@ -122,15 +128,17 @@ function defaultPromptFor(id: string): string {
 // Settings modal
 // ---------------------------------------------------------------------------
 
+function fillFromConfig(cfg: { provider: ProviderType; model?: string; api_key?: string; profile?: string; region?: string; compartment_id?: string }) {
+  cfgProvider.value = cfg.provider;
+  cfgApiKey.value = cfg.api_key ?? "";
+  cfgModel.value = cfg.model ?? defaultModelFor(cfg.provider);
+  cfgProfile.value = cfg.profile ?? "";
+  cfgRegion.value = cfg.region ?? "us-chicago-1";
+  cfgCompartment.value = cfg.compartment_id ?? "";
+}
+
 function openSettings() {
-  if (provider) {
-    cfgProvider.value = provider.provider;
-    cfgApiKey.value = provider.api_key ?? "";
-    cfgModel.value = provider.model;
-    cfgProfile.value = provider.profile ?? "";
-    cfgRegion.value = provider.region ?? "us-chicago-1";
-    cfgCompartment.value = provider.compartment_id ?? "";
-  }
+  fillFromConfig(provider ?? defaultsFor("oci-session"));
   syncSettingsRows();
   settingsModal.classList.add("modal--open");
 }
@@ -146,7 +154,14 @@ function syncSettingsRows() {
   rowProfile.style.display = isOci ? "flex" : "none";
   rowRegion.style.display = isOci ? "flex" : "none";
   rowCompartment.style.display = isOci ? "flex" : "none";
-  if (!cfgModel.value) cfgModel.value = defaultModelFor(p);
+  // When switching provider type, refill empty OCI / model fields so the
+  // user doesn't have to retype defaults that always make sense (e.g.
+  // BOAT-OC1 + observai compartment + us-chicago-1).
+  const def = defaultsFor(p);
+  if (!cfgModel.value) cfgModel.value = def.model;
+  if (isOci && !cfgProfile.value) cfgProfile.value = def.profile ?? "";
+  if (isOci && !cfgRegion.value) cfgRegion.value = def.region ?? "";
+  if (isOci && !cfgCompartment.value) cfgCompartment.value = def.compartment_id ?? "";
 }
 
 function saveSettings() {
@@ -185,6 +200,38 @@ async function runSelected() {
   responsePill.innerHTML = `<span class="pill__dot"></span>running…`;
   sendBtn.disabled = true;
   sendBtn.textContent = "Running…";
+
+  const useStream = selected.streamable && streamToggle.checked;
+
+  if (useStream) {
+    let count = 0;
+    await streamPattern(
+      selected.id,
+      promptArea.value,
+      provider,
+      (e: RunEvent) => {
+        count++;
+        responsePill.className = "pill pill--busy";
+        responsePill.innerHTML = `<span class="pill__dot"></span>${count} events`;
+        appendEvent(e);
+      },
+      (final) => {
+        responsePill.className = "pill pill--up";
+        responsePill.innerHTML = `<span class="pill__dot"></span>${count} events · done`;
+        if (final) appendFinal(final);
+        sendBtn.disabled = false;
+        sendBtn.textContent = "Run";
+      },
+      (msg) => {
+        responsePill.className = "pill pill--down";
+        responsePill.innerHTML = `<span class="pill__dot"></span>error`;
+        appendError(msg);
+        sendBtn.disabled = false;
+        sendBtn.textContent = "Run";
+      },
+    );
+    return;
+  }
 
   try {
     const result = await runPattern(selected.id, promptArea.value, provider);

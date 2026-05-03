@@ -3,6 +3,7 @@ export type Pattern = {
   title: string;
   tutorial: number;
   summary: string;
+  streamable: boolean;
 };
 
 export type ProviderType = "openai" | "anthropic" | "oci-session" | "oci-apikey";

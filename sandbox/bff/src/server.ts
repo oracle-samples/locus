@@ -48,6 +48,39 @@ app.post("/api/run/:pattern", (req, res) => {
   });
 });
 
+app.post("/api/run/:pattern/stream", async (req, res) => {
+  const path = `/api/run/${encodeURIComponent(req.params.pattern)}/stream`;
+  let upstream: Response;
+  try {
+    upstream = (await fetch(`${RUNNER}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(req.body),
+    })) as unknown as Response;
+  } catch (err) {
+    res.status(502).json({ error: `bff: ${(err as Error).message}` });
+    return;
+  }
+  if (!upstream.ok || !upstream.body) {
+    const text = await upstream.text();
+    res.status(upstream.status || 502).type("text/plain").send(text);
+    return;
+  }
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+  const reader = (upstream.body as unknown as ReadableStream<Uint8Array>).getReader();
+  const decoder = new TextDecoder();
+  req.on("close", () => void reader.cancel().catch(() => undefined));
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    res.write(decoder.decode(value, { stream: true }));
+  }
+  res.end();
+});
+
 app.listen(PORT, () => {
   // eslint-disable-next-line no-console
   console.log(`[bff] :${PORT} → runner ${RUNNER}`);

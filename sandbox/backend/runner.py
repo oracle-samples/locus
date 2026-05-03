@@ -36,8 +36,13 @@ import os
 from collections.abc import AsyncIterator
 from typing import Any, Literal
 
+import asyncio
+import json
+from collections.abc import AsyncIterator as _AI
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 
@@ -436,6 +441,90 @@ async def _run_structured_output(req: RunRequest) -> RunResponse:
     return RunResponse(reply=reply)
 
 
+# ---------------------------------------------------------------------------
+# Streaming — only for patterns that build a single Agent (agent,
+# agent_with_tools, structured_output). Multi-stage patterns
+# (orchestrator, pipeline, graph) still use the one-shot endpoint.
+# ---------------------------------------------------------------------------
+
+
+def _build_streaming_agent(pattern_id: str, provider: ProviderConfig) -> Any:
+    from locus.agent import Agent, AgentConfig
+    from locus.tools import tool
+
+    model = build_model(provider)
+
+    if pattern_id == "agent":
+        return Agent(
+            config=AgentConfig(
+                model=model,
+                system_prompt="You are a concise assistant. Answer in one paragraph.",
+                max_iterations=3,
+            )
+        )
+    if pattern_id == "agent_with_tools":
+        @tool
+        def add(a: float, b: float) -> float:
+            """Sum two numbers."""
+            return a + b
+
+        @tool
+        def reverse(s: str) -> str:
+            """Reverse a string."""
+            return s[::-1]
+
+        return Agent(
+            config=AgentConfig(
+                model=model,
+                tools=[add, reverse],
+                system_prompt="Use the tools when relevant. Answer succinctly.",
+                max_iterations=5,
+            )
+        )
+    if pattern_id == "structured_output":
+        class Verdict(BaseModel):
+            winner: str
+            confidence: float
+            reasoning: str
+
+        return Agent(
+            config=AgentConfig(
+                model=model,
+                output_schema=Verdict,
+                system_prompt=(
+                    "You are a judge. Pick a winner from the input and report a "
+                    "Verdict with winner, confidence (0..1), and one-sentence reasoning."
+                ),
+                max_iterations=2,
+            )
+        )
+    return None  # not a stream-capable pattern
+
+
+async def _stream_pattern(pattern_id: str, prompt: str, provider: ProviderConfig) -> _AI[str]:
+    """Yield SSE-formatted lines from an agent.run() stream."""
+    agent = _build_streaming_agent(pattern_id, provider)
+    if agent is None:
+        yield _sse({"type": "ErrorEvent", "message": f"pattern {pattern_id!r} does not support streaming"})
+        return
+    try:
+        async for ev in agent.run(prompt):
+            kind = type(ev).__name__
+            payload: dict[str, Any] = {"type": kind}
+            for attr in ("tool_name", "final_message", "content", "reasoning", "message"):
+                v = getattr(ev, attr, None)
+                if v is not None:
+                    payload[attr] = v if isinstance(v, str) else str(v)
+            yield _sse(payload)
+            await asyncio.sleep(0)  # let the loop flush
+    except Exception as exc:
+        yield _sse({"type": "ErrorEvent", "message": f"{type(exc).__name__}: {exc}"})
+
+
+def _sse(payload: dict[str, Any]) -> str:
+    return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
 PATTERN_RUNNERS: dict[str, Any] = {
     "agent": _run_agent,
     "agent_with_tools": _run_agent_with_tools,
@@ -461,9 +550,15 @@ app.add_middleware(
 )
 
 
+STREAMABLE = {"agent", "agent_with_tools", "structured_output"}
+
+
 @app.get("/api/patterns")
 def list_patterns() -> list[dict[str, Any]]:
-    return PATTERNS
+    out: list[dict[str, Any]] = []
+    for p in PATTERNS:
+        out.append({**p, "streamable": p["id"] in STREAMABLE})
+    return out
 
 
 @app.post("/api/run/{pattern_id}")
@@ -479,6 +574,24 @@ async def run(pattern_id: str, req: RunRequest) -> RunResponse:
         raise HTTPException(500, f"{type(exc).__name__}: {exc}") from exc
 
 
+@app.post("/api/run/{pattern_id}/stream")
+async def run_stream(pattern_id: str, req: RunRequest) -> StreamingResponse:
+    if pattern_id not in PATTERN_RUNNERS:
+        raise HTTPException(404, f"unknown pattern: {pattern_id}")
+    if pattern_id not in STREAMABLE:
+        raise HTTPException(400, f"pattern {pattern_id!r} doesn't support streaming yet")
+
+    async def gen() -> _AI[str]:
+        async for line in _stream_pattern(pattern_id, req.prompt, req.provider):
+            yield line
+
+    return StreamingResponse(
+        gen(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
 @app.get("/api/health")
 def health() -> dict[str, Any]:
-    return {"ok": True, "patterns": [p["id"] for p in PATTERNS]}
+    return {"ok": True, "patterns": [p["id"] for p in PATTERNS], "streamable": sorted(STREAMABLE)}

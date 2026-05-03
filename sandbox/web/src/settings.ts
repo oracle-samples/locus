@@ -28,6 +28,35 @@ export function defaultModelFor(p: ProviderType): string {
   }
 }
 
+/** A full prefill for a freshly-selected provider. Per-provider sensible defaults
+ *  for the OCI-shaped fields so the user only has to drop a key in for OpenAI /
+ *  Anthropic, or just confirm Save for the standard OCI session path. */
+export function defaultsFor(p: ProviderType): ProviderConfig {
+  switch (p) {
+    case "openai":
+      return { provider: "openai", model: "gpt-5" };
+    case "anthropic":
+      return { provider: "anthropic", model: "claude-sonnet-4-6" };
+    case "oci-session":
+      return {
+        provider: "oci-session",
+        model: "openai.gpt-5",
+        profile: "BOAT-OC1",
+        region: "us-chicago-1",
+        compartment_id:
+          "ocid1.compartment.oc1..aaaaaaaandceai675euuovyyazlymnglde2xknsq35rni43zzmwdhxxu4v7q",
+      };
+    case "oci-apikey":
+      return {
+        provider: "oci-apikey",
+        model: "openai.gpt-5",
+        profile: "DEFAULT",
+        region: "us-chicago-1",
+        compartment_id: "",
+      };
+  }
+}
+
 export function describeProvider(cfg: ProviderConfig): string {
   switch (cfg.provider) {
     case "openai":

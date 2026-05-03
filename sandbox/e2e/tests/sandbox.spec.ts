@@ -62,4 +62,31 @@ test.describe("locus sandbox", () => {
     const allKinds = await events.locator(".event__kind").allTextContents();
     expect(allKinds.some((k) => k.startsWith("Tool"))).toBe(true);
   });
+
+  test("settings modal pre-fills OCI defaults on first open", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("settings-btn").click();
+    // Pre-filled because we default to oci-session and there's no saved cfg.
+    await expect(page.getByTestId("cfg-provider")).toHaveValue("oci-session");
+    await expect(page.getByTestId("cfg-model")).toHaveValue("openai.gpt-5");
+    await expect(page.getByTestId("cfg-profile")).toHaveValue(PROFILE);
+    await expect(page.getByTestId("cfg-region")).toHaveValue("us-chicago-1");
+    await expect(page.getByTestId("cfg-compartment")).toHaveValue(COMPARTMENT);
+  });
+
+  test("streams agent events live via SSE", async ({ page }) => {
+    test.setTimeout(180_000);
+    await page.goto("/");
+    await configureOCISession(page);
+    await page.getByTestId("pattern-agent").click();
+    // Stream toggle is only visible for streamable patterns.
+    await expect(page.getByTestId("stream-toggle")).toBeVisible();
+    await page.getByTestId("stream-toggle").check();
+    await page.getByTestId("prompt").fill("Say pong and only the word pong.");
+    await page.getByTestId("send-btn").click();
+    // The streaming endpoint emits events as they arrive — first one shows up
+    // before the request even completes.
+    await expect(page.getByTestId("event").first()).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId("final-reply")).toBeVisible({ timeout: 60_000 });
+  });
 });
