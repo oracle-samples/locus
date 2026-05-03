@@ -246,10 +246,11 @@ async function runEdited() {
   wbOutputPill.style.display = "inline-flex";
   wbOutputPill.className = "pill pill--busy";
   wbOutputPill.innerHTML = `<span class="pill__dot"></span>running…`;
-  // Auto-enter full-screen so the user has the editor + streaming output
-  // edge-to-edge for the duration of the run. Esc still exits.
+  // Auto-enter full-screen and hide the editor so only the streaming
+  // output is visible while the run is in flight. Esc / the toggle
+  // button restore the split view.
   const wbRoot = document.getElementById("workbench");
-  wbRoot?.classList.add("wb--full");
+  wbRoot?.classList.add("wb--full", "wb--auto");
   document.body.classList.add("body--full");
   setTimeout(() => editor?.requestMeasure(), 0);
   setRunning(true);
@@ -349,6 +350,8 @@ function setupFullscreenToggles() {
   const toggle = () => {
     const willOpen = !root.classList.contains("wb--full");
     root.classList.toggle("wb--full", willOpen);
+    // Manual toggle never hides the editor — only the auto-Run path does.
+    root.classList.remove("wb--auto");
     document.body.classList.toggle("body--full", willOpen);
     setTimeout(() => editor?.requestMeasure(), 0);
   };
@@ -356,7 +359,7 @@ function setupFullscreenToggles() {
   btn.addEventListener("click", toggle);
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && root.classList.contains("wb--full")) {
-      root.classList.remove("wb--full");
+      root.classList.remove("wb--full", "wb--auto");
       document.body.classList.remove("body--full");
       setTimeout(() => editor?.requestMeasure(), 0);
     }

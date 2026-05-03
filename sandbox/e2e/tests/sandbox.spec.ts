@@ -140,7 +140,7 @@ print(agent.run_sync("ping").message)
     expect(Math.abs(persisted - after)).toBeLessThan(24);
   });
 
-  test("clicking Run auto-enters full-screen", async ({ page }) => {
+  test("clicking Run auto-enters full-screen with output-only view", async ({ page }) => {
     await configureOCI(page);
     await expect.poll(async () => page.evaluate(() => Boolean((window as any).__wb)), { timeout: 10_000 }).toBe(true);
     await page.evaluate(() => {
@@ -148,9 +148,16 @@ print(agent.run_sync("ping").message)
       wb.setSource("print('autofs-marker')\n");
     });
     await page.getByTestId("wb-run-btn").click();
-    // Workbench should immediately go full-screen.
+    // Workbench should immediately go full-screen with the editor hidden.
     await expect(page.getByTestId("wb-root")).toHaveClass(/wb--full/);
+    await expect(page.getByTestId("wb-root")).toHaveClass(/wb--auto/);
+    await expect(page.getByTestId("wb-editor-card")).toBeHidden();
+    await expect(page.getByTestId("wb-output-card")).toBeVisible();
     await expect(page.getByTestId("wb-output")).toContainText("autofs-marker", { timeout: 60_000 });
+    // Esc restores the editor.
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("wb-root")).not.toHaveClass(/wb--full/);
+    await expect(page.getByTestId("wb-editor-card")).toBeVisible();
   });
 
   test("workbench full-screen toggles via icon button + Escape", async ({ page }) => {

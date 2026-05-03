@@ -863,3 +863,26 @@ code, pre { font-family: var(--mono); }
   background: var(--or-red-tint);
   color: var(--or-red-deep);
 }
+
+/* ----- Auto-Run full-screen: only the output is visible -------------- */
+#workbench.wb--full.wb--auto #wb-editor-card,
+#workbench.wb--full.wb--auto .wb-resize {
+  display: none;
+}
+#workbench.wb--full.wb--auto .wb-split {
+  /* Single column — output card eats the whole pane. */
+  grid-template-columns: 1fr;
+}
+#workbench.wb--full.wb--auto #wb-output-card {
+  margin: 0;
+  flex: 1;
+  height: 100%;
+  max-height: none;
+}
+#workbench.wb--full.wb--auto .wb-output {
+  height: auto;
+  max-height: none;
+  flex: 1;
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
