@@ -749,11 +749,11 @@ code, pre { font-family: var(--mono); }
   background: #1b1a18;
 }
 
-/* ----- Workbench split: editor + output side-by-side at wide widths ----- */
+/* ----- Workbench split: editor + draggable divider + output ----- */
 .wb-split {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-  gap: 1rem;
+  grid-template-columns: minmax(0, var(--wb-left, 1.35fr)) auto minmax(0, var(--wb-right, 1fr));
+  gap: 0;
   align-items: stretch;
 }
 .wb-split > .card {
@@ -762,18 +762,60 @@ code, pre { font-family: var(--mono); }
   margin-bottom: 0;
   min-width: 0;
 }
+.wb-split > .card:first-of-type { margin-right: 0.45rem; }
+.wb-split > .card:last-of-type  { margin-left: 0.45rem; }
+
+/* Draggable divider — 8px hit area, 2px visible bar in the middle. */
+.wb-resize {
+  width: 8px;
+  cursor: col-resize;
+  position: relative;
+  user-select: none;
+  align-self: stretch;
+  border: 0;
+  background: transparent;
+}
+.wb-resize__grip {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  bottom: 8px;
+  transform: translateX(-50%);
+  width: 2px;
+  background: var(--or-rule);
+  border-radius: 1px;
+  transition: background 0.12s, width 0.12s;
+}
+.wb-resize:hover .wb-resize__grip,
+.wb-resize:focus-visible .wb-resize__grip,
+.wb-resize.wb-resize--dragging .wb-resize__grip {
+  background: var(--or-red);
+  width: 4px;
+}
+.wb-resize:focus { outline: none; }
+@media (max-width: 1100px) {
+  .wb-resize { display: none; }
+}
 .wb-split .wb-editor {
-  flex: 1;
-  height: auto;
-  min-height: 56vh;
+  /* Pin the editor to a fixed height so CodeMirror scrolls internally
+     instead of growing the card to fit every line. Without this, a long
+     tutorial source makes the workbench thousands of pixels tall and
+     pushes the resize divider off-screen. */
+  height: 60vh;
+  min-height: 360px;
+  max-height: 60vh;
+  flex: 0 0 60vh;
 }
 .wb-split .wb-output {
-  flex: 1;
-  max-height: none;
-  min-height: 56vh;
+  height: 60vh;
+  min-height: 360px;
+  max-height: 60vh;
+  flex: 0 0 60vh;
+  overflow: auto;
 }
 @media (max-width: 1100px) {
-  .wb-split { grid-template-columns: 1fr; }
+  .wb-split { grid-template-columns: 1fr; gap: 1rem; }
+  .wb-split > .card { margin: 0; }
 }
 
 /* Full-screen mode keeps the same split shape, edge-to-edge. */

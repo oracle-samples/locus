@@ -118,6 +118,28 @@ print(agent.run_sync("ping").message)
     await expect(html).toHaveAttribute("data-theme", after as string);
   });
 
+  test("split divider is draggable and persists", async ({ page }) => {
+    await page.setViewportSize({ width: 1400, height: 900 });
+    await page.goto("/");
+    await page.evaluate(() => localStorage.removeItem("locus.sandbox.split"));
+    await page.reload();
+    const editorCard = page.getByTestId("wb-editor-card");
+    const handle = page.getByTestId("wb-resize");
+    const before = (await editorCard.boundingBox())!.width;
+    const hbox = (await handle.boundingBox())!;
+    // Drag the divider 200px to the right — editor should grow.
+    await page.mouse.move(hbox.x + hbox.width / 2, hbox.y + hbox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(hbox.x + hbox.width / 2 + 200, hbox.y + hbox.height / 2, { steps: 10 });
+    await page.mouse.up();
+    const after = (await editorCard.boundingBox())!.width;
+    expect(after).toBeGreaterThan(before + 100);
+    // Persisted across reload.
+    await page.reload();
+    const persisted = (await editorCard.boundingBox())!.width;
+    expect(Math.abs(persisted - after)).toBeLessThan(24);
+  });
+
   test("workbench full-screen toggles via icon button + Escape", async ({ page }) => {
     await page.goto("/");
     const root = page.getByTestId("wb-root");

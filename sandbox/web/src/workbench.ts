@@ -280,6 +280,61 @@ async function runEdited() {
   );
 }
 
+function setupSplitResize() {
+  const split = document.querySelector<HTMLElement>(".wb-split");
+  const handle = document.querySelector<HTMLElement>("#wb-resize");
+  if (!split || !handle) return;
+
+  // Restore the last user position (as a 0..1 ratio of the editor side).
+  const saved = parseFloat(localStorage.getItem("locus.sandbox.split") ?? "");
+  if (Number.isFinite(saved) && saved > 0.15 && saved < 0.85) {
+    split.style.setProperty("--wb-left", `${saved}fr`);
+    split.style.setProperty("--wb-right", `${1 - saved}fr`);
+  }
+
+  let startX = 0;
+  let startLeftPx = 0;
+
+  const onMouseMove = (e: MouseEvent) => {
+    const total = split.getBoundingClientRect().width;
+    const dx = e.clientX - startX;
+    const newLeft = Math.max(280, Math.min(total - 280, startLeftPx + dx));
+    const ratio = newLeft / total;
+    split.style.setProperty("--wb-left", `${ratio}fr`);
+    split.style.setProperty("--wb-right", `${1 - ratio}fr`);
+    editor?.requestMeasure();
+  };
+
+  const onMouseUp = () => {
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
+    handle.classList.remove("wb-resize--dragging");
+    document.body.style.cursor = "";
+    const editorCard = split.children[0] as HTMLElement;
+    const ratio = editorCard.getBoundingClientRect().width / split.getBoundingClientRect().width;
+    localStorage.setItem("locus.sandbox.split", String(ratio));
+  };
+
+  handle.addEventListener("mousedown", (e: MouseEvent) => {
+    startX = e.clientX;
+    const editorCard = split.children[0] as HTMLElement;
+    startLeftPx = editorCard.getBoundingClientRect().width;
+    handle.classList.add("wb-resize--dragging");
+    document.body.style.cursor = "col-resize";
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    e.preventDefault();
+  });
+
+  // Double-click resets to 50/50 split.
+  handle.addEventListener("dblclick", () => {
+    split.style.setProperty("--wb-left", "1fr");
+    split.style.setProperty("--wb-right", "1fr");
+    localStorage.setItem("locus.sandbox.split", "0.5");
+    editor?.requestMeasure();
+  });
+}
+
 function setupFullscreenToggles() {
   const root = document.querySelector<HTMLElement>("#workbench");
   const btn = document.querySelector<HTMLButtonElement>("#wb-fullscreen-btn");
@@ -319,6 +374,7 @@ export function initWorkbench() {
   })();
 
   search.addEventListener("input", () => renderList(search.value));
+  setupSplitResize();
   setupFullscreenToggles();
   wbRunBtn.addEventListener("click", () => void runEdited());
   wbStopBtn.addEventListener("click", () => {

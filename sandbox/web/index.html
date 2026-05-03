@@ -34,7 +34,7 @@
         <button class="btn" id="settings-btn" data-testid="settings-btn">Provider settings</button>
       </header>
 
-      <aside class="app__side">
+      <aside class="app__side" id="app-side" data-testid="app-side">
         <div class="side__title">Tutorials</div>
         <input type="search" class="input" id="tutorial-search" placeholder="filter…" style="margin: 0 0.5rem 0.5rem; width: calc(100% - 1rem)" />
         <div id="side-tutorials" data-testid="side-tutorials"></div>
@@ -91,6 +91,9 @@
               <button class="btn" id="wb-stop-btn" style="display:none">Stop</button>
               <button class="btn btn--primary" id="wb-run-btn" data-testid="wb-run-btn">Run</button>
             </div>
+          </div>
+          <div class="wb-resize" id="wb-resize" data-testid="wb-resize" role="separator" aria-orientation="vertical" tabindex="0" title="Drag to resize">
+            <span class="wb-resize__grip"></span>
           </div>
           <div class="card" id="wb-output-card" data-testid="wb-output-card">
             <div class="card__header">
