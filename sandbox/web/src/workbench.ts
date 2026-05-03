@@ -234,6 +234,19 @@ function appendEvent(ev: Record<string, unknown>) {
 function setRunning(running: boolean) {
   wbRunBtn.style.display = running ? "none" : "inline-flex";
   wbStopBtn.style.display = running ? "inline-flex" : "none";
+  // Lock tutorial navigation while a subprocess is in flight — switching
+  // would swap the editor source out from under the streaming output.
+  const prev = document.querySelector<HTMLButtonElement>("#wb-prev-btn");
+  const next = document.querySelector<HTMLButtonElement>("#wb-next-btn");
+  if (prev && next) {
+    if (running) {
+      prev.disabled = true;
+      next.disabled = true;
+    } else {
+      // Recompute boundary state (idx===0 → prev disabled, etc.).
+      renderNavState();
+    }
+  }
 }
 
 async function runEdited() {

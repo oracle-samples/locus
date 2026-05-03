@@ -156,6 +156,34 @@ print(agent.run_sync("ping").message)
     await expect(page.locator("#wb-title")).toHaveText(titleBefore as string);
   });
 
+  test("prev/next disabled while a run is in flight, re-enabled after", async ({ page }) => {
+    await configureOCI(page);
+    await expect.poll(async () => page.evaluate(() => Boolean((window as any).__wb)), { timeout: 10_000 }).toBe(true);
+    // Sleep just long enough that the test can observe disabled state mid-run.
+    await page.evaluate(() => {
+      const wb = (window as any).__wb as { setSource: (s: string) => void };
+      wb.setSource("import time\ntime.sleep(2)\nprint('done')\n");
+    });
+    // Step to tutorial 02 first so both prev and next start enabled.
+    await page.getByTestId("wb-next-btn").click();
+    await expect(page.getByTestId("wb-prev-btn")).toBeEnabled();
+    await expect(page.getByTestId("wb-next-btn")).toBeEnabled();
+    // Refresh source to our sleep stub (selectTutorial just overwrote it).
+    await page.evaluate(() => {
+      const wb = (window as any).__wb as { setSource: (s: string) => void };
+      wb.setSource("import time\ntime.sleep(2)\nprint('done')\n");
+    });
+    await page.getByTestId("wb-run-btn").click();
+    // Mid-run both nav buttons must be disabled.
+    await expect(page.getByTestId("wb-prev-btn")).toBeDisabled();
+    await expect(page.getByTestId("wb-next-btn")).toBeDisabled();
+    // After the subprocess finishes, prev should be enabled (we're on
+    // tutorial 02), next too.
+    await expect(page.getByTestId("wb-output")).toContainText("done", { timeout: 30_000 });
+    await expect(page.getByTestId("wb-prev-btn")).toBeEnabled();
+    await expect(page.getByTestId("wb-next-btn")).toBeEnabled();
+  });
+
   test("brand uses the locus mark + slogan from the docs site", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator(".app__brand-mark")).toHaveText("locus");
