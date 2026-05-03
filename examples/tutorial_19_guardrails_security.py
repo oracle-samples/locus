@@ -166,10 +166,14 @@ async def main():
     ]
 
     print("Tool Access Control:")
+    from locus.core.events import BeforeToolCallEvent
+
     for tool_name, args in tool_tests:
         guardrails.clear_violations()
         try:
-            await guardrails.on_before_tool_call(tool_name, args)
+            await guardrails.on_before_tool_call(
+                BeforeToolCallEvent(tool_name=tool_name, arguments=args)
+            )
             print(f"  {tool_name} -> Allowed")
         except ValueError:
             print(f"  {tool_name} -> BLOCKED")
@@ -191,7 +195,9 @@ async def main():
     print("Allowlist mode (only read_file, search, analyze allowed):")
     for tool_name in tool_tests:
         try:
-            await allowlist_guardrails.on_before_tool_call(tool_name, {})
+            await allowlist_guardrails.on_before_tool_call(
+                BeforeToolCallEvent(tool_name=tool_name, arguments={})
+            )
             print(f"  {tool_name} -> Allowed")
         except ValueError:
             print(f"  {tool_name} -> BLOCKED")
