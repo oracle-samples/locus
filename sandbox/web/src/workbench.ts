@@ -140,7 +140,7 @@ let liveChunkEl: HTMLSpanElement | null = null;
 function ensureLiveChunkEl(): HTMLSpanElement {
   if (liveChunkEl && liveChunkEl.isConnected) return liveChunkEl;
   liveChunkEl = document.createElement("span");
-  liveChunkEl.className = "ln ln--chunk";
+  liveChunkEl.className = "ln ln--chunk ln--chunk--live";
   liveChunkEl.dataset.testid = "live-chunk";
   wbOutput.appendChild(liveChunkEl);
   return liveChunkEl;
@@ -148,10 +148,21 @@ function ensureLiveChunkEl(): HTMLSpanElement {
 
 function closeLiveChunk() {
   if (liveChunkEl?.isConnected && liveChunkEl.textContent) {
-    // Append a trailing newline so the next event/line lands on its own row.
-    liveChunkEl.textContent = liveChunkEl.textContent + "\n";
+    // Strip the "live" modifier (the blinking caret pseudo-element) and
+    // add a trailing newline so the next chip/line lands on its own row.
+    liveChunkEl.classList.remove("ln--chunk--live");
+    liveChunkEl.appendChild(document.createTextNode("\n"));
   }
   liveChunkEl = null;
+}
+
+export function endLiveStream() {
+  // Called from the run finalizer so the caret stops blinking even when
+  // the agent loop never emits TerminateEvent (raw stdout, errors, etc.).
+  if (liveChunkEl?.isConnected) {
+    liveChunkEl.classList.remove("ln--chunk--live");
+    liveChunkEl = null;
+  }
 }
 
 function appendEvent(ev: Record<string, unknown>) {
@@ -160,7 +171,12 @@ function appendEvent(ev: Record<string, unknown>) {
     const piece = (ev.content as string | undefined) ?? "";
     if (!piece) return;
     const node = ensureLiveChunkEl();
-    node.textContent = (node.textContent ?? "") + piece;
+    // Each chunk lands as its own span with a brief fade-in animation,
+    // so the user sees the model spitting tokens in real time.
+    const span = document.createElement("span");
+    span.className = "chunk-piece";
+    span.textContent = piece;
+    node.appendChild(span);
     wbOutput.scrollTop = wbOutput.scrollHeight;
     return;
   }
@@ -225,12 +241,14 @@ async function runEdited() {
     provider as ProviderConfig,
     (e) => {
       if (e.type === "exit") {
+        endLiveStream();
         appendOutput(`process exited with code ${e.code}`, "exit");
         wbOutputPill.className = e.code === 0 ? "pill pill--up" : "pill pill--down";
         wbOutputPill.innerHTML = `<span class="pill__dot"></span>exit ${e.code} · ${stdoutLines} stdout · ${stderrLines} stderr`;
         return;
       }
       if (e.type === "error") {
+        endLiveStream();
         appendOutput(e.text, "error");
         wbOutputPill.className = "pill pill--down";
         wbOutputPill.innerHTML = `<span class="pill__dot"></span>error`;
@@ -241,6 +259,7 @@ async function runEdited() {
       else stderrLines++;
     },
     () => {
+      endLiveStream();
       setRunning(false);
       cancelRun = null;
     },

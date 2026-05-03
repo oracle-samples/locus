@@ -595,4 +595,43 @@ code, pre { font-family: var(--mono); }
   background: rgba(240, 204, 113, 0.10);
   display: inline;
   padding: 0 0.05rem;
+  border-radius: 2px;
+}
+/* Each ModelChunkEvent lands as its own .chunk-piece span with a brief
+   fade-and-soften so the user sees the model emitting tokens live. */
+.wb-output .chunk-piece {
+  display: inline;
+  animation: chunk-fade-in 220ms ease-out both;
+}
+@keyframes chunk-fade-in {
+  0%   { opacity: 0; filter: blur(2px); transform: translateY(1px); }
+  100% { opacity: 1; filter: blur(0);   transform: translateY(0); }
+}
+/* Blinking caret follows the live transcript while it's actively
+   streaming; gets removed when a non-chunk event lands or the run ends. */
+.wb-output .ln--chunk--live::after {
+  content: "▌";
+  display: inline-block;
+  margin-left: 1px;
+  color: #f0cc71;
+  animation: locus-caret 0.95s steps(1, end) infinite;
+  transform: translateY(-1px);
+}
+@keyframes locus-caret {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+/* Sand shimmer under the live transcript. */
+.wb-output .ln--chunk--live {
+  box-shadow: inset 0 0 0 1px rgba(240, 204, 113, 0.18);
+  background-image: linear-gradient(90deg,
+    rgba(240, 204, 113, 0.06) 0%,
+    rgba(240, 204, 113, 0.20) 50%,
+    rgba(240, 204, 113, 0.06) 100%);
+  background-size: 240% 100%;
+  animation: chunk-shimmer 2.4s ease-in-out infinite;
+}
+@keyframes chunk-shimmer {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
 }
