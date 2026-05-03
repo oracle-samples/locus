@@ -116,6 +116,9 @@ Specialist(
   — router + three parallel specialists, results merged.
 - [`tutorial_18_specialist_agents.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_18_specialist_agents.py)
   — confidence floors and per-specialist playbooks.
+- [`tutorial_47_procurement_approval.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_47_procurement_approval.py)
+  — orchestrator-shaped procurement with tiered approval gates and a
+  typed `PurchaseOrder` artifact.
 
 ## Source
 

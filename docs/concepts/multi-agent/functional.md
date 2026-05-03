@@ -100,9 +100,14 @@ async def end_to_end(catalogue: list[dict]) -> dict:
     return final
 ```
 
-## Tutorial
+## Tutorials
 
-[`tutorial_36_functional_api.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_36_functional_api.py).
+- [`tutorial_36_functional_api.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_36_functional_api.py)
+  — `@task` and `@entrypoint` end-to-end.
+- [`tutorial_42_map_reduce_code_review.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_42_map_reduce_code_review.py)
+  — same map/reduce shape, written as a graph with `Send` instead.
+  Useful as the "graph version" comparison when you're choosing
+  between functional and StateGraph for a fan-out workload.
 
 ## Source
 

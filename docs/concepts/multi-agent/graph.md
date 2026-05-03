@@ -127,6 +127,16 @@ a design review.
   — custom state reducers.
 - [`tutorial_35_graph_advanced.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_35_graph_advanced.py)
   — `RetryPolicy`, `CachePolicy`, subgraphs, Mermaid output.
+- [`tutorial_42_map_reduce_code_review.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_42_map_reduce_code_review.py)
+  — `Send` fan-out / reduce in a graph.
+- [`tutorial_43_supervisor_critic_loop.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_43_supervisor_critic_loop.py)
+  — `allow_cycles=True` + `max_iterations` for refine-until-confidence.
+- [`tutorial_46_incident_response.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_46_incident_response.py)
+  — triage → parallel investigators → severity gate → page-the-human.
+- [`tutorial_47_procurement_approval.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_47_procurement_approval.py)
+  — stacked `interrupt()` gates with tier routing.
+- [`tutorial_48_contract_review.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_48_contract_review.py)
+  — parallel reviewers + `Command(goto=...)` to short-circuit a loop.
 
 ## Source
 
