@@ -564,3 +564,35 @@ code, pre { font-family: var(--mono); }
 .wb-output .ln--stderr { color: #f0b8a8; }
 .wb-output .ln--exit { color: #86b596; font-weight: 600; }
 .wb-output .ln--error { color: #c74634; font-weight: 600; }
+
+/* ----- Workbench inline event chips + live chunks ----- */
+.wb-output .ln--event { display: block; margin: 0.18rem 0; }
+.wb-output .ln--event .event__kind {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.10);
+  color: #c9c4be;
+  margin-right: 0.4rem;
+}
+.wb-output .ln--event .event__kind--tool {
+  background: rgba(0, 104, 140, 0.30);
+  color: #9bd6e8;
+}
+.wb-output .ln--event .event__kind--terminate {
+  background: rgba(134, 181, 150, 0.30);
+  color: #9fdbb1;
+}
+.wb-output .ln--event .event__body {
+  color: #e8e2da;
+  font-size: 0.78rem;
+}
+.wb-output .ln--chunk {
+  color: #f5e9c8;
+  background: rgba(240, 204, 113, 0.10);
+  display: inline;
+  padding: 0 0.05rem;
+}

@@ -924,11 +924,116 @@ async def run_tutorial(req: WorkbenchRunRequest) -> StreamingResponse:
     examples_dir = _TUTORIAL_DIR
     src_dir = repo_root / "src"
 
+    # Bootstrap: monkey-patch Agent.__init__ so every agent the tutorial
+    # creates emits a typed event line per turn. Lines start with __LE__:
+    # so the frontend can split them out from regular stdout. Only fires
+    # when the tutorial hasn't already wired its own callback_handler.
+    bootstrap = '''\
+import json as __le_json, sys as __le_sys
+__LE_PREFIX = "__LE__:"
+
+def __le_emit__(payload):
+    try:
+        __le_sys.stdout.write(__LE_PREFIX + __le_json.dumps(payload, ensure_ascii=False) + "\\n")
+        __le_sys.stdout.flush()
+    except Exception:
+        pass
+
+def __locus_emit__(ev):
+    d = {"type": type(ev).__name__}
+    for k in ("tool_name", "final_message", "content", "reasoning", "message", "agent_name", "node_id"):
+        v = getattr(ev, k, None)
+        if v is None:
+            continue
+        d[k] = v if isinstance(v, str) else str(v)
+    __le_emit__(d)
+
+# 1. After every Agent is constructed, attach a callback_handler so we
+#    see Think / Tool / Terminate events as they fire — regardless of
+#    whether the tutorial passed model=… directly or config=AgentConfig(…).
+try:
+    from locus.agent import Agent as __LocusAgent__
+    __orig_init__ = __LocusAgent__.__init__
+    def __patched__(self, *a, **kw):
+        __orig_init__(self, *a, **kw)
+        try:
+            cfg = getattr(self, "config", None)
+            if cfg is not None and getattr(cfg, "callback_handler", None) is None:
+                cfg.callback_handler = __locus_emit__
+        except Exception:
+            pass
+    __LocusAgent__.__init__ = __patched__
+except Exception:
+    pass
+
+# 2. Wrap each provider's .complete() so it internally calls .stream() and
+#    emits one ModelChunkEvent per token. The agent loop sees a normal
+#    ModelResponse, the workbench UI sees a live transcript.
+def __wrap_streaming__(cls):
+    if getattr(cls, "__locus_streamed__", False):
+        return
+    if not (hasattr(cls, "complete") and hasattr(cls, "stream")):
+        return
+    cls.__locus_streamed__ = True
+    _orig_complete = cls.complete
+
+    async def _streaming_complete(self, messages, tools=None, **kwargs):
+        from locus.core.messages import Message
+        from locus.models.base import ModelResponse
+        full = ""
+        tool_calls = None
+        usage = {}
+        stop_reason = "end_turn"
+        try:
+            chunks_iter = self.stream(messages, tools, **kwargs)
+        except TypeError:
+            chunks_iter = self.stream(messages, tools)
+        async for chunk in chunks_iter:
+            content = getattr(chunk, "content", None) or ""
+            if content:
+                full += content
+                __le_emit__({"type": "ModelChunkEvent", "content": content})
+            tc = getattr(chunk, "tool_calls", None)
+            if tc:
+                tool_calls = tc
+            if getattr(chunk, "done", False):
+                break
+        if not full and tool_calls is None:
+            # Stream produced nothing; fall back to the original sync path
+            # so we don't strand the agent loop with an empty response.
+            return await _orig_complete(self, messages, tools, **kwargs)
+        return ModelResponse(
+            message=Message.assistant(content=full, tool_calls=tool_calls),
+            usage=usage,
+            stop_reason=stop_reason,
+        )
+
+    cls.complete = _streaming_complete
+
+try:
+    from locus.models.providers.oci.openai_compat import OCIOpenAIModel as __O1
+    __wrap_streaming__(__O1)
+except Exception:
+    pass
+try:
+    from locus.models.native.openai import OpenAIModel as __O2
+    __wrap_streaming__(__O2)
+except Exception:
+    pass
+try:
+    from locus.models.native.anthropic import AnthropicModel as __O3
+    __wrap_streaming__(__O3)
+except Exception:
+    pass
+
+# --- end bootstrap; user source follows ---
+'''
+
     # Write the user's source to a tmp file. Keep it inside examples/ so
     # tutorials' relative imports (`from config import get_model`) resolve.
     tmp_dir = Path(tempfile.mkdtemp(prefix="locus-wb-"))
     tmp_file = tmp_dir / "tutorial_workbench.py"
-    tmp_file.write_text(req.source)
+    tmp_file.write_text(bootstrap + req.source)
 
     env = {
         **os.environ,

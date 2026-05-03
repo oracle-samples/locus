@@ -26,19 +26,9 @@
       </header>
 
       <aside class="app__side">
-        <div class="side__mode">
-          <button class="mode__btn mode__btn--active" id="mode-patterns" data-testid="mode-patterns">Patterns</button>
-          <button class="mode__btn" id="mode-workbench" data-testid="mode-workbench">Workbench</button>
-        </div>
-        <div id="side-patterns-section">
-          <div class="side__title">Patterns</div>
-          <div id="side-patterns"></div>
-        </div>
-        <div id="side-tutorials-section" style="display:none">
-          <div class="side__title">Tutorials</div>
-          <input type="search" class="input" id="tutorial-search" placeholder="filter…" style="margin: 0 0.5rem 0.5rem; width: calc(100% - 1rem)" />
-          <div id="side-tutorials" data-testid="side-tutorials"></div>
-        </div>
+        <div class="side__title">Tutorials</div>
+        <input type="search" class="input" id="tutorial-search" placeholder="filter…" style="margin: 0 0.5rem 0.5rem; width: calc(100% - 1rem)" />
+        <div id="side-tutorials" data-testid="side-tutorials"></div>
       </aside>
 
       <main class="app__main">
@@ -63,7 +53,8 @@
           </p>
         </div>
 
-        <div id="workbench" style="display: none">
+
+        <div id="workbench">
           <div class="card">
             <div class="card__header">
               <div>
@@ -90,40 +81,6 @@
           </div>
         </div>
 
-        <div id="playground" style="display: none">
-          <div class="card">
-            <div class="card__header">
-              <div>
-                <h2 class="card__title" id="pattern-title">…</h2>
-                <div class="card__sub" id="pattern-sub">…</div>
-              </div>
-              <span class="pill" id="provider-pill"></span>
-            </div>
-
-            <div class="field" style="margin-bottom: 0.7rem">
-              <label class="field__label" for="prompt">Prompt</label>
-              <textarea id="prompt" class="textarea" data-testid="prompt"></textarea>
-            </div>
-
-            <div class="form-row">
-              <label class="checkbox" id="stream-toggle-row" style="display:none">
-                <input type="checkbox" id="stream-toggle" data-testid="stream-toggle" />
-                Stream events (SSE)
-              </label>
-              <div style="flex: 1"></div>
-              <button class="btn" id="clear-btn">Clear</button>
-              <button class="btn btn--primary" id="send-btn" data-testid="send-btn">Run</button>
-            </div>
-          </div>
-
-          <div class="card reply">
-            <div class="card__header">
-              <h2 class="card__title">Response</h2>
-              <span class="pill" id="response-pill" style="display: none"></span>
-            </div>
-            <div id="response"></div>
-          </div>
-        </div>
       </main>
 
       <footer class="app__footer">Built on Oracle Generative AI · locus</footer>

@@ -115,11 +115,83 @@ async function selectTutorial(id: string) {
   renderList(search.value);
 }
 
+const LE_PREFIX = "__LE__:";
+
 function appendOutput(line: string, kind: "stdout" | "stderr" | "exit" | "error") {
+  // Detect locus-event lines emitted by the workbench bootstrap.
+  if (kind === "stdout" && line.startsWith(LE_PREFIX)) {
+    try {
+      const ev = JSON.parse(line.slice(LE_PREFIX.length)) as Record<string, unknown>;
+      appendEvent(ev);
+      return;
+    } catch {
+      /* fall through to plain print */
+    }
+  }
   const span = document.createElement("span");
   span.className = `ln ln--${kind}`;
   span.textContent = `${line}\n`;
   wbOutput.appendChild(span);
+  wbOutput.scrollTop = wbOutput.scrollHeight;
+}
+
+let liveChunkEl: HTMLSpanElement | null = null;
+
+function ensureLiveChunkEl(): HTMLSpanElement {
+  if (liveChunkEl && liveChunkEl.isConnected) return liveChunkEl;
+  liveChunkEl = document.createElement("span");
+  liveChunkEl.className = "ln ln--chunk";
+  liveChunkEl.dataset.testid = "live-chunk";
+  wbOutput.appendChild(liveChunkEl);
+  return liveChunkEl;
+}
+
+function closeLiveChunk() {
+  if (liveChunkEl?.isConnected && liveChunkEl.textContent) {
+    // Append a trailing newline so the next event/line lands on its own row.
+    liveChunkEl.textContent = liveChunkEl.textContent + "\n";
+  }
+  liveChunkEl = null;
+}
+
+function appendEvent(ev: Record<string, unknown>) {
+  const kind = (ev.type as string) ?? "Event";
+  if (kind === "ModelChunkEvent") {
+    const piece = (ev.content as string | undefined) ?? "";
+    if (!piece) return;
+    const node = ensureLiveChunkEl();
+    node.textContent = (node.textContent ?? "") + piece;
+    wbOutput.scrollTop = wbOutput.scrollHeight;
+    return;
+  }
+  // Any non-chunk event terminates the current live transcript so the
+  // tag chip lands on its own line below.
+  closeLiveChunk();
+  const text =
+    (ev.tool_name as string) ??
+    (ev.final_message as string) ??
+    (ev.content as string) ??
+    (ev.reasoning as string) ??
+    (ev.message as string) ??
+    "";
+  const row = document.createElement("span");
+  row.className = "ln ln--event";
+  const tag = document.createElement("span");
+  tag.className = `event__kind ${
+    kind === "TerminateEvent"
+      ? "event__kind--terminate"
+      : kind.startsWith("Tool")
+        ? "event__kind--tool"
+        : ""
+  }`;
+  tag.textContent = kind.replace("Event", "");
+  const body = document.createElement("span");
+  body.className = "event__body";
+  body.textContent = ` ${text}`;
+  row.appendChild(tag);
+  row.appendChild(body);
+  row.appendChild(document.createTextNode("\n"));
+  wbOutput.appendChild(row);
   wbOutput.scrollTop = wbOutput.scrollHeight;
 }
 
@@ -140,6 +212,7 @@ async function runEdited() {
     return;
   }
   wbOutput.innerHTML = "";
+  liveChunkEl = null;
   wbOutputPill.style.display = "inline-flex";
   wbOutputPill.className = "pill pill--busy";
   wbOutputPill.innerHTML = `<span class="pill__dot"></span>running…`;
