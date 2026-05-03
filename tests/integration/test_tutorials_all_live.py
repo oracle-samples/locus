@@ -74,6 +74,14 @@ def test_tutorial_runs_clean(tutorial: Path):
     env.setdefault("LOCUS_MODEL_ID", "openai.gpt-4o-mini")
     env.setdefault("LOCUS_OCI_PROFILE", _PROFILE or "DEFAULT")
     env.setdefault("LOCUS_OCI_REGION", _REGION)
+    # Propagate the auth type + compartment so profiles like BOAT-OC1
+    # (session-token, cross-tenancy access to saasobservai) work. Without
+    # these, config.py falls back to api_key + auto-derived compartment
+    # which fails for session-token profiles.
+    if os.environ.get("OCI_AUTH_TYPE"):
+        env.setdefault("LOCUS_OCI_AUTH_TYPE", os.environ["OCI_AUTH_TYPE"])
+    if os.environ.get("OCI_COMPARTMENT"):
+        env.setdefault("LOCUS_OCI_COMPARTMENT", os.environ["OCI_COMPARTMENT"])
 
     proc = subprocess.run(  # noqa: S603 — controlled subprocess of our own script
         [sys.executable, str(tutorial)],
