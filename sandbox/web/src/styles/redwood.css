@@ -748,3 +748,76 @@ code, pre { font-family: var(--mono); }
 #wb-output-card .wb-output {
   background: #1b1a18;
 }
+
+/* ----- Workbench split: editor + output side-by-side at wide widths ----- */
+.wb-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+.wb-split > .card {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+  min-width: 0;
+}
+.wb-split .wb-editor {
+  flex: 1;
+  height: auto;
+  min-height: 56vh;
+}
+.wb-split .wb-output {
+  flex: 1;
+  max-height: none;
+  min-height: 56vh;
+}
+@media (max-width: 1100px) {
+  .wb-split { grid-template-columns: 1fr; }
+}
+
+/* Full-screen mode keeps the same split shape, edge-to-edge. */
+#workbench.wb--full .wb-split {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+}
+#workbench.wb--full > .wb-split > .card {
+  flex: 1;
+  min-height: 0;
+}
+#workbench.wb--full .wb-editor,
+#workbench.wb--full .wb-output {
+  min-height: 0;
+}
+
+/* ----- Dark-mode polish: pill contrast + icon button ----- */
+[data-theme="dark"] .pill {
+  /* Default pill on dark surface — bump alpha + lighten text. */
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--or-text-soft);
+}
+[data-theme="dark"] .pill--up {
+  background: rgba(134, 181, 150, 0.20);
+  color: #b6dfc1;
+}
+[data-theme="dark"] .pill--busy {
+  background: rgba(240, 204, 113, 0.22);
+  color: #f0d391;
+}
+[data-theme="dark"] .pill--down {
+  background: rgba(199, 70, 52, 0.22);
+  color: #ee9b8d;
+}
+/* Icon button in dark mode shouldn't have a subtle border on a dark
+   panel — it visually competes with the pill next to it. Drop the
+   border, lean on hover-fill for affordance. */
+[data-theme="dark"] .icon-btn {
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--or-text-soft);
+}
+[data-theme="dark"] .icon-btn:hover {
+  background: var(--or-red-tint);
+  color: var(--or-red-deep);
+}
