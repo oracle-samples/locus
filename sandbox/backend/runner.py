@@ -880,6 +880,18 @@ class WorkbenchRunRequest(BaseModel):
     timeout_seconds: int = 120
 
 
+def _describe_provider(cfg: ProviderConfig) -> str:
+    """One-line label for the bootstrap banner. Avoid leaking secrets."""
+    if cfg.provider == "openai":
+        return f"openai · {cfg.model or 'gpt-5'}"
+    if cfg.provider == "anthropic":
+        return f"anthropic · {cfg.model or 'claude-sonnet-4-6'}"
+    if cfg.provider in ("oci-session", "oci-apikey"):
+        tail = cfg.model or "openai.gpt-5"
+        return f"{cfg.provider} · {cfg.profile or 'DEFAULT'} · {tail}"
+    return cfg.provider
+
+
 def _provider_env(cfg: ProviderConfig) -> dict[str, str]:
     """Translate a UI provider config into the env vars examples/config.py expects."""
     env: dict[str, str] = {}
@@ -929,8 +941,31 @@ async def run_tutorial(req: WorkbenchRunRequest) -> StreamingResponse:
     # so the frontend can split them out from regular stdout. Only fires
     # when the tutorial hasn't already wired its own callback_handler.
     bootstrap = '''\
-import json as __le_json, sys as __le_sys
+import json as __le_json, sys as __le_sys, os as __le_os
 __LE_PREFIX = "__LE__:"
+
+# Hard guard: never let a tutorial silently fall back to MockModel. The
+# workbench always sets LOCUS_MODEL_PROVIDER to a real provider, but
+# guard against any tutorial that hardcodes mock or imports MockModel
+# directly. Wraps `from config import get_model` so the returned object
+# is asserted real before the tutorial uses it.
+__SB_PROVIDER = "__SB_PROVIDER_VALUE__"
+__le_sys.stdout.write(f"[locus-sandbox] running against {__SB_PROVIDER}\\n")
+__le_sys.stdout.flush()
+try:
+    import config as __sb_config
+    __orig_get_model = __sb_config.get_model
+    def __guarded_get_model(*a, **kw):
+        m = __orig_get_model(*a, **kw)
+        if type(m).__name__ == "MockModel":
+            raise RuntimeError(
+                "locus-sandbox: refusing to run with MockModel. "
+                "Set OpenAI / Anthropic / OCI provider in Provider settings."
+            )
+        return m
+    __sb_config.get_model = __guarded_get_model
+except Exception as __sb_err:
+    __le_sys.stderr.write(f"[locus-sandbox] guard install failed: {__sb_err}\\n")
 
 def __le_emit__(payload):
     try:
@@ -982,7 +1017,8 @@ except Exception:
     # tutorials' relative imports (`from config import get_model`) resolve.
     tmp_dir = Path(tempfile.mkdtemp(prefix="locus-wb-"))
     tmp_file = tmp_dir / "tutorial_workbench.py"
-    tmp_file.write_text(bootstrap + req.source)
+    rendered = bootstrap.replace("__SB_PROVIDER_VALUE__", _describe_provider(req.provider))
+    tmp_file.write_text(rendered + req.source)
 
     env = {
         **os.environ,
