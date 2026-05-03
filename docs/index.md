@@ -7,21 +7,21 @@ hide:
 <div class="locus-hero" markdown>
 <div class="locus-hero__copy" markdown>
 
-# Build agents that reason and <span class="accent">solve together.</span>
+# Multi-agent workflows you'd actually <span class="accent">deploy.</span>
 
-**The Oracle Gen AI Multi-Agent Reasoning SDK.**
+**Stream them. Branch them. Pause for a human. Resume next week.**
 
-Reasoning lives inside the loop. **Reflexion** evaluates every turn.
-**Grounding** verifies every claim against its source. **Causal**
-traces root cause from symptom.
+Seven workflow shapes you compose in one process or scale across a
+mesh. **Compose** linear pipelines. **Orchestrate** specialists in
+parallel. **Swarm** for peer-to-peer research. **Handoff** for
+escalation desks. **StateGraph** loops until confident. **Functional**
+maps across agents. **A2A** meshes across processes.
 
-Six shapes for six problems. **Compose** linear pipelines.
-**Orchestrate** specialists in parallel. **Swarm** for peer-to-peer
-research. **Handoff** for escalation desks. **StateGraph** loops
-until confident. **Functional** maps across agents. **A2A** meshes
-across processes.
-
-Every model on Oracle Generative AI the day it lands.
+The boring stuff is built in: **Reflexion** catches a bad turn before
+the next one. **Grounding** verifies claims against their source.
+**Idempotent tools** dedupe side effects. **Checkpointing** survives
+every restart. The 90+ models on Oracle Generative AI, the day they
+land.
 
 [See what you can build](#six-things-you-can-ship){ .md-button .md-button--primary }
 [GitHub](https://github.com/oracle-samples/locus){ .md-button }
@@ -38,42 +38,39 @@ pip install "locus[oci]"
 
 ```python
 from locus import Agent
-from locus.tools.decorator import tool
-from locus.memory.backends import OCIBucketBackend
-from locus.core.termination import (
-    MaxIterations, ToolCalled, ConfidenceMet,
-)
+from locus.core.send import Send
+from locus.multiagent.graph import END, START, StateGraph
 
-@tool
-def search_flights(origin: str, destination: str, date: str) -> list[dict]:
-    """Search the GDS for available flights."""
-    return gds.search(origin, destination, date)
+REVIEWERS = ["security", "performance", "style"]
 
-@tool(idempotent=True)
-def book_flight(flight_id: str, customer_id: str) -> dict:
-    """Book a flight. Re-fires return the cached receipt."""
-    return billing.charge_and_book(flight_id, customer_id)
+def reviewer(role):
+    return Agent(model="oci:openai.gpt-5", system_prompt=f"You're a {role} reviewer.")
 
-agent = Agent(
-    model="oci:openai.gpt-5",
-    tools=[search_flights, book_flight],
-    system_prompt="You are a travel concierge. Find a flight, then book it.",
-    reflexion=True,                                 # self-correct mid-run
-    checkpointer=OCIBucketBackend(                  # survive every restart
-        bucket="locus-threads",
-        namespace="<your-namespace>",
-    ),
-    termination=(
-        ToolCalled("book_flight") & ConfidenceMet(0.9)
-    ) | MaxIterations(8),
-)
+async def split(state):
+    # Fan out: one Send per (file, role). The graph runs them in parallel.
+    return [Send("review", {"file": f, "role": r})
+            for f in state["files"] for r in REVIEWERS]
 
-result = agent.run_sync(
-    "Book a flight from JFK to NRT on 2026-05-04 for customer C-42.",
-    thread_id="th-c42-jfk-nrt",                     # resumable conversation
-)
-print(result.message)
-# → Booked AA-181 (JFK→NRT, 2026-05-04). Confirmation BK-58291.
+async def review(state):
+    out = reviewer(state["role"]).run_sync(state["file"])
+    return {"finding": {"file": state["file"], "role": state["role"], "text": out.message}}
+
+async def synthesize(state):
+    findings = [v["finding"] for v in state.values()
+                if isinstance(v, dict) and "finding" in v]
+    return {"report": "\n".join(f"[{f['role']}] {f['file']}: {f['text']}" for f in findings)}
+
+graph = StateGraph()
+graph.add_node("split", split)
+graph.add_node("review", review)
+graph.add_node("synthesize", synthesize)
+graph.add_edge(START, "split")
+graph.add_edge("split", "synthesize")
+graph.add_edge("synthesize", END)
+
+result = await graph.execute({"files": ["auth.py", "billing.py", "search.py"]})
+print(result.final_state["report"])
+# → 9 reviewers ran in parallel. Findings reduced into one report.
 ```
 
 </div>
