@@ -55,7 +55,14 @@ function ensureEditor(initial = "") {
 
 function setEditorContent(text: string) {
   const ed = ensureEditor(text);
-  ed.dispatch({ changes: { from: 0, to: ed.state.doc.length, insert: text } });
+  ed.dispatch({
+    changes: { from: 0, to: ed.state.doc.length, insert: text },
+    // Park the cursor at the very top, then scroll line 1 into view —
+    // otherwise CodeMirror keeps whatever selection was around from the
+    // previous tutorial and the user sees the bottom of the file.
+    selection: { anchor: 0 },
+    effects: EditorView.scrollIntoView(0, { y: "start" }),
+  });
   // Hook for playwright / programmatic edits.
   (window as unknown as { __wb: { setSource: (t: string) => void; getSource: () => string } }).__wb = {
     setSource: setEditorContent,
