@@ -203,13 +203,26 @@ function appendEvent(ev: Record<string, unknown>) {
   // Any non-chunk event terminates the current live transcript so the
   // tag chip lands on its own line below.
   closeLiveChunk();
-  const text =
-    (ev.tool_name as string) ??
-    (ev.final_message as string) ??
-    (ev.content as string) ??
-    (ev.reasoning as string) ??
-    (ev.message as string) ??
-    "";
+  // Compact body text per event family. The tutorial's own print()
+  // statements already render the final agent reply, so Think /
+  // Terminate chips don't need to echo the entire message — that just
+  // triples the noise. Tool events keep their tool name (the useful
+  // signal) and other events show a short truncated preview.
+  let text = "";
+  if (kind === "ToolStartEvent" || kind === "ToolCompleteEvent") {
+    text = (ev.tool_name as string) ?? "";
+  } else if (kind === "ThinkEvent" || kind === "TerminateEvent") {
+    text = ""; // chip-only, body lives in the tutorial's prints
+  } else {
+    const raw =
+      (ev.tool_name as string) ??
+      (ev.final_message as string) ??
+      (ev.content as string) ??
+      (ev.reasoning as string) ??
+      (ev.message as string) ??
+      "";
+    text = raw.length > 80 ? raw.slice(0, 77) + "…" : raw;
+  }
   const row = document.createElement("span");
   row.className = "ln ln--event";
   const tag = document.createElement("span");
