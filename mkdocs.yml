@@ -1,5 +1,5 @@
 site_name: locus
-site_description: Oracle Generative AI · Multi-Agent · Reasoning · Orchestrator SDK
+site_description: Multi-agent workflows for Python — stream them, branch them, pause for a human, resume next week. Built on Oracle Generative AI.
 site_url: https://oracle-samples.github.io/locus/
 repo_url: https://github.com/oracle-samples/locus
 repo_name: oracle-samples/locus
