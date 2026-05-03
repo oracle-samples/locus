@@ -103,6 +103,20 @@ print(agent.run_sync("ping").message)
     expect(chips.some((c) => c.toLowerCase().includes("terminate"))).toBe(true);
   });
 
+  test("workbench full-screen toggles via icon button + Escape", async ({ page }) => {
+    await page.goto("/");
+    const root = page.getByTestId("wb-root");
+    const editorCard = page.getByTestId("wb-editor-card");
+    const outputCard = page.getByTestId("wb-output-card");
+    await page.getByTestId("wb-fullscreen-btn").click();
+    await expect(root).toHaveClass(/wb--full/);
+    // Both cards must remain visible inside the full-screen workbench.
+    await expect(editorCard).toBeVisible();
+    await expect(outputCard).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(root).not.toHaveClass(/wb--full/);
+  });
+
   test("SDK transport works with cohere.command-r-plus", async ({ page }) => {
     test.setTimeout(180_000);
     await configureOCI(page, { transport: "sdk", model: "cohere.command-r-plus-08-2024" });

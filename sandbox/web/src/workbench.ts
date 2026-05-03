@@ -43,9 +43,16 @@ function ensureEditor(initial = "") {
       python(),
       oneDark,
       keymap.of([...defaultKeymap, ...historyKeymap]),
+      // Match the output panel's surface so editor + output share the
+      // same dark canvas (no jarring colour seam between them).
       EditorView.theme({
-        "&": { fontSize: "13px", height: "100%" },
+        "&": { fontSize: "13px", height: "100%", backgroundColor: "#1b1a18" },
         ".cm-scroller": { fontFamily: "JetBrains Mono, ui-monospace, Menlo, monospace" },
+        ".cm-gutters": { backgroundColor: "#1b1a18", borderRight: "1px solid #2a2823" },
+        ".cm-content": { caretColor: "#f0cc71" },
+        ".cm-cursor, .cm-dropCursor": { borderLeftColor: "#f0cc71" },
+        ".cm-activeLine": { backgroundColor: "rgba(240, 204, 113, 0.06)" },
+        ".cm-activeLineGutter": { backgroundColor: "rgba(240, 204, 113, 0.06)" },
       }),
     ],
   });
@@ -273,6 +280,28 @@ async function runEdited() {
   );
 }
 
+function setupFullscreenToggles() {
+  const root = document.querySelector<HTMLElement>("#workbench");
+  const btn = document.querySelector<HTMLButtonElement>("#wb-fullscreen-btn");
+  if (!root || !btn) return;
+
+  const toggle = () => {
+    const willOpen = !root.classList.contains("wb--full");
+    root.classList.toggle("wb--full", willOpen);
+    document.body.classList.toggle("body--full", willOpen);
+    setTimeout(() => editor?.requestMeasure(), 0);
+  };
+
+  btn.addEventListener("click", toggle);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && root.classList.contains("wb--full")) {
+      root.classList.remove("wb--full");
+      document.body.classList.remove("body--full");
+      setTimeout(() => editor?.requestMeasure(), 0);
+    }
+  });
+}
+
 export function initWorkbench() {
   ensureEditor("# pick a tutorial from the sidebar to load its source");
   renderProviderPill();
@@ -290,6 +319,7 @@ export function initWorkbench() {
   })();
 
   search.addEventListener("input", () => renderList(search.value));
+  setupFullscreenToggles();
   wbRunBtn.addEventListener("click", () => void runEdited());
   wbStopBtn.addEventListener("click", () => {
     cancelRun?.();

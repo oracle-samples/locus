@@ -635,3 +635,73 @@ code, pre { font-family: var(--mono); }
   0%   { background-position: 0% 50%; }
   100% { background-position: 100% 50%; }
 }
+
+/* ----- Icon button (full-screen toggle, etc.) ----- */
+.icon-btn {
+  background: transparent;
+  border: 1px solid var(--or-rule);
+  border-radius: var(--radius-sm);
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--or-text-soft);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.icon-btn:hover {
+  background: var(--or-red-tint);
+  border-color: var(--or-red);
+  color: var(--or-red-deep);
+}
+
+/* ----- Workbench full-screen mode (editor + output stacked) ----- */
+.body--full {
+  overflow: hidden;
+}
+#workbench.wb--full {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: #1b1a18;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+#workbench.wb--full > .card {
+  margin: 0;
+  border: 1px solid #2a2823;
+  background: #1b1a18;
+  color: #e8e2da;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+#workbench.wb--full > .card .card__title,
+#workbench.wb--full > .card .card__sub {
+  color: #e8e2da;
+}
+#workbench.wb--full > .card .card__sub {
+  color: #a59f96;
+}
+#workbench.wb--full .wb-editor {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+}
+#workbench.wb--full .wb-output {
+  flex: 1;
+  max-height: none;
+  height: auto;
+}
+/* Reuse the same dark surface for the OUTPUT card whether full-screen
+   or not — the editor and output should not look like two different
+   apps stitched together. */
+#wb-editor-card .wb-editor,
+#wb-output-card .wb-output {
+  background: #1b1a18;
+}
