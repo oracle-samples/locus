@@ -70,7 +70,8 @@ def test_tutorial_runs_clean(tutorial: Path):
     # LOCUS_OCI_* to build the right model. Setting these here makes
     # every tutorial run against a real, cheap OCI model instead of the
     # hard-coded MockModel default.
-    env["LOCUS_MODEL_PROVIDER"] = "oci"
+    # Default to OCI but allow override via env (mostly for CI mock runs).
+    env.setdefault("LOCUS_MODEL_PROVIDER", "oci")
     env.setdefault("LOCUS_MODEL_ID", "openai.gpt-4o-mini")
     env.setdefault("LOCUS_OCI_PROFILE", _PROFILE or "DEFAULT")
     env.setdefault("LOCUS_OCI_REGION", _REGION)
