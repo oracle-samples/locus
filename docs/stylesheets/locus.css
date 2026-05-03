@@ -382,8 +382,10 @@
   align-self: center;
 }
 /* Stack the first topic vertically: "locus" wordmark + small
-   "MULTI-AGENT WORKFLOWS" subtitle beneath, mirroring the SVG logo's
-   wordmark+tagline lockup. */
+   "REASONING ORCHESTRATOR" subtitle beneath, mirroring the SVG logo's
+   wordmark+tagline lockup. (Logo carries the full
+   "MULTI-AGENT REASONING ORCHESTRATOR SDK" slogan; the header uses the
+   distinctive 2-word abbreviation so it fits beneath the wordmark.) */
 .md-header__ellipsis > .md-header__topic:first-of-type {
   display: flex;
   flex-direction: column;
@@ -401,7 +403,7 @@
   color: var(--locus-ink);
 }
 .md-header__ellipsis > .md-header__topic:first-of-type::after {
-  content: "MULTI-AGENT WORKFLOWS";
+  content: "REASONING ORCHESTRATOR";
   font-family: var(--locus-sans);
   font-size: 0.55rem;
   font-weight: 600;
