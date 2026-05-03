@@ -269,10 +269,13 @@ def oci_bucket_config() -> dict:
 
     - ``OCI_BUCKET_NAME`` — target bucket (must already exist)
     - ``OCI_NAMESPACE`` — Object Storage namespace for the tenancy
-    - ``OCI_PROFILE`` — profile name in ``~/.oci/config``
-    - ``OCI_AUTH_TYPE`` — optional; ``api_key`` (default),
-      ``security_token``, ``instance_principal`` or ``resource_principal``
-    - ``OCI_REGION`` — optional; overrides the region baked into the profile
+    - ``OCI_BUCKET_PROFILE`` — optional override; profile to use for bucket
+      access. Falls back to ``OCI_PROFILE``. Useful when GenAI tests use
+      one tenancy (e.g. BOAT-OC1) and the test bucket lives in another
+      (e.g. API_FREE_TIER's free-tier bucket).
+    - ``OCI_BUCKET_AUTH_TYPE`` — optional; falls back to
+      ``OCI_AUTH_TYPE``, then ``api_key``.
+    - ``OCI_BUCKET_REGION`` — optional; falls back to ``OCI_REGION``.
     - ``OCI_BUCKET_TEST_PREFIX`` — optional; prefix under the bucket; tests
       should scope their own sub-prefix under this one
 
@@ -282,9 +285,9 @@ def oci_bucket_config() -> dict:
     return {
         "bucket_name": os.environ["OCI_BUCKET_NAME"],
         "namespace": os.environ["OCI_NAMESPACE"],
-        "profile_name": os.environ["OCI_PROFILE"],
-        "auth_type": os.getenv("OCI_AUTH_TYPE", "api_key"),
-        "region": os.getenv("OCI_REGION"),
+        "profile_name": (os.getenv("OCI_BUCKET_PROFILE") or os.environ["OCI_PROFILE"]),
+        "auth_type": (os.getenv("OCI_BUCKET_AUTH_TYPE") or os.getenv("OCI_AUTH_TYPE", "api_key")),
+        "region": os.getenv("OCI_BUCKET_REGION") or os.getenv("OCI_REGION"),
         "prefix": os.getenv("OCI_BUCKET_TEST_PREFIX", "locus/test/"),
     }
 
