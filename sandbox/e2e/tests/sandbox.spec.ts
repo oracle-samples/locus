@@ -103,6 +103,21 @@ print(agent.run_sync("ping").message)
     expect(chips.some((c) => c.toLowerCase().includes("terminate"))).toBe(true);
   });
 
+  test("theme toggle switches data-theme + persists in localStorage", async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => localStorage.removeItem("locus.sandbox.theme"));
+    await page.reload();
+    const html = page.locator("html");
+    // Click toggle, expect data-theme to flip and persist across reload.
+    const before = await html.getAttribute("data-theme");
+    await page.getByTestId("theme-btn").click();
+    const after = await html.getAttribute("data-theme");
+    expect(after).not.toBe(before);
+    expect(["light", "dark"]).toContain(after);
+    await page.reload();
+    await expect(html).toHaveAttribute("data-theme", after as string);
+  });
+
   test("workbench full-screen toggles via icon button + Escape", async ({ page }) => {
     await page.goto("/");
     const root = page.getByTestId("wb-root");

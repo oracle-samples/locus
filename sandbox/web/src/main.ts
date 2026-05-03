@@ -176,6 +176,28 @@ cfgCompartment.addEventListener("input", queueRefresh);
 cfgApiKey.addEventListener("input", queueRefresh);
 cfgTransport.addEventListener("change", queueRefresh);
 
+// --- Theme toggle (light / dark) ---
+const themeBtn = $<HTMLButtonElement>("#theme-btn");
+const themeSun = $<HTMLElement>("#theme-icon-sun");
+const themeMoon = $<HTMLElement>("#theme-icon-moon");
+const THEME_KEY = "locus.sandbox.theme";
+
+function applyTheme(t: "light" | "dark") {
+  document.documentElement.setAttribute("data-theme", t);
+  themeSun.style.display = t === "dark" ? "none" : "block";
+  themeMoon.style.display = t === "dark" ? "block" : "none";
+}
+
+const savedTheme = localStorage.getItem(THEME_KEY) as "light" | "dark" | null;
+const initialTheme: "light" | "dark" =
+  savedTheme ?? (window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+applyTheme(initialTheme);
+themeBtn.addEventListener("click", () => {
+  const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+  localStorage.setItem(THEME_KEY, next);
+  applyTheme(next);
+});
+
 // Workbench is the only mode now.
 if (!provider) providerWarning.style.display = "block";
 initWorkbench();

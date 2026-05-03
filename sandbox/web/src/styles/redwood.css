@@ -37,6 +37,49 @@
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
+/* Dark theme — flip the locus brand greys + Oracle reds for the
+   warm-near-black canvas the docs site uses. Editor/output stay on
+   their existing dark surface; the chrome catches up. */
+[data-theme="dark"] {
+  --or-text:        #F0EBE6;
+  --or-text-soft:   #c9c4be;
+  --or-text-mute:   #95908a;
+  --or-bg:          #1B1A18;
+  --or-bg-soft:     #25231F;
+  --or-surface:     #1F1D1A;
+  --or-rule:        #36332E;
+
+  --or-red:         #C74634;
+  --or-red-deep:    #E2715F;
+  --or-red-tint:    rgba(199, 70, 52, 0.18);
+  --or-teal:        #89B2B0;
+  --or-link:        #89B2B0;
+  --or-mauve:       #B07A85;
+  --or-sand:        #F0CC71;
+  --or-sage-teal:   #89B2B0;
+  --or-sage-green:  #86B596;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-2: 0 6px 18px -10px rgba(0, 0, 0, 0.5);
+}
+[data-theme="dark"] body { color: var(--or-text); }
+[data-theme="dark"] .input,
+[data-theme="dark"] .textarea {
+  background: var(--or-bg-soft);
+  color: var(--or-text);
+  border-color: var(--or-rule);
+}
+[data-theme="dark"] .input:focus,
+[data-theme="dark"] .textarea:focus {
+  background: var(--or-surface);
+  border-color: var(--or-red);
+}
+[data-theme="dark"] select.input option { background: var(--or-surface); color: var(--or-text); }
+[data-theme="dark"] .icon-btn { color: var(--or-text-soft); border-color: var(--or-rule); }
+[data-theme="dark"] .icon-btn:hover { background: var(--or-red-tint); color: var(--or-red-deep); border-color: var(--or-red); }
+[data-theme="dark"] .modal { background: rgba(0, 0, 0, 0.65); }
+[data-theme="dark"] .modal__panel { box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.7); }
+
 * { box-sizing: border-box; }
 
 html, body, #root {
