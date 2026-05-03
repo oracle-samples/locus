@@ -381,8 +381,9 @@
   margin-left: 0.6rem;
   align-self: center;
 }
-/* Stack the first topic vertically: "locus" wordmark + small "AGENTS SDK"
-   subtitle beneath, mirroring the SVG logo's wordmark+tagline lockup. */
+/* Stack the first topic vertically: "locus" wordmark + small
+   "MULTI-AGENT WORKFLOWS" subtitle beneath, mirroring the SVG logo's
+   wordmark+tagline lockup. */
 .md-header__ellipsis > .md-header__topic:first-of-type {
   display: flex;
   flex-direction: column;
@@ -400,13 +401,14 @@
   color: var(--locus-ink);
 }
 .md-header__ellipsis > .md-header__topic:first-of-type::after {
-  content: "AGENTS SDK";
+  content: "MULTI-AGENT WORKFLOWS";
   font-family: var(--locus-sans);
-  font-size: 0.58rem;
+  font-size: 0.55rem;
   font-weight: 600;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
   color: var(--or-red);
   line-height: 1;
+  white-space: nowrap;
 }
 @media (max-width: 56em) {
   .md-header__ellipsis > .md-header__topic:first-of-type::after {
