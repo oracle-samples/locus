@@ -80,12 +80,13 @@ test.describe("locus sandbox · workbench", () => {
     await expect(page.getByTestId("wb-output")).toContainText(/exited with code 0/i, { timeout: 60_000 });
   });
 
-  test("streams ModelChunkEvents live for a tutorial that runs an Agent", async ({ page }) => {
+  test("agent tutorial emits Terminate event chip via the callback handler", async ({ page }) => {
     test.setTimeout(240_000);
     await configureOCI(page);
     await expect.poll(async () => page.evaluate(() => Boolean((window as any).__wb)), { timeout: 10_000 }).toBe(true);
-    // Replace the editor with a tiny program that constructs and runs an
-    // Agent — the bootstrap should patch model.complete to stream tokens.
+    // Tiny tutorial that builds an Agent and prints its reply. The
+    // bootstrap injects a callback_handler so we should see a Terminate
+    // chip in the output even though the tutorial only calls run_sync.
     await page.evaluate(() => {
       const wb = (window as any).__wb as { setSource: (s: string) => void };
       wb.setSource(`from config import get_model
@@ -95,10 +96,7 @@ print(agent.run_sync("ping").message)
 `);
     });
     await page.getByTestId("wb-run-btn").click();
-    // Live chunk transcript appears as tokens stream in.
-    await expect(page.getByTestId("live-chunk")).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId("wb-output")).toContainText(/exited with code 0/i, { timeout: 120_000 });
-    // We expect at least one TerminateEvent rendered as a chip.
     const chips = await page.locator(".wb-output .event__kind").allTextContents();
     expect(chips.some((c) => c.toLowerCase().includes("terminate"))).toBe(true);
   });

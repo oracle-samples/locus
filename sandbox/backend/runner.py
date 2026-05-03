@@ -966,65 +966,14 @@ try:
 except Exception:
     pass
 
-# 2. Wrap each provider's .complete() so it internally calls .stream() and
-#    emits one ModelChunkEvent per token. The agent loop sees a normal
-#    ModelResponse, the workbench UI sees a live transcript.
-def __wrap_streaming__(cls):
-    if getattr(cls, "__locus_streamed__", False):
-        return
-    if not (hasattr(cls, "complete") and hasattr(cls, "stream")):
-        return
-    cls.__locus_streamed__ = True
-    _orig_complete = cls.complete
-
-    async def _streaming_complete(self, messages, tools=None, **kwargs):
-        from locus.core.messages import Message
-        from locus.models.base import ModelResponse
-        full = ""
-        tool_calls = None
-        usage = {}
-        stop_reason = "end_turn"
-        try:
-            chunks_iter = self.stream(messages, tools, **kwargs)
-        except TypeError:
-            chunks_iter = self.stream(messages, tools)
-        async for chunk in chunks_iter:
-            content = getattr(chunk, "content", None) or ""
-            if content:
-                full += content
-                __le_emit__({"type": "ModelChunkEvent", "content": content})
-            tc = getattr(chunk, "tool_calls", None)
-            if tc:
-                tool_calls = tc
-            if getattr(chunk, "done", False):
-                break
-        if not full and tool_calls is None:
-            # Stream produced nothing; fall back to the original sync path
-            # so we don't strand the agent loop with an empty response.
-            return await _orig_complete(self, messages, tools, **kwargs)
-        return ModelResponse(
-            message=Message.assistant(content=full, tool_calls=tool_calls),
-            usage=usage,
-            stop_reason=stop_reason,
-        )
-
-    cls.complete = _streaming_complete
-
-try:
-    from locus.models.providers.oci.openai_compat import OCIOpenAIModel as __O1
-    __wrap_streaming__(__O1)
-except Exception:
-    pass
-try:
-    from locus.models.native.openai import OpenAIModel as __O2
-    __wrap_streaming__(__O2)
-except Exception:
-    pass
-try:
-    from locus.models.native.anthropic import AnthropicModel as __O3
-    __wrap_streaming__(__O3)
-except Exception:
-    pass
+# Note: a previous version of this bootstrap also monkey-patched each
+# provider's .complete() to internally stream tokens and emit one
+# ModelChunkEvent per chunk. That duplicated content with tutorials
+# that use run_sync + print(result.message) — the chunks appeared live
+# at the top of the output and the same text appeared again, formatted,
+# in the tutorial's prints. We now only inject the callback_handler;
+# token streaming for hand-built agents that iterate run() works on
+# its own when the user wires model.stream() explicitly.
 
 # --- end bootstrap; user source follows ---
 '''
