@@ -157,8 +157,16 @@ builder, validation-error formatter.
 
 `src/locus/agent/agent.py:_structure_output` — repair-on-failure loop.
 
-## Tutorial
+## Tutorials
 
-[`tutorial_13_structured_output.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_13_structured_output.py)
-covers both the standalone `parse_structured()` parser (useful for
-non-Agent flows) and the Agent `output_schema=` integration above.
+- [`tutorial_13_structured_output.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_13_structured_output.py)
+  covers both the standalone `parse_structured()` parser (useful for
+  non-Agent flows) and the Agent `output_schema=` integration above.
+- [`tutorial_44_debate_with_judge.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_44_debate_with_judge.py)
+  — typed `Verdict` as the workflow boundary artifact.
+- [`tutorial_46_incident_response.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_46_incident_response.py)
+  — typed `Postmortem` as the terminal artifact of an incident graph.
+- [`tutorial_47_procurement_approval.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_47_procurement_approval.py)
+  — typed `PurchaseOrder` from a tiered approval flow.
+- [`tutorial_48_contract_review.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_48_contract_review.py)
+  — typed `ContractDecision` from a parallel-review + negotiation loop.
