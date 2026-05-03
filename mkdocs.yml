@@ -106,6 +106,17 @@ plugins:
 
 nav:
 - Home: index.md
+- Multi-agent workflows:
+  - Overview: concepts/multi-agent.md
+  - Composition: concepts/multi-agent/composition.md
+  - Orchestrator: concepts/multi-agent/orchestrator.md
+  - Swarm: concepts/multi-agent/swarm.md
+  - Handoff: concepts/multi-agent/handoff.md
+  - StateGraph: concepts/multi-agent/graph.md
+  - Functional API: concepts/multi-agent/functional.md
+  - A2A protocol: concepts/multi-agent/a2a.md
+  - Production-readiness: concepts/multi-agent/production.md
+- Tutorials: tutorials/index.md
 - Concepts:
   - Agents:
     - Overview: concepts/agent.md
@@ -148,15 +159,6 @@ nav:
     - Safety & Guardrails: concepts/safety.md
     - Observability: concepts/observability.md
     - Evaluation: concepts/evaluation.md
-- Multi-agent:
-  - Overview: concepts/multi-agent.md
-  - Composition: concepts/multi-agent/composition.md
-  - Orchestrator: concepts/multi-agent/orchestrator.md
-  - Swarm: concepts/multi-agent/swarm.md
-  - Handoff: concepts/multi-agent/handoff.md
-  - StateGraph: concepts/multi-agent/graph.md
-  - Functional API: concepts/multi-agent/functional.md
-  - A2A protocol: concepts/multi-agent/a2a.md
 - How-to:
   - Quickstart: how-to/quickstart.md
   - Deploy: how-to/deploy.md

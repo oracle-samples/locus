@@ -254,6 +254,6 @@ examples/mcp_test_*.py
 examples/start_and_test.sh
 
 # Old tutorials directory (superseded by examples/tutorial_*.py)
-tutorials/
+/tutorials/
 site/
 .claude/
