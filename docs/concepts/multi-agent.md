@@ -1,12 +1,27 @@
-# Multi-agent orchestration
+# Multi-agent workflows
 
-There is no single right way to coordinate agents. Different problems
-want different shapes. locus ships **six in-process patterns plus
-A2A across processes** — all sharing one `Agent` class and one event
-type, so you can mix them in a single process and stream events from
-any of them in the same `match` block.
+Multi-agent workflows are what Locus is for. Seven shapes you compose
+in one process or scale across a mesh, every shape backed by the same
+`Agent` class, the same event stream, and the same primitives. Pick a
+tutorial below, copy the code, ship it.
 
-![Six in-process orchestration patterns plus A2A across processes — Composition, Orchestrator + Specialists, Swarm, Handoff, StateGraph, Functional, A2A](../img/multi-agent-patterns.svg)
+![Seven multi-agent workflow shapes — Composition, Orchestrator + Specialists, Swarm, Handoff, StateGraph, Functional, A2A](../img/multi-agent-patterns.svg)
+
+## What you can ship today
+
+Every example below is a real `examples/tutorial_NN_*.py` file in the
+repo, runs end-to-end against the bundled `MockModel` (no creds), and
+upgrades to live OCI / OpenAI by setting one env var.
+
+| | Workflow | One line | Code |
+|---|---|---|---|
+| **42** | Map-reduce code review | Scatter a diff to `N` reviewers via `Send`, reduce findings into one report. | [`tutorial_42_map_reduce_code_review.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_42_map_reduce_code_review.py) |
+| **43** | Supervisor + critic loop | Researcher → Writer → Critic, loop back to Writer until critic approves (cap'd revisions). | [`tutorial_43_supervisor_critic_loop.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_43_supervisor_critic_loop.py) |
+| **44** | Adversarial debate + judge | PRO and CON argue across N rounds; Judge emits a typed `Verdict` via `output_schema`. | [`tutorial_44_debate_with_judge.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_44_debate_with_judge.py) |
+| **45** | Multi-agent + human-in-the-loop | Three patterns in one file: approval gate, human-as-tool, long-pause snapshot/resume. | [`tutorial_45_multiagent_human_in_loop.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_45_multiagent_human_in_loop.py) |
+| **46** | On-call incident response | Triage → 3 parallel investigators (logs / metrics / traces) → severity gate → page-the-human → mitigate → typed `Postmortem`. | [`tutorial_46_incident_response.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_46_incident_response.py) |
+| **47** | Tiered approval workflow | Justifier → Vendor analyst → tier router (auto / manager / +finance / +CFO) → typed `PurchaseOrder`. Three stacked `interrupt()` gates on the top tier. | [`tutorial_47_procurement_approval.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_47_procurement_approval.py) |
+| **48** | Contract review + negotiation | Parser → 3 parallel reviewers → negotiation gate → human counsel → `Command(goto="sign_off")` short-circuits when resolved. Cycles enabled. | [`tutorial_48_contract_review.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_48_contract_review.py) |
 
 ## Pick a shape
 
@@ -33,12 +48,11 @@ any of them in the same `match` block.
                                                                 Handoff
 ```
 
-When you write your own glue code (asyncio fan-out, retries,
-schedulers): use the **Functional API** (`@task`, `@entrypoint`).
-That's just a thinner wrapper that brings agent runs into the
-ordinary asyncio universe.
+Writing your own glue (asyncio fan-out, retries, schedulers)? Use the
+**Functional API** (`@task`, `@entrypoint`) — a thin wrapper that brings
+agent runs into the ordinary asyncio universe.
 
-## The six in-process patterns plus A2A
+## The seven shapes
 
 | Pattern | Best for | Key class | Source |
 |---|---|---|---|
@@ -50,163 +64,151 @@ ordinary asyncio universe.
 | **[Functional](multi-agent/functional.md)** | map/reduce over agents; asyncio-native composition | `@task`, `@entrypoint` | [`multiagent/functional.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/multiagent/functional.py) |
 | **[A2A](multi-agent/a2a.md)** | cross-process / cross-runtime; capability discovery | `A2AServer`, `A2AClient`, `AgentCard` | [`a2a/protocol.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/a2a/protocol.py) |
 
-## Quick examples
+## Workflow primitives
 
-### Composition — sequential pipeline
+The pieces every shape is built from. Drop them into any graph node.
 
-```python
-from locus.agent.composition import SequentialPipeline
-
-pipeline = SequentialPipeline(agents=[researcher, summariser, fact_checker])
-result = pipeline.run_sync("Brief on Q3 launch.")
-```
-
-A linear chain. Output of `researcher` feeds `summariser`, which
-feeds `fact_checker`. Tutorial:
-[tutorial_25_composition.py](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_25_composition.py).
-
-### Orchestrator + Specialists — one router, parallel experts
+### `Send` — scatter / map-reduce
 
 ```python
-from locus.multiagent import Orchestrator, Specialist
+from locus.core.send import Send
 
-procurement = Specialist(name="procurement", agent=procurement_agent,
-                         description="Reads the catalogue, quotes vendors.")
-compliance  = Specialist(name="compliance",  agent=compliance_agent,
-                         description="Vets vendors against SOC2 / ISO posture.")
-
-orchestrator = Orchestrator(
-    coordinator_model="oci:openai.gpt-5",
-    specialists=[procurement, compliance],
-    system_prompt="You are the procurement lead. Delegate to the right specialist.",
-)
-
-result = orchestrator.run_sync("Pick three vendors for $2M of cloud spend.")
+async def split(state):
+    return [Send("worker", {"task": t}) for t in state["tasks"]]
 ```
 
-Coordinator delegates each sub-task to the right specialist;
-specialists run concurrently when the coordinator dispatches to
-several of them at once. Tutorial:
-[tutorial_17_orchestrator_pattern.py](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_17_orchestrator_pattern.py).
+Returning a list of `Send` from a node spawns parallel executions —
+no `asyncio.gather`, no shared mutable state. Each result lands in
+`state[send.id]` automatically. Used by tutorials 42, 46, 48.
 
-### Swarm — peer-to-peer research
+### `interrupt()` — pause for a human
 
 ```python
-from locus.multiagent import Swarm
+from locus.core import interrupt
 
-swarm = Swarm(
-    agents=[researcher, summariser, fact_checker],
-    shared_context={"topic": "Q3 launch"},
-    max_iterations=8,
-)
-
-result = swarm.run_sync("Produce a launch brief on Q3.")
+async def approval_node(state):
+    response = interrupt({"question": "Ship it?", "options": ["yes", "no"]})
+    return {"approved": response == "yes"}
 ```
 
-No central router. Each agent reads `SharedContext` and pulls tasks
-off a shared queue; new tasks any agent posts get picked up by the
-next available peer. Tutorial:
-[tutorial_11_swarm_multiagent.py](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_11_swarm_multiagent.py).
+`interrupt()` raises `InterruptException`; the graph catches it,
+snapshots state, and returns control to the caller. Resume by calling
+`graph.execute(Command(resume="yes"))`. Used by tutorials 45, 46, 47, 48.
 
-### Handoff — escalation desk
+### `Command(goto=...)` — explicit routing
 
 ```python
-from locus.multiagent import Handoff
+from locus.core import goto
 
-flow = Handoff(
-    initial=triage_agent,
-    targets={"billing": billing_agent, "shipping": shipping_agent},
-)
-
-result = flow.run_sync("My order #4321 was charged twice.")
+async def smart_router(state):
+    if state["urgent"]:
+        return goto("emergency", priority=10)   # skip ahead
+    return {"score": compute_score(state)}      # normal flow
 ```
 
-The triage agent reads the conversation, decides which specialist
-should take over, and emits a `Handoff(target="billing")` directive.
-The full transcript transfers; the billing agent resumes the same
-thread. Tutorial:
-[tutorial_16_agent_handoff.py](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_16_agent_handoff.py).
+Return a `Command` from a node to override the default edge — useful
+for short-circuiting refinement loops or skipping straight to sign-off.
+Used by tutorial 48 to skip the negotiation loop when counsel says RESOLVED.
 
-### StateGraph — explicit nodes, edges, cycles
+### `Agent(output_schema=...)` — typed terminal artifacts
 
 ```python
-from locus.multiagent import StateGraph, END
+from pydantic import BaseModel
+from locus import Agent, AgentConfig
 
-graph = StateGraph(state_schema=ResearchState)
-graph.add_node("plan", plan_agent)
-graph.add_node("research", research_agent)
-graph.add_node("review", review_agent)
+class Verdict(BaseModel):
+    winner: str
+    confidence: float
+    reasoning: str
 
-graph.add_edge("plan", "research")
-graph.add_edge("research", "review")
-graph.add_conditional_edges(
-    "review",
-    lambda state: "research" if state.confidence < 0.85 else END,
-)
-
-result = graph.compile().run_sync({"prompt": "Write a launch brief."})
+agent = Agent(config=AgentConfig(model="oci:openai.gpt-5", output_schema=Verdict))
+result = agent.run_sync("...")
+verdict: Verdict = result.parsed   # validated Pydantic instance, not free text
 ```
 
-Pure-function router from `(node, state) → next node`. Cycles, fan-out,
-subgraphs all work. Per-node `RetryPolicy` + `CachePolicy`. Mermaid
-viz via `graph.compile().get_mermaid()`. Tutorials:
-[06_basic_graph](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_06_basic_graph.py) ·
-[07_conditional_routing](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_07_conditional_routing.py) ·
-[35_graph_advanced](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_35_graph_advanced.py).
+When you need a typed artifact at the workflow boundary — `Verdict`,
+`Postmortem`, `PurchaseOrder`, `ContractDecision` — `output_schema`
+gives you a validated Pydantic instance. Used by tutorials 44, 46, 47, 48.
 
-### Functional API — map/reduce in asyncio
+### `GraphConfig(allow_cycles=True)` — refinement loops
 
 ```python
-import asyncio
-from locus.multiagent.functional import task, entrypoint
+from locus.multiagent.graph import GraphConfig, StateGraph
 
-@task
-async def vet_vendor(vendor: dict) -> dict:
-    return await compliance_agent.run(f"Vet {vendor['name']}.")
-
-@entrypoint
-async def vet_all(vendors: list[dict]) -> list[dict]:
-    return await asyncio.gather(*[vet_vendor(v) for v in vendors])
-
-scored = vet_all.run_sync(catalogue)
+graph = StateGraph(config=GraphConfig(allow_cycles=True, max_iterations=20))
+graph.add_edge("critic", "writer")   # loop edge — only legal with allow_cycles
 ```
 
-`@task` and `@entrypoint` adapt agent runs into the regular asyncio
-universe. Use `asyncio.gather` for fan-out, `asyncio.timeout` for
-deadlines, your own retry decorator — same primitives you use in any
-async Python. Tutorial:
-[tutorial_36_functional_api.py](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_36_functional_api.py).
+Cycles are off by default (so you can't accidentally infinite-loop).
+Opt in with `allow_cycles=True` plus an iteration cap. Used by
+tutorials 43, 48.
 
-### A2A — across processes
+## Why these workflows ship to prod
+
+The boring stuff that turns a demo into a product. Every primitive
+below works in any of the seven shapes — you don't pick "shape" or
+"production-ready", you get both.
+
+### Reflexion — catch a bad turn before the next one
 
 ```python
-# host (team A's service)
-from locus.a2a.protocol import A2AServer, AgentCard
-
-card = AgentCard(
-    name="vendor_research",
-    description="Reads the vendor catalogue, quotes prices.",
-    skills=["vendor_lookup", "price_quote"],
-)
-A2AServer(agent=research_agent, card=card).run(port=7421)
+agent = Agent(config=AgentConfig(model=..., reflexion=True))
 ```
+
+`reflexion=True` self-evaluates every turn and feeds the next Think a
+sharper plan. → [Reasoning concept](reasoning.md)
+
+### Grounding — verify claims against their source
 
 ```python
-# client (team B's service)
-from locus.a2a.protocol import A2AClient
-
-client = A2AClient.discover("http://research-host:7421")
-reply = await client.send("Quote three options for $2M cloud.")
+agent = Agent(config=AgentConfig(model=..., grounding=True))
 ```
 
-HTTP + SSE under the hood. `AgentCard` advertises the agent's
-capabilities so consumers can pick the right peer by skill tag. Each
-side keeps its own `Agent` runtime. Tutorial:
-[tutorial_34_a2a_protocol.py](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_34_a2a_protocol.py).
+Each claim is scored against the tool result it came from; below-threshold
+claims get dropped or sent back. → [Reasoning concept](reasoning.md) ·
+[GSAR](gsar.md) for typed grounding.
+
+### Idempotent tools — side effects fire once
+
+```python
+@tool(idempotent=True)
+def book_flight(flight_id: str, customer_id: str) -> dict:
+    return billing.charge_and_book(flight_id, customer_id)
+```
+
+The ReAct loop dedupes repeat calls on the `(name, kwargs)` hash — the
+model can't double-charge, double-book, or double-page. → [Idempotency
+concept](idempotency.md).
+
+### Checkpointing — survive every restart
+
+```python
+agent = Agent(config=AgentConfig(
+    model=...,
+    checkpointer=OCIBucketBackend(bucket="...", namespace="..."),
+))
+```
+
+Nine backends — one Protocol — and the graph snapshots state at every
+interrupt boundary. Pause for a human Friday afternoon, resume Monday
+morning from a different process. → [Checkpointers](checkpointers.md).
+
+### Streaming events — every node visible
+
+```python
+async for event in graph.stream(initial, mode=StreamMode.NODES):
+    match event:
+        case StreamEvent(node_id=n, mode=StreamMode.NODES):
+            print(f"✓ {n}")
+```
+
+Every shape in this section emits the same typed events. SSE-ready,
+match-statement friendly, attributable to the specific specialist that
+produced them. → [Streaming](streaming.md).
 
 ## One event stream across all of them
 
-The whole point of having one `Agent` class is that all six in-process
+The whole point of having one `Agent` class is that all seven in-process
 shapes plus A2A share the same event taxonomy:
 
 ```python
