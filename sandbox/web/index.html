@@ -17,11 +17,12 @@
     <div class="app" id="app">
       <header class="app__header">
         <div class="app__brand">
+          <img class="app__brand-icon" id="app-brand-icon" src="/locus-mark.svg" alt="locus" />
           <span class="app__brand-mark">locus</span>
-          <span class="app__brand-tag">sandbox</span>
+          <span class="app__brand-tag">multi-agent reasoning orchestrator SDK</span>
         </div>
         <div class="app__header-spacer"></div>
-        <span class="app__header-meta" id="header-meta">Multi-Agent Reasoning Orchestrator SDK</span>
+        <span class="app__header-meta" id="header-meta">sandbox · workbench</span>
         <button class="icon-btn" id="theme-btn" data-testid="theme-btn" title="Toggle theme" aria-label="Toggle theme">
           <svg id="theme-icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="4"></circle>
@@ -72,6 +73,16 @@
                 <div class="card__sub" id="wb-sub">Edit the source. Hit Run to execute as a python subprocess against the configured provider.</div>
               </div>
               <div style="display: flex; gap: 0.4rem; align-items: center">
+                <button class="icon-btn" id="wb-prev-btn" data-testid="wb-prev-btn" title="Previous tutorial" aria-label="Previous tutorial">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+                <button class="icon-btn" id="wb-next-btn" data-testid="wb-next-btn" title="Next tutorial" aria-label="Next tutorial">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
                 <span class="pill" id="wb-provider-pill"></span>
                 <button class="icon-btn" id="wb-fullscreen-btn" data-testid="wb-fullscreen-btn" title="Toggle full screen (Esc to exit)" aria-label="Toggle workbench full screen">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">

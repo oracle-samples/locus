@@ -140,6 +140,36 @@ print(agent.run_sync("ping").message)
     expect(Math.abs(persisted - after)).toBeLessThan(24);
   });
 
+  test("prev/next buttons walk the tutorial catalog", async ({ page }) => {
+    await page.goto("/");
+    await expect.poll(async () => page.evaluate(() => Boolean((window as any).__wb)), { timeout: 10_000 }).toBe(true);
+    // First tutorial loaded (tutorial 01); prev should be disabled.
+    await expect(page.getByTestId("wb-prev-btn")).toBeDisabled();
+    await expect(page.getByTestId("wb-next-btn")).toBeEnabled();
+    const titleBefore = await page.locator("#wb-title").textContent();
+    await page.getByTestId("wb-next-btn").click();
+    await expect.poll(async () => page.locator("#wb-title").textContent(), { timeout: 10_000 }).not.toBe(titleBefore);
+    // Now prev should be enabled too.
+    await expect(page.getByTestId("wb-prev-btn")).toBeEnabled();
+    // Step back, original title returns.
+    await page.getByTestId("wb-prev-btn").click();
+    await expect(page.locator("#wb-title")).toHaveText(titleBefore as string);
+  });
+
+  test("brand uses the locus mark + slogan from the docs site", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator(".app__brand-mark")).toHaveText("locus");
+    await expect(page.locator(".app__brand-tag")).toContainText(/multi-agent reasoning orchestrator/i);
+    await expect(page.locator(".app__brand-icon")).toBeVisible();
+  });
+
+  test("default theme is dark when no preference is saved", async ({ page }) => {
+    await page.goto("/");
+    await page.evaluate(() => localStorage.removeItem("locus.sandbox.theme"));
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  });
+
   test("clicking Run auto-enters full-screen with output-only view", async ({ page }) => {
     await configureOCI(page);
     await expect.poll(async () => page.evaluate(() => Boolean((window as any).__wb)), { timeout: 10_000 }).toBe(true);

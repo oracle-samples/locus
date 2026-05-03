@@ -189,8 +189,9 @@ function applyTheme(t: "light" | "dark") {
 }
 
 const savedTheme = localStorage.getItem(THEME_KEY) as "light" | "dark" | null;
-const initialTheme: "light" | "dark" =
-  savedTheme ?? (window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+// Default to dark — the sandbox is for hands-on coding, dark is the
+// natural fit. User can flip to light via the header toggle.
+const initialTheme: "light" | "dark" = savedTheme ?? "dark";
 applyTheme(initialTheme);
 themeBtn.addEventListener("click", () => {
   const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";

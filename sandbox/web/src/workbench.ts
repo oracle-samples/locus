@@ -127,6 +127,12 @@ async function selectTutorial(id: string) {
   wbOutputPill.style.display = "none";
   wbStatus.textContent = `loaded ${current.filename}`;
   renderList(search.value);
+  renderNavState();
+  // Scroll the active item into view in the sidebar so prev/next stays
+  // visible as you walk through tutorials.
+  document
+    .querySelector<HTMLElement>(`[data-testid="tutorial-${current.id}"]`)
+    ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
 }
 
 const LE_PREFIX = "__LE__:";
@@ -287,6 +293,36 @@ async function runEdited() {
   );
 }
 
+function setupTutorialNav() {
+  const prev = document.querySelector<HTMLButtonElement>("#wb-prev-btn");
+  const next = document.querySelector<HTMLButtonElement>("#wb-next-btn");
+  if (!prev || !next) return;
+
+  const step = (delta: number) => {
+    if (!current) return;
+    if (!current) return;
+    const cid = current.id;
+    const idx = tutorials.findIndex((t) => t.id === cid);
+    const target = tutorials[idx + delta];
+    if (target) void selectTutorial(target.id);
+  };
+  prev.addEventListener("click", () => step(-1));
+  next.addEventListener("click", () => step(+1));
+  // Refresh disabled state whenever the current tutorial changes —
+  // selectTutorial calls renderList which re-runs renderNavState below.
+  document.addEventListener("locus:current-changed", renderNavState);
+}
+
+function renderNavState() {
+  const prev = document.querySelector<HTMLButtonElement>("#wb-prev-btn");
+  const next = document.querySelector<HTMLButtonElement>("#wb-next-btn");
+  if (!prev || !next) return;
+  const cur = current;
+  const idx = cur ? tutorials.findIndex((t) => t.id === cur.id) : -1;
+  prev.disabled = idx <= 0;
+  next.disabled = idx === -1 || idx >= tutorials.length - 1;
+}
+
 function setupSplitResize() {
   const split = document.querySelector<HTMLElement>(".wb-split");
   const handle = document.querySelector<HTMLElement>("#wb-resize");
@@ -385,6 +421,7 @@ export function initWorkbench() {
   search.addEventListener("input", () => renderList(search.value));
   setupSplitResize();
   setupFullscreenToggles();
+  setupTutorialNav();
   wbRunBtn.addEventListener("click", () => void runEdited());
   wbStopBtn.addEventListener("click", () => {
     cancelRun?.();

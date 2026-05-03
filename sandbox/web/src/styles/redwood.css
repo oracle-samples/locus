@@ -133,22 +133,34 @@ code, pre { font-family: var(--mono); }
 }
 .app__brand {
   display: flex;
-  align-items: baseline;
-  gap: 0.6rem;
+  align-items: center;
+  gap: 0.55rem;
+}
+.app__brand-icon {
+  width: 28px;
+  height: 28px;
+  display: block;
+  flex: 0 0 auto;
 }
 .app__brand-mark {
   font-weight: 700;
   font-size: 1.2rem;
   letter-spacing: -0.04em;
   color: var(--or-text);
+  text-transform: lowercase;
+  line-height: 1;
 }
 .app__brand-tag {
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   letter-spacing: 0.16em;
   font-weight: 600;
   color: var(--or-red);
   text-transform: uppercase;
+  margin-left: 0.3rem;
+  white-space: nowrap;
 }
+@media (max-width: 880px) { .app__brand-tag { display: none; } }
+[data-theme="dark"] .app__brand-icon { content: url("/locus-mark-dark.svg"); }
 .app__header-spacer { flex: 1; }
 .app__header-meta {
   font-size: 0.78rem;
