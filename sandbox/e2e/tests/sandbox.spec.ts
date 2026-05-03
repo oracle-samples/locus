@@ -140,6 +140,35 @@ test.describe("locus sandbox · OpenAI", () => {
   });
 });
 
+test.describe("locus sandbox · OCI transports", () => {
+  test("SDK transport works with cohere.command-r-plus", async ({ page }) => {
+    test.setTimeout(180_000);
+    await page.goto("/");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await page.getByTestId("settings-btn").click();
+    await page.getByTestId("cfg-provider").selectOption("oci-session");
+    await page.getByTestId("cfg-profile").fill(PROFILE);
+    await page.getByTestId("cfg-region").fill(REGION);
+    await page.getByTestId("cfg-compartment").fill(COMPARTMENT);
+    await page.getByTestId("cfg-transport").selectOption("sdk");
+    // Wait for live model list, then pick the cohere R-plus.
+    await expect(async () => {
+      const opts = await page.getByTestId("cfg-model").locator("option").allTextContents();
+      expect(opts.some((m) => m.startsWith("cohere.command-r-plus"))).toBe(true);
+    }).toPass({ timeout: 30_000 });
+    await page.getByTestId("cfg-model").selectOption("cohere.command-r-plus-08-2024");
+    await page.getByTestId("settings-save").click();
+    // Pill must reflect both the model and the explicit transport.
+    await expect(page.locator("#provider-pill")).toContainText("cohere.command-r-plus-08-2024");
+    await expect(page.locator("#provider-pill")).toContainText("sdk");
+    await page.getByTestId("pattern-agent").click();
+    await page.getByTestId("prompt").fill("Reply only with: pong.");
+    await page.getByTestId("send-btn").click();
+    await expect(page.getByTestId("final-reply")).toBeVisible({ timeout: 90_000 });
+  });
+});
+
 test.describe("locus sandbox · Workbench", () => {
   test("workbench loads tutorials and runs edited source against OCI", async ({ page }) => {
     test.setTimeout(240_000);

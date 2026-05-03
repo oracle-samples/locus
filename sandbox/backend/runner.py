@@ -60,6 +60,19 @@ class ProviderConfig(BaseModel):
     profile: str | None = None
     region: str = "us-chicago-1"
     compartment_id: str | None = None
+    # OCI only: "auto" | "v1" | "sdk". v1 = /openai/v1/chat/completions
+    # (OCIOpenAIModel), sdk = native OCI GenAI chat shape (OCIModel).
+    # "auto" routes Cohere R-series → sdk, everything else → v1.
+    oci_transport: Literal["auto", "v1", "sdk"] = "auto"
+
+
+def _is_oci_sdk_family(model_id: str) -> bool:
+    """Cohere R-series models go through OCI's proprietary chat shape (SDK
+    transport / OCIModel). Everything else (openai.*, meta.*, google.*,
+    xai.*, plus non-R Cohere) speaks the OpenAI-compatible v1 endpoint
+    (OCIOpenAIModel). Same rule examples/config.py uses."""
+    mid = model_id.lower()
+    return mid.startswith("cohere.command-r")
 
 
 def build_model(cfg: ProviderConfig) -> Any:
@@ -82,17 +95,43 @@ def build_model(cfg: ProviderConfig) -> Any:
         return AnthropicModel(model=cfg.model or "claude-sonnet-4-6")
 
     if cfg.provider in ("oci-session", "oci-apikey"):
+        model_id = cfg.model or "openai.gpt-5.5"
+        profile = cfg.profile or "DEFAULT"
+        # Honour an explicit transport choice; fall back to the
+        # examples/config.py auto rule when "auto" or unset.
+        if cfg.oci_transport == "sdk":
+            use_sdk = True
+        elif cfg.oci_transport == "v1":
+            use_sdk = False
+        else:
+            use_sdk = _is_oci_sdk_family(model_id)
+        if use_sdk:
+            # Cohere R-series → SDK transport. The OCI Python SDK builds
+            # its endpoint from the *profile's* region in ~/.oci/config
+            # (e.g. BOAT-OC1 lists us-ashburn-1) which usually doesn't
+            # match where GenAI is deployed. Override service_endpoint
+            # explicitly using the user-supplied region so the request
+            # actually lands in us-chicago-1.
+            from locus.models import OCIAuthType, OCIModel
+
+            auth_type = OCIAuthType.SECURITY_TOKEN if cfg.provider == "oci-session" else OCIAuthType.API_KEY
+            region = cfg.region or "us-chicago-1"
+            endpoint = f"https://inference.generativeai.{region}.oci.oraclecloud.com"
+            return OCIModel(
+                model_id=model_id,
+                profile_name=profile,
+                auth_type=auth_type,
+                compartment_id=cfg.compartment_id,
+                service_endpoint=endpoint,
+            )
+        # Everything else → OpenAI-compatible /openai/v1 transport.
         from locus.models.providers.oci.openai_compat import OCIOpenAIModel
 
-        # Auth-type is inferred from the profile entry in ~/.oci/config —
-        # we just need profile + compartment + region. The provider name
-        # in our payload is informational, used only for the badge in the
-        # web UI.
         return OCIOpenAIModel(
-            model=cfg.model or "openai.gpt-5",
-            profile=cfg.profile or "DEFAULT",
+            model=model_id,
+            profile=profile,
             compartment_id=cfg.compartment_id,
-            region=cfg.region,
+            region=cfg.region or "us-chicago-1",
         )
 
     raise HTTPException(400, f"unknown provider: {cfg.provider}")
@@ -863,6 +902,13 @@ def _provider_env(cfg: ProviderConfig) -> dict[str, str]:
             env["LOCUS_OCI_REGION"] = cfg.region
         if cfg.compartment_id:
             env["LOCUS_OCI_COMPARTMENT"] = cfg.compartment_id
+        # examples/config.py reads LOCUS_OCI_TRANSPORT to override its
+        # auto pick. The workbench subprocess inherits this env so the
+        # tutorial's `from config import get_model` lands on the right
+        # transport.
+        if cfg.oci_transport != "auto":
+            env["LOCUS_OCI_TRANSPORT"] = cfg.oci_transport
+        env["LOCUS_OCI_AUTH_TYPE"] = "security_token" if cfg.provider == "oci-session" else "api_key"
     return env
 
 

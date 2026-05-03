@@ -29,10 +29,12 @@ const cfgModelStatus = $("#cfg-model-status");
 const cfgProfile = $<HTMLInputElement>("#cfg-profile");
 const cfgRegion = $<HTMLInputElement>("#cfg-region");
 const cfgCompartment = $<HTMLInputElement>("#cfg-compartment");
+const cfgTransport = $<HTMLSelectElement>("#cfg-transport");
 const rowApiKey = $("#row-apikey");
 const rowProfile = $("#row-profile");
 const rowRegion = $("#row-region");
 const rowCompartment = $("#row-compartment");
+const rowTransport = $("#row-transport");
 const promptArea = $<HTMLTextAreaElement>("#prompt");
 const sendBtn = $<HTMLButtonElement>("#send-btn");
 const clearBtn = $<HTMLButtonElement>("#clear-btn");
@@ -131,12 +133,13 @@ function defaultPromptFor(id: string): string {
 // Settings modal
 // ---------------------------------------------------------------------------
 
-function fillFromConfig(cfg: { provider: ProviderType; model?: string; api_key?: string; profile?: string; region?: string; compartment_id?: string }) {
+function fillFromConfig(cfg: ProviderConfig) {
   cfgProvider.value = cfg.provider;
   cfgApiKey.value = cfg.api_key ?? "";
   cfgProfile.value = cfg.profile ?? "";
   cfgRegion.value = cfg.region ?? "us-chicago-1";
   cfgCompartment.value = cfg.compartment_id ?? "";
+  cfgTransport.value = cfg.oci_transport ?? "auto";
   // Seed the model select with a single placeholder option containing the
   // requested default — the real list lands when refreshModels resolves.
   const want = cfg.model ?? defaultModelFor(cfg.provider);
@@ -203,6 +206,7 @@ function syncSettingsRows() {
   rowProfile.style.display = isOci ? "flex" : "none";
   rowRegion.style.display = isOci ? "flex" : "none";
   rowCompartment.style.display = isOci ? "flex" : "none";
+  rowTransport.style.display = isOci ? "flex" : "none";
   // When switching provider type, refill empty OCI / model fields so the
   // user doesn't have to retype defaults that always make sense (e.g.
   // BOAT-OC1 + observai compartment + us-chicago-1).
@@ -229,6 +233,7 @@ function saveSettings() {
     cfg.profile = cfgProfile.value.trim() || "DEFAULT";
     cfg.region = cfgRegion.value.trim() || "us-chicago-1";
     cfg.compartment_id = cfgCompartment.value.trim();
+    cfg.oci_transport = (cfgTransport.value as ProviderConfig["oci_transport"]) ?? "auto";
   }
   provider = cfg;
   saveProvider(cfg);
