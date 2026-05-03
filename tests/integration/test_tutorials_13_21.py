@@ -554,6 +554,7 @@ class TestTutorial19GuardrailsSecurity:
     @pytest.mark.asyncio
     async def test_guardrails_hook_tool_blocking(self):
         """Test tool blocking in guardrails."""
+        from locus.core.events import BeforeToolCallEvent
         from locus.hooks.builtin.guardrails import GuardrailConfig, GuardrailsHook
 
         config = GuardrailConfig(
@@ -563,11 +564,13 @@ class TestTutorial19GuardrailsSecurity:
         hook = GuardrailsHook(config=config)
 
         # Safe tool should pass
-        await hook.on_before_tool_call("safe_tool", {})
+        await hook.on_before_tool_call(BeforeToolCallEvent(tool_name="safe_tool", arguments={}))
 
         # Dangerous tool should be blocked
         with pytest.raises(ValueError):
-            await hook.on_before_tool_call("dangerous_tool", {})
+            await hook.on_before_tool_call(
+                BeforeToolCallEvent(tool_name="dangerous_tool", arguments={})
+            )
 
     def test_guardrail_actions(self):
         """Test guardrail action types."""
