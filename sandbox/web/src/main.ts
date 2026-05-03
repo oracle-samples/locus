@@ -31,7 +31,6 @@ const rowProfile = $("#row-profile");
 const rowRegion = $("#row-region");
 const rowCompartment = $("#row-compartment");
 const rowTransport = $("#row-transport");
-const headerMeta = $("#header-meta");
 const providerWarning = $("#provider-warning");
 
 // ---------------------------------------------------------------------------
@@ -39,8 +38,6 @@ const providerWarning = $("#provider-warning");
 // ---------------------------------------------------------------------------
 
 let provider: ProviderConfig | null = loadProvider();
-
-headerMeta.textContent = "Multi-Agent Reasoning Orchestrator SDK";
 
 // ---------------------------------------------------------------------------
 // Settings modal

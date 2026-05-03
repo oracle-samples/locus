@@ -166,6 +166,32 @@ code, pre { font-family: var(--mono); }
   font-size: 0.78rem;
   color: var(--or-text-mute);
 }
+/* Oracle Generative AI lockup on the right — OCI rounded-O + Oracle
+   wordmark, same shape the docs site uses. */
+.app__oracle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: var(--radius);
+  text-decoration: none;
+  transition: background 0.12s, transform 0.12s, box-shadow 0.12s;
+}
+.app__oracle:hover {
+  background: rgba(199, 70, 52, 0.08);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px -2px rgba(199, 70, 52, 0.25);
+}
+.app__oracle-mark { width: 28px; height: 28px; display: block; }
+.app__oracle-wordmark {
+  height: 20px;
+  width: auto;
+  aspect-ratio: 109.36 / 22.96;
+  display: block;
+}
+@media (max-width: 720px) { .app__oracle-wordmark { display: none; } }
+[data-theme="dark"] .app__oracle-wordmark { content: url("/oracle-white.svg"); }
+[data-theme="dark"] .app__oracle:hover { background: rgba(199, 70, 52, 0.16); }
 
 .app__side {
   grid-area: side;

@@ -22,7 +22,10 @@
           <span class="app__brand-tag">multi-agent reasoning orchestrator SDK</span>
         </div>
         <div class="app__header-spacer"></div>
-        <span class="app__header-meta" id="header-meta">sandbox · workbench</span>
+        <a class="app__oracle" href="https://www.oracle.com/artificial-intelligence/generative-ai/" target="_blank" rel="noopener noreferrer" aria-label="Oracle Generative AI">
+          <img class="app__oracle-mark" src="/oci-mark.svg" alt="" />
+          <img class="app__oracle-wordmark" id="oracle-wordmark" src="/oracle.svg" alt="Oracle" />
+        </a>
         <button class="icon-btn" id="theme-btn" data-testid="theme-btn" title="Toggle theme" aria-label="Toggle theme">
           <svg id="theme-icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="4"></circle>
@@ -42,12 +45,12 @@
       </aside>
 
       <main class="app__main">
-        <div class="page__crumbs" id="crumbs">Sandbox</div>
-        <h1 class="page__title" id="page-title">Pick a pattern</h1>
+        <div class="page__crumbs" id="crumbs">Sandbox · Workbench</div>
+        <h1 class="page__title" id="page-title">Workbench</h1>
         <p class="page__lede" id="page-lede">
-          Every pattern below runs against the same provider you configure in
-          <strong>Provider settings</strong> — OpenAI, Anthropic, OCI session, or OCI api-key. Pick a
-          pattern from the sidebar to start.
+          Pick a tutorial from the sidebar, edit the source, hit Run. Every tutorial executes
+          as a python subprocess against the provider you configure in
+          <strong>Provider settings</strong> — OpenAI, Anthropic, OCI session, or OCI api-key.
         </p>
 
         <div class="card" id="provider-warning" style="display: none">

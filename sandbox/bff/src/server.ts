@@ -9,7 +9,7 @@
 import express from "express";
 import type { Request, Response } from "express";
 
-const PORT = Number(process.env.PORT ?? 3001);
+const PORT = Number(process.env.PORT ?? 3101);
 const RUNNER = (process.env.RUNNER_URL ?? "http://127.0.0.1:8100").replace(/\/$/, "");
 
 const app = express();

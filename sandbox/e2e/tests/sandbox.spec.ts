@@ -161,6 +161,10 @@ print(agent.run_sync("ping").message)
     await expect(page.locator(".app__brand-mark")).toHaveText("locus");
     await expect(page.locator(".app__brand-tag")).toContainText(/multi-agent reasoning orchestrator/i);
     await expect(page.locator(".app__brand-icon")).toBeVisible();
+    // Oracle / OCI lockup on the right links to the GenAI page.
+    const oracle = page.locator(".app__oracle");
+    await expect(oracle).toBeVisible();
+    await expect(oracle).toHaveAttribute("href", /oracle\.com.*generative-ai/i);
   });
 
   test("default theme is dark when no preference is saved", async ({ page }) => {
