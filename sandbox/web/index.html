@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>locus · sandbox</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/styles/redwood.css" />
+  </head>
+  <body>
+    <div class="app" id="app">
+      <header class="app__header">
+        <div class="app__brand">
+          <span class="app__brand-mark">locus</span>
+          <span class="app__brand-tag">sandbox</span>
+        </div>
+        <div class="app__header-spacer"></div>
+        <span class="app__header-meta" id="header-meta">Multi-Agent Reasoning Orchestrator SDK</span>
+        <button class="btn" id="settings-btn" data-testid="settings-btn">Provider settings</button>
+      </header>
+
+      <aside class="app__side">
+        <div class="side__title">Patterns</div>
+        <div id="side-patterns"></div>
+      </aside>
+
+      <main class="app__main">
+        <div class="page__crumbs" id="crumbs">Sandbox</div>
+        <h1 class="page__title" id="page-title">Pick a pattern</h1>
+        <p class="page__lede" id="page-lede">
+          Every pattern below runs against the same provider you configure in
+          <strong>Provider settings</strong> — OpenAI, Anthropic, OCI session, or OCI api-key. Pick a
+          pattern from the sidebar to start.
+        </p>
+
+        <div class="card" id="provider-warning" style="display: none">
+          <div class="card__header">
+            <h2 class="card__title">No provider configured</h2>
+            <span class="pill pill--down"><span class="pill__dot"></span>setup required</span>
+          </div>
+          <p>
+            Click <strong>Provider settings</strong> in the header to enter your model
+            credentials. The sandbox accepts <em>OpenAI</em> + <em>Anthropic</em> API keys
+            and <em>OCI</em> profile names from <code>~/.oci/config</code> (session token or
+            API-key auth — instance / resource principals are intentionally unsupported).
+          </p>
+        </div>
+
+        <div id="playground" style="display: none">
+          <div class="card">
+            <div class="card__header">
+              <div>
+                <h2 class="card__title" id="pattern-title">…</h2>
+                <div class="card__sub" id="pattern-sub">…</div>
+              </div>
+              <span class="pill" id="provider-pill"></span>
+            </div>
+
+            <div class="field" style="margin-bottom: 0.7rem">
+              <label class="field__label" for="prompt">Prompt</label>
+              <textarea id="prompt" class="textarea" data-testid="prompt"></textarea>
+            </div>
+
+            <div class="form-row">
+              <div style="flex: 1"></div>
+              <button class="btn" id="clear-btn">Clear</button>
+              <button class="btn btn--primary" id="send-btn" data-testid="send-btn">Run</button>
+            </div>
+          </div>
+
+          <div class="card reply">
+            <div class="card__header">
+              <h2 class="card__title">Response</h2>
+              <span class="pill" id="response-pill" style="display: none"></span>
+            </div>
+            <div id="response"></div>
+          </div>
+        </div>
+      </main>
+
+      <footer class="app__footer">Built on Oracle Generative AI · locus</footer>
+    </div>
+
+    <!-- Provider settings modal (vanilla TS, hidden by default) -->
+    <div class="modal" id="settings-modal" aria-hidden="true">
+      <div class="modal__panel">
+        <div class="modal__header">
+          <h2>Provider settings</h2>
+          <button class="modal__close" id="settings-close" aria-label="Close">×</button>
+        </div>
+        <p class="modal__lede">
+          Stored in your browser's localStorage. Never sent anywhere except the local BFF.
+        </p>
+
+        <div class="field">
+          <label class="field__label">Provider</label>
+          <select id="cfg-provider" class="input" data-testid="cfg-provider">
+            <option value="openai">OpenAI (api key)</option>
+            <option value="anthropic">Anthropic (api key)</option>
+            <option value="oci-session">OCI · session token (BOAT-OC1 etc.)</option>
+            <option value="oci-apikey">OCI · API-key auth</option>
+          </select>
+        </div>
+
+        <div class="field" id="row-apikey">
+          <label class="field__label">API key</label>
+          <input type="password" id="cfg-apikey" class="input" autocomplete="off" data-testid="cfg-apikey" />
+        </div>
+
+        <div class="field" id="row-model">
+          <label class="field__label">Model</label>
+          <input id="cfg-model" class="input" data-testid="cfg-model" />
+        </div>
+
+        <div class="field" id="row-profile" style="display: none">
+          <label class="field__label">OCI profile</label>
+          <input id="cfg-profile" class="input" data-testid="cfg-profile" placeholder="DEFAULT, BOAT-OC1, …" />
+        </div>
+
+        <div class="field" id="row-region" style="display: none">
+          <label class="field__label">OCI region</label>
+          <input id="cfg-region" class="input" value="us-chicago-1" data-testid="cfg-region" />
+        </div>
+
+        <div class="field" id="row-compartment" style="display: none">
+          <label class="field__label">OCI compartment OCID</label>
+          <input id="cfg-compartment" class="input" placeholder="ocid1.compartment.oc1..…" data-testid="cfg-compartment" />
+        </div>
+
+        <div class="form-row" style="margin-top: 1rem">
+          <div style="flex: 1"></div>
+          <button class="btn" id="settings-cancel">Cancel</button>
+          <button class="btn btn--primary" id="settings-save" data-testid="settings-save">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
