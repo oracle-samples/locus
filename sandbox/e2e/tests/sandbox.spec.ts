@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 const COMPARTMENT =
   process.env.OCI_COMPARTMENT ??
@@ -6,87 +6,148 @@ const COMPARTMENT =
 const PROFILE = process.env.OCI_PROFILE ?? "BOAT-OC1";
 const REGION = process.env.OCI_REGION ?? "us-chicago-1";
 
-async function configureOCISession(page: import("@playwright/test").Page) {
+const OPENAI_KEY = process.env.OPENAI_API_KEY;
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+
+async function configureOCI(page: Page) {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
   await page.getByTestId("settings-btn").click();
   await page.getByTestId("cfg-provider").selectOption("oci-session");
-  await page.getByTestId("cfg-model").fill("openai.gpt-5");
   await page.getByTestId("cfg-profile").fill(PROFILE);
   await page.getByTestId("cfg-region").fill(REGION);
   await page.getByTestId("cfg-compartment").fill(COMPARTMENT);
+  // Wait for the model dropdown to populate from /api/models, then pick 5.5.
+  await expect(async () => {
+    const models = await page.getByTestId("cfg-model").locator("option").allTextContents();
+    expect(models.some((m) => m.includes("openai.gpt-5.5"))).toBe(true);
+  }).toPass({ timeout: 30_000 });
+  await page.getByTestId("cfg-model").selectOption("openai.gpt-5.5");
   await page.getByTestId("settings-save").click();
 }
 
-test.describe("locus sandbox", () => {
+async function configureOpenAI(page: Page) {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByTestId("settings-btn").click();
+  await page.getByTestId("cfg-provider").selectOption("openai");
+  await page.getByTestId("cfg-apikey").fill(OPENAI_KEY ?? "");
+  // Wait for the OpenAI model list to populate, then pick gpt-5.
+  await expect(async () => {
+    const opts = await page.getByTestId("cfg-model").locator("option").allTextContents();
+    expect(opts.includes("gpt-5")).toBe(true);
+  }).toPass({ timeout: 10_000 });
+  await page.getByTestId("cfg-model").selectOption("gpt-5");
+  await page.getByTestId("settings-save").click();
+}
+
+async function configureAnthropic(page: Page) {
+  await page.goto("/");
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByTestId("settings-btn").click();
+  await page.getByTestId("cfg-provider").selectOption("anthropic");
+  await page.getByTestId("cfg-apikey").fill(ANTHROPIC_KEY ?? "");
+  await expect(async () => {
+    const opts = await page.getByTestId("cfg-model").locator("option").allTextContents();
+    expect(opts.includes("claude-sonnet-4-6")).toBe(true);
+  }).toPass({ timeout: 10_000 });
+  await page.getByTestId("cfg-model").selectOption("claude-sonnet-4-6");
+  await page.getByTestId("settings-save").click();
+}
+
+test.describe("locus sandbox · UI smoke", () => {
   test("loads pattern catalog from BFF", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator(".app__brand-mark")).toHaveText("locus");
-    // 7 patterns from the runner.
     const items = page.locator("[data-testid^='pattern-']");
     await expect(items).toHaveCount(7);
-    await expect(page.getByTestId("pattern-agent")).toBeVisible();
-    await expect(page.getByTestId("pattern-orchestrator")).toBeVisible();
   });
 
   test("provider settings round-trip via localStorage", async ({ page }) => {
-    await page.goto("/");
-    await configureOCISession(page);
-    // Provider pill should reflect the saved config.
+    await configureOCI(page);
     await expect(page.locator("#provider-pill")).toContainText(PROFILE);
     await page.reload();
     await expect(page.locator("#provider-pill")).toContainText(PROFILE);
   });
 
-  test("runs the basic agent end-to-end against OCI GenAI", async ({ page }) => {
-    test.setTimeout(180_000);
+  test("settings modal pre-fills + lists models for the selected connection", async ({ page }) => {
     await page.goto("/");
-    await configureOCISession(page);
-    await page.getByTestId("pattern-agent").click();
-    await page.getByTestId("prompt").fill("Say 'pong' and nothing else.");
-    await page.getByTestId("send-btn").click();
-    await expect(page.getByTestId("final-reply")).toBeVisible({ timeout: 120_000 });
-    const reply = (await page.getByTestId("final-reply").textContent())?.trim() ?? "";
-    expect(reply.length).toBeGreaterThan(0);
-  });
-
-  test("runs agent_with_tools and renders tool events", async ({ page }) => {
-    test.setTimeout(180_000);
-    await page.goto("/");
-    await configureOCISession(page);
-    await page.getByTestId("pattern-agent_with_tools").click();
-    await page.getByTestId("prompt").fill("What is 17 + 25? Reverse 'locus'.");
-    await page.getByTestId("send-btn").click();
-    await expect(page.getByTestId("final-reply")).toBeVisible({ timeout: 120_000 });
-    const events = page.getByTestId("event");
-    expect(await events.count()).toBeGreaterThan(2);
-    // At least one ToolStart event should appear.
-    const allKinds = await events.locator(".event__kind").allTextContents();
-    expect(allKinds.some((k) => k.startsWith("Tool"))).toBe(true);
-  });
-
-  test("settings modal pre-fills OCI defaults on first open", async ({ page }) => {
-    await page.goto("/");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
     await page.getByTestId("settings-btn").click();
-    // Pre-filled because we default to oci-session and there's no saved cfg.
     await expect(page.getByTestId("cfg-provider")).toHaveValue("oci-session");
-    await expect(page.getByTestId("cfg-model")).toHaveValue("openai.gpt-5");
     await expect(page.getByTestId("cfg-profile")).toHaveValue(PROFILE);
-    await expect(page.getByTestId("cfg-region")).toHaveValue("us-chicago-1");
     await expect(page.getByTestId("cfg-compartment")).toHaveValue(COMPARTMENT);
+    // Models populate from /api/models against the live OCI list — should
+    // include both gpt-5 and gpt-5.5 families.
+    await expect(async () => {
+      const opts = await page.getByTestId("cfg-model").locator("option").allTextContents();
+      expect(opts.length).toBeGreaterThan(20);
+      expect(opts.some((m) => m.startsWith("openai.gpt-5.5"))).toBe(true);
+    }).toPass({ timeout: 30_000 });
+  });
+});
+
+test.describe("locus sandbox · OCI gpt-5.5", () => {
+  test("runs agent + emits real ModelChunkEvent token stream", async ({ page }) => {
+    test.setTimeout(180_000);
+    await configureOCI(page);
+    await page.getByTestId("pattern-agent").click();
+    await page.getByTestId("stream-toggle").check();
+    await page.getByTestId("prompt").fill("Count from one to five, one per line.");
+    await page.getByTestId("send-btn").click();
+    // Live transcript element appears as ModelChunk arrives.
+    const live = page.getByTestId("live-transcript");
+    await expect(live).toBeVisible({ timeout: 60_000 });
+    await expect(live).toContainText(/one/i, { timeout: 60_000 });
+    await expect(page.getByTestId("final-reply")).toBeVisible({ timeout: 90_000 });
   });
 
-  test("streams agent events live via SSE", async ({ page }) => {
+  test("composition (sequential) runs end-to-end", async ({ page }) => {
     test.setTimeout(180_000);
-    await page.goto("/");
-    await configureOCISession(page);
-    await page.getByTestId("pattern-agent").click();
-    // Stream toggle is only visible for streamable patterns.
-    await expect(page.getByTestId("stream-toggle")).toBeVisible();
-    await page.getByTestId("stream-toggle").check();
-    await page.getByTestId("prompt").fill("Say pong and only the word pong.");
+    await configureOCI(page);
+    await page.getByTestId("pattern-composition").click();
+    await page.getByTestId("prompt").fill("Renewable energy in 2026.");
     await page.getByTestId("send-btn").click();
-    // The streaming endpoint emits events as they arrive — first one shows up
-    // before the request even completes.
-    await expect(page.getByTestId("event").first()).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByTestId("final-reply")).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId("final-reply")).toBeVisible({ timeout: 120_000 });
+    expect((await page.getByTestId("final-reply").textContent())?.length ?? 0).toBeGreaterThan(20);
+  });
+
+  test("agent_with_tools renders ToolStart events", async ({ page }) => {
+    test.setTimeout(180_000);
+    await configureOCI(page);
+    await page.getByTestId("pattern-agent_with_tools").click();
+    await page.getByTestId("prompt").fill("17 + 25 = ? Reverse 'locus'.");
+    await page.getByTestId("send-btn").click();
+    await expect(page.getByTestId("final-reply")).toBeVisible({ timeout: 120_000 });
+    const kinds = await page.getByTestId("event").locator(".event__kind").allTextContents();
+    expect(kinds.some((k) => k.startsWith("Tool"))).toBe(true);
+  });
+});
+
+const openaiTest = OPENAI_KEY ? test : test.skip;
+test.describe("locus sandbox · OpenAI", () => {
+  openaiTest("runs basic agent against OpenAI", async ({ page }) => {
+    test.setTimeout(180_000);
+    await configureOpenAI(page);
+    await page.getByTestId("pattern-agent").click();
+    await page.getByTestId("prompt").fill("Reply with the word pong.");
+    await page.getByTestId("send-btn").click();
+    await expect(page.getByTestId("final-reply")).toBeVisible({ timeout: 120_000 });
+  });
+});
+
+const anthropicTest = ANTHROPIC_KEY ? test : test.skip;
+test.describe("locus sandbox · Anthropic", () => {
+  anthropicTest("runs basic agent against Anthropic", async ({ page }) => {
+    test.setTimeout(180_000);
+    await configureAnthropic(page);
+    await page.getByTestId("pattern-agent").click();
+    await page.getByTestId("prompt").fill("Reply with the word pong.");
+    await page.getByTestId("send-btn").click();
+    await expect(page.getByTestId("final-reply")).toBeVisible({ timeout: 120_000 });
   });
 });

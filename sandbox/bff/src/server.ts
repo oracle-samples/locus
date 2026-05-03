@@ -40,6 +40,14 @@ app.get("/api/patterns", (req, res) => {
   void forward(req, res, { method: "GET" });
 });
 
+app.post("/api/models", (req, res) => {
+  void forward(req, res, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req.body),
+  });
+});
+
 app.post("/api/run/:pattern", (req, res) => {
   void forward(req, res, {
     method: "POST",

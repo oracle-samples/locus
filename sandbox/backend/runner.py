@@ -69,7 +69,7 @@ def build_model(cfg: ProviderConfig) -> Any:
             raise HTTPException(400, "openai provider requires api_key")
         # Locus OpenAIModel reads OPENAI_API_KEY by default; pass it through.
         os.environ["OPENAI_API_KEY"] = cfg.api_key
-        from locus.models import OpenAIModel
+        from locus.models.native.openai import OpenAIModel
 
         return OpenAIModel(model=cfg.model or "gpt-5")
 
@@ -77,12 +77,12 @@ def build_model(cfg: ProviderConfig) -> Any:
         if not cfg.api_key:
             raise HTTPException(400, "anthropic provider requires api_key")
         os.environ["ANTHROPIC_API_KEY"] = cfg.api_key
-        from locus.models import AnthropicModel
+        from locus.models.native.anthropic import AnthropicModel
 
         return AnthropicModel(model=cfg.model or "claude-sonnet-4-6")
 
     if cfg.provider in ("oci-session", "oci-apikey"):
-        from locus.models import OCIOpenAIModel
+        from locus.models.providers.oci.openai_compat import OCIOpenAIModel
 
         # Auth-type is inferred from the profile entry in ~/.oci/config —
         # we just need profile + compartment + region. The provider name
@@ -146,16 +146,32 @@ async def _drive_agent(agent: Any, prompt: str) -> tuple[str, list[RunEvent]]:
 
 
 async def _drive_pipeline(runnable: Any, prompt: str) -> tuple[str, list[RunEvent]]:
-    """Drive a non-Agent runnable (Pipeline / Orchestrator) by .run_async or .run_sync."""
-    if hasattr(runnable, "run") and hasattr(runnable.run, "__aiter__"):
-        return await _drive_agent(runnable, prompt)
-    if hasattr(runnable, "run_async"):
+    """Drive a non-Agent multi-agent shape.
+
+    Each shape has its own entry point:
+      * ``SequentialPipeline`` / ``ParallelPipeline`` / ``LoopAgent`` → ``await runnable.run(task)``
+      * ``Orchestrator``                                              → ``await runnable.execute(task)``
+      * Anything else with ``run_async`` / ``run_sync``               → fallthrough.
+    """
+    cls = type(runnable).__name__
+    if cls in {"SequentialPipeline", "ParallelPipeline", "LoopAgent"}:
+        out = await runnable.run(prompt)
+    elif cls == "Orchestrator":
+        out = await runnable.execute(prompt)
+    elif hasattr(runnable, "run_async"):
         out = await runnable.run_async(prompt)
-    else:
+    elif hasattr(runnable, "run_sync"):
         import asyncio
 
         out = await asyncio.to_thread(runnable.run_sync, prompt)
-    msg = getattr(out, "message", None) or getattr(out, "final_message", None) or str(out)
+    else:
+        raise RuntimeError(f"don't know how to drive {cls}")
+    msg = (
+        getattr(out, "final_output", None)
+        or getattr(out, "final_message", None)
+        or getattr(out, "message", None)
+        or str(out)
+    )
     return msg, []
 
 
@@ -502,7 +518,19 @@ def _build_streaming_agent(pattern_id: str, provider: ProviderConfig) -> Any:
 
 
 async def _stream_pattern(pattern_id: str, prompt: str, provider: ProviderConfig) -> _AI[str]:
-    """Yield SSE-formatted lines from an agent.run() stream."""
+    """Yield SSE-formatted lines.
+
+    For the ``agent`` pattern (no tools) we go directly to ``model.stream()``
+    so the user sees real token-by-token streaming. For ``agent_with_tools``
+    and ``structured_output`` we drive the full agent loop and forward its
+    coarser-grained events (Think / Tool / Terminate) — token streaming
+    inside a ReAct loop isn't a thing the runtime currently offers.
+    """
+    if pattern_id == "agent":
+        async for line in _stream_raw_model(prompt, provider):
+            yield line
+        return
+
     agent = _build_streaming_agent(pattern_id, provider)
     if agent is None:
         yield _sse({"type": "ErrorEvent", "message": f"pattern {pattern_id!r} does not support streaming"})
@@ -516,7 +544,32 @@ async def _stream_pattern(pattern_id: str, prompt: str, provider: ProviderConfig
                 if v is not None:
                     payload[attr] = v if isinstance(v, str) else str(v)
             yield _sse(payload)
-            await asyncio.sleep(0)  # let the loop flush
+            await asyncio.sleep(0)
+    except Exception as exc:
+        yield _sse({"type": "ErrorEvent", "message": f"{type(exc).__name__}: {exc}"})
+
+
+async def _stream_raw_model(prompt: str, provider: ProviderConfig) -> _AI[str]:
+    """Stream tokens directly from ``model.stream()`` — used for plain Q&A."""
+    from locus.core.messages import Message
+
+    try:
+        model = build_model(provider)
+        messages = [
+            Message.system("You are a concise assistant. Answer in one paragraph."),
+            Message.user(prompt),
+        ]
+        full = ""
+        async for chunk in model.stream(messages):
+            content = getattr(chunk, "content", None) or ""
+            done = bool(getattr(chunk, "done", False))
+            if content:
+                full += content
+                yield _sse({"type": "ModelChunkEvent", "chunk": True, "content": content, "done": done})
+            elif done:
+                yield _sse({"type": "ModelChunkEvent", "chunk": True, "content": "", "done": True})
+            await asyncio.sleep(0)
+        yield _sse({"type": "TerminateEvent", "final_message": full})
     except Exception as exc:
         yield _sse({"type": "ErrorEvent", "message": f"{type(exc).__name__}: {exc}"})
 
@@ -590,6 +643,96 @@ async def run_stream(pattern_id: str, req: RunRequest) -> StreamingResponse:
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+class ListModelsRequest(BaseModel):
+    provider: ProviderConfig
+
+
+# Curated OpenAI / Anthropic model lists — listing them via the provider
+# APIs requires a valid api key, so we keep a small hand-rolled set for
+# the dropdown. The backend will accept any model id the user types
+# anyway; this is just discoverability.
+_OPENAI_MODELS = [
+    "gpt-5.5",
+    "gpt-5.5-pro",
+    "gpt-5.1",
+    "gpt-5.1-codex",
+    "gpt-5",
+    "gpt-5-mini",
+    "gpt-5-nano",
+    "gpt-4.1",
+    "gpt-4o",
+    "gpt-4o-mini",
+    "o3",
+    "o4-mini",
+]
+_ANTHROPIC_MODELS = [
+    "claude-opus-4-7",
+    "claude-sonnet-4-6",
+    "claude-haiku-4-5-20251001",
+    "claude-3-5-sonnet-20241022",
+    "claude-3-5-haiku-20241022",
+]
+
+
+@app.post("/api/models")
+async def list_models(req: ListModelsRequest) -> dict[str, Any]:
+    """Discoverable model ids for a given provider config.
+
+    OpenAI / Anthropic return curated lists. OCI hits the live
+    ``ListModels`` API against the user-supplied compartment + profile,
+    so the dropdown reflects the user's tenancy + access policies.
+    """
+    p = req.provider.provider
+    if p == "openai":
+        return {"provider": p, "models": _OPENAI_MODELS}
+    if p == "anthropic":
+        return {"provider": p, "models": _ANTHROPIC_MODELS}
+
+    # OCI — hit the GenAI control plane.
+    if not req.provider.compartment_id:
+        return {"provider": p, "models": [], "error": "compartment_id required"}
+    try:
+        import asyncio
+
+        import oci
+
+        cfg_path = "~/.oci/config"
+        config = oci.config.from_file(cfg_path, req.provider.profile or "DEFAULT")
+
+        signer: Any | None = None
+        if "security_token_file" in config:
+            with open(config["security_token_file"]) as f:
+                token = f.read().strip()
+            private_key = oci.signer.load_private_key_from_file(config["key_file"])
+            signer = oci.auth.signers.SecurityTokenSigner(token, private_key)
+
+        # Override region in the config for the call.
+        config = {**config, "region": req.provider.region or "us-chicago-1"}
+
+        client_kwargs: dict[str, Any] = {"config": config}
+        if signer is not None:
+            client_kwargs["signer"] = signer
+
+        client = oci.generative_ai.GenerativeAiClient(**client_kwargs)
+
+        def _list() -> list[str]:
+            page = client.list_models(
+                compartment_id=req.provider.compartment_id,
+                lifecycle_state="ACTIVE",
+                limit=400,
+            ).data
+            names = sorted({m.display_name for m in page.items if m.display_name})
+            # Surface only chat-capable models (those whose names start with
+            # one of the families we know).
+            keep_prefix = ("openai.", "cohere.command", "meta.llama", "google.gemini", "xai.grok")
+            return [n for n in names if n.startswith(keep_prefix)]
+
+        models = await asyncio.to_thread(_list)
+        return {"provider": p, "models": models}
+    except Exception as exc:  # pragma: no cover — surface to UI
+        return {"provider": p, "models": [], "error": f"{type(exc).__name__}: {exc}"}
 
 
 @app.get("/api/health")

@@ -19,12 +19,12 @@ export function saveProvider(cfg: ProviderConfig): void {
 export function defaultModelFor(p: ProviderType): string {
   switch (p) {
     case "openai":
-      return "gpt-5";
+      return "gpt-5.5";
     case "anthropic":
       return "claude-sonnet-4-6";
     case "oci-session":
     case "oci-apikey":
-      return "openai.gpt-5";
+      return "openai.gpt-5.5";
   }
 }
 

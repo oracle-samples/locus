@@ -1,4 +1,4 @@
-import { listPatterns, runPattern, streamPattern } from "./api";
+import { listModels, listPatterns, runPattern, streamPattern } from "./api";
 import { defaultModelFor, defaultsFor, describeProvider, loadProvider, saveProvider } from "./settings";
 import type { Pattern, ProviderConfig, ProviderType, RunEvent } from "./types";
 
@@ -23,7 +23,8 @@ const settingsCancel = $<HTMLButtonElement>("#settings-cancel");
 const settingsSave = $<HTMLButtonElement>("#settings-save");
 const cfgProvider = $<HTMLSelectElement>("#cfg-provider");
 const cfgApiKey = $<HTMLInputElement>("#cfg-apikey");
-const cfgModel = $<HTMLInputElement>("#cfg-model");
+const cfgModel = $<HTMLSelectElement>("#cfg-model");
+const cfgModelStatus = $("#cfg-model-status");
 const cfgProfile = $<HTMLInputElement>("#cfg-profile");
 const cfgRegion = $<HTMLInputElement>("#cfg-region");
 const cfgCompartment = $<HTMLInputElement>("#cfg-compartment");
@@ -131,16 +132,62 @@ function defaultPromptFor(id: string): string {
 function fillFromConfig(cfg: { provider: ProviderType; model?: string; api_key?: string; profile?: string; region?: string; compartment_id?: string }) {
   cfgProvider.value = cfg.provider;
   cfgApiKey.value = cfg.api_key ?? "";
-  cfgModel.value = cfg.model ?? defaultModelFor(cfg.provider);
   cfgProfile.value = cfg.profile ?? "";
   cfgRegion.value = cfg.region ?? "us-chicago-1";
   cfgCompartment.value = cfg.compartment_id ?? "";
+  // Seed the model select with a single placeholder option containing the
+  // requested default — the real list lands when refreshModels resolves.
+  const want = cfg.model ?? defaultModelFor(cfg.provider);
+  setModelOptions([want], want);
+}
+
+function setModelOptions(models: string[], selected?: string) {
+  cfgModel.innerHTML = "";
+  if (selected && !models.includes(selected)) models = [selected, ...models];
+  for (const m of models) {
+    const opt = document.createElement("option");
+    opt.value = m;
+    opt.textContent = m;
+    cfgModel.appendChild(opt);
+  }
+  if (selected) cfgModel.value = selected;
+}
+
+let modelsRefreshSeq = 0;
+
+async function refreshModels() {
+  const seq = ++modelsRefreshSeq;
+  const p = cfgProvider.value as ProviderType;
+  cfgModelStatus.textContent = "fetching…";
+  try {
+    const cfg = {
+      provider: p,
+      model: cfgModel.value,
+      api_key: cfgApiKey.value || undefined,
+      profile: cfgProfile.value || undefined,
+      region: cfgRegion.value || undefined,
+      compartment_id: cfgCompartment.value || undefined,
+    };
+    const result = await listModels(cfg as ProviderConfig);
+    if (seq !== modelsRefreshSeq) return; // stale
+    if (result.error) {
+      cfgModelStatus.textContent = result.error;
+      return;
+    }
+    cfgModelStatus.textContent = `${result.models.length} available`;
+    const want = cfgModel.value || defaultModelFor(p);
+    setModelOptions(result.models, want);
+  } catch (err) {
+    if (seq !== modelsRefreshSeq) return;
+    cfgModelStatus.textContent = `error: ${(err as Error).message}`;
+  }
 }
 
 function openSettings() {
   fillFromConfig(provider ?? defaultsFor("oci-session"));
   syncSettingsRows();
   settingsModal.classList.add("modal--open");
+  void refreshModels();
 }
 
 function closeSettings() {
@@ -158,7 +205,7 @@ function syncSettingsRows() {
   // user doesn't have to retype defaults that always make sense (e.g.
   // BOAT-OC1 + observai compartment + us-chicago-1).
   const def = defaultsFor(p);
-  if (!cfgModel.value) cfgModel.value = def.model;
+  if (!cfgModel.value) setModelOptions([def.model], def.model);
   if (isOci && !cfgProfile.value) cfgProfile.value = def.profile ?? "";
   if (isOci && !cfgRegion.value) cfgRegion.value = def.region ?? "";
   if (isOci && !cfgCompartment.value) cfgCompartment.value = def.compartment_id ?? "";
@@ -205,6 +252,15 @@ async function runSelected() {
 
   if (useStream) {
     let count = 0;
+    let liveEl: HTMLDivElement | null = null;
+    const startLive = () => {
+      if (liveEl) return liveEl;
+      liveEl = document.createElement("div");
+      liveEl.className = "reply__live";
+      liveEl.dataset.testid = "live-transcript";
+      responseEl.appendChild(liveEl);
+      return liveEl;
+    };
     await streamPattern(
       selected.id,
       promptArea.value,
@@ -213,12 +269,24 @@ async function runSelected() {
         count++;
         responsePill.className = "pill pill--busy";
         responsePill.innerHTML = `<span class="pill__dot"></span>${count} events`;
+        // Token-level chunks: append text to the live transcript instead of
+        // dropping a new event card per word.
+        if (e.kind === "ModelChunkEvent") {
+          const node = startLive();
+          const piece = (e.extra?.content as string | undefined) ?? "";
+          if (piece) node.textContent = (node.textContent ?? "") + piece;
+          return;
+        }
         appendEvent(e);
       },
       (final) => {
         responsePill.className = "pill pill--up";
         responsePill.innerHTML = `<span class="pill__dot"></span>${count} events · done`;
+        // Either we got a Terminate.final_message, or fall back to the live
+        // transcript text we accumulated from chunks.
+        const fallback = liveEl?.textContent?.trim() ?? "";
         if (final) appendFinal(final);
+        else if (fallback) appendFinal(fallback);
         sendBtn.disabled = false;
         sendBtn.textContent = "Run";
       },
@@ -292,7 +360,26 @@ settingsBtn.addEventListener("click", openSettings);
 settingsClose.addEventListener("click", closeSettings);
 settingsCancel.addEventListener("click", closeSettings);
 settingsSave.addEventListener("click", saveSettings);
-cfgProvider.addEventListener("change", syncSettingsRows);
+cfgProvider.addEventListener("change", () => {
+  // Reset the model select to that provider's default so we don't
+  // accidentally send "openai.gpt-5.5" to the OpenAI provider just because
+  // it was the previous OCI selection.
+  const p = cfgProvider.value as ProviderType;
+  setModelOptions([defaultModelFor(p)], defaultModelFor(p));
+  syncSettingsRows();
+  void refreshModels();
+});
+// Refresh the model list when the OCI connection details change so the
+// dropdown reflects what's actually available in that profile/region/compartment.
+let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+const queueRefresh = () => {
+  if (refreshTimer) clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(() => void refreshModels(), 400);
+};
+cfgProfile.addEventListener("input", queueRefresh);
+cfgRegion.addEventListener("input", queueRefresh);
+cfgCompartment.addEventListener("input", queueRefresh);
+cfgApiKey.addEventListener("input", queueRefresh);
 sendBtn.addEventListener("click", runSelected);
 clearBtn.addEventListener("click", () => {
   responseEl.innerHTML = "";

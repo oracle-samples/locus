@@ -482,3 +482,28 @@ code, pre { font-family: var(--mono); }
 .modal .field {
   margin-bottom: 0.7rem;
 }
+
+/* ----- Live token streaming ----- */
+.reply__live {
+  background: var(--or-bg-soft);
+  border-left: 3px solid var(--or-sage-green);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  margin: 0.7rem 0;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  position: relative;
+}
+.reply__live::after {
+  content: "▌";
+  display: inline-block;
+  margin-left: 2px;
+  color: var(--or-red);
+  animation: locus-cursor 1s steps(1) infinite;
+}
+@keyframes locus-cursor {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}

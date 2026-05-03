@@ -6,6 +6,17 @@ export async function listPatterns(): Promise<Pattern[]> {
   return (await r.json()) as Pattern[];
 }
 
+export async function listModels(provider: ProviderConfig): Promise<{ models: string[]; error?: string }> {
+  const r = await fetch("/api/models", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ provider }),
+  });
+  if (!r.ok) throw new Error(`models ${r.status}`);
+  const data = (await r.json()) as { models: string[]; error?: string };
+  return data;
+}
+
 export async function runPattern(
   pattern: string,
   prompt: string,
