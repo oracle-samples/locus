@@ -1,0 +1,37 @@
+{
+  "name": "locus workbench",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bullseye",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/postCreate.sh",
+  "postStartCommand": "bash .devcontainer/postStart.sh",
+  "forwardPorts": [5173, 3101, 8100],
+  "portsAttributes": {
+    "5173": {
+      "label": "Workbench UI",
+      "onAutoForward": "openBrowserOnce",
+      "visibility": "public"
+    },
+    "3101": {
+      "label": "BFF (internal)",
+      "onAutoForward": "silent"
+    },
+    "8100": {
+      "label": "Backend (internal)",
+      "onAutoForward": "silent"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  }
+}

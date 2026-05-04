@@ -24,6 +24,16 @@
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 
+<p align="center">
+  <a href="https://codespaces.new/oracle-samples/locus?ref=feat/a2a-mesh-genai-playwright&devcontainer_path=.devcontainer%2Fdevcontainer.json">
+    <img src="https://github.com/codespaces/badge.svg" alt="Open the workbench in GitHub Codespaces">
+  </a>
+</p>
+
+<p align="center">
+  <em>Try the workbench in your browser — bring your own OpenAI / Anthropic key, no install.</em>
+</p>
+
 ---
 
 Seven workflow shapes you compose in one process or scale across a
