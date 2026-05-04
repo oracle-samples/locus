@@ -123,6 +123,12 @@ class SharedContext(BaseModel):
             for key, value in self.findings.items():
                 lines.append(f"- **{key}**: {value}")
 
+        if self.task_results:
+            lines.append("\n### Task Results:")
+            for tid, result in self.task_results.items():
+                snippet = result if len(result) <= 600 else result[:600].rstrip() + "…"
+                lines.append(f"- **{tid}**:\n{snippet}")
+
         if self.blackboard:
             lines.append("\n### Blackboard Messages:")
             for key, msg in self.blackboard.items():
@@ -346,7 +352,9 @@ class Swarm(BaseModel):
     # Configuration
     max_iterations: int = 10
     max_parallel_agents: int = 5
-    task_timeout_ms: float = 30000
+    # Real LLM completions with structured-response budgets routinely exceed
+    # 30s on gpt-class models, so the default per-task timeout is 120s.
+    task_timeout_ms: float = 120000
 
     # Model for coordination decisions
     model: Any = None
@@ -359,12 +367,14 @@ class Swarm(BaseModel):
     def add_agent(self, agent: SwarmAgent) -> Swarm:
         """Add an agent to the swarm.
 
-        If the swarm has a model configured and the agent does not, the
-        swarm-level model is propagated so agents created without an
-        explicit ``model=`` argument still work when the swarm is executed.
+        If the swarm has a model configured and the incoming agent does
+        not, the agent inherits the swarm's model. Without this, the
+        agent's first ``work_on_task`` would fail with
+        "No model configured for agent" — which used to be the most
+        common silent-failure mode for new users of the swarm API.
         """
-        if agent.model is None and self.model is not None:
-            agent.model = self.model
+        if self.model is not None and agent.model is None:
+            agent = agent.with_model(self.model)
         self.agents.append(agent)
         return self
 
@@ -646,13 +656,18 @@ def create_swarm(
     Args:
         name: Swarm name
         agents: List of agents to add
-        model: Model for agents and coordination
+        model: Model for agents and coordination. When provided, any agent
+            in ``agents`` that doesn't already carry its own model inherits
+            this one — otherwise ``Swarm.execute`` would later report
+            "No model configured for agent" for those agents.
 
     Returns:
         Configured Swarm instance
     """
     swarm = Swarm(name=name, model=model)
 
+    # ``Swarm.add_agent`` propagates the swarm's model into any agent that
+    # doesn't already carry one, so we don't repeat that logic here.
     if agents:
         for agent in agents:
             swarm.add_agent(agent)
