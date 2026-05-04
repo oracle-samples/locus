@@ -127,7 +127,7 @@ async function selectTutorial(id: string) {
   wbTitle.textContent = current.title;
   wbSub.textContent = current.summary || `${current.filename}`;
   setEditorContent(current.source);
-  wbOutput.innerHTML = "";
+  wbOutput.innerHTML = `<div class="wb-output__empty">Hit <strong>Run</strong> to execute this tutorial against your configured provider. Output streams here.</div>`;
   wbOutputPill.style.display = "none";
   wbStatus.textContent = `loaded ${current.filename}`;
   renderList(search.value);

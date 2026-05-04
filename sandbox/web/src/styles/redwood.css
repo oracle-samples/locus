@@ -964,3 +964,27 @@ code, pre { font-family: var(--mono); }
 .wb-output .ln--event--live .chunk-piece {
   color: #f5e9c8;
 }
+
+/* ----- Output empty-state hint (no run yet) ----- */
+.wb-output__empty {
+  color: #95908a;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 2.4rem 1.4rem;
+  line-height: 1.5;
+}
+.wb-output__empty strong {
+  color: var(--or-red-deep);
+  font-weight: 600;
+}
+
+/* ----- Tighter provider pill — clip the long dated SKU ----- */
+#wb-provider-pill {
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-flex;
+  align-items: center;
+}

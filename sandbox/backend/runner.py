@@ -885,6 +885,11 @@ class WorkbenchRunRequest(BaseModel):
     source: str
     provider: ProviderConfig
     timeout_seconds: int = 120
+    # When true, the bootstrap force-enables reflexion=True on every
+    # Agent the tutorial creates — exposes chain-of-thought via
+    # ReflectEvent (assessment + guidance per step) on any provider /
+    # transport, since reflexion is an SDK feature, not a model feature.
+    reflexion: bool = False
 
 
 def _describe_provider(cfg: ProviderConfig) -> str:
@@ -1073,12 +1078,21 @@ try:
     __orig_init__ = __LocusAgent__.__init__
     __orig_run_sync = __LocusAgent__.run_sync
 
+    __SB_FORCE_REFLEXION = __le_os.environ.get("LOCUS_SANDBOX_REFLEXION") == "1"
+
     def __patched__(self, *a, **kw):
         __orig_init__(self, *a, **kw)
         try:
             cfg = getattr(self, "config", None)
             if cfg is not None and getattr(cfg, "callback_handler", None) is None:
                 cfg.callback_handler = __locus_emit__
+            # When the workbench user asks for chain-of-thought we flip
+            # reflexion on. The agent then emits ReflectEvent each step
+            # carrying the model's self-assessment + guidance — the
+            # closest provider-agnostic CoT we can offer.
+            if cfg is not None and __SB_FORCE_REFLEXION:
+                if not getattr(cfg, "reflexion", None):
+                    cfg.reflexion = True
         except Exception:
             pass
     __LocusAgent__.__init__ = __patched__
@@ -1122,6 +1136,7 @@ except Exception:
         **_provider_env(req.provider),
         "PYTHONPATH": f"{src_dir}{os.pathsep}{examples_dir}",
         "PYTHONUNBUFFERED": "1",
+        "LOCUS_SANDBOX_REFLEXION": "1" if req.reflexion else "0",
     }
 
     async def gen() -> _AI[str]:
