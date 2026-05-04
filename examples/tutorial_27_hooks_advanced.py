@@ -94,6 +94,21 @@ def example_write_protection():
     except AttributeError as e:
         print(f"tool_name (read-only): {e}")
 
+    # AI commentary so this Part also exercises the configured provider
+    import time as _t
+
+    agent = Agent(model=get_model(max_tokens=80), system_prompt="Reply in one short sentence.")
+    t0 = _t.perf_counter()
+    res = agent.run_sync(
+        "In one sentence, why does Locus mark BeforeToolCallEvent.tool_name as "
+        "read-only while letting hooks edit `arguments` and `cancel`?"
+    )
+    dt = _t.perf_counter() - t0
+    print(
+        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+    )
+    print(f"  AI rationale: {res.message.strip()}")
+
 
 if __name__ == "__main__":
     example_cancel_tool()

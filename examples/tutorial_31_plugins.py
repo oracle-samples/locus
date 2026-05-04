@@ -102,11 +102,29 @@ def example_callback():
 
 
 def example_cancel():
-    """Stop an agent from another thread."""
+    """Stop an agent from another thread, after running one normal call first."""
     print("\n=== Part 3: Cancel Signal ===\n")
 
-    model = get_model()
+    model = get_model(max_tokens=80)
 
+    # 3a — A real call first, so this Part also exercises the provider.
+    live_agent = Agent(
+        config=AgentConfig(
+            system_prompt="Answer in one sentence.",
+            max_iterations=3,
+            model=model,
+        )
+    )
+    t0 = time.perf_counter()
+    live_result = live_agent.run_sync("In one sentence, why does an agent need a cancel signal?")
+    dt = time.perf_counter() - t0
+    print(
+        f"  [OCI call: {dt:.2f}s · "
+        f"{live_result.metrics.prompt_tokens}→{live_result.metrics.completion_tokens} tokens]"
+    )
+    print(f"  AI rationale: {live_result.message.strip()}")
+
+    # 3b — Now cancel a fresh agent before it runs.
     agent = Agent(
         config=AgentConfig(
             system_prompt="Answer concisely.",
@@ -114,8 +132,6 @@ def example_cancel():
             model=model,
         )
     )
-
-    # Cancel before running
     agent.cancel()
     result = agent.run_sync("This should be cancelled")
     print(f"Stop reason: {result.stop_reason}")  # "cancelled"

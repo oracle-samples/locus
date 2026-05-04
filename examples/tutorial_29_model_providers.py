@@ -19,7 +19,27 @@ Prerequisites:
 Difficulty: Beginner
 """
 
+import asyncio
+import time
+
+from config import get_model as get_configured_model
+
+from locus.agent import Agent
 from locus.models.registry import get_model, list_providers
+
+
+def _llm_call(
+    prompt: str, *, system: str = "Reply in one short sentence.", max_tokens: int = 80
+) -> str:
+    """Helper: real OCI call with timing/token banner — used by every Part."""
+    agent = Agent(model=get_configured_model(max_tokens=max_tokens), system_prompt=system)
+    t0 = time.perf_counter()
+    res = agent.run_sync(prompt)
+    dt = time.perf_counter() - t0
+    print(
+        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+    )
+    return res.message.strip()
 
 
 # =============================================================================
@@ -33,6 +53,9 @@ def example_providers():
 
     providers = list_providers()
     print(f"Registered providers: {providers}")
+    print(
+        f"AI rationale: {_llm_call('In one sentence, why do AI SDKs ship a model registry instead of hard-coding one provider?')}"
+    )
 
     print("\nUsage:")
     print('  model = get_model("openai:gpt-4o")')
@@ -57,6 +80,9 @@ def example_providers():
 def example_direct():
     """Use providers directly without the registry."""
     print("\n=== Direct Provider Usage ===\n")
+    print(
+        f"AI rationale: {_llm_call('In one sentence, when would you instantiate OCIOpenAIModel directly instead of via the registry?')}"
+    )
 
     # OCI GenAI — V1 transport (recommended for OpenAI/Meta/xAI/Mistral/Gemini)
     print("OCI GenAI — V1 (/openai/v1):")
@@ -95,6 +121,27 @@ def example_direct():
     print('  model = OllamaModel(model="llama3.3")')
 
 
+async def example_live_call() -> None:
+    """Actually call whichever provider is configured in the environment."""
+    print("\n=== Live Provider Call ===\n")
+    model = get_configured_model(max_tokens=80)
+    agent = Agent(
+        model=model,
+        system_prompt="Reply with one short sentence.",
+    )
+    import time as _t
+
+    t0 = _t.perf_counter()
+    result = agent.run_sync("Name two strengths of OCI Generative AI.")
+    dt = _t.perf_counter() - t0
+    print(f"  Model class: {type(model).__name__}")
+    print(f"  Reply:       {result.message.strip()}")
+    print(
+        f"  [OCI call:   {dt:.2f}s · {result.metrics.prompt_tokens}→{result.metrics.completion_tokens} tokens]"
+    )
+
+
 if __name__ == "__main__":
     example_providers()
     example_direct()
+    asyncio.run(example_live_call())
