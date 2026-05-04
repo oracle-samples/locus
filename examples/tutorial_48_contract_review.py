@@ -196,20 +196,16 @@ def negotiation_gate(state: dict[str, Any]) -> str:
     return "negotiate"
 
 
-async def negotiate(state: dict[str, Any]) -> Any:
-    """Pause for human counsel to redline a clause.
+async def negotiate(state: dict[str, Any]) -> Command:
+    """Pause for counsel to redline a clause; always return a Command.
 
-    Returns a ``Command`` that explicitly routes to the next node. Three
-    outcomes:
+    Three outcomes:
 
-    - ``RESOLVED``: counterparty accepted our terms. Skip re-review and
-      go straight to sign-off — Command(goto="sign_off").
-    - ``WALK``: counterparty refused; abandon. Also goes to sign-off
-      (which marks the decision as 'abandoned').
-    - Custom redline text: continue the loop — re-parse + re-review.
+    - ``RESOLVED``: counterparty accepted our terms. Route to sign-off.
+    - ``WALK``: counterparty refused; route to sign-off as 'abandoned'.
+    - Custom redline text: route back to ``parse`` with the new clauses
+      so the parallel reviewers re-evaluate.
     """
-    from locus.core import goto
-
     open_blockers = state.get("open_blockers", [])
     response = interrupt(
         {
@@ -225,33 +221,37 @@ async def negotiate(state: dict[str, Any]) -> Any:
         }
     )
     if response.startswith("WALK"):
-        return goto(
-            "sign_off",
-            walk_away=True,
-            open_blockers=open_blockers,
+        return Command(
+            goto="sign_off",
+            update={"walk_away": True, "open_blockers": open_blockers},
         )
     if response.startswith("RESOLVED"):
-        return goto(
-            "sign_off",
-            blockers_resolved=list(state.get("blockers_resolved", [])) + open_blockers,
-            open_blockers=[],
-            clauses=state.get("clauses", "") + "\n[All blockers resolved per redline.]",
+        return Command(
+            goto="sign_off",
+            update={
+                "blockers_resolved": list(state.get("blockers_resolved", [])) + open_blockers,
+                "open_blockers": [],
+                "clauses": state.get("clauses", "") + "\n[All blockers resolved per redline.]",
+            },
         )
-    # Counterparty redlined — feed the new text back through review.
-    return {
-        "clauses": response,
-        "blockers_resolved": list(state.get("blockers_resolved", [])) + open_blockers,
-        "open_blockers": [],
-    }
+    # Counterparty redlined — re-parse the new text and re-run reviewers.
+    return Command(
+        goto="parse",
+        update={
+            "contract_text": response,
+            "blockers_resolved": list(state.get("blockers_resolved", [])) + open_blockers,
+            "open_blockers": [],
+        },
+    )
 
 
 async def sign_off(state: dict[str, Any]) -> dict[str, Any]:
     """Emit ``ContractDecision`` via ``Agent.output_schema=ContractDecision``.
 
-    A real-world sign-off step is an LLM-summarised audit record. The
-    Agent reads accumulated state and produces the typed Pydantic
-    instance. MockModel fallback is deterministic so the demo always
-    finishes with a valid decision.
+    The Agent reads accumulated state and produces the typed Pydantic
+    instance. ``result.parsed`` must be populated — if the model can't
+    honor the JSON schema we surface a hard error instead of fabricating
+    a record.
     """
     import asyncio as _asyncio
 
@@ -262,18 +262,29 @@ async def sign_off(state: dict[str, Any]) -> dict[str, Any]:
     else:
         outcome = "signed"
 
+    # Keep the prompt tight so it fits any provider's context comfortably
+    # and the model focuses on the structured fields rather than long
+    # reviewer prose.
+    open_blockers = state.get("open_blockers", []) or []
+    resolved = state.get("blockers_resolved", []) or []
+
+    def _trim(items: list[str], n: int = 5, w: int = 80) -> list[str]:
+        out = [s[:w] for s in items[:n]]
+        if len(items) > n:
+            out.append(f"... and {len(items) - n} more")
+        return out
+
     agent = Agent(
         config=AgentConfig(
             agent_id="contract-signoff",
             model=state["__model__"],
             system_prompt=(
                 "You are a contract-ops officer writing the final ContractDecision. "
-                "Summarise the negotiation in two sentences. Use the supplied "
-                "structured fields verbatim."
+                "Use the supplied fields. Summarise the final terms in one sentence."
             ),
             output_schema=ContractDecision,
             max_iterations=2,
-            max_tokens=300,
+            max_tokens=400,
         )
     )
     prompt = (
@@ -281,23 +292,30 @@ async def sign_off(state: dict[str, Any]) -> dict[str, Any]:
         f"Counterparty: {state.get('counterparty')}\n"
         f"Decision: {outcome}\n"
         f"Rounds: {state.get('rounds', 0)}\n"
-        f"Resolved blockers: {state.get('blockers_resolved', [])}\n"
-        f"Open blockers: {state.get('open_blockers', [])}\n"
-        f"Final terms (first 200 chars): {(state.get('clauses') or '')[:200]}\n\n"
+        f"Resolved blockers ({len(resolved)}): {_trim(resolved)}\n"
+        f"Open blockers ({len(open_blockers)}): {_trim(open_blockers)}\n\n"
         "Emit the ContractDecision."
     )
-    result = await _asyncio.to_thread(agent.run_sync, prompt)
+    last_exc: BaseException | None = None
+    result = None
+    for attempt in range(3):
+        try:
+            result = await _asyncio.to_thread(agent.run_sync, prompt)
+            break
+        except Exception as exc:  # noqa: BLE001 — retry transient OCI flakiness
+            last_exc = exc
+            await _asyncio.sleep(0.5 * (attempt + 1))
+    if result is None:
+        raise RuntimeError(
+            f"Sign-off agent failed after 3 attempts. Last error: {last_exc!r}"
+        ) from last_exc
     decision = result.parsed
     if decision is None:
-        # MockModel fallback.
-        decision = ContractDecision(
-            contract_id=state.get("contract_id", "C-0001"),
-            counterparty=state.get("counterparty", "(unknown)"),
-            rounds=state.get("rounds", 0),
-            blockers_resolved=state.get("blockers_resolved", []),
-            open_blockers=state.get("open_blockers", []),
-            final_terms_summary=(state.get("clauses") or "")[:200],
-            decision=outcome,
+        raise RuntimeError(
+            "Sign-off agent returned no parsed ContractDecision. The configured "
+            "model could not honor the JSON schema. Use a stronger model "
+            "(e.g. openai.gpt-4o, openai.gpt-5, anthropic.claude-3-5-sonnet) "
+            f"for tutorial 48. Raw output: {result.message!r}"
         )
     return {"decision": decision}
 
@@ -340,17 +358,146 @@ def build_review_graph() -> StateGraph:
 
 
 SAMPLE_CONTRACT = """\
-Master Services Agreement (excerpt)
+MASTER SERVICES AGREEMENT — EXCERPT
 
-1. Term: 36 months, auto-renew unless cancelled with 90 days notice.
-2. Payment: Net-30, 5% late fee per month, no cap.
-3. Indemnity: Vendor indemnifies Customer for IP claims; Customer
-   indemnifies Vendor for everything else, uncapped.
-4. Termination: Vendor may terminate for convenience with 30 days
-   notice; Customer may terminate only for material breach.
-5. Data: Customer data may be processed in any region. No deletion
-   guarantee on termination.
-6. Liability cap: 1× annual fees.
+This Master Services Agreement ("Agreement") is entered into by and between
+MegaCorp Cloud Solutions, Inc. ("Vendor") and the customer entity named on
+the order form ("Customer"), and is effective as of the date of last signature
+below.
+
+1. SERVICES AND ORDER FORMS
+
+1.1 Vendor will provide the cloud-platform services described in one or more
+order forms executed by the parties. Each order form is incorporated into
+this Agreement by reference. In the event of a conflict between an order form
+and this Agreement, the order form controls.
+
+1.2 Vendor reserves the right to modify the technical implementation of the
+Services at any time provided that the functional description on the most
+recent order form is materially preserved.
+
+2. TERM AND RENEWAL
+
+2.1 The initial term is thirty-six (36) months from the effective date.
+
+2.2 The Agreement auto-renews for successive twelve (12) month terms unless
+Customer provides written notice of non-renewal at least ninety (90) days
+prior to the end of the then-current term. Notice given any later than that
+window will not be effective until the following renewal cycle.
+
+3. FEES, PAYMENT, AND PRICE ESCALATION
+
+3.1 Customer shall pay all fees within Net-30 of invoice date. Fees not paid
+when due bear a late charge of five percent (5%) per month, compounding, with
+no cap on the total late charge accumulation.
+
+3.2 At each renewal, Vendor may increase fees in its sole discretion and is
+not obligated to provide advance notice of the increase prior to invoicing
+the renewal term.
+
+4. INTELLECTUAL PROPERTY
+
+4.1 Customer retains all right, title and interest in Customer Data.
+
+4.2 Any feedback, suggestions, or requests submitted by Customer or its users
+regarding the Services (including bug reports, feature requests, and any
+configuration patterns or workflows developed using the Services) shall be
+deemed assigned to Vendor on a worldwide, royalty-free, perpetual,
+sublicensable basis without further consideration.
+
+5. INDEMNITY
+
+5.1 Vendor will defend and indemnify Customer against third-party claims
+alleging that the Services infringe a U.S. patent or copyright, subject to
+the liability cap in Section 7.
+
+5.2 Customer will defend, indemnify, and hold harmless Vendor and its
+affiliates, officers, employees and contractors from and against any and all
+claims, damages, losses, fines, judgments, and reasonable attorneys' fees
+arising out of or relating to (a) Customer's use of the Services, (b) any
+content uploaded to the Services by Customer or its end users, and (c) any
+breach of this Agreement by Customer. Customer's obligations under this
+Section 5.2 are not subject to the liability cap in Section 7.
+
+6. DATA, PROCESSING, AND DELETION
+
+6.1 Customer Data may be processed and stored in any region in which Vendor
+or its sub-processors operate. Vendor will use commercially reasonable
+efforts to comply with applicable data-protection law.
+
+6.2 Upon termination, Vendor will retain Customer Data for at least thirty
+(30) days for operational continuity. After thirty days Vendor may, but is
+not obligated to, delete Customer Data; deletion certifications are not
+provided.
+
+7. LIABILITY CAP
+
+7.1 Each party's aggregate liability under this Agreement is capped at one
+times (1×) the fees paid by Customer in the twelve months preceding the claim,
+except as set out in Sections 5.2 and 8.
+
+8. TERMINATION
+
+8.1 Either party may terminate this Agreement for the other party's
+uncured material breach upon thirty (30) days written notice.
+
+8.2 Vendor may additionally terminate this Agreement, or any order form, for
+convenience upon thirty (30) days written notice. Customer may not terminate
+for convenience.
+
+8.3 Service-level credits, if any, are Customer's sole and exclusive remedy
+for unavailability or performance failures. The SLA schedule, attached as
+Exhibit A, may be revised by Vendor unilaterally with thirty (30) days
+notice.
+"""
+
+REDLINE_ROUND_1 = """\
+MASTER SERVICES AGREEMENT — EXCERPT (counterparty redline, round 1)
+
+The contract above stands except for the following counterparty edits:
+
+3.1 Late charge reduced to one percent (1.0%) per month, capped at fifteen
+percent (15%) of the unpaid invoice. Payment terms remain Net-30.
+
+5.2 Customer indemnity is now subject to the same liability cap in Section 7
+as Vendor's indemnity. The carve-outs for content-based and breach claims
+remain.
+
+8.2 Vendor's right to terminate for convenience is removed. Either party may
+terminate for material uncured breach on 30 days notice; otherwise the
+Agreement runs to end of term.
+
+All other clauses (term length, renewal notice window, IP feedback
+assignment, data residency, liability cap, SLA unilateral revision) are
+unchanged from the prior draft.
+"""
+
+REDLINE_ROUND_2 = """\
+MASTER SERVICES AGREEMENT — EXCERPT (counterparty redline, round 2)
+
+Building on round-1 edits, counterparty has further accepted:
+
+2.2 Renewal-notice window shortened from 90 days to 30 days, and Customer
+may opt out of renewal at any time after the initial 36-month term with 30
+days written notice (no auto-roll into a new 12-month commit).
+
+3.2 Renewal price escalation capped at the lesser of CPI or 5% per renewal,
+with at least 60 days advance written notice of any increase.
+
+4.2 IP-feedback assignment removed. Customer feedback and suggestions remain
+Customer's property; Vendor receives only a non-exclusive licence to act on
+the feedback.
+
+6.2 Vendor will delete Customer Data within 60 days of termination and
+provide a written deletion certification at no charge.
+
+8.3 SLA schedule may not be revised unilaterally by Vendor; revisions
+require Customer's written consent. Service-level credits remain a remedy
+but are no longer the *sole* remedy.
+
+Open items (counterparty's position): liability cap remains 1× annual fees;
+data-residency clause remains "any region"; sub-processor list will be made
+available on request.
 """
 
 
@@ -383,9 +530,14 @@ async def main() -> None:
 
     print(f"\nReviewing: {initial['counterparty']} ({initial['contract_id']})")
 
-    # Auto-resolve the first negotiation round, walk away on the second
-    # (just to demonstrate the abandon path).
-    answers = ["RESOLVED: counterparty agreed to our terms"]
+    # Drive the negotiation across two rounds: counterparty redlines once
+    # (loops back through parse → reviewers), redlines again, then the
+    # third interrupt — if reached — accepts our terms.
+    answers = [
+        REDLINE_ROUND_1,
+        REDLINE_ROUND_2,
+        "RESOLVED: counterparty agreed to our terms",
+    ]
     result = await graph.execute(initial)
     answer_idx = 0
     while result.interrupt:
@@ -397,7 +549,8 @@ async def main() -> None:
         )
         for b in payload.get("open_blockers", [])[:3]:
             print(f"      - {b[:80]}")
-        print(f"  ▶  Counsel responds: {answer!r}")
+        preview = answer if len(answer) <= 80 else answer[:77] + "..."
+        print(f"  ▶  Counsel responds: {preview!r}")
         result = await graph.execute(
             Command(resume=answer, update={**result.final_state, "__model__": model})
         )

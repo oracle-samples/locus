@@ -65,6 +65,20 @@ def example_termination():
     custom = CustomCondition(lambda state, **ctx: (state.iteration > 10, "too_many_iterations"))
     print(f"\nCustomCondition: {custom.check(AgentState(agent_id='t').with_iteration(11))}")
 
+    import time as _t
+
+    agent = Agent(model=get_model(max_tokens=80), system_prompt="Reply in one short sentence.")
+    t0 = _t.perf_counter()
+    res = agent.run_sync(
+        "In one sentence, why is composable termination (MaxIterations | TextMention) "
+        "better than hard-coding a single stop check inside an Agent?"
+    )
+    dt = _t.perf_counter() - t0
+    print(
+        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+    )
+    print(f"  AI rationale: {res.message.strip()}")
+
 
 # =============================================================================
 # Part 2: output_key — Auto-Save Agent Output

@@ -144,9 +144,9 @@ async def con_turn(state: dict[str, Any]) -> dict[str, Any]:
 async def judge_turn(state: dict[str, Any]) -> dict[str, Any]:
     """Use ``output_schema=Verdict`` so the verdict is a typed Pydantic object.
 
-    With a real model, ``result.parsed`` is a populated ``Verdict``
-    instance. With ``MockModel``, the mock can't honor a JSON schema so
-    ``result.parsed`` is None and we surface the raw text instead.
+    ``result.parsed`` must be a populated ``Verdict``. If the configured
+    model can't honor the JSON schema we raise — the demo never fakes a
+    structured verdict from raw text.
     """
     import asyncio as _asyncio
 
@@ -164,11 +164,28 @@ async def judge_turn(state: dict[str, Any]) -> dict[str, Any]:
         f"[{t.side.upper()} r{t.round}] {t.text}" for t in state["transcript"]
     )
     prompt = f"Topic: {state['topic']}\n\nTranscript:\n{transcript_text}\n\nNow emit your Verdict."
-    # Run in a worker thread to avoid nesting an asyncio loop inside this
-    # already-async graph node — ``run_sync`` is the entry point that
-    # returns the parsed object.
-    final = await _asyncio.to_thread(agent.run_sync, prompt)
-    return {"verdict": final.parsed, "verdict_raw": final.message}
+    # ``run_sync`` is the entry point that returns the parsed object; the
+    # call is hopped onto a worker thread because we're already inside an
+    # asyncio loop driving the graph.
+    last_exc: BaseException | None = None
+    final = None
+    for attempt in range(3):
+        try:
+            final = await _asyncio.to_thread(agent.run_sync, prompt)
+            break
+        except Exception as exc:  # noqa: BLE001 — retry transient OCI flakiness
+            last_exc = exc
+            await _asyncio.sleep(0.5 * (attempt + 1))
+    if final is None:
+        raise RuntimeError(f"Judge failed after 3 attempts. Last error: {last_exc!r}") from last_exc
+    if final.parsed is None:
+        raise RuntimeError(
+            "Judge returned no parsed Verdict. The configured model could not "
+            "honor the JSON schema. Use a stronger model (e.g. openai.gpt-4o, "
+            "openai.gpt-5, anthropic.claude-3-5-sonnet) for tutorial 44. "
+            f"Raw output: {final.message!r}"
+        )
+    return {"verdict": final.parsed}
 
 
 # ---------------------------------------------------------------------------
@@ -209,7 +226,13 @@ async def main() -> None:
     model = get_model()
     graph = build_debate_graph()
     initial = {
-        "topic": "Should Python have static typing enabled by default?",
+        "topic": (
+            "Resolved: A 30-engineer SaaS team running a 250k-LOC Python "
+            "monolith on a single Postgres + Redis stack should split the "
+            "monolith into microservices over the next 12 months, given a "
+            "current weekly deploy cadence and ~2 outages per quarter "
+            "traceable to coupling between billing and provisioning code."
+        ),
         "transcript": [],
         "round": 0,
         "__model__": model,
@@ -220,7 +243,7 @@ async def main() -> None:
 
     result = await graph.execute(initial)
     transcript: list[Turn] = result.final_state.get("transcript", [])
-    verdict: Verdict | None = result.final_state.get("verdict")
+    verdict: Verdict = result.final_state["verdict"]
 
     print(f"Total turns: {len(transcript)}")
     print()
@@ -230,15 +253,12 @@ async def main() -> None:
     print()
     print("Verdict:")
     print("-" * 60)
-    if verdict is None:
-        print(f"(unparsed) {result.final_state.get('verdict_raw', '')}")
-    else:
-        print(f"  Winner:     {verdict.winner}")
-        print(f"  Confidence: {verdict.confidence:.2f}")
-        print(f"  Key points:")
-        for p in verdict.key_points:
-            print(f"    - {p}")
-        print(f"  Reasoning:  {verdict.reasoning}")
+    print(f"  Winner:     {verdict.winner}")
+    print(f"  Confidence: {verdict.confidence:.2f}")
+    print("  Key points:")
+    for p in verdict.key_points:
+        print(f"    - {p}")
+    print(f"  Reasoning:  {verdict.reasoning}")
 
 
 if __name__ == "__main__":
