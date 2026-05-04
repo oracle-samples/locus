@@ -382,10 +382,9 @@
   margin-left: 0.6rem;
   align-self: center;
 }
-/* Stack the first topic vertically: "locus" wordmark + the full
-   "ORACLE GENERATIVE AI · MULTI-AGENT REASONING ORCHESTRATOR SDK"
-   subtitle beneath, matching the wordmark+tagline lockup the SVG
-   logo carries. */
+/* Stack the first topic vertically: "locus" wordmark + the
+   "MULTI-AGENT REASONING ORCHESTRATOR SDK" subtitle beneath, matching
+   the wordmark+tagline lockup the SVG logo carries. */
 .md-header__ellipsis > .md-header__topic:first-of-type {
   display: flex;
   flex-direction: column;
@@ -403,7 +402,7 @@
   color: var(--locus-ink);
 }
 .md-header__ellipsis > .md-header__topic:first-of-type::after {
-  content: "ORACLE GENERATIVE AI · MULTI-AGENT REASONING ORCHESTRATOR SDK";
+  content: "MULTI-AGENT REASONING ORCHESTRATOR SDK";
   font-family: var(--locus-sans);
   font-size: 0.55rem;
   font-weight: 600;
