@@ -49,6 +49,11 @@ RUN python3.12 -m pip install --no-cache-dir ".[server,oci,openai,anthropic]"
 # of the COPY context so we install fresh inside the image.
 COPY sandbox/ /app/sandbox/
 
+# Tutorial catalog. The runner walks `<repo>/examples/tutorial_*.py`
+# to populate the sidebar — without this COPY the catalog is empty
+# and every Run hits a "no such tutorial" error.
+COPY examples/ /app/examples/
+
 # Node dependency install for both BFF and web.
 RUN cd sandbox/bff && npm ci --no-audit --no-fund \
     && cd ../web   && npm ci --no-audit --no-fund
