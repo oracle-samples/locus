@@ -72,7 +72,7 @@ def test_tutorial_runs_clean(tutorial: Path):
     # hard-coded MockModel default.
     # Default to OCI but allow override via env (mostly for CI mock runs).
     env.setdefault("LOCUS_MODEL_PROVIDER", "oci")
-    env.setdefault("LOCUS_MODEL_ID", "openai.gpt-4o-mini")
+    env.setdefault("LOCUS_MODEL_ID", "openai.gpt-5.5-2026-04-23")
     env.setdefault("LOCUS_OCI_PROFILE", _PROFILE or "DEFAULT")
     env.setdefault("LOCUS_OCI_REGION", _REGION)
     # Propagate the auth type + compartment so profiles like BOAT-OC1
