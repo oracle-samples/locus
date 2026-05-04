@@ -7,7 +7,7 @@ hide:
 <div class="locus-hero" markdown>
 <div class="locus-hero__copy" markdown>
 
-# Production-grade multi-agent workflows on <span class="accent">Oracle Generative AI.</span>
+# Multi-agent workflows you'd actually <span class="accent">deploy.</span>
 
 **Stream events. Branch on state. Pause for human review.
 Resume across days, weeks, or queues.**
@@ -18,6 +18,9 @@ process, scalable across an agent mesh. **Compose** linear pipelines.
 research. **Handoff** for escalation desks. **StateGraph** for bounded
 retry loops. **Functional** for map-style composition. **A2A** for
 cross-process meshes.
+
+Open source. Python. BYO provider — OCI GenAI, OpenAI, Anthropic, or
+Ollama, picked per agent.
 
 [See what you can build](#six-things-you-can-ship){ .md-button .md-button--primary }
 [GitHub](https://github.com/oracle-samples/locus){ .md-button }
