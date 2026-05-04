@@ -26,13 +26,18 @@
 </p>
 
 <p align="center">
-  <a href="https://codespaces.new/oracle-samples/locus?ref=tutorials/destub-24-real-model-calls&devcontainer_path=.devcontainer%2Fdevcontainer.json">
+  <a href="https://codespaces.new/oracle-samples/locus?devcontainer_path=.devcontainer%2Fdevcontainer.json">
     <img src="https://github.com/codespaces/badge.svg" alt="Open the workbench in GitHub Codespaces">
   </a>
 </p>
 
 <p align="center">
-  <em>Try the workbench in your browser — bring your own OpenAI / Anthropic key, no install.</em>
+  <em>Try the workbench in your browser — bring your own OpenAI / Anthropic key, no install.<br/>
+  Step-by-step: <a href="docs/workbench.md">docs/workbench.md</a></em>
+</p>
+
+<p align="center">
+  <a href="docs/workbench.md"><img src="docs/img/workbench.gif" alt="locus workbench walk-through" width="900"></a>
 </p>
 
 ---
