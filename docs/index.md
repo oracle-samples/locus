@@ -7,15 +7,23 @@ hide:
 <div class="locus-hero" markdown>
 <div class="locus-hero__copy" markdown>
 
-# Multi-agent workflows you'd actually <span class="accent">deploy.</span>
+# Production-safe multi-agent <span class="accent">workflows.</span>
 
-**Stream them. Branch them. Pause for a human. Resume next week.**
+**Idempotent tools that fire once on retry. Typed termination
+conditions you can `&` and `|`. Deterministic handoff with full
+chain-of-custody. Checkpoint and replay across days, weeks, or queues.**
 
-Seven workflow shapes you compose in one process or scale across a
-mesh. **Compose** linear pipelines. **Orchestrate** specialists in
-parallel. **Swarm** for peer-to-peer research. **Handoff** for
-escalation desks. **StateGraph** loops until confident. **Functional**
-maps across agents. **A2A** meshes across processes.
+Five graph-shaped multi-agent patterns plus two composition helpers,
+all in pure Python. **StateGraph** for declarative DAGs with conditional
+edges and `Send` fan-out. **Orchestrator** + **Specialist** for
+router/expert teams. **Swarm** for shared-blackboard peers. **Handoff**
+for typed escalation chains. **A2A** for cross-process meshes over HTTP.
+Plus `SequentialPipeline` / `ParallelPipeline` / `LoopAgent` for
+straight-line composition, and a functional `@task` / `@entrypoint`
+API when you don't need a graph.
+
+Open source. Python. BYO provider — OCI GenAI is native (90+ models,
+day-0); OpenAI, Anthropic, and Ollama through their official SDKs.
 
 [See what you can build](#six-things-you-can-ship){ .md-button .md-button--primary }
 [GitHub](https://github.com/oracle-samples/locus){ .md-button }

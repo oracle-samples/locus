@@ -59,10 +59,10 @@ class MockModel(BaseModel):
 
 
 def _oci_model() -> Any:
-    from locus.models.oci_openai import OCIOpenAIModel
+    from locus.models import OCIOpenAIModel
 
     return OCIOpenAIModel(
-        model_id=os.environ.get("LOCUS_MODEL_ID", "openai.gpt-5"),
+        model=os.environ.get("LOCUS_MODEL_ID", "openai.gpt-5.5-2026-04-23"),
         profile=os.environ.get("LOCUS_OCI_PROFILE", "DEFAULT"),
         region=os.environ.get("LOCUS_OCI_REGION", "us-chicago-1"),
         compartment_id=os.environ.get("LOCUS_OCI_COMPARTMENT"),
@@ -70,9 +70,9 @@ def _oci_model() -> Any:
 
 
 def _openai_model() -> Any:
-    from locus.models.openai import OpenAIModel
+    from locus.models import OpenAIModel
 
-    return OpenAIModel(model_id=os.environ.get("LOCUS_MODEL_ID", "gpt-5"))
+    return OpenAIModel(model=os.environ.get("LOCUS_MODEL_ID", "gpt-5.5-2026-04-23"))
 
 
 def get_model() -> Any:

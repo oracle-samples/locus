@@ -122,8 +122,8 @@ class TestProfileMode:
     def test_env_var_overrides_profile_tenancy(self, monkeypatch):
         """``OCI_COMPARTMENT`` env var beats the profile-tenancy fallback.
 
-        Common case: BOAT-OC1's home tenancy lacks GenAI policy, but the
-        user has access to GenAI inference in saasobservai's compartment.
+        Common case: MY_PROFILE's home tenancy lacks GenAI policy, but the
+        user has access to GenAI inference in the target tenancy's compartment.
         Setting ``OCI_COMPARTMENT`` should make the model target the
         compartment with the policy.
         """

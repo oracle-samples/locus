@@ -12,8 +12,26 @@ Difficulty: Intermediate
 """
 
 import asyncio
+import time
 
+from config import get_model
+
+from locus.agent import Agent
 from locus.multiagent import END, START, StateGraph
+
+
+def _llm_call(
+    prompt: str, *, system: str = "Reply in one short sentence.", max_tokens: int = 80
+) -> str:
+    """Helper: real OCI call with timing/token banner — used by every Part."""
+    agent = Agent(model=get_model(max_tokens=max_tokens), system_prompt=system)
+    t0 = time.perf_counter()
+    res = agent.run_sync(prompt)
+    dt = time.perf_counter() - t0
+    print(
+        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+    )
+    return res.message.strip()
 
 
 # =============================================================================
@@ -32,10 +50,18 @@ async def example_binary_routing():
         return {"age": age, "is_adult": age >= 18}
 
     async def adult_path(inputs):
-        return {"message": "Welcome! You have full access."}
+        msg = _llm_call(
+            f"Write a one-line welcome message for an adult user (age "
+            f"{inputs.get('age')}) with full system access.",
+        )
+        return {"message": msg}
 
     async def minor_path(inputs):
-        return {"message": "Welcome! Parental guidance required."}
+        msg = _llm_call(
+            f"Write a one-line welcome message for a minor user (age "
+            f"{inputs.get('age')}) that mentions parental guidance.",
+        )
+        return {"message": msg}
 
     graph.add_node("check", check_age)
     graph.add_node("adult", adult_path)
@@ -78,16 +104,20 @@ async def example_multiway_routing():
         return {"priority": priority}
 
     async def handle_critical(inputs):
-        return {"response": "CRITICAL: Immediate escalation!", "sla": "1 hour"}
+        line = _llm_call("In one short line, escalate a CRITICAL ticket. SLA 1 hour.")
+        return {"response": line, "sla": "1 hour"}
 
     async def handle_high(inputs):
-        return {"response": "HIGH: Priority queue", "sla": "4 hours"}
+        line = _llm_call("In one short line, route a HIGH priority ticket. SLA 4 hours.")
+        return {"response": line, "sla": "4 hours"}
 
     async def handle_normal(inputs):
-        return {"response": "NORMAL: Standard queue", "sla": "24 hours"}
+        line = _llm_call("In one short line, queue a NORMAL ticket. SLA 24 hours.")
+        return {"response": line, "sla": "24 hours"}
 
     async def handle_low(inputs):
-        return {"response": "LOW: Backlog", "sla": "1 week"}
+        line = _llm_call("In one short line, backlog a LOW ticket. SLA 1 week.")
+        return {"response": line, "sla": "1 week"}
 
     graph.add_node("classify", classify_ticket)
     graph.add_node("critical", handle_critical)
@@ -144,13 +174,16 @@ async def example_chained_conditions():
         return {"is_admin": role == "admin"}
 
     async def admin_action(inputs):
-        return {"result": "Admin operation completed"}
+        line = _llm_call("In one line, log a successful admin operation.")
+        return {"result": line}
 
     async def user_action(inputs):
-        return {"result": "User operation completed"}
+        line = _llm_call("In one line, log a successful regular-user operation.")
+        return {"result": line}
 
     async def access_denied(inputs):
-        return {"result": "Access denied - invalid token"}
+        line = _llm_call("In one line, politely decline an unauthenticated user.")
+        return {"result": line}
 
     graph.add_node("auth", authenticate)
     graph.add_node("permissions", check_permissions)
@@ -202,16 +235,20 @@ async def example_default_route():
         return {"category": category}
 
     async def handle_tech(inputs):
-        return {"handler": "Tech Support Team"}
+        line = _llm_call("In one short line, name the team that handles technical issues.")
+        return {"handler": line}
 
     async def handle_billing(inputs):
-        return {"handler": "Billing Department"}
+        line = _llm_call("In one short line, name the team that handles billing issues.")
+        return {"handler": line}
 
     async def handle_sales(inputs):
-        return {"handler": "Sales Team"}
+        line = _llm_call("In one short line, name the team that handles sales inquiries.")
+        return {"handler": line}
 
     async def handle_other(inputs):
-        return {"handler": "General Support"}
+        line = _llm_call("In one short line, name a generic support fallback team.")
+        return {"handler": line}
 
     graph.add_node("categorize", categorize)
     graph.add_node("tech", handle_tech)
@@ -271,13 +308,16 @@ async def example_complex_routing():
         }
 
     async def express_processing(inputs):
-        return {"processing": "EXPRESS", "eta": "Same day"}
+        line = _llm_call("In one short line, confirm same-day express order processing.")
+        return {"processing": line, "eta": "Same day"}
 
     async def priority_processing(inputs):
-        return {"processing": "PRIORITY", "eta": "1-2 days"}
+        line = _llm_call("In one short line, confirm 1-2 day priority order processing.")
+        return {"processing": line, "eta": "1-2 days"}
 
     async def standard_processing(inputs):
-        return {"processing": "STANDARD", "eta": "3-5 days"}
+        line = _llm_call("In one short line, confirm 3-5 day standard order processing.")
+        return {"processing": line, "eta": "3-5 days"}
 
     graph.add_node("evaluate", evaluate_order)
     graph.add_node("express", express_processing)
@@ -324,6 +364,70 @@ async def example_complex_routing():
 
 
 # =============================================================================
+# Part 6: LLM-driven Router
+# =============================================================================
+
+
+async def example_llm_router():
+    """Let the model classify the input and pick the branch."""
+    print("=== Part 6: LLM-driven router ===\n")
+
+    graph = StateGraph()
+
+    async def classify_with_llm(inputs):
+        import time as _t
+
+        text = inputs.get("text", "")
+        agent = Agent(
+            model=get_model(max_tokens=10),
+            system_prompt=(
+                "Classify the user's message into exactly one of: "
+                "billing, tech, sales. Reply with just the single word."
+            ),
+        )
+        t0 = _t.perf_counter()
+        result = agent.run_sync(text)
+        dt = _t.perf_counter() - t0
+        print(
+            f"  [OCI call: {dt:.2f}s · {result.metrics.prompt_tokens}→{result.metrics.completion_tokens} tokens]"
+        )
+        label = result.message.strip().lower()
+        if label not in {"billing", "tech", "sales"}:
+            label = "tech"
+        return {"category": label}
+
+    async def billing(_inputs):
+        return {"handler": "Billing Department"}
+
+    async def tech(_inputs):
+        return {"handler": "Tech Support Team"}
+
+    async def sales(_inputs):
+        return {"handler": "Sales Team"}
+
+    graph.add_node("classify", classify_with_llm)
+    graph.add_node("billing", billing)
+    graph.add_node("tech", tech)
+    graph.add_node("sales", sales)
+
+    graph.add_edge(START, "classify")
+    graph.add_conditional_edges("classify", lambda s: s["category"])
+    graph.add_edge("billing", END)
+    graph.add_edge("tech", END)
+    graph.add_edge("sales", END)
+
+    samples = [
+        "My invoice last month has a duplicate charge.",
+        "I want to compare your enterprise plans.",
+        "The dashboard keeps throwing a 500 error.",
+    ]
+    for text in samples:
+        result = await graph.execute({"text": text})
+        print(f"  '{text[:40]}…' → {result.final_state.get('handler')}")
+    print()
+
+
+# =============================================================================
 # Main
 # =============================================================================
 
@@ -340,6 +444,7 @@ async def main():
     await example_chained_conditions()
     await example_default_route()
     await example_complex_routing()
+    await example_llm_router()
 
     print("=" * 60)
     print("Next: Tutorial 08 - State Reducers")

@@ -191,15 +191,18 @@ class AgentConfig(BaseModel):
         description="Maximum wall-clock seconds before stopping (None = unlimited)",
     )
 
-    # Reasoning patterns
+    # Reasoning patterns. Both fields accept either ``True`` (use sensible
+    # defaults — see ``ReflexionConfig`` / ``GroundingConfig``), an
+    # explicit config instance, or ``None`` (disabled). The boolean
+    # shorthand is what the docs advertise as ``reflexion=True``.
     reflexion: ReflexionConfig | None = Field(
         default=None,
-        description="Reflexion configuration (None to disable)",
+        description="Reflexion configuration. Pass True for sensible defaults, None to disable.",
     )
 
     grounding: GroundingConfig | None = Field(
         default=None,
-        description="Grounding evaluation configuration (None to disable)",
+        description="Grounding evaluation configuration. Pass True for sensible defaults, None to disable.",
     )
 
     gsar: GSARConfig | None = Field(
@@ -397,6 +400,31 @@ class AgentConfig(BaseModel):
             return None
         if not (isinstance(v, type) and issubclass(v, BaseModel)):
             raise TypeError(f"output_schema must be a pydantic.BaseModel subclass, got: {v!r}")
+        return v
+
+    @field_validator("reflexion", mode="before")
+    @classmethod
+    def _coerce_reflexion(cls, v: Any) -> Any:
+        """Accept ``True`` as shorthand for default ReflexionConfig().
+
+        The docs advertise ``Agent(reflexion=True)`` as a one-liner;
+        without this validator that call would TypeError. ``False`` /
+        ``None`` keep reflexion off.
+        """
+        if v is True:
+            return ReflexionConfig()
+        if v is False:
+            return None
+        return v
+
+    @field_validator("grounding", mode="before")
+    @classmethod
+    def _coerce_grounding(cls, v: Any) -> Any:
+        """Accept ``True`` as shorthand for default GroundingConfig()."""
+        if v is True:
+            return GroundingConfig()
+        if v is False:
+            return None
         return v
 
     # Multi-modal provider registry. Setting any of these wires a matching

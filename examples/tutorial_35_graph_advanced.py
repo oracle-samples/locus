@@ -14,7 +14,11 @@ Difficulty: Advanced
 """
 
 import asyncio
+import time
 
+from config import get_model
+
+from locus.agent import Agent
 from locus.multiagent.graph import (
     END,
     START,
@@ -26,6 +30,20 @@ from locus.multiagent.graph import (
 from locus.multiagent.visualize import draw_ascii, draw_mermaid
 
 
+def _llm_call(
+    prompt: str, *, system: str = "Reply in one short sentence.", max_tokens: int = 80
+) -> str:
+    """Helper: real OCI call with timing/token banner — used by every Part."""
+    agent = Agent(model=get_model(max_tokens=max_tokens), system_prompt=system)
+    t0 = time.perf_counter()
+    res = agent.run_sync(prompt)
+    dt = time.perf_counter() - t0
+    print(
+        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+    )
+    return res.message.strip()
+
+
 # =============================================================================
 # Part 1: RetryPolicy — Exponential Backoff
 # =============================================================================
@@ -34,6 +52,9 @@ from locus.multiagent.visualize import draw_ascii, draw_mermaid
 async def example_retry():
     """Node with retry policy retries on failure."""
     print("=== Part 1: RetryPolicy ===\n")
+    print(
+        f"AI rationale: {_llm_call('In one sentence, why is exponential backoff with jitter the right retry default?')}"
+    )
 
     attempt = 0
 
@@ -67,6 +88,9 @@ async def example_retry():
 async def example_cache():
     """Cache node results to avoid re-computation."""
     print("\n=== Part 2: CachePolicy ===\n")
+    print(
+        f"AI rationale: {_llm_call('In one sentence, when does CachePolicy on a node beat memoising the function yourself?')}"
+    )
 
     call_count = 0
 
@@ -101,6 +125,9 @@ async def example_cache():
 async def example_visualization():
     """Generate Mermaid and ASCII diagrams."""
     print("\n=== Part 3: Visualization ===\n")
+    print(
+        f"AI rationale: {_llm_call('In one sentence, why are Mermaid diagrams useful when reviewing a Locus StateGraph?')}"
+    )
 
     graph = StateGraph(config=GraphConfig(parallel=False))
 
@@ -137,6 +164,9 @@ async def example_visualization():
 async def example_realtime_streaming():
     """Stream node events in real time + push custom progress events."""
     print("\n=== Part 4: Real-time streaming with emit_custom ===\n")
+    print(
+        f"AI rationale: {_llm_call('In one sentence, why is streaming progress events better than polling for graph status?')}"
+    )
     from locus.multiagent import StreamMode, emit_custom
 
     graph = StateGraph(config=GraphConfig(parallel=False))
@@ -163,8 +193,41 @@ async def example_realtime_streaming():
     print(f"\nDelivered {seen_custom} custom events + {seen_updates} updates.")
 
 
+async def example_retry_with_llm() -> None:
+    """Wrap a real model call in a node so RetryPolicy guards LLM blips too."""
+    print("\n=== Part 5: RetryPolicy + real LLM ===\n")
+
+    async def llm_node(inputs):
+        import time as _t
+
+        agent = Agent(
+            model=get_model(max_tokens=60),
+            system_prompt="Answer in one sentence.",
+        )
+        t0 = _t.perf_counter()
+        result = agent.run_sync(inputs["question"])
+        dt = _t.perf_counter() - t0
+        print(
+            f"  [OCI call: {dt:.2f}s · {result.metrics.prompt_tokens}→{result.metrics.completion_tokens} tokens]"
+        )
+        return {"answer": result.message.strip()}
+
+    graph = StateGraph(config=GraphConfig(parallel=False))
+    graph.add_node(
+        "llm",
+        llm_node,
+        retry_policy=RetryPolicy(max_attempts=2, initial_interval=0.2, jitter=False),
+    )
+    graph.add_edge(START, "llm")
+    graph.add_edge("llm", END)
+
+    result = await graph.execute({"question": "What is OCI Generative AI?"})
+    print(f"Answer: {result.final_state.get('answer')}")
+
+
 if __name__ == "__main__":
     asyncio.run(example_retry())
     asyncio.run(example_cache())
     asyncio.run(example_visualization())
     asyncio.run(example_realtime_streaming())
+    asyncio.run(example_retry_with_llm())

@@ -49,7 +49,7 @@ before booting each service:
 
 ```bash
 export LOCUS_MODEL_PROVIDER=oci
-export LOCUS_MODEL_ID=openai.gpt-5
+export LOCUS_MODEL_ID=openai.gpt-5.5-2026-04-23
 export LOCUS_OCI_PROFILE=DEFAULT
 make research
 ```

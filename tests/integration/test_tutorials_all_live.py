@@ -72,11 +72,11 @@ def test_tutorial_runs_clean(tutorial: Path):
     # hard-coded MockModel default.
     # Default to OCI but allow override via env (mostly for CI mock runs).
     env.setdefault("LOCUS_MODEL_PROVIDER", "oci")
-    env.setdefault("LOCUS_MODEL_ID", "openai.gpt-4o-mini")
+    env.setdefault("LOCUS_MODEL_ID", "openai.gpt-5.5-2026-04-23")
     env.setdefault("LOCUS_OCI_PROFILE", _PROFILE or "DEFAULT")
     env.setdefault("LOCUS_OCI_REGION", _REGION)
-    # Propagate the auth type + compartment so profiles like BOAT-OC1
-    # (session-token, cross-tenancy access to saasobservai) work. Without
+    # Propagate the auth type + compartment so profiles like MY_PROFILE
+    # (session-token, cross-tenancy access to the target compartment) work. Without
     # these, config.py falls back to api_key + auto-derived compartment
     # which fails for session-token profiles.
     if os.environ.get("OCI_AUTH_TYPE"):
@@ -89,7 +89,10 @@ def test_tutorial_runs_clean(tutorial: Path):
         cwd=str(_TUTORIALS_DIR),
         env=env,
         capture_output=True,
-        timeout=180,
+        # Reasoning-class default model (openai.gpt-5.5-*) spends real
+        # wall-clock on thinking tokens; tutorials with multiple agent
+        # hops (16, 39, 48) routinely take >2 min. Allow 6 min per test.
+        timeout=360,
         check=False,
     )
 

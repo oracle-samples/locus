@@ -293,8 +293,16 @@ class GuardrailsHook(HookProvider):
 
 @tool
 def process_text(text: str) -> str:
-    """Process some text."""
-    return f"Processed: {text}"
+    """Process some text — real word/char counts plus a sha-256 digest."""
+    import hashlib
+    import re
+
+    words = re.findall(r"\b\w+\b", text)
+    digest = hashlib.sha256(text.encode()).hexdigest()[:12]
+    return (
+        f"chars={len(text)} words={len(words)} unique_words={len({w.lower() for w in words})} "
+        f"sha256={digest}"
+    )
 
 
 def example_guardrails_hook():

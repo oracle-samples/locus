@@ -12,10 +12,12 @@ Difficulty: Advanced
 """
 
 import asyncio
+import time
 
 # Import shared config for model
 from config import get_model, print_config
 
+from locus.agent import Agent
 from locus.multiagent.swarm import (
     SharedContext,
     Swarm,
@@ -23,6 +25,20 @@ from locus.multiagent.swarm import (
     create_swarm,
     create_swarm_agent,
 )
+
+
+def _llm_call(
+    prompt: str, *, system: str = "Reply in one short sentence.", max_tokens: int = 80
+) -> str:
+    """Helper: real OCI call with timing/token banner — used by every Part."""
+    agent = Agent(model=get_model(max_tokens=max_tokens), system_prompt=system)
+    t0 = time.perf_counter()
+    res = agent.run_sync(prompt)
+    dt = time.perf_counter() - t0
+    print(
+        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+    )
+    return res.message.strip()
 
 
 # =============================================================================
@@ -33,6 +49,9 @@ from locus.multiagent.swarm import (
 def example_create_agents():
     """Create specialized swarm agents."""
     print("=== Part 1: Creating Swarm Agents ===\n")
+    print(
+        f"AI rationale: {_llm_call('In one sentence, when is a swarm of small specialised agents a better fit than one generalist agent?')}"
+    )
 
     # Agents have names, capabilities, and system prompts
     researcher = create_swarm_agent(
@@ -69,6 +88,9 @@ def example_create_agents():
 async def example_shared_context():
     """Demonstrate shared context for inter-agent communication."""
     print("=== Part 2: Shared Context ===\n")
+    print(
+        f"AI rationale: {_llm_call('In one sentence, why does a swarm need SharedContext for messages and discoveries?')}"
+    )
 
     context = SharedContext()
 
@@ -105,6 +127,9 @@ async def example_shared_context():
 def example_task_queue():
     """Demonstrate the task queue system."""
     print("=== Part 3: Task Queue ===\n")
+    print(
+        f"AI rationale: {_llm_call('In one sentence, why is task-queue routing useful for a heterogeneous swarm?')}"
+    )
 
     swarm = Swarm(name="Research Team")
 
@@ -130,6 +155,9 @@ def example_task_queue():
 def example_capability_matching():
     """Show how agents are matched to tasks based on capabilities."""
     print("=== Part 4: Capability-Based Assignment ===\n")
+    print(
+        f"AI rationale: {_llm_call('In one sentence, why is capability-based agent selection better than random round-robin?')}"
+    )
 
     researcher = create_swarm_agent(
         name="Researcher",
@@ -165,8 +193,12 @@ def example_capability_matching():
 
 
 async def example_simple_swarm():
-    """Execute a simple swarm without a real model."""
+    """Execute a simple swarm — and verify the provider is reachable."""
     print("=== Part 5: Simple Swarm Execution ===\n")
+    rationale_prompt = (
+        "In one sentence, what does 'simple swarm execution' mean and when is it enough?"
+    )
+    print(f"AI rationale: {_llm_call(rationale_prompt)}")
 
     # Create a swarm with mock execution
     swarm = Swarm(name="Demo Swarm")
@@ -212,29 +244,10 @@ async def example_full_swarm():
     """Execute a swarm with a real model."""
     print("=== Part 6: Full Swarm with Model ===\n")
 
-    # Get configured model
-    model = get_model(max_tokens=500)
-
-    # Check if we have a real model (not mock)
-    model_type = type(model).__name__
-    if model_type == "MockModel":
-        print("Using mock model - showing swarm structure only.")
-        print("Set LOCUS_MODEL_PROVIDER=oci for real execution.")
-        print()
-
-        # Create swarm to show structure
-        swarm = create_swarm(
-            name="Analysis Team",
-            agents=[
-                create_swarm_agent("Researcher", ["research", "investigate"]),
-                create_swarm_agent("Analyst", ["analyze", "evaluate"]),
-                create_swarm_agent("Writer", ["write", "summarize"]),
-            ],
-        )
-
-        print(f"Swarm ready: {swarm.name}")
-        print(f"Agents: {[a.name for a in swarm.agents]}")
-        return
+    # The swarm asks each agent for a structured
+    # `### Findings / ### Analysis / ### Blackboard` response, so we need
+    # enough completion budget to leave room for substantive content.
+    model = get_model(max_tokens=2000)
 
     # Create swarm with model
     swarm = create_swarm(
@@ -264,8 +277,11 @@ async def example_full_swarm():
     print("This may take a moment...\n")
 
     result = await swarm.execute(
-        initial_task="Analyze the benefits and drawbacks of async programming in Python",
-        decompose_tasks=False,  # Skip decomposition for simpler demo
+        initial_task=(
+            "Research, analyze, and write a brief summary of the benefits "
+            "of async programming in Python."
+        ),
+        decompose_tasks=True,  # Let the swarm break this into capability-matched subtasks
     )
 
     print("Swarm completed!")
@@ -274,6 +290,20 @@ async def example_full_swarm():
     print(f"  Failed tasks: {len(result.failed_tasks)}")
     print(f"  Duration: {result.duration_ms:.0f}ms")
 
+    if result.completed_tasks:
+        print("\nCompleted subtasks:")
+        for t in result.completed_tasks[:5]:
+            assigned = t.claimed_by or "unassigned"
+            print(f"  - [{assigned}] {t.description[:80]}")
+            preview = (t.result or "<empty>").strip().splitlines()[0:6]
+            for line in preview:
+                print(f"      {line[:120]}")
+            if not t.result:
+                print("      (no .result text — model returned empty)")
+    if result.failed_tasks:
+        print("\nFailed subtasks:")
+        for t in result.failed_tasks[:5]:
+            print(f"  - {t.description[:80]} (reason: {t.error or 'no agent matched'})")
     if result.summary:
         print(f"\nSummary:\n{result.summary[:500]}...")
     print()
@@ -287,6 +317,9 @@ async def example_full_swarm():
 def example_swarm_patterns():
     """Common swarm patterns and configurations."""
     print("=== Part 7: Swarm Patterns ===\n")
+    print(
+        f"AI rationale: {_llm_call('In one sentence, when is a Specialist Team swarm preferable to a Pipeline swarm?')}"
+    )
 
     print("Pattern 1: Specialist Team")
     print("-" * 40)

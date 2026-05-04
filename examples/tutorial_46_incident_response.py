@@ -151,22 +151,13 @@ async def _run(agent: Agent, prompt: str) -> str:
 
 
 async def triage(state: dict[str, Any]) -> dict[str, Any]:
-    """Hybrid triage: deterministic keywords first, model second.
-
-    Production triage almost always combines a regex / classifier
-    fast-path with an LLM fallback. Locus Agents are happy to be wired
-    behind a deterministic gate.
-    """
+    """Classify severity by asking the triage agent."""
     symptom = state.get("symptom", "")
-    upper = symptom.upper()
-    # Deterministic keyword fast-path — runs in microseconds, no model call.
-    if any(k in upper for k in ("CRITICAL", "P0", "SEV1", "OUTAGE", "DOWN")):
-        return {"severity": "critical"}
-
     agent = _make_agent("triage", state["__model__"])
     raw = await _run(agent, f"Incident: {symptom}")
-    sev = (raw.lower().split() or ["warn"])[0]
+    sev = (raw.lower().split() or ["warn"])[0].strip(".,!?:;")
     severity = sev if sev in {"info", "warn", "critical"} else "warn"
+    print(f"  [triage] agent classified severity={severity!r} (raw={raw!r})")
     return {"severity": severity}
 
 
@@ -238,10 +229,9 @@ async def write_postmortem(state: dict[str, Any]) -> dict[str, Any]:
     """Emit the structured Postmortem via ``Agent.output_schema=Postmortem``.
 
     The agent reads the workflow's accumulated state (severity, hypothesis,
-    investigator reports, mitigation) and emits a Pydantic Postmortem.
-    With a real model, ``result.parsed`` is the validated instance. With
-    MockModel we fall back to a deterministic record so the demo still
-    shows a finished Postmortem.
+    investigator reports, mitigation) and emits a Pydantic ``Postmortem``.
+    ``result.parsed`` must be populated — if the model can't honor the JSON
+    schema we surface that as a hard error rather than fabricating a record.
     """
     import asyncio as _asyncio
 
@@ -269,21 +259,26 @@ async def write_postmortem(state: dict[str, Any]) -> dict[str, Any]:
         f"Mitigation: {state.get('mitigation', '(none)')}\n\n"
         "Emit the Postmortem now."
     )
-    result = await _asyncio.to_thread(agent.run_sync, prompt)
+    last_exc: BaseException | None = None
+    result = None
+    for attempt in range(3):
+        try:
+            result = await _asyncio.to_thread(agent.run_sync, prompt)
+            break
+        except Exception as exc:  # noqa: BLE001 — retry transient OCI flakiness
+            last_exc = exc
+            await _asyncio.sleep(0.5 * (attempt + 1))
+    if result is None:
+        raise RuntimeError(
+            f"Postmortem writer failed after 3 attempts. Last error: {last_exc!r}"
+        ) from last_exc
     pm = result.parsed
     if pm is None:
-        # MockModel fallback — produce a minimal valid Postmortem so the
-        # demo still has something to show. Real models populate it.
-        pm = Postmortem(
-            incident_id=state.get("incident_id", "INC-0001"),
-            severity=state.get("severity", "warn"),
-            root_cause_hypothesis=state.get("hypothesis", "(unknown)") or "(unknown)",
-            contributing_factors=[f"{r.source}: {' / '.join(r.findings[:2])}" for r in reports],
-            mitigation_applied=state.get("mitigation", "(none)"),
-            follow_up_actions=[
-                "Add alerting for the failure mode",
-                "Open ticket to backfill missing instrumentation",
-            ],
+        raise RuntimeError(
+            "Postmortem writer returned no parsed Postmortem. The configured "
+            "model could not honor the JSON schema. Use a stronger model "
+            "(e.g. openai.gpt-4o, openai.gpt-5, anthropic.claude-3-5-sonnet) "
+            f"for tutorial 46. Raw output: {result.message!r}"
         )
     return {"postmortem": pm}
 
@@ -345,10 +340,17 @@ async def main() -> None:
     model = get_model()
     graph = build_runbook()
 
-    # Force the critical path so the demo exercises the human-approval branch.
+    # The triage agent classifies severity from the raw symptom — no
+    # keyword pre-filter — so the human-approval branch only fires when
+    # the agent calls it critical on its own.
     initial = {
         "incident_id": "INC-2026-0517",
-        "symptom": "API p99 latency 8x baseline; some 503s. Started 04:12 UTC. CRITICAL.",
+        "symptom": (
+            "API p99 latency is 8x its baseline and approximately 12% of "
+            "requests return 503. The regression started at 04:12 UTC and is "
+            "ongoing. Customer-facing checkout is degraded for paying users "
+            "across multiple regions; on-call has been paged."
+        ),
         "__model__": model,
     }
 

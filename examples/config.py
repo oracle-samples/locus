@@ -37,7 +37,7 @@ Examples:
 
     # Run with OCI GenAI (V1 transport, OpenAI-compatible endpoint):
     export LOCUS_MODEL_PROVIDER=oci
-    export LOCUS_MODEL_ID=openai.gpt-5
+    export LOCUS_MODEL_ID=openai.gpt-5.5-2026-04-23
     export LOCUS_OCI_PROFILE=MY_PROFILE
     python examples/tutorial_01_basic_agent.py
 
@@ -50,7 +50,7 @@ Examples:
 
     # Run with OCI on an OCI VM / OKE node (workload identity):
     export LOCUS_MODEL_PROVIDER=oci
-    export LOCUS_MODEL_ID=openai.gpt-5
+    export LOCUS_MODEL_ID=openai.gpt-5.5-2026-04-23
     export LOCUS_OCI_AUTH_TYPE=instance_principal
     export LOCUS_OCI_COMPARTMENT=ocid1.compartment.oc1...
 
@@ -189,7 +189,7 @@ def _pick_oci_transport(model_id: str) -> str:
 
 def _get_oci_model(**kwargs: Any) -> Any:
     """Get an OCI GenAI model — picks V1 vs SDK transport per model family."""
-    model_id = os.environ.get("LOCUS_MODEL_ID", "openai.gpt-5")
+    model_id = os.environ.get("LOCUS_MODEL_ID", "openai.gpt-5.5-2026-04-23")
     transport = _pick_oci_transport(model_id)
     if transport == "v1":
         return _get_oci_v1_model(model_id, **kwargs)
@@ -236,6 +236,15 @@ def _get_oci_sdk_model(model_id: str, **kwargs: Any) -> Any:
     auth_type_str = os.environ.get("LOCUS_OCI_AUTH_TYPE", "api_key")
     compartment = os.environ.get("LOCUS_OCI_COMPARTMENT")
     endpoint = os.environ.get("LOCUS_OCI_ENDPOINT")
+    # The OCI profile's home region is often *not* the GenAI region
+    # (e.g. MY_PROFILE's us-ashburn-1 vs GenAI in us-chicago-1). Derive
+    # the endpoint from LOCUS_OCI_REGION when no explicit endpoint is
+    # set so cross-tenancy / cross-region session tokens still hit the
+    # right service.
+    if not endpoint:
+        region = os.environ.get("LOCUS_OCI_REGION") or os.environ.get("OCI_REGION")
+        if region:
+            endpoint = f"https://inference.generativeai.{region}.oci.oraclecloud.com"
 
     auth_type_map = {
         "api_key": OCIAuthType.API_KEY,

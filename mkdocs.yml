@@ -1,5 +1,5 @@
 site_name: locus
-site_description: Multi-agent workflows for Python — stream them, branch them, pause for a human, resume next week. Built on Oracle Generative AI.
+site_description: Multi-agent workflows for Python — stream them, branch them, pause for a human, resume next week. Open source, provider-agnostic.
 site_url: https://oracle-samples.github.io/locus/
 repo_url: https://github.com/oracle-samples/locus
 repo_name: oracle-samples/locus
@@ -74,7 +74,8 @@ markdown_extensions:
     line_spans: __span
     pygments_lang_class: true
 - pymdownx.inlinehilite
-- pymdownx.snippets
+- pymdownx.snippets:
+    base_path: [.]
 - pymdownx.superfences
 - pymdownx.tabbed:
     alternate_style: true
@@ -116,8 +117,8 @@ nav:
   - Functional API: concepts/multi-agent/functional.md
   - A2A protocol: concepts/multi-agent/a2a.md
   - Production-readiness: concepts/multi-agent/production.md
-- Tutorials: tutorials/index.md
 - Concepts:
+  - Capabilities: FEATURES.md
   - Agents:
     - Overview: concepts/agent.md
     - Agent Loop: concepts/agent-loop.md
@@ -159,6 +160,63 @@ nav:
     - Safety & Guardrails: concepts/safety.md
     - Observability: concepts/observability.md
     - Evaluation: concepts/evaluation.md
+- Tutorials:
+  - Overview: tutorials/index.md
+  - 01 · Basic Agent - Your First Locus Agent: tutorials/tutorial_01_basic_agent.md
+  - 02 · Agent with Tools: tutorials/tutorial_02_agent_with_tools.md
+  - 03 · Agent Memory & Checkpointing: tutorials/tutorial_03_agent_memory.md
+  - 04 · Agent Streaming & Events: tutorials/tutorial_04_agent_streaming.md
+  - 05 · Agent Hooks & Lifecycle: tutorials/tutorial_05_agent_hooks.md
+  - 06 · Introduction to StateGraph: tutorials/tutorial_06_basic_graph.md
+  - 07 · Conditional Routing: tutorials/tutorial_07_conditional_routing.md
+  - 08 · State Reducers: tutorials/tutorial_08_state_reducers.md
+  - 09 · Human-in-the-Loop: tutorials/tutorial_09_human_in_the_loop.md
+  - 10 · Advanced Patterns: tutorials/tutorial_10_advanced_patterns.md
+  - 11 · Swarm Multi-Agent: tutorials/tutorial_11_swarm_multiagent.md
+  - 12 · MCP Integration: tutorials/tutorial_12_mcp_integration.md
+  - 13 · Structured Output — every part runs against a real LLM: tutorials/tutorial_13_structured_output.md
+  - 14 · Reasoning Patterns — every part drives a real LLM call: tutorials/tutorial_14_reasoning_patterns.md
+  - 15 · Playbooks — every part runs against a real LLM: tutorials/tutorial_15_playbooks.md
+  - 16 · Agent Handoff: tutorials/tutorial_16_agent_handoff.md
+  - 17 · Orchestrator Pattern: tutorials/tutorial_17_orchestrator_pattern.md
+  - 18 · Specialist Agents: tutorials/tutorial_18_specialist_agents.md
+  - 19 · Guardrails & Security — every part runs a real Agent: tutorials/tutorial_19_guardrails_security.md
+  - 20 · Checkpoint Backends: tutorials/tutorial_20_checkpoint_backends.md
+  - 21 · SSE Streaming: tutorials/tutorial_21_sse_streaming.md
+  - 22 · RAG Basics - Retrieval Augmented Generation: tutorials/tutorial_22_rag_basics.md
+  - 23 · RAG Providers - Embeddings and Vector Stores: tutorials/tutorial_23_rag_providers.md
+  - 24 · RAG Agents - Building Knowledge-Augmented Agents: tutorials/tutorial_24_rag_agents.md
+  - 25 · Agent Composition — Sequential, Parallel, and Loop Pipelines: tutorials/tutorial_25_composition.md
+  - 26 · Evaluation Framework — Systematic Agent Quality Testing: tutorials/tutorial_26_evaluation.md
+  - 27 · Advanced Hooks — Write-Protected Events, Cancel, Retry: tutorials/tutorial_27_hooks_advanced.md
+  - 28 · Agent Server — Deploy Agents as HTTP APIs: tutorials/tutorial_28_agent_server.md
+  - 29 · Model Providers — OCI, OpenAI, Anthropic, Ollama: tutorials/tutorial_29_model_providers.md
+  - 30 · Advanced Guardrails — Topic Policy, Content Safety, Output Filtering: tutorials/tutorial_30_guardrails_advanced.md
+  - 31 · Plugins — Composable Agent Extensions: tutorials/tutorial_31_plugins.md
+  - 32 · Skills — AgentSkills.io Progressive Disclosure: tutorials/tutorial_32_skills.md
+  - 33 · Steering — LLM-Powered Real-Time Tool Approval: tutorials/tutorial_33_steering.md
+  - 34 · A2A Protocol — Agent-to-Agent Communication: tutorials/tutorial_34_a2a_protocol.md
+  - 35 · Advanced Graph — RetryPolicy, CachePolicy, Visualization: tutorials/tutorial_35_graph_advanced.md
+  - 36 · Functional API — @entrypoint and @task Decorators: tutorials/tutorial_36_functional_api.md
+  - 37 · Composable Termination, output_key, Dynamic System Prompt: tutorials/tutorial_37_termination.md
+  - 38 · Multi-modal providers — web search, web fetch, image, speech: tutorials/tutorial_38_multimodal_providers.md
+  - 39 · GSAR — typed grounding for hallucination detection and recovery: tutorials/tutorial_39_gsar_typed_grounding.md
+  - 40 · OCI Dedicated AI Cluster (DAC) endpoints: tutorials/tutorial_40_oci_dac.md
+  - 42 · Map-Reduce code-review crew: tutorials/tutorial_42_map_reduce_code_review.md
+  - 43 · Supervisor + critic refinement loop: tutorials/tutorial_43_supervisor_critic_loop.md
+  - 44 · Adversarial debate with structured-output judge: tutorials/tutorial_44_debate_with_judge.md
+  - 45 · Multi-agent workflows with human-in-the-loop: tutorials/tutorial_45_multiagent_human_in_loop.md
+  - 46 · Incident-response runbook (SRE-grade workflow): tutorials/tutorial_46_incident_response.md
+  - 47 · Procurement approval with tiered human gates: tutorials/tutorial_47_procurement_approval.md
+  - 48 · Contract-review workflow (parallel review + negotiation loop): tutorials/tutorial_48_contract_review.md
+  - 49 · Voice output — turn an agent's reply into speech: tutorials/tutorial_49_audio_response.md
+  - 50 · Voice in → voice out chat via OCI gpt-audio: tutorials/tutorial_50_audio_chat.md
+- Workbench: workbench.md
+- API reference:
+  - Agent: api/agent.md
+  - Checkpointers: api/checkpointers.md
+  - Tools: api/tools.md
+  - Events: api/events.md
 - How-to:
   - Quickstart: how-to/quickstart.md
   - Deploy: how-to/deploy.md
@@ -167,9 +225,3 @@ nav:
   - Add a checkpointer backend: how-to/custom-checkpointer.md
   - OCI GenAI models: how-to/oci-models.md
   - OCI Dedicated AI Cluster (DAC): how-to/oci-dac.md
-- API reference:
-  - Agent: api/agent.md
-  - Checkpointers: api/checkpointers.md
-  - Tools: api/tools.md
-  - Events: api/events.md
-- Capabilities: FEATURES.md

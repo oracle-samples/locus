@@ -334,7 +334,9 @@ def get_embedder():
 
         return OpenAIEmbeddings(model="text-embedding-3-small")
 
-    # Try OCI GenAI
+    # Try OCI GenAI. OCIEmbeddings auto-derives the endpoint from
+    # LOCUS_OCI_REGION / OCI_REGION (falls back to the profile region,
+    # then us-chicago-1) when service_endpoint is left empty.
     if os.path.exists(os.path.expanduser("~/.oci/config")):
         try:
             from locus.rag.embeddings import OCIEmbeddings

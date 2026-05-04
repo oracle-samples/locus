@@ -13,10 +13,28 @@ Difficulty: Advanced
 """
 
 import asyncio
+import time
 
+from config import get_model
+
+from locus.agent import Agent
 from locus.core import Command, broadcast, end, goto, scatter
 from locus.memory import InMemoryStore
 from locus.multiagent import END, START, StateGraph
+
+
+def _llm_call(
+    prompt: str, *, system: str = "Reply in one short sentence.", max_tokens: int = 80
+) -> str:
+    """Helper: real OCI call with timing/token banner — used by every Part."""
+    agent = Agent(model=get_model(max_tokens=max_tokens), system_prompt=system)
+    t0 = time.perf_counter()
+    res = agent.run_sync(prompt)
+    dt = time.perf_counter() - t0
+    print(
+        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+    )
+    return res.message.strip()
 
 
 # =============================================================================
@@ -27,6 +45,9 @@ from locus.multiagent import END, START, StateGraph
 async def example_command_routing():
     """Use Command for dynamic routing decisions."""
     print("=== Part 1: Command Routing ===\n")
+    print(
+        f"AI rationale: {_llm_call('In one sentence, why is Locus Command better than separate edges + state writes?')}"
+    )
 
     graph = StateGraph()
 
@@ -81,6 +102,9 @@ async def example_command_routing():
 async def example_goto_helpers():
     """Use goto() and end() helper functions."""
     print("=== Part 1b: goto/end Helpers ===\n")
+    print(
+        f"AI rationale: {_llm_call('In one sentence, when is goto() preferable to a Command literal?')}"
+    )
 
     graph = StateGraph()
 
@@ -120,6 +144,9 @@ async def example_goto_helpers():
 async def example_scatter():
     """Fan-out processing with scatter()."""
     print("=== Part 2: scatter() Pattern ===\n")
+    print(
+        f"AI rationale: {_llm_call('In one sentence, give an SDK use-case for the scatter() fan-out helper.')}"
+    )
 
     graph = StateGraph()
 
@@ -158,6 +185,9 @@ async def example_scatter():
 async def example_broadcast():
     """Send same data to multiple processors."""
     print("=== Part 2b: broadcast() Pattern ===\n")
+    print(
+        f"AI rationale: {_llm_call('In one sentence, when is broadcast() better than scatter() in a graph?')}"
+    )
 
     graph = StateGraph()
 
@@ -208,6 +238,9 @@ async def example_broadcast():
 async def example_subgraph():
     """Compose graphs from reusable subgraphs."""
     print("=== Part 3: Subgraph Composition ===\n")
+    print(
+        f"AI rationale: {_llm_call('In one sentence, when should you factor a piece of graph logic out as a subgraph?')}"
+    )
 
     # Create a reusable validation subgraph
     validation_graph = StateGraph()
@@ -267,6 +300,9 @@ async def example_subgraph():
 async def example_store():
     """Use Store for cross-conversation memory."""
     print("=== Part 4: Cross-Thread Store ===\n")
+    print(
+        f"AI rationale: {_llm_call('In one sentence, what kind of state belongs in InMemoryStore vs in graph state?')}"
+    )
 
     store = InMemoryStore()
     graph = StateGraph()
@@ -318,6 +354,9 @@ async def example_store():
 async def example_combined():
     """Combine multiple patterns in one workflow."""
     print("=== Part 5: Combined Patterns ===\n")
+    print(
+        f"AI rationale: {_llm_call('In one sentence, why is combining Command + scatter + Store typical for multi-tenant order pipelines?')}"
+    )
 
     store = InMemoryStore()
     graph = StateGraph()
@@ -389,6 +428,70 @@ async def example_combined():
 
 
 # =============================================================================
+# Part 6: LLM picks the Command target
+# =============================================================================
+
+
+async def example_command_with_llm():
+    """An LLM classifies a customer request and the node returns a Command
+    with the chosen branch — combining real reasoning with structured
+    routing primitives."""
+    print("=== Part 6: Command + real LLM ===\n")
+
+    graph = StateGraph()
+
+    async def triage(inputs):
+        import time as _t
+
+        message = inputs.get("message", "")
+        agent = Agent(
+            model=get_model(max_tokens=10),
+            system_prompt=(
+                "You are a triage classifier. Output one of: refund, ship, escalate. "
+                "Reply with just that single word."
+            ),
+        )
+        t0 = _t.perf_counter()
+        result = agent.run_sync(message)
+        dt = _t.perf_counter() - t0
+        print(
+            f"  [OCI call: {dt:.2f}s · {result.metrics.prompt_tokens}→{result.metrics.completion_tokens} tokens]"
+        )
+        label = result.message.strip().lower()
+        if label not in {"refund", "ship", "escalate"}:
+            label = "escalate"
+        return Command(update={"label": label}, goto=label)
+
+    async def refund(_inputs):
+        return {"resolution": "refund queued"}
+
+    async def ship(_inputs):
+        return {"resolution": "shipping label generated"}
+
+    async def escalate(_inputs):
+        return {"resolution": "escalated to a human agent"}
+
+    graph.add_node("triage", triage)
+    graph.add_node("refund", refund)
+    graph.add_node("ship", ship)
+    graph.add_node("escalate", escalate)
+    graph.add_edge(START, "triage")
+    graph.add_edge("refund", END)
+    graph.add_edge("ship", END)
+    graph.add_edge("escalate", END)
+
+    samples = [
+        "Charge me back, the package never arrived.",
+        "When will my order #482 ship?",
+        "I want to speak with a manager about your data policy.",
+    ]
+    for msg in samples:
+        result = await graph.execute({"message": msg})
+        print(f"  '{msg[:40]}…' → {result.final_state.get('resolution')}")
+    print()
+
+
+# =============================================================================
 # Main
 # =============================================================================
 
@@ -407,6 +510,7 @@ async def main():
     await example_subgraph()
     await example_store()
     await example_combined()
+    await example_command_with_llm()
 
     print("=" * 60)
     print("Next: Tutorial 11 - Swarm Multi-Agent")

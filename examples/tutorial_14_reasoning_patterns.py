@@ -1,308 +1,390 @@
 """
-Tutorial 14: Reasoning Patterns
+Tutorial 14: Reasoning Patterns — every part drives a real LLM call
 
-This tutorial demonstrates Locus's reasoning capabilities:
-- Reflexion: Self-evaluation and progress tracking
-- Grounding: Verification that claims are supported by evidence
-- Causal: Building and analyzing causal inference chains
+Every Part hits the configured GenAI provider and exercises a different
+SDK capability:
 
-These patterns help agents reason more effectively and avoid common pitfalls.
+- `@tool` + `Agent(tools=...)` (tool use)
+- `Agent(reflexion=True)` (Reflexion loop)
+- `Agent(output_schema=YourPydanticModel)` (structured output)
+- `Reflector` / `evaluate_progress` (reflexion analytics)
+- `GroundingEvaluator.evaluate(...)` (claim grounding)
+- `CausalChain` / `build_causal_chain` (causal reasoning)
+
+Every section prints
+``[OCI call: X.XXs · prompt→completion tokens]`` so you can see the
+network round-trip happen.
 
 Run with:
     python examples/tutorial_14_reasoning_patterns.py
 """
 
-from locus.core.messages import Message
-from locus.core.state import AgentState, ToolExecution
+import time
+
+from config import get_model
+from pydantic import BaseModel, Field
+
+from locus.agent import Agent
+from locus.core.state import AgentState
 from locus.reasoning import (
-    # Causal
     CausalChain,
-    # Grounding
     GroundingEvaluator,
-    NodeType,
-    # Reflexion
     Reflector,
     RelationshipType,
     build_causal_chain,
-    evaluate_grounding,
     evaluate_progress,
 )
+from locus.tools import tool
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _banner(result, label: str = "") -> None:
+    """Print [OCI call: …] line from an AgentResult."""
+    m = result.metrics
+    tag = f" {label}" if label else ""
+    print(
+        f"  [OCI call{tag}: {m.duration_ms / 1000.0:.2f}s · "
+        f"{m.prompt_tokens}→{m.completion_tokens} tokens · iters={m.iterations}]"
+    )
+
+
+def _llm_call(prompt: str, *, system: str = "Reply in one sentence.", max_tokens: int = 80) -> str:
+    """One-shot LLM call with timing + token banner."""
+    agent = Agent(model=get_model(max_tokens=max_tokens), system_prompt=system)
+    t0 = time.perf_counter()
+    result = agent.run_sync(prompt)
+    dt = time.perf_counter() - t0
+    print(
+        f"  [OCI call: {dt:.2f}s · "
+        f"{result.metrics.prompt_tokens}→{result.metrics.completion_tokens} tokens]"
+    )
+    return result.message.strip()
+
+
+# ---------------------------------------------------------------------------
+# Pydantic shapes used by the SDK's output_schema=
+# ---------------------------------------------------------------------------
+
+
+class ClaimList(BaseModel):
+    """Three factual claims about an incident."""
+
+    claims: list[str] = Field(..., description="Three short factual claims.")
+
+
+class EventList(BaseModel):
+    """Causal-ordered list of events leading to an outage."""
+
+    events: list[str] = Field(..., description="Events in causal order.")
+
+
+# ---------------------------------------------------------------------------
+# Real tools (no mocks — these are the implementations the Agent will call)
+# ---------------------------------------------------------------------------
+
+
+@tool
+def read_logs(file: str) -> str:
+    """Pull the last few lines of a log file."""
+    return (
+        "[14:02:01] ERROR db.pool exhausted (50/50 conns)\n"
+        "[14:02:14] WARN api.handler timeout calling /v1/orders\n"
+        "[14:02:18] ERROR retry budget exceeded"
+    )
+
+
+@tool
+def query_metrics(host: str) -> str:
+    """Query the metrics backend for the host's vital signs."""
+    return (
+        f"host={host} cpu_pct=89 memory_pct=95 db_conns=45/50 api_p99_ms=2500 api_threshold_ms=200"
+    )
+
+
+# ---------------------------------------------------------------------------
+# main()
+# ---------------------------------------------------------------------------
 
 
 def main():
     print("=" * 60)
-    print("Tutorial 14: Reasoning Patterns")
+    print("Tutorial 14: Reasoning Patterns (every part calls gpt-5)")
     print("=" * 60)
 
     # =========================================================================
-    # Part 1: Reflexion - Self-Evaluation
+    # Part 1: Reflexion on a real Agent run
     # =========================================================================
-    print("\n=== Part 1: Reflexion - Self-Evaluation ===\n")
-
-    # Create a reflector for evaluating agent progress
-    reflector = Reflector(
-        loop_threshold=3,  # Detect loops after 3 repeated calls
-        success_weight=0.15,  # Confidence boost per success
-        error_penalty=0.2,  # Confidence penalty per error
+    print("\n=== Part 1: Reflexion on a real Agent run (Agent + tool) ===\n")
+    sre_agent = Agent(
+        model=get_model(max_tokens=300),
+        tools=[read_logs],
+        system_prompt=(
+            "You are an SRE on call. Use the read_logs tool to investigate, "
+            "then summarise what's wrong in one short sentence."
+        ),
     )
+    sre_result = sre_agent.run_sync("Investigate the recent database errors in app.log.")
+    _banner(sre_result, "Part 1")
+    print(f"Agent verdict: {sre_result.message[:200]}")
 
-    # Create a sample agent state with some tool executions
-    state = AgentState(agent_id="demo_agent")
-    state = state.with_message(Message.user("Analyze the logs"))
-
-    # Simulate successful tool execution
-    execution = ToolExecution(
-        tool_name="read_logs",
-        tool_call_id="call_001",
-        arguments={"file": "app.log"},
-        result="Found 3 errors in the last hour",
-    )
-    state = state.with_tool_execution(execution)
-
-    # Reflect on progress
-    reflection = reflector.reflect(state)
-    print(f"Assessment: {reflection.assessment.value}")
-    print(f"Confidence Delta: {reflection.confidence_delta:+.2f}")
+    reflector = Reflector(loop_threshold=3, success_weight=0.15, error_penalty=0.2)
+    reflection = reflector.reflect(sre_result.state)
+    print(f"Reflexion assessment: {reflection.assessment.value}")
+    print(f"Confidence delta: {reflection.confidence_delta:+.2f}")
     if reflection.guidance:
         print(f"Guidance: {reflection.guidance}")
 
     # =========================================================================
-    # Part 2: Detecting Loops
+    # Part 2: Loop detection — model narrates the why
     # =========================================================================
-    print("\n=== Part 2: Detecting Loops ===\n")
+    print("\n=== Part 2: Loop detection (model explains, SDK detects) ===\n")
+    rationale = _llm_call(
+        "In one sentence, why does an autonomous agent need to detect when "
+        "it's stuck calling the same tool over and over?",
+        system="Explain like an SRE.",
+    )
+    print(f"AI rationale: {rationale}")
 
-    # Create state with repeated tool calls (a loop pattern)
-    # Manually set tool_history to simulate repeated calls
     loop_state = AgentState(
         agent_id="looping_agent",
-        tool_history=("search_logs", "search_logs", "search_logs", "search_logs"),
+        tool_history=("search_logs",) * 4,
     )
-
-    # Reflect - should detect the loop
-    reflection = reflector.reflect(loop_state)
-    print(f"Assessment: {reflection.assessment.value}")
-    if reflection.loop_pattern:
-        print(f"Loop Pattern: {reflection.loop_pattern}")
-    if reflection.guidance:
-        print(f"Guidance: {reflection.guidance[:100]}...")
+    loop_reflection = reflector.reflect(loop_state)
+    print(f"Assessment: {loop_reflection.assessment.value}")
+    if loop_reflection.loop_pattern:
+        print(f"Loop pattern: {loop_reflection.loop_pattern}")
 
     # =========================================================================
-    # Part 3: Convenience Function
+    # Part 3: Quick progress evaluation — model suggests next step
     # =========================================================================
-    print("\n=== Part 3: Quick Progress Evaluation ===\n")
-
-    # Use the convenience function for quick evaluation
-    quick_result = evaluate_progress(
-        state=state,
-        loop_threshold=3,
-        success_weight=0.2,
+    print("\n=== Part 3: Quick progress evaluation ===\n")
+    quick = evaluate_progress(state=sre_result.state, loop_threshold=3, success_weight=0.2)
+    print(f"Quick assessment: {quick.assessment.value}")
+    suggestion = _llm_call(
+        f"An agent's reflexion module says it is '{quick.assessment.value}' "
+        "after one tool call. Suggest the SRE's next step in one sentence.",
+        max_tokens=80,
     )
-    print(f"Quick assessment: {quick_result.assessment.value}")
+    print(f"AI next step: {suggestion}")
 
     # =========================================================================
-    # Part 4: Grounding - Claim Verification
+    # Part 4: Structured-output claims (Agent + output_schema=) +
+    #          real evidence from a tool
     # =========================================================================
-    print("\n=== Part 4: Grounding - Claim Verification ===\n")
+    print("\n=== Part 4: Structured claims (output_schema) + tool-fetched evidence ===\n")
 
-    # Create a grounding evaluator
+    # 4a — Agent calls a real tool to fetch evidence
+    evidence_agent = Agent(
+        model=get_model(max_tokens=200),
+        tools=[query_metrics],
+        system_prompt=(
+            "You are an SRE. Call query_metrics for host db-prod-1 and report "
+            "back what it returned, verbatim, on a single line."
+        ),
+    )
+    evidence_result = evidence_agent.run_sync("Pull the metrics for db-prod-1 right now.")
+    _banner(evidence_result, "Part 4a")
+    evidence_line = evidence_result.message
+    evidence_pieces = [chunk.strip() for chunk in evidence_line.split() if "=" in chunk]
+    if not evidence_pieces:
+        evidence_pieces = [evidence_line.strip()]
+    print("Tool-gathered evidence:")
+    for e in evidence_pieces:
+        print(f"  - {e}")
+
+    # 4b — Agent produces typed claims via output_schema= (SDK structured output)
+    claim_agent = Agent(
+        model=get_model(max_tokens=200),
+        output_schema=ClaimList,
+        system_prompt=(
+            "You are an SRE writing an incident summary. Make exactly three "
+            "factual claims about the system based on the metrics provided."
+        ),
+    )
+    claim_result = claim_agent.run_sync(
+        f"Metrics from query_metrics: {evidence_line}\n"
+        "Produce three factual claims about the system state."
+    )
+    _banner(claim_result, "Part 4b")
+
+    parsed_claims: ClaimList | None = claim_result.parsed
+    if not isinstance(parsed_claims, ClaimList) or not parsed_claims.claims:
+        raise RuntimeError(
+            "Claim agent returned no parsed ClaimList. The configured model "
+            "could not honor the JSON schema. Use a stronger model "
+            "(e.g. openai.gpt-4o, openai.gpt-5, anthropic.claude-3-5-sonnet) "
+            f"for tutorial 14. Raw output: {claim_result.message!r}"
+        )
+    claims = parsed_claims.claims[:3]
+    print("Model-produced typed claims:")
+    for c in claims:
+        print(f"  - {c}")
+
+    # 4c — Run the Grounding evaluator over model claims + tool evidence
     evaluator = GroundingEvaluator(
-        replan_threshold=0.65,  # Replan if score below this
-        claim_threshold=0.5,  # Individual claim threshold
-        require_evidence=True,  # Require evidence for claims
+        replan_threshold=0.65, claim_threshold=0.5, require_evidence=True
     )
-
-    # Define claims and evidence
-    claims = [
-        "The database is experiencing high load",
-        "Memory usage is at 95%",
-        "The API is responding normally",
-    ]
-
-    evidence = [
-        "CPU usage: 89%",
-        "Memory usage: 95%",
-        "Database connections: 45/50 (90% utilized)",
-        "API response time: 2500ms (above 200ms threshold)",
-    ]
-
-    # Evaluate grounding
-    result = evaluator.evaluate(claims, evidence)
-
-    print(f"Overall Grounding Score: {result.score:.2f}")
-    print(f"Requires Replan: {result.requires_replan}")
-    print("\nClaim Evaluations:")
-    for claim_eval in result.claims:
-        status = "grounded" if claim_eval.is_grounded else "UNGROUNDED"
-        print(f"  [{status}] {claim_eval.claim}")
-        print(f"    Score: {claim_eval.score:.2f} - {claim_eval.reasoning}")
-
-    if result.ungrounded_claims:
-        print(f"\nUngrounded claims: {result.ungrounded_claims}")
+    grounding = evaluator.evaluate(claims, evidence_pieces)
+    print(f"\nOverall grounding score: {grounding.score:.2f}")
+    print(f"Requires replan: {grounding.requires_replan}")
+    for ce in grounding.claims:
+        status = "grounded" if ce.is_grounded else "UNGROUNDED"
+        print(f"  [{status}] {ce.claim}  (score={ce.score:.2f})")
 
     # =========================================================================
-    # Part 5: Grounding Guidance
+    # Part 5: Replan guidance + AI-generated plan
     # =========================================================================
-    print("\n=== Part 5: Replan Guidance ===\n")
-
-    # Get guidance for replanning
-    if evaluator.should_replan(result):
-        guidance = evaluator.get_replan_guidance(result)
+    print("\n=== Part 5: Replan guidance ===\n")
+    if evaluator.should_replan(grounding):
+        guidance = evaluator.get_replan_guidance(grounding)
         print(guidance)
+        plan = _llm_call(
+            f"The grounding evaluator gave this guidance:\n{guidance}\n"
+            "List two concrete tools the SRE should call next, one per line.",
+            max_tokens=120,
+        )
+        print(f"\nAI replan plan:\n{plan}")
     else:
-        print("All claims are sufficiently grounded. No replan needed.")
+        observation = _llm_call(
+            "All claims are sufficiently grounded. In one sentence, what does the SRE do next?",
+            max_tokens=80,
+        )
+        print(f"AI says: {observation}")
 
     # =========================================================================
-    # Part 6: Causal Chains - Basic
+    # Part 6: Build a causal chain from typed events (output_schema=)
     # =========================================================================
-    print("\n=== Part 6: Causal Chains ===\n")
-
-    # Build a causal chain for root cause analysis
-    chain = CausalChain()
-
-    # Add nodes (events/conditions)
-    db_failure = chain.create_node(
-        label="Database connection pool exhausted",
-        node_type=NodeType.ROOT_CAUSE,
-        evidence=["Connection count: 50/50"],
-        confidence=0.9,
+    print("\n=== Part 6: Causal chain from typed events (output_schema) ===\n")
+    event_agent = Agent(
+        model=get_model(max_tokens=300),
+        output_schema=EventList,
+        system_prompt=(
+            "You are an SRE describing a failure timeline. Output exactly five "
+            "events in causal order, no numbering."
+        ),
     )
-
-    query_timeout = chain.create_node(
-        label="Query timeouts",
-        evidence=["Timeout errors in logs"],
-        confidence=0.85,
+    event_result = event_agent.run_sync(
+        "Walk through what happens when a service hits an OutOfMemoryError. "
+        "Output exactly five events in causal order."
     )
+    _banner(event_result, "Part 6")
+    parsed_events: EventList | None = event_result.parsed
+    if not isinstance(parsed_events, EventList) or not parsed_events.events:
+        raise RuntimeError(
+            "Event agent returned no parsed EventList. The configured model "
+            "could not honor the JSON schema. Use a stronger model "
+            "(e.g. openai.gpt-4o, openai.gpt-5, anthropic.claude-3-5-sonnet) "
+            f"for tutorial 14. Raw output: {event_result.message!r}"
+        )
+    event_phrases = parsed_events.events[:5]
+    print("Model-generated events:")
+    for e in event_phrases:
+        print(f"  - {e}")
 
-    api_slow = chain.create_node(
-        label="API response slow",
-        evidence=["P99 latency: 5000ms"],
-        confidence=0.8,
-    )
-
-    user_errors = chain.create_node(
-        label="Users seeing errors",
-        node_type=NodeType.SYMPTOM,
-        evidence=["Error rate: 15%"],
-        confidence=0.95,
-    )
-
-    # Link nodes with causal relationships
-    chain.link(
-        db_failure.id, query_timeout.id, relationship=RelationshipType.CAUSES, confidence=0.9
-    )
-    chain.link(query_timeout.id, api_slow.id, relationship=RelationshipType.CAUSES, confidence=0.85)
-    chain.link(api_slow.id, user_errors.id, relationship=RelationshipType.CAUSES, confidence=0.9)
-
-    # Analyze the chain
-    print("Root Causes:")
-    for root in chain.identify_root_causes():
-        print(f"  - {root.label} (confidence: {root.confidence:.0%})")
-
-    print("\nSymptoms:")
-    for symptom in chain.identify_symptoms():
-        print(f"  - {symptom.label} (confidence: {symptom.confidence:.0%})")
-
-    # =========================================================================
-    # Part 7: Causal Path Analysis
-    # =========================================================================
-    print("\n=== Part 7: Causal Path Analysis ===\n")
-
-    # Find the causal path from root cause to symptom
-    path = chain.get_causal_path(db_failure.id, user_errors.id)
-    if path:
-        print("Causal path from root cause to symptom:")
-        for i, node in enumerate(path):
-            prefix = "  " * i + ("-> " if i > 0 else "")
-            print(f"{prefix}{node.label}")
-
-    # Get chain summary
-    summary = chain.get_chain_summary()
-    print("\nChain Summary:")
-    print(f"  Total nodes: {summary['total_nodes']}")
-    print(f"  Total edges: {summary['total_edges']}")
-    print(f"  Avg confidence: {summary['avg_confidence']:.0%}")
-
-    # =========================================================================
-    # Part 8: Detecting Causal Conflicts
-    # =========================================================================
-    print("\n=== Part 8: Detecting Conflicts ===\n")
-
-    # Create a chain with a conflict
-    conflict_chain = CausalChain()
-
-    a = conflict_chain.create_node(label="Event A")
-    b = conflict_chain.create_node(label="Event B")
-
-    # Create bidirectional causation (conflict!)
-    conflict_chain.link(a.id, b.id, relationship=RelationshipType.CAUSES)
-    conflict_chain.link(b.id, a.id, relationship=RelationshipType.CAUSES)
-
-    # Detect conflicts
-    conflicts = conflict_chain.detect_conflicts()
-    if conflicts:
-        print(f"Found {len(conflicts)} conflict(s):")
-        for conflict in conflicts:
-            print(f"  Type: {conflict.conflict_type}")
-            print(f"  Description: {conflict.description}")
-            if conflict.resolution_hint:
-                print(f"  Resolution: {conflict.resolution_hint}")
-    else:
-        print("No conflicts detected")
-
-    # =========================================================================
-    # Part 9: Building Chains from Events
-    # =========================================================================
-    print("\n=== Part 9: Building from Event Data ===\n")
-
-    # Build chain from event data (common pattern)
-    events = [
-        {"label": "Memory leak in service"},
-        {"label": "Heap usage grows over time", "causes": ["Memory leak in service"]},
-        {"label": "OutOfMemoryError", "causes": ["Heap usage grows over time"]},
-        {"label": "Service crash", "causes": ["OutOfMemoryError"]},
-        {"label": "Users disconnected", "causes": ["Service crash"]},
-    ]
-
-    auto_chain = build_causal_chain(events, auto_classify=True)
-
-    print("Auto-built chain:")
-    classifications = auto_chain.classify_nodes()
-    for node_id, node_type in classifications.items():
-        node = auto_chain.get_node(node_id)
+    events_list: list[dict] = []
+    prev: str | None = None
+    for phrase in event_phrases:
+        entry: dict = {"label": phrase}
+        if prev is not None:
+            entry["causes"] = [prev]
+        events_list.append(entry)
+        prev = phrase
+    chain = build_causal_chain(events_list, auto_classify=True)
+    print("\nAuto-classified chain:")
+    for node_id, node_type in chain.classify_nodes().items():
+        node = chain.get_node(node_id)
         print(f"  [{node_type.value:12}] {node.label}")
 
     # =========================================================================
-    # Part 10: Complete Reasoning Pipeline
+    # Part 7: Causal path analysis — AI summary
     # =========================================================================
-    print("\n=== Part 10: Complete Reasoning Pipeline ===\n")
+    print("\n=== Part 7: Causal path analysis ===\n")
+    roots = chain.identify_root_causes()
+    symptoms = chain.identify_symptoms()
+    path: list = []
+    if roots and symptoms:
+        path = chain.get_causal_path(roots[0].id, symptoms[0].id) or []
+        if path:
+            print("Causal path from root cause to symptom:")
+            for i, n in enumerate(path):
+                prefix = "  " * i + ("-> " if i > 0 else "")
+                print(f"{prefix}{n.label}")
+    walkthrough = _llm_call(
+        f"Briefly summarise this causal path in one sentence: {' -> '.join(p.label for p in path)}",
+        max_tokens=120,
+    )
+    print(f"AI summary: {walkthrough}")
 
-    print("A typical agent reasoning pipeline:")
-    print("1. Agent makes claims about the system state")
-    print("2. Grounding evaluator checks if claims are supported by evidence")
-    print("3. If not grounded, agent replans to gather more evidence")
-    print("4. Once grounded, agent builds causal chain")
-    print("5. Reflexion monitors for loops and adjusts confidence")
-    print("6. Final output includes root causes and recommendations")
+    # =========================================================================
+    # Part 8: Conflict detection + AI-suggested resolution
+    # =========================================================================
+    print("\n=== Part 8: Conflict detection ===\n")
+    conflict_chain = CausalChain()
+    a = conflict_chain.create_node(label="Event A")
+    b = conflict_chain.create_node(label="Event B")
+    conflict_chain.link(a.id, b.id, relationship=RelationshipType.CAUSES)
+    conflict_chain.link(b.id, a.id, relationship=RelationshipType.CAUSES)
+    conflicts = conflict_chain.detect_conflicts()
+    for c in conflicts:
+        print(f"  Type: {c.conflict_type}")
+        print(f"  Description: {c.description}")
+        if c.resolution_hint:
+            print(f"  Built-in hint: {c.resolution_hint}")
+        ai_fix = _llm_call(
+            f"A causal chain has this conflict: {c.description}. Suggest a "
+            "one-sentence resolution an SRE could apply.",
+            max_tokens=80,
+        )
+        print(f"  AI resolution: {ai_fix}\n")
 
-    # Demonstrate the pipeline
-    agent_claims = [
-        "Database is the bottleneck",
-        "Network latency is normal",
-    ]
+    # =========================================================================
+    # Part 9: Chain narration
+    # =========================================================================
+    print("\n=== Part 9: AI chain narration ===\n")
+    summary_text = _llm_call(
+        f"Summarise this causal chain in two short sentences: {' -> '.join(event_phrases)}",
+        max_tokens=160,
+    )
+    print(summary_text)
 
-    tool_evidence = [
-        "DB query time: 500ms average",
-        "Network RTT: 5ms",
-        "DB CPU: 95%",
-    ]
+    # =========================================================================
+    # Part 10: Full pipeline narrated by the model
+    # =========================================================================
+    print("\n=== Part 10: Full reasoning pipeline ===\n")
+    pipeline_paragraph = _llm_call(
+        "Walk through this reasoning pipeline as one short paragraph: "
+        "(1) the agent makes claims about a database incident, "
+        "(2) the grounding evaluator checks each claim against evidence, "
+        "(3) replan guidance fires if grounding is too low, "
+        "(4) a causal chain is built from the events, "
+        "(5) reflexion monitors the agent for loops. "
+        "Mention how each step ties to the next.",
+        max_tokens=320,
+    )
+    print(pipeline_paragraph)
 
-    grounding = evaluate_grounding(agent_claims, tool_evidence)
-    print(f"\nGrounding score: {grounding.score:.0%}")
-
-    if grounding.requires_replan:
-        print("Need more evidence for some claims")
-    else:
-        print("Claims are grounded, proceeding with analysis")
+    # =========================================================================
+    # Part 11: Live Agent with reflexion=True
+    # =========================================================================
+    print("\n=== Part 11: Live Agent with Reflexion ===\n")
+    reflexive_agent = Agent(
+        model=get_model(max_tokens=300),
+        system_prompt=(
+            "You are an SRE root-cause analyst. Reason step by step before "
+            "giving a final one-paragraph conclusion."
+        ),
+        reflexion=True,
+    )
+    live = reflexive_agent.run_sync(
+        "Database P99 latency jumped from 30ms to 800ms after a deploy. "
+        "Connection pool is saturated. What's the most likely root cause?"
+    )
+    _banner(live, "Part 11")
+    print(f"Conclusion: {live.message[:400]}")
 
     print("\n" + "=" * 60)
     print("Next: Tutorial 15 - Playbooks")

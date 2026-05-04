@@ -39,6 +39,20 @@ class AnthropicConfig(ModelConfig):
         ),
     )
 
+    # Production-safety knobs — same posture as the OpenAI provider.
+    # The anthropic SDK retries 5xx + connection errors with exponential
+    # backoff between attempts; default of 3 / 60s matches OpenAIConfig.
+    max_retries: int = Field(
+        default=3,
+        ge=0,
+        description="Retry budget for transient errors (overloaded, 5xx, network).",
+    )
+    request_timeout: float = Field(
+        default=60.0,
+        gt=0,
+        description="Per-request timeout in seconds.",
+    )
+
 
 class AnthropicModel(BaseModel):
     """Anthropic model provider.
@@ -87,13 +101,21 @@ class AnthropicModel(BaseModel):
 
     @property
     def client(self) -> anthropic.AsyncAnthropic:
-        """Get or create the Anthropic client."""
+        """Get or create the Anthropic client.
+
+        Configured with explicit ``max_retries`` + ``timeout`` so a
+        transient 529 (overloaded) / 5xx / connection reset doesn't
+        kill the agent loop on the first try. Retries use exponential
+        backoff inside the anthropic SDK.
+        """
         if self._client is None:
             import anthropic
 
             self._client = anthropic.AsyncAnthropic(
                 api_key=self.config.api_key,
                 base_url=self.config.base_url,
+                max_retries=self.config.max_retries,
+                timeout=self.config.request_timeout,
             )
         return self._client
 

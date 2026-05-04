@@ -4,7 +4,7 @@ Tutorial 28: Agent Server — Deploy Agents as HTTP APIs
 This tutorial covers:
 - AgentServer: wrap any agent as a FastAPI app
 - POST /invoke: synchronous invocation
-- POST /stream: SSE streaming
+- POST /stream: SSE streaming (uses the same SSE primitives as tutorial 21)
 - GET /threads/{tid}: load a persisted thread
 - DELETE /threads/{tid}: drop a persisted thread
 - GET /health: health check
@@ -12,12 +12,21 @@ This tutorial covers:
 Threads are scoped to the bearer-principal hash so two API keys sharing
 one server can't read each other's conversations.
 
+When to use AgentServer vs A2AServer (tutorial 34):
+- AgentServer: first-party HTTP API. Persisted threads, principal scoping,
+  bearer auth. Use when locus is the system of record and clients are yours.
+- A2AServer: cross-framework interop with the A2A message spec. Use when
+  another framework (Strands, ADK) needs to call your locus agent or vice
+  versa.
+
 Prerequisites:
 - pip install fastapi uvicorn
 - Configure model via environment variables
 
 Difficulty: Intermediate
 """
+
+import os
 
 from config import get_model
 
@@ -93,13 +102,49 @@ def example_server():
     r = client.delete("/threads/demo-thread")
     print(f"DELETE /threads/demo-thread: {r.json()}")
 
-    print("\nTo run as a real server:")
-    print("  server.run(host='0.0.0.0', port=8000)")
+    print("\nTo run as a real server, set LOCUS_TUTORIAL_BOOT=1 and run this")
+    print("file directly. Example session:")
+    print("  LOCUS_TUTORIAL_BOOT=1 LOCUS_MODEL_PROVIDER=oci \\")
+    print("      python examples/tutorial_28_agent_server.py")
+    print("  curl -s -X POST http://127.0.0.1:8000/invoke \\")
+    print("       -H 'Content-Type: application/json' \\")
+    print('       -d \'{"prompt":"What is 2+2?"}\'')
     print("\nWith api_key= set, every /threads call is principal-scoped:")
     print("  AgentServer(agent=agent, api_key='secret')")
     print("  # Two clients with different bearer tokens see different threads")
     print("  # for the same client-supplied thread_id.")
+    return server
+
+
+def boot_live_server() -> None:
+    """Build the agent server and bind a live uvicorn instance.
+
+    Gated behind ``LOCUS_TUTORIAL_BOOT=1`` so the integration runner that
+    imports / executes every tutorial doesn't hang here.
+    """
+    model = get_model()
+    agent = Agent(
+        config=AgentConfig(
+            system_prompt="You are a helpful assistant. Answer concisely.",
+            max_iterations=5,
+            model=model,
+            checkpointer=MemoryCheckpointer(),
+        )
+    )
+    server = AgentServer(
+        agent=agent,
+        title="My Agent API",
+        description="A helpful AI assistant exposed as HTTP API",
+    )
+    print("Booting AgentServer on http://127.0.0.1:8000 — Ctrl-C to stop.")
+    print("Try: curl -X POST http://127.0.0.1:8000/invoke \\")
+    print("          -H 'Content-Type: application/json' \\")
+    print('          -d \'{"prompt":"What is 2+2?"}\'')
+    server.run(host="127.0.0.1", port=8000)
 
 
 if __name__ == "__main__":
-    example_server()
+    if os.getenv("LOCUS_TUTORIAL_BOOT") == "1":
+        boot_live_server()
+    else:
+        example_server()

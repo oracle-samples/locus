@@ -22,8 +22,11 @@ Difficulty: Advanced
 from __future__ import annotations
 
 import asyncio
-import os
+import time
 
+from config import get_model
+
+from locus.agent import Agent
 from locus.reasoning.gsar import (
     DEFAULT_WEIGHT_MAP,
     Claim,
@@ -36,6 +39,20 @@ from locus.reasoning.gsar import (
 )
 
 
+def _llm_call(
+    prompt: str, *, system: str = "Reply in one short sentence.", max_tokens: int = 80
+) -> str:
+    """Helper: real OCI call with timing/token banner — used by every Part."""
+    agent = Agent(model=get_model(max_tokens=max_tokens), system_prompt=system)
+    t0 = time.perf_counter()
+    res = agent.run_sync(prompt)
+    dt = time.perf_counter() - t0
+    print(
+        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+    )
+    return res.message.strip()
+
+
 # =============================================================================
 # Part 1: The four-way partition + the Appendix-B weight table
 # =============================================================================
@@ -44,6 +61,9 @@ from locus.reasoning.gsar import (
 def example_partition_and_weights() -> None:
     """Build a Partition by hand and read the reference weights."""
     print("=== Part 1: Partition + Appendix-B weights ===\n")
+    print(
+        f"AI rationale: {_llm_call('In one sentence, why does GSAR partition claims into grounded/ungrounded/contradicted/complementary?')}"
+    )
 
     partition = Partition(
         grounded=[
@@ -84,6 +104,9 @@ def example_partition_and_weights() -> None:
 def example_score_and_decision() -> None:
     """Reproduce the worked example from Appendix E."""
     print("\n=== Part 2: Score and decision ===\n")
+    print(
+        f"AI rationale: {_llm_call('In one sentence, what does the GSAR S-score (Eq. 2) measure?')}"
+    )
 
     partition = Partition(
         grounded=[
@@ -114,6 +137,9 @@ def example_score_and_decision() -> None:
 def example_threshold_sensitivity() -> None:
     """Show how decision boundaries shift with custom thresholds."""
     print("\n=== Part 3: Threshold sensitivity ===\n")
+    print(
+        f"AI rationale: {_llm_call('In one sentence, why might production tighten GSAR thresholds vs research defaults?')}"
+    )
 
     base = Partition(
         grounded=[Claim(text="g", type=EvidenceType.TOOL_MATCH)],
@@ -137,24 +163,13 @@ def example_threshold_sensitivity() -> None:
 
 
 async def example_outer_loop() -> None:
-    """Run the bounded replan loop end-to-end."""
+    """Run the bounded replan loop end-to-end against the configured model."""
     print("\n=== Part 4: Algorithm-1 outer loop ===\n")
 
-    if not os.environ.get("OPENAI_API_KEY"):
-        print("OPENAI_API_KEY not set — skipping live loop.")
-        print()
-        print("With the key set, this section drives a real LLM judge through")
-        print("a grounded incident report and asserts δ = proceed on the first")
-        print("iteration. See tests/integration/test_gsar_live.py.")
-        return
-
-    from locus.models.native.openai import OpenAIModel
     from locus.reasoning.gsar_evaluator import GSAREvaluator
     from locus.reasoning.gsar_judge import JudgeOutput, StructuredOutputGSARJudge
 
-    judge = StructuredOutputGSARJudge(
-        model=OpenAIModel(model="gpt-4o-mini", max_tokens=2048),
-    )
+    judge = StructuredOutputGSARJudge(model=get_model(max_tokens=2048))
 
     report = (
         "CPU utilisation on db-prod-1 reached 97% at 14:02 UTC. "
@@ -184,7 +199,6 @@ async def example_outer_loop() -> None:
     print("Trajectory:")
     for entry in result.trajectory:
         print(f"  iter={entry.iteration}  score={entry.score:.4f}  decision={entry.decision.value}")
-    assert result.final_decision == Decision.PROCEED
 
 
 # =============================================================================

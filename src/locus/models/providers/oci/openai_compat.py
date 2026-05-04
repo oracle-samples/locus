@@ -248,7 +248,7 @@ class OCIOpenAIModel(OpenAIModel):
         #      conftest convention so a single export drives every test)
         #   3. profile's tenancy (last-resort default; may not have GenAI
         #      policy if the profile lives in a different home tenancy than
-        #      the GenAI compartment, which is the BOAT-OC1 / observai case)
+        #      the GenAI compartment, which is the MY_PROFILE / cross-tenancy case)
         if compartment_id is None:
             import os
 

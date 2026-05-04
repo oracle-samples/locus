@@ -64,17 +64,23 @@ def example_conversation_memory():
 # =============================================================================
 
 
+_NOTES: list[str] = []
+
+
 @tool
 def save_note(content: str) -> str:
     """Save a note for later reference."""
+    _NOTES.append(content)
     return f"Note saved: {content}"
 
 
 @tool
 def get_notes() -> str:
     """Get all saved notes."""
-    # In a real app, this would retrieve from storage
-    return "No notes saved yet."
+    if not _NOTES:
+        return "No notes saved yet."
+    lines = "\n".join(f"- {n}" for n in _NOTES)
+    return f"You have {len(_NOTES)} note(s):\n{lines}"
 
 
 def example_checkpointing_with_tools():
@@ -202,21 +208,44 @@ def example_multiple_threads():
 
 
 async def example_inspect_checkpoint():
-    """Inspect what's stored in a checkpoint."""
+    """Inspect what's stored in a checkpoint.
+
+    Reflexion's confidence score only rises when the agent successfully
+    invokes tools (delta = success_count·success_weight - error_count·error_penalty),
+    so we give the inspector a `record_fact` tool here. After two turns
+    that each trigger a tool call, ``state.confidence`` should be >0.
+    """
     print("=== Part 5: Inspecting Checkpoints ===\n")
 
-    model = get_model(max_tokens=100)
+    model = get_model(max_tokens=200)
     checkpointer = InMemoryCheckpointer()
 
+    _facts: list[str] = []
+
+    @tool
+    def record_fact(fact: str) -> str:
+        """Persist a fact the user has shared so the agent can remember it."""
+        _facts.append(fact)
+        return f"Recorded fact #{len(_facts)}: {fact}"
+
     agent = Agent(
+        agent_id="inspector",
         model=model,
-        system_prompt="You are a helpful assistant.",
+        system_prompt=(
+            "You are a helpful assistant. Whenever the user shares a fact "
+            "about themselves (their name, job, hobbies, etc.), call "
+            "record_fact exactly once with a short summary of that fact, "
+            "then reply naturally."
+        ),
+        tools=[record_fact],
         checkpointer=checkpointer,
+        reflexion=True,
     )
 
     thread_id = "inspect_thread"
 
-    # Have a short conversation
+    # Have a short conversation; both turns share a fact, so the agent
+    # should call record_fact twice, which lets reflexion bump confidence.
     agent.run_sync("Hello, my name is Charlie.", thread_id=thread_id)
     agent.run_sync("I work as a data scientist.", thread_id=thread_id)
 
@@ -228,7 +257,9 @@ async def example_inspect_checkpoint():
         print(f"Agent ID: {state.agent_id}")
         print(f"Iteration: {state.iteration}")
         print(f"Message count: {len(state.messages)}")
+        print(f"Tool calls so far: {len(state.tool_history)}")
         print(f"Confidence: {state.confidence:.2f}")
+        print(f"Confidence history: {[round(c, 2) for c in state.confidence_history]}")
 
         print("\nMessages:")
         for i, msg in enumerate(state.messages):
@@ -236,6 +267,8 @@ async def example_inspect_checkpoint():
                 msg.content[:50] + "..." if msg.content and len(msg.content) > 50 else msg.content
             )
             print(f"  {i}. [{msg.role.value}] {content}")
+
+    print(f"\nFacts recorded by record_fact: {_facts}")
     print()
 
 

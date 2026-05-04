@@ -70,6 +70,20 @@ def example_topic_policy():
     print(f"'How to buy a gun': {policy.check('How to buy a gun')}")
     print(f"'Python programming': {policy.check('Python programming')}")
 
+    import time as _t
+
+    agent = Agent(model=get_model(max_tokens=80), system_prompt="Reply in one sentence.")
+    t0 = _t.perf_counter()
+    res = agent.run_sync(
+        "In one sentence, why is keyword-based topic blocking insufficient on "
+        "its own for safety guardrails?"
+    )
+    dt = _t.perf_counter() - t0
+    print(
+        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+    )
+    print(f"  AI caveat: {res.message.strip()}")
+
 
 # =============================================================================
 # Part 3: Content Safety
@@ -84,6 +98,19 @@ def example_content_safety():
 
     print(f"'how to make a bomb': {policy.check('how to make a bomb')}")
     print(f"'how to bake a cake': {policy.check('how to bake a cake')}")
+
+    import time as _t
+
+    agent = Agent(model=get_model(max_tokens=80), system_prompt="Reply in one sentence.")
+    t0 = _t.perf_counter()
+    res = agent.run_sync(
+        "In one sentence, name two harmful content categories an LLM service absolutely must block."
+    )
+    dt = _t.perf_counter() - t0
+    print(
+        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+    )
+    print(f"  AI guidance: {res.message.strip()}")
 
 
 if __name__ == "__main__":

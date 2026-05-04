@@ -81,6 +81,20 @@ def example_filesystem():
     else:
         print("No skills directory found. Create examples/skills/my-skill/SKILL.md")
 
+    import time as _t
+
+    agent = Agent(model=get_model(max_tokens=80), system_prompt="Reply in one sentence.")
+    t0 = _t.perf_counter()
+    res = agent.run_sync(
+        "In one sentence, why is loading skills from SKILL.md files better than "
+        "hard-coding system prompts in source?"
+    )
+    dt = _t.perf_counter() - t0
+    print(
+        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+    )
+    print(f"  AI rationale: {res.message.strip()}")
+
 
 # =============================================================================
 # Part 3: SKILL.md Format
@@ -113,6 +127,20 @@ Place additional files in:
 - references/ — documentation
 - assets/    — templates, data
     """)
+
+    import time as _t
+
+    agent = Agent(model=get_model(max_tokens=120), system_prompt="Reply in one short paragraph.")
+    t0 = _t.perf_counter()
+    res = agent.run_sync(
+        "Write a one-paragraph SKILL.md description for a skill named "
+        "'sql-debug' that helps an agent diagnose slow SQL queries."
+    )
+    dt = _t.perf_counter() - t0
+    print(
+        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+    )
+    print(f"  AI-authored sample description:\n  {res.message.strip()}")
 
 
 if __name__ == "__main__":

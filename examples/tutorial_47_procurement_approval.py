@@ -48,7 +48,6 @@ Prerequisites: tutorial_45 (HITL multi-agent)
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
 from typing import Any
 
 from config import get_model
@@ -256,20 +255,26 @@ async def emit_po(state: dict[str, Any]) -> dict[str, Any]:
         f"Vendor assessment: {state.get('vendor_assessment', '')[:200]}\n\n"
         "Emit the PurchaseOrder."
     )
-    result = await _asyncio.to_thread(agent.run_sync, prompt)
+    last_exc: BaseException | None = None
+    result = None
+    for attempt in range(3):
+        try:
+            result = await _asyncio.to_thread(agent.run_sync, prompt)
+            break
+        except Exception as exc:  # noqa: BLE001 — retry transient OCI flakiness
+            last_exc = exc
+            await _asyncio.sleep(0.5 * (attempt + 1))
+    if result is None:
+        raise RuntimeError(
+            f"PO emitter failed after 3 attempts. Last error: {last_exc!r}"
+        ) from last_exc
     po = result.parsed
     if po is None:
-        # MockModel fallback — build the record from state directly.
-        po = PurchaseOrder(
-            request_id=state.get("request_id", "REQ-0001"),
-            vendor=state["vendor"],
-            item=state["item"],
-            amount_usd=float(state["amount_usd"]),
-            business_justification=state.get("justification", ""),
-            vendor_assessment=state.get("vendor_assessment", ""),
-            approvals=state.get("approvals", []),
-            approved_at=datetime.now(UTC).isoformat(timespec="seconds"),
-            status=final_status,
+        raise RuntimeError(
+            "PO emitter returned no parsed PurchaseOrder. The configured model "
+            "could not honor the JSON schema. Use a stronger model "
+            "(e.g. openai.gpt-4o, openai.gpt-5, anthropic.claude-3-5-sonnet) "
+            f"for tutorial 47. Raw output: {result.message!r}"
         )
     return {"purchase_order": po}
 

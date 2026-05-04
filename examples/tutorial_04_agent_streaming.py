@@ -295,21 +295,43 @@ async def example_progress_tracking():
 
     model = get_model(max_tokens=300)
 
+    # Real, deterministic tool implementations — no canned strings.
+    # fetch_data simulates network latency but returns a real summary
+    # of the requested source. process_data does an actual hash so the
+    # result is reproducible from the input.
+    sources = {
+        "users": [
+            {"id": 1, "name": "Alice", "role": "engineer"},
+            {"id": 2, "name": "Bob", "role": "designer"},
+            {"id": 3, "name": "Charlie", "role": "researcher"},
+        ],
+        "orders": [
+            {"id": 101, "user_id": 1, "total": 49.99},
+            {"id": 102, "user_id": 2, "total": 19.99},
+        ],
+    }
+
     @tool
     def fetch_data(source: str) -> str:
-        """Fetch data from a source."""
+        """Fetch records from a named in-memory source (users, orders, ...)."""
+        import json
         import time
 
         time.sleep(0.3)
-        return f"Data from {source}: [sample data]"
+        rows = sources.get(source.lower())
+        if rows is None:
+            return f"unknown source {source!r}; try one of: {sorted(sources)}"
+        return f"{len(rows)} record(s) from {source}: {json.dumps(rows)}"
 
     @tool
     def process_data(data: str) -> str:
-        """Process fetched data."""
+        """Process fetched data — counts records and emits a checksum."""
+        import hashlib
         import time
 
         time.sleep(0.2)
-        return f"Processed: {data}"
+        digest = hashlib.sha256(data.encode()).hexdigest()[:12]
+        return f"processed {len(data)} bytes, sha256:{digest}"
 
     @tool
     def store_results(results: str) -> str:

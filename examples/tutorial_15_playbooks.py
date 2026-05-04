@@ -1,22 +1,22 @@
 """
-Tutorial 15: Playbooks
+Tutorial 15: Playbooks — every part runs against a real LLM
 
-This tutorial demonstrates Locus's playbook system for structured
-agent execution plans.
-
-Topics covered:
-1. Creating playbook steps
-2. Defining playbooks with validation
-3. Tracking execution progress
-4. Enforcing playbook compliance
-5. Loading playbooks from YAML
+Every Part exercises both a Locus playbook SDK feature *and* the
+configured GenAI provider, so you can see the structured-execution
+mechanics next to live agent reasoning. Each section prints
+``[OCI call: X.XXs · prompt→completion tokens]`` so you can see the
+network round-trip happen.
 
 Run with:
     python examples/tutorial_15_playbooks.py
 """
 
+import time
 from datetime import UTC, datetime
 
+from config import get_model
+
+from locus.agent import Agent
 from locus.playbooks import (
     Playbook,
     PlaybookPlan,
@@ -24,31 +24,40 @@ from locus.playbooks import (
     StepExecution,
     StepStatus,
 )
+from locus.tools import tool
+
+
+def _llm_call(
+    prompt: str, *, system: str = "Reply in one short sentence.", max_tokens: int = 100
+) -> str:
+    agent = Agent(model=get_model(max_tokens=max_tokens), system_prompt=system)
+    t0 = time.perf_counter()
+    res = agent.run_sync(prompt)
+    dt = time.perf_counter() - t0
+    print(
+        f"  [OCI call: {dt:.2f}s · "
+        f"{res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+    )
+    return res.message.strip()
 
 
 def main():
     print("=" * 60)
-    print("Tutorial 15: Playbooks")
+    print("Tutorial 15: Playbooks (every part calls gpt-5)")
     print("=" * 60)
 
     # =========================================================================
-    # Part 1: Creating Playbook Steps
+    # Part 1: PlaybookStep + AI rationale
     # =========================================================================
     print("\n=== Part 1: Creating Playbook Steps ===\n")
-
-    # Define individual steps
     step1 = PlaybookStep(
         id="gather_logs",
         description="Collect relevant log files from the affected services",
         expected_tools=["read_file", "search_logs"],
-        hints=[
-            "Start with the most recent logs",
-            "Look for ERROR and WARN levels",
-        ],
+        hints=["Start with the most recent logs", "Look for ERROR and WARN levels"],
         required=True,
         max_tool_calls=5,
     )
-
     step2 = PlaybookStep(
         id="analyze_errors",
         description="Analyze the collected logs for error patterns",
@@ -56,70 +65,56 @@ def main():
         hints=["Group errors by type", "Note timestamps"],
         required=True,
     )
-
     step3 = PlaybookStep(
         id="check_metrics",
         description="Review system metrics during the incident window",
         expected_tools=["query_metrics", "get_dashboard"],
         hints=["Focus on CPU, memory, and network"],
-        required=False,  # Optional step
+        required=False,
     )
-
     step4 = PlaybookStep(
         id="summarize_findings",
         description="Create a summary of findings and recommendations",
-        expected_tools=[],  # No specific tools required
+        expected_tools=[],
         hints=["Include root cause if identified"],
         required=True,
     )
-
-    print(f"Step 1: {step1.id}")
-    print(f"  Description: {step1.description}")
-    print(f"  Expected tools: {step1.expected_tools}")
-    print(f"  Required: {step1.required}")
+    print(f"  Step: {step1.id} ({len(step1.expected_tools)} expected tools)")
+    rationale = _llm_call(
+        "In one sentence, why does an incident-response playbook benefit from "
+        "having `expected_tools` declared per step?",
+    )
+    print(f"AI rationale: {rationale}")
 
     # =========================================================================
-    # Part 2: Creating a Complete Playbook
+    # Part 2: Full Playbook + AI describes the procedure
     # =========================================================================
     print("\n=== Part 2: Creating a Playbook ===\n")
-
     playbook = Playbook(
         id="incident_investigation",
         name="Incident Investigation Playbook",
         description="Standard procedure for investigating production incidents",
         version="1.0.0",
         steps=[step1, step2, step3, step4],
-        strict_sequence=True,  # Steps must be in order
-        allow_extra_tools=True,  # Allow tools not in expected_tools
+        strict_sequence=True,
+        allow_extra_tools=True,
         max_iterations=20,
         tags=["incident", "investigation", "production"],
     )
-
-    print(f"Playbook: {playbook.name}")
-    print(f"Version: {playbook.version}")
-    print(f"Steps: {len(playbook.steps)}")
-    print(f"Strict sequence: {playbook.strict_sequence}")
-    print(f"Tags: {playbook.tags}")
-
-    # Access specific step
-    step = playbook.get_step("analyze_errors")
-    if step:
-        print(f"\nStep 'analyze_errors': {step.description}")
+    print(f"  Playbook: {playbook.name} v{playbook.version} steps={len(playbook.steps)}")
+    described = _llm_call(
+        f"Describe this playbook in two sentences: {playbook.description}. "
+        f"Steps: {[s.id for s in playbook.steps]}.",
+        max_tokens=160,
+    )
+    print(f"AI description: {described}")
 
     # =========================================================================
-    # Part 3: Execution Plans
+    # Part 3: Execution plan + AI suggests next action
     # =========================================================================
     print("\n=== Part 3: Execution Plans ===\n")
-
-    # Create an execution plan from the playbook
     plan = PlaybookPlan(playbook=playbook)
-
-    print(f"Current step: {plan.current_step.id if plan.current_step else 'None'}")
-    print(f"Progress: {plan.progress:.0%}")
-    print(f"Pending steps: {plan.pending_steps}")
-
-    # Simulate completing a step
-    step_exec = StepExecution(
+    plan.step_executions["gather_logs"] = StepExecution(
         step_id="gather_logs",
         status=StepStatus.COMPLETED,
         started_at=datetime.now(UTC),
@@ -128,63 +123,52 @@ def main():
         tool_call_count=3,
         result="Found 15 error entries in app.log",
     )
-
-    # Update plan with execution
-    plan.step_executions["gather_logs"] = step_exec
-    plan.current_step_index = 1  # Move to next step
-
-    print("\nAfter completing step 1:")
-    print(f"Progress: {plan.progress:.0%}")
-    print(f"Current step: {plan.current_step.id if plan.current_step else 'None'}")
-    print(f"Completed steps: {plan.completed_steps}")
+    plan.current_step_index = 1
+    print(f"  Progress: {plan.progress:.0%}  current_step={plan.current_step.id}")
+    next_step = _llm_call(
+        f"The previous step '{plan.completed_steps[0]}' completed and found 15 "
+        f"error entries. The next step is '{plan.current_step.id}'. Suggest one "
+        "specific tool call for that step.",
+        max_tokens=80,
+    )
+    print(f"AI next-step suggestion: {next_step}")
 
     # =========================================================================
-    # Part 4: Step Status Tracking
+    # Part 4: Step-status tracking + AI summarises status meaning
     # =========================================================================
     print("\n=== Part 4: Step Status Tracking ===\n")
-
-    # Different step statuses
     for status in StepStatus:
-        print(f"  {status.value}")
-
-    # Check step completion
-    print(f"\nIs 'gather_logs' complete? {plan.is_step_complete('gather_logs')}")
-    print(f"Is 'analyze_errors' complete? {plan.is_step_complete('analyze_errors')}")
-
-    # Get execution details
-    exec_details = plan.get_step_execution("gather_logs")
-    if exec_details:
-        print("\nStep 'gather_logs' execution:")
-        print(f"  Status: {exec_details.status.value}")
-        print(f"  Tool calls: {exec_details.tool_call_count}")
-        print(f"  Result: {exec_details.result}")
+        print(f"  - {status.value}")
+    print(f"  is_step_complete('gather_logs') = {plan.is_step_complete('gather_logs')}")
+    summary = _llm_call(
+        "In one sentence, when should an SRE mark a playbook step as SKIPPED rather than FAILED?",
+        max_tokens=80,
+    )
+    print(f"AI summary: {summary}")
 
     # =========================================================================
-    # Part 5: Playbook Validation
+    # Part 5: Validation rules + AI checks
     # =========================================================================
     print("\n=== Part 5: Playbook Validation ===\n")
-
-    # Playbooks with validation criteria
     validated_step = PlaybookStep(
         id="validate_fix",
         description="Verify the fix is working",
         expected_tools=["run_tests", "check_health"],
-        validation={
-            "min_tool_calls": 1,
-            "required_result_keywords": ["passed", "healthy"],
-        },
+        validation={"min_tool_calls": 1, "required_result_keywords": ["passed", "healthy"]},
         required=True,
     )
-
-    print(f"Step with validation: {validated_step.id}")
-    print(f"Validation rules: {validated_step.validation}")
+    print(f"  Step: {validated_step.id}  validation={validated_step.validation}")
+    judge = _llm_call(
+        f"This step requires the result to contain {validated_step.validation['required_result_keywords']}. "
+        "If the actual result is 'tests passed: 12, services healthy', does it satisfy the validation? Reply YES or NO with one-word reason.",
+        max_tokens=40,
+    )
+    print(f"AI judgment: {judge}")
 
     # =========================================================================
-    # Part 6: Playbook Metadata
+    # Part 6: Metadata + AI proposes a useful metadata field
     # =========================================================================
     print("\n=== Part 6: Playbook Metadata ===\n")
-
-    # Steps and playbooks can have arbitrary metadata
     step_with_meta = PlaybookStep(
         id="escalate",
         description="Escalate if issue persists",
@@ -195,55 +179,38 @@ def main():
             "notify_channels": ["#incidents", "#oncall"],
         },
     )
-
-    print(f"Step metadata: {step_with_meta.metadata}")
-
-    playbook_with_meta = Playbook(
-        id="deployment_rollback",
-        name="Deployment Rollback",
-        description="Procedure for rolling back a failed deployment",
-        steps=[step_with_meta],
-        metadata={
-            "owner": "platform-team",
-            "last_reviewed": "2024-01-15",
-            "sla_minutes": 15,
-        },
+    print(f"  metadata: {step_with_meta.metadata}")
+    suggestion = _llm_call(
+        "Suggest one extra metadata field a production-grade incident playbook "
+        "step should carry, with a one-line rationale.",
+        max_tokens=80,
     )
-
-    print(f"Playbook metadata: {playbook_with_meta.metadata}")
+    print(f"AI suggestion: {suggestion}")
 
     # =========================================================================
-    # Part 7: Building Playbooks Programmatically
+    # Part 7: Programmatic Playbook factory + AI verifies the result
     # =========================================================================
     print("\n=== Part 7: Building Playbooks Programmatically ===\n")
 
-    def create_deployment_playbook(environment: str, services: list[str]) -> Playbook:
-        """Create a deployment playbook for specific services."""
-        steps = []
-
-        # Pre-deployment checks
-        steps.append(
+    def deployment_playbook(env: str, services: list[str]) -> Playbook:
+        steps = [
             PlaybookStep(
                 id="pre_check",
-                description=f"Verify {environment} environment is ready",
+                description=f"Verify {env} environment is ready",
                 expected_tools=["check_health", "verify_deps"],
                 required=True,
             )
-        )
-
-        # Deploy each service
-        for service in services:
-            steps.append(
-                PlaybookStep(
-                    id=f"deploy_{service}",
-                    description=f"Deploy {service} to {environment}",
-                    expected_tools=["deploy", "wait_healthy"],
-                    metadata={"service": service},
-                    required=True,
-                )
+        ]
+        steps += [
+            PlaybookStep(
+                id=f"deploy_{s}",
+                description=f"Deploy {s} to {env}",
+                expected_tools=["deploy", "wait_healthy"],
+                metadata={"service": s},
+                required=True,
             )
-
-        # Post-deployment validation
+            for s in services
+        ]
         steps.append(
             PlaybookStep(
                 id="post_validate",
@@ -252,51 +219,26 @@ def main():
                 required=True,
             )
         )
-
         return Playbook(
-            id=f"deploy_{environment}",
-            name=f"{environment.title()} Deployment",
+            id=f"deploy_{env}",
+            name=f"{env.title()} Deployment",
             steps=steps,
-            tags=["deployment", environment],
+            tags=["deployment", env],
         )
 
-    prod_playbook = create_deployment_playbook("production", ["api", "web", "worker"])
-    print(f"Generated playbook: {prod_playbook.name}")
-    print(f"Steps: {[s.id for s in prod_playbook.steps]}")
+    prod_playbook = deployment_playbook("production", ["api", "web", "worker"])
+    print(f"  Generated: {prod_playbook.name}  steps={[s.id for s in prod_playbook.steps]}")
+    review = _llm_call(
+        f"Review this generated deployment playbook: {[s.id for s in prod_playbook.steps]}. "
+        "Spot one weakness in one short sentence.",
+        max_tokens=100,
+    )
+    print(f"AI review: {review}")
 
     # =========================================================================
-    # Part 8: Playbook Progress Visualization
+    # Part 8: Progress visualisation + AI ETA estimate
     # =========================================================================
     print("\n=== Part 8: Progress Visualization ===\n")
-
-    def visualize_progress(plan: PlaybookPlan) -> None:
-        """Visualize playbook execution progress."""
-        print(f"Playbook: {plan.playbook.name}")
-        print(
-            f"Progress: [{'#' * int(plan.progress * 20)}{'-' * (20 - int(plan.progress * 20))}] {plan.progress:.0%}"
-        )
-        print()
-
-        for i, step in enumerate(plan.playbook.steps):
-            exec_info = plan.step_executions.get(step.id)
-
-            if exec_info:
-                status_icon = {
-                    StepStatus.COMPLETED: "[done]",
-                    StepStatus.IN_PROGRESS: "[....]",
-                    StepStatus.FAILED: "[FAIL]",
-                    StepStatus.SKIPPED: "[skip]",
-                    StepStatus.PENDING: "[    ]",
-                }[exec_info.status]
-            elif i == plan.current_step_index:
-                status_icon = "[>>>>]"
-            else:
-                status_icon = "[    ]"
-
-            required = "*" if step.required else " "
-            print(f"  {status_icon} {required} {step.id}: {step.description[:40]}...")
-
-    # Create a demo plan with mixed progress
     demo_plan = PlaybookPlan(playbook=playbook)
     demo_plan.step_executions["gather_logs"] = StepExecution(
         step_id="gather_logs", status=StepStatus.COMPLETED
@@ -305,64 +247,81 @@ def main():
         step_id="analyze_errors", status=StepStatus.IN_PROGRESS
     )
     demo_plan.current_step_index = 1
-
-    visualize_progress(demo_plan)
+    bar = "#" * int(demo_plan.progress * 20) + "-" * (20 - int(demo_plan.progress * 20))
+    print(f"  [{bar}] {demo_plan.progress:.0%}")
+    eta = _llm_call(
+        "An incident-investigation playbook has 4 steps. One is done, one is "
+        "in progress, two are pending. Roughly how long should we expect the "
+        "remaining work to take? Answer in one short sentence.",
+        max_tokens=80,
+    )
+    print(f"AI ETA: {eta}")
 
     # =========================================================================
-    # Part 9: Playbook Best Practices
+    # Part 9: Best practices — AI authors the cheatsheet
     # =========================================================================
     print("\n=== Part 9: Best Practices ===\n")
-
-    print("1. Keep steps focused and atomic")
-    print("2. Use descriptive step IDs (snake_case)")
-    print("3. Provide helpful hints for complex steps")
-    print("4. Mark truly optional steps as required=False")
-    print("5. Set reasonable max_tool_calls to prevent runaway")
-    print("6. Use metadata for operational context")
-    print("7. Version your playbooks for change tracking")
-    print("8. Include validation criteria for critical steps")
-
-    # =========================================================================
-    # Part 10: Auto-installing the enforcer via Agent(playbook=...)
-    # =========================================================================
-    print("\n=== Part 10: Agent(playbook=...) auto-install ===\n")
-    print(
-        "When you pass a Playbook to the Agent constructor, Locus auto-\n"
-        "installs PlaybookEnforcerHook for you. Each tool call is validated\n"
-        "against the current step's expected_tools; out-of-sequence calls\n"
-        "are cancelled with a hint. The plan auto-advances when a step's\n"
-        "expected_tools are exhausted.\n"
+    practices = _llm_call(
+        "Write five terse best-practice bullets for designing reliable Locus "
+        "playbooks. Five bullets only.",
+        max_tokens=240,
     )
-    print("Sketch (requires real model credentials to run):\n")
-    print(
-        """    from locus import Agent
-    from locus.playbooks import Playbook, PlaybookStep
+    print(practices)
+
+    # =========================================================================
+    # Part 10: Live Agent driving a Playbook with real tools
+    # =========================================================================
+    print("\n=== Part 10: Live Agent driving a Playbook ===\n")
+
+    @tool
+    def fetch_logs(incident_id: str) -> str:
+        return (
+            f"[{incident_id}] 2026-05-03T19:01:14Z ERROR db.pool exhausted "
+            "(50/50 conns)\n[INC-42] 2026-05-03T19:01:18Z ERROR api.handler "
+            "timeout calling /v1/orders"
+        )
+
+    @tool
+    def classify_severity(snippet: str) -> str:
+        return "P1" if "ERROR" in snippet and "exhausted" in snippet else "P3"
+
+    @tool
+    def page_oncall(severity: str, incident_id: str) -> str:
+        return f"paged oncall for {incident_id} at severity {severity}"
 
     triage = Playbook(
-        id="triage",
+        id="incident_triage",
         name="Incident triage",
         steps=[
-            PlaybookStep(id="gather", description="Pull logs",
-                         expected_tools=["fetch_logs"]),
-            PlaybookStep(id="classify", description="Severity",
-                         expected_tools=["classify_severity"]),
-            PlaybookStep(id="page", description="Page oncall",
-                         expected_tools=["page_oncall"]),
+            PlaybookStep(id="gather", description="Pull logs", expected_tools=["fetch_logs"]),
+            PlaybookStep(
+                id="classify", description="Decide severity", expected_tools=["classify_severity"]
+            ),
+            PlaybookStep(
+                id="page", description="Page oncall if P1", expected_tools=["page_oncall"]
+            ),
         ],
     )
 
-    agent = Agent(
-        model="oci:openai.gpt-5",
+    triage_agent = Agent(
+        model=get_model(max_tokens=400),
         tools=[fetch_logs, classify_severity, page_oncall],
-        playbook=triage,           # auto-installs PlaybookEnforcerHook
+        playbook=triage,
+        system_prompt=(
+            "You are an SRE on call. Follow the playbook steps in order: "
+            "fetch logs, classify severity, then page oncall if it is P1."
+        ),
     )
-
-    result = agent.run_sync("Triage incident INC-42.")
-    # Out-of-order calls are blocked; the plan reaches `is_complete` in order.
-"""
+    t0 = time.perf_counter()
+    triage_result = triage_agent.run_sync("Triage incident INC-42.")
+    dt = time.perf_counter() - t0
+    print(
+        f"  [OCI call: {dt:.2f}s · "
+        f"{triage_result.metrics.prompt_tokens}→{triage_result.metrics.completion_tokens} tokens · "
+        f"iters={triage_result.metrics.iterations}]"
     )
+    print(f"Triage outcome: {triage_result.message[:300]}")
 
-    # =========================================================================
     print("\n" + "=" * 60)
     print("Next: Tutorial 16 - Agent Handoff")
     print("=" * 60)
