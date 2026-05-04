@@ -45,7 +45,7 @@ export function defaultsFor(p: ProviderType): ProviderConfig {
         region: "us-chicago-1",
         compartment_id:
           "ocid1.compartment.oc1..aaaaaaaandceai675euuovyyazlymnglde2xknsq35rni43zzmwdhxxu4v7q",
-        oci_transport: "auto",
+        oci_transport: "v1",
       };
     case "oci-apikey":
       return {
@@ -54,7 +54,7 @@ export function defaultsFor(p: ProviderType): ProviderConfig {
         profile: "DEFAULT",
         region: "us-chicago-1",
         compartment_id: "",
-        oci_transport: "auto",
+        oci_transport: "v1",
       };
   }
 }
@@ -66,11 +66,11 @@ export function describeProvider(cfg: ProviderConfig): string {
     case "anthropic":
       return `Anthropic · ${cfg.model}`;
     case "oci-session": {
-      const tx = cfg.oci_transport && cfg.oci_transport !== "auto" ? ` · ${cfg.oci_transport}` : "";
+      const tx = cfg.oci_transport && cfg.oci_transport !== "v1" ? ` · ${cfg.oci_transport}` : "";
       return `OCI session · ${cfg.profile} · ${cfg.model}${tx}`;
     }
     case "oci-apikey": {
-      const tx = cfg.oci_transport && cfg.oci_transport !== "auto" ? ` · ${cfg.oci_transport}` : "";
+      const tx = cfg.oci_transport && cfg.oci_transport !== "v1" ? ` · ${cfg.oci_transport}` : "";
       return `OCI api-key · ${cfg.profile} · ${cfg.model}${tx}`;
     }
   }

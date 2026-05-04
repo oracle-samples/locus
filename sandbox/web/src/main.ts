@@ -49,7 +49,7 @@ function fillFromConfig(cfg: ProviderConfig) {
   cfgProfile.value = cfg.profile ?? "";
   cfgRegion.value = cfg.region ?? "us-chicago-1";
   cfgCompartment.value = cfg.compartment_id ?? "";
-  cfgTransport.value = cfg.oci_transport ?? "auto";
+  cfgTransport.value = cfg.oci_transport ?? "v1";
   const want = cfg.model ?? defaultModelFor(cfg.provider);
   setModelOptions([want], want);
 }
@@ -139,7 +139,7 @@ function saveSettings() {
     cfg.profile = cfgProfile.value.trim() || "DEFAULT";
     cfg.region = cfgRegion.value.trim() || "us-chicago-1";
     cfg.compartment_id = cfgCompartment.value.trim();
-    cfg.oci_transport = (cfgTransport.value as ProviderConfig["oci_transport"]) ?? "auto";
+    cfg.oci_transport = (cfgTransport.value as ProviderConfig["oci_transport"]) ?? "v1";
   }
   provider = cfg;
   saveProvider(cfg);

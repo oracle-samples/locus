@@ -164,8 +164,8 @@
         <div class="field" id="row-transport" style="display: none">
           <label class="field__label">OCI transport</label>
           <select id="cfg-transport" class="input" data-testid="cfg-transport">
+            <option value="v1" selected>v1 — /openai/v1 (OpenAIModel-compat)</option>
             <option value="auto">auto (cohere.command-r* → sdk, else v1)</option>
-            <option value="v1">v1 — /openai/v1 (OpenAIModel-compat)</option>
             <option value="sdk">sdk — native OCI GenAI (regular)</option>
           </select>
         </div>

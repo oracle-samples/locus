@@ -30,15 +30,18 @@ Adding a new pattern is ~20 lines: write a builder function that returns
 ``(agent_or_runnable, run_fn)``, then register it in ``PATTERNS``.
 """
 
-from __future__ import annotations
+# This is sandbox / playground code — relax a handful of ruff rules that
+# only matter for production. Keep ruff format on; just silence the lint
+# nits that don't apply here.
+# ruff: noqa: BLE001, E402, N806, N814, ASYNC230
 
-import os
-from collections.abc import AsyncIterator
-from typing import Any, Literal
+from __future__ import annotations
 
 import asyncio
 import json
+import os
 from collections.abc import AsyncIterator as _AI
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -60,10 +63,10 @@ class ProviderConfig(BaseModel):
     profile: str | None = None
     region: str = "us-chicago-1"
     compartment_id: str | None = None
-    # OCI only: "auto" | "v1" | "sdk". v1 = /openai/v1/chat/completions
-    # (OCIOpenAIModel), sdk = native OCI GenAI chat shape (OCIModel).
-    # "auto" routes Cohere R-series → sdk, everything else → v1.
-    oci_transport: Literal["auto", "v1", "sdk"] = "auto"
+    # OCI only: "v1" | "auto" | "sdk". v1 = /openai/v1/chat/completions
+    # (OCIOpenAIModel) — the default. sdk = native OCI GenAI chat shape
+    # (OCIModel). "auto" routes Cohere R-series → sdk, everything else → v1.
+    oci_transport: Literal["auto", "v1", "sdk"] = "v1"
 
 
 def _is_oci_sdk_family(model_id: str) -> bool:
@@ -114,7 +117,9 @@ def build_model(cfg: ProviderConfig) -> Any:
             # actually lands in us-chicago-1.
             from locus.models import OCIAuthType, OCIModel
 
-            auth_type = OCIAuthType.SECURITY_TOKEN if cfg.provider == "oci-session" else OCIAuthType.API_KEY
+            auth_type = (
+                OCIAuthType.SECURITY_TOKEN if cfg.provider == "oci-session" else OCIAuthType.API_KEY
+            )
             region = cfg.region or "us-chicago-1"
             endpoint = f"https://inference.generativeai.{region}.oci.oraclecloud.com"
             return OCIModel(
@@ -356,9 +361,7 @@ async def _run_orchestrator(req: RunRequest) -> RunResponse:
     orch = Orchestrator(
         coordinator_model=model,
         specialists=[researcher, editor],
-        system_prompt=(
-            "Delegate research to researcher, then ask editor to tighten."
-        ),
+        system_prompt=("Delegate research to researcher, then ask editor to tighten."),
     )
     reply, events = await _drive_pipeline(orch, req.prompt)
     return RunResponse(reply=reply, events=events)
@@ -415,7 +418,11 @@ async def _run_stategraph_loop(req: RunRequest) -> RunResponse:
     graph.add_conditional_edges("critic", route, {"writer": "writer", "end": "__end__"})
     result = await graph.execute({"prompt": req.prompt})
     final_state = getattr(result, "final_state", result)
-    return RunResponse(reply=str(final_state.get("draft", "")) if isinstance(final_state, dict) else str(final_state))
+    return RunResponse(
+        reply=str(final_state.get("draft", ""))
+        if isinstance(final_state, dict)
+        else str(final_state)
+    )
 
 
 async def _run_map_reduce(req: RunRequest) -> RunResponse:
@@ -460,7 +467,9 @@ async def _run_map_reduce(req: RunRequest) -> RunResponse:
     graph.add_edge("review", "reduce")
     result = await graph.execute({"prompt": req.prompt})
     final = getattr(result, "final_state", result)
-    return RunResponse(reply=str(final.get("report", "")) if isinstance(final, dict) else str(final))
+    return RunResponse(
+        reply=str(final.get("report", "")) if isinstance(final, dict) else str(final)
+    )
 
 
 async def _run_structured_output(req: RunRequest) -> RunResponse:
@@ -494,7 +503,9 @@ async def _run_structured_output(req: RunRequest) -> RunResponse:
             f"reasoning: {parsed.reasoning}"
         )
     else:
-        reply = (getattr(result, "message", None) or getattr(result, "final_message", None) or "") or str(result)
+        reply = (
+            getattr(result, "message", None) or getattr(result, "final_message", None) or ""
+        ) or str(result)
     return RunResponse(reply=reply)
 
 
@@ -520,6 +531,7 @@ def _build_streaming_agent(pattern_id: str, provider: ProviderConfig) -> Any:
             )
         )
     if pattern_id == "agent_with_tools":
+
         @tool
         def add(a: float, b: float) -> float:
             """Sum two numbers."""
@@ -539,6 +551,7 @@ def _build_streaming_agent(pattern_id: str, provider: ProviderConfig) -> Any:
             )
         )
     if pattern_id == "structured_output":
+
         class Verdict(BaseModel):
             winner: str
             confidence: float
@@ -574,7 +587,9 @@ async def _stream_pattern(pattern_id: str, prompt: str, provider: ProviderConfig
 
     agent = _build_streaming_agent(pattern_id, provider)
     if agent is None:
-        yield _sse({"type": "ErrorEvent", "message": f"pattern {pattern_id!r} does not support streaming"})
+        yield _sse(
+            {"type": "ErrorEvent", "message": f"pattern {pattern_id!r} does not support streaming"}
+        )
         return
     try:
         async for ev in agent.run(prompt):
@@ -606,7 +621,9 @@ async def _stream_raw_model(prompt: str, provider: ProviderConfig) -> _AI[str]:
             done = bool(getattr(chunk, "done", False))
             if content:
                 full += content
-                yield _sse({"type": "ModelChunkEvent", "chunk": True, "content": content, "done": done})
+                yield _sse(
+                    {"type": "ModelChunkEvent", "chunk": True, "content": content, "done": done}
+                )
             elif done:
                 yield _sse({"type": "ModelChunkEvent", "chunk": True, "content": "", "done": True})
             await asyncio.sleep(0)
@@ -789,9 +806,9 @@ async def list_models(req: ListModelsRequest) -> dict[str, Any]:
 
 import re
 import shutil
-import subprocess
 import tempfile
 from pathlib import Path
+
 
 # Tutorials kept out of the workbench because they require infra beyond
 # the model (Postgres, vector store, MCP server, multi-process A2A,
@@ -832,7 +849,11 @@ def _parse_tutorial(path: Path) -> dict[str, Any]:
         title = lines[0].strip().rstrip(".")
         # Take the next non-empty narrative paragraph as summary.
         for ln in lines[1:]:
-            if ln.strip().lower().startswith(("this tutorial covers", "prerequisites", "difficulty")):
+            if (
+                ln.strip()
+                .lower()
+                .startswith(("this tutorial covers", "prerequisites", "difficulty"))
+            ):
                 break
             if ln.strip():
                 summary = ln.strip()
@@ -932,11 +953,14 @@ def _provider_env(cfg: ProviderConfig) -> dict[str, str]:
         # transport.
         if cfg.oci_transport != "auto":
             env["LOCUS_OCI_TRANSPORT"] = cfg.oci_transport
-        env["LOCUS_OCI_AUTH_TYPE"] = "security_token" if cfg.provider == "oci-session" else "api_key"
+        env["LOCUS_OCI_AUTH_TYPE"] = (
+            "security_token" if cfg.provider == "oci-session" else "api_key"
+        )
     return env
 
 
 import uuid as _uuid
+
 
 # Active subprocess runs that can accept human-input responses via
 # `POST /api/tutorials/runs/{run_id}/respond`. Keyed by run id, value is
@@ -968,7 +992,7 @@ def _split_future_imports(source: str) -> tuple[str, str]:
         stripped = lines[i].lstrip()
         for q in ('"""', "'''"):
             if stripped.startswith(q):
-                rest_after_q = stripped[len(q):]
+                rest_after_q = stripped[len(q) :]
                 if q in rest_after_q:  # one-liner
                     i += 1
                 else:
@@ -1018,7 +1042,7 @@ async def run_tutorial(req: WorkbenchRunRequest) -> StreamingResponse:
     # creates emits a typed event line per turn. Lines start with __LE__:
     # so the frontend can split them out from regular stdout. Only fires
     # when the tutorial hasn't already wired its own callback_handler.
-    bootstrap = '''\
+    bootstrap = """\
 import json as __le_json, sys as __le_sys, os as __le_os
 __LE_PREFIX = "__LE__:"
 
@@ -1150,7 +1174,7 @@ except Exception:
 # soon as the event fires.
 
 # --- end bootstrap; user source follows ---
-'''
+"""
 
     # Write the user's source to a tmp file. Keep it inside examples/ so
     # tutorials' relative imports (`from config import get_model`) resolve.
