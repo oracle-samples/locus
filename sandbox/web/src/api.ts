@@ -33,7 +33,20 @@ export type WorkbenchEvent =
   | { type: "stdout"; text: string }
   | { type: "stderr"; text: string }
   | { type: "exit"; code: number }
-  | { type: "error"; text: string };
+  | { type: "error"; text: string }
+  | { type: "runStarted"; run_id: string };
+
+export async function respondToInterrupt(runId: string, response: unknown): Promise<void> {
+  const r = await fetch(`/api/tutorials/runs/${encodeURIComponent(runId)}/respond`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ response }),
+  });
+  if (!r.ok) {
+    const t = await r.text();
+    throw new Error(`respond ${r.status}: ${t}`);
+  }
+}
 
 export function runTutorialSource(
   source: string,

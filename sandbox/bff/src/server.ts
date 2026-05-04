@@ -97,6 +97,13 @@ app.get("/api/tutorials/:tid", (req, res) => {
 app.post("/api/tutorials/run", async (req, res) => {
   await streamForward("/api/tutorials/run", req, res);
 });
+app.post("/api/tutorials/runs/:runId/respond", (req, res) => {
+  void forward(req, res, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req.body),
+  });
+});
 
 app.post("/api/run/:pattern/stream", async (req, res) => {
   const path = `/api/run/${encodeURIComponent(req.params.pattern)}/stream`;

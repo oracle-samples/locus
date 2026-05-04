@@ -988,3 +988,63 @@ code, pre { font-family: var(--mono); }
   display: inline-flex;
   align-items: center;
 }
+
+/* ----- Inline interrupt input form ----- */
+.wb-interrupt {
+  background: rgba(0, 104, 140, 0.10);
+  border: 1px solid rgba(0, 104, 140, 0.35);
+  border-radius: var(--radius);
+  padding: 0.7rem 0.9rem;
+  margin: 0.6rem 0;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  color: #e8e2da;
+}
+.wb-interrupt__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+.wb-interrupt__head strong {
+  color: #e8e2da;
+  font-weight: 600;
+}
+.wb-interrupt__body {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.wb-interrupt__text {
+  flex: 1;
+  min-width: 200px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #e8e2da;
+  font-family: var(--sans);
+}
+.wb-interrupt__opt {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.20);
+  color: #e8e2da;
+}
+.wb-interrupt__opt:hover {
+  background: rgba(0, 104, 140, 0.30);
+  border-color: var(--or-link);
+  color: #9bd6e8;
+}
+.wb-interrupt--sent {
+  opacity: 0.75;
+}
+.wb-interrupt__ack {
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  color: #9fdbb1;
+}
+.wb-interrupt__err {
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  color: #ee9b8d;
+}

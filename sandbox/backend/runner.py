@@ -936,14 +936,12 @@ def _provider_env(cfg: ProviderConfig) -> dict[str, str]:
     return env
 
 
-_INTERRUPT_PATTERN = re.compile(
-    r"(from\s+locus(\.core)?\s+import\s+[^\n]*\binterrupt\b|locus\.core\.interrupt\s*\()"
-)
+import uuid as _uuid
 
-
-def _looks_like_needs_stdin(source: str) -> bool:
-    """Heuristic — does the user source call locus.core.interrupt()?"""
-    return bool(_INTERRUPT_PATTERN.search(source))
+# Active subprocess runs that can accept human-input responses via
+# `POST /api/tutorials/runs/{run_id}/respond`. Keyed by run id, value is
+# the asyncio subprocess so the endpoint can write JSON to its stdin.
+_RUNS: dict[str, asyncio.subprocess.Process] = {}
 
 
 def _split_future_imports(source: str) -> tuple[str, str]:
@@ -1005,17 +1003,13 @@ async def run_tutorial(req: WorkbenchRunRequest) -> StreamingResponse:
     ``stdout``, ``stderr``, ``exit``, or ``error``. The frontend renders a
     terminal-shaped log.
 
-    Reject early when the source uses ``locus.core.interrupt()`` — those
-    tutorials pause for human input on stdin which we can't supply from
-    the workbench. Caller gets a 400 with a hint to run them locally.
+    Tutorials that call ``locus.core.interrupt()`` are supported now —
+    the bootstrap monkey-patches ``interrupt`` to emit an
+    ``InterruptEvent`` SSE line and block on stdin for the response.
+    The frontend pops a modal and POSTs the answer to
+    ``/api/tutorials/runs/{run_id}/respond`` which writes a JSON line
+    to the subprocess's stdin.
     """
-    if _looks_like_needs_stdin(req.source):
-        raise HTTPException(
-            400,
-            "this tutorial uses locus.core.interrupt() to pause for human "
-            "input — the workbench can't provide stdin to the subprocess. "
-            "Run it locally instead: python examples/tutorial_NN_*.py",
-        )
     repo_root = _TUTORIAL_DIR.parent
     examples_dir = _TUTORIAL_DIR
     src_dir = repo_root / "src"
@@ -1107,6 +1101,44 @@ try:
 except Exception:
     pass
 
+# Override locus.core.interrupt so it emits an InterruptEvent SSE line
+# and blocks on stdin for the user's response. The runner's
+# /api/tutorials/runs/{run_id}/respond endpoint writes a JSON line to
+# the subprocess's stdin on the user's behalf.
+try:
+    import locus.core as __sb_lcore
+    def __locus_interrupt__(payload, **metadata):
+        try:
+            payload_str = payload if isinstance(payload, (str, int, float, bool, list, dict, type(None))) else str(payload)
+        except Exception:
+            payload_str = str(payload)
+        __le_emit__({"type": "InterruptEvent", "payload": payload_str, "metadata": metadata})
+        try:
+            line = __le_sys.stdin.readline()
+        except Exception:
+            return None
+        if not line:
+            return None
+        s = line.strip()
+        try:
+            return __le_json.loads(s)
+        except Exception:
+            return s
+    try:
+        __sb_lcore.interrupt = __locus_interrupt__
+    except Exception:
+        pass
+    # Also rebind on locus.multiagent.graph if it imported the original
+    # symbol at module load time.
+    try:
+        import locus.multiagent.graph as __sb_lgraph
+        if hasattr(__sb_lgraph, "interrupt"):
+            __sb_lgraph.interrupt = __locus_interrupt__
+    except Exception:
+        pass
+except Exception:
+    pass
+
 # Note: a previous version of this bootstrap also patched each model's
 # .complete() to internally call .stream() so the workbench could show
 # tokens land live inside the THINK chip. That patch reconstructs the
@@ -1139,11 +1171,14 @@ except Exception:
         "LOCUS_SANDBOX_REFLEXION": "1" if req.reflexion else "0",
     }
 
+    run_id = _uuid.uuid4().hex
+
     async def gen() -> _AI[str]:
         try:
             proc = await asyncio.create_subprocess_exec(
                 "python",
                 str(tmp_file),
+                stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 env=env,
@@ -1153,6 +1188,12 @@ except Exception:
             yield _sse({"type": "error", "text": f"spawn failed: {exc}"})
             shutil.rmtree(tmp_dir, ignore_errors=True)
             return
+
+        _RUNS[run_id] = proc
+        # First SSE message gives the client the run id so it can POST
+        # responses back to /api/tutorials/runs/{run_id}/respond when an
+        # InterruptEvent fires.
+        yield _sse({"type": "runStarted", "run_id": run_id})
 
         async def pump(reader: asyncio.StreamReader | None, kind: str) -> None:
             if reader is None:
@@ -1192,6 +1233,7 @@ except Exception:
             yield _sse({"type": "exit", "code": rc})
         finally:
             gather_task.cancel()
+            _RUNS.pop(run_id, None)
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
     return StreamingResponse(
@@ -1199,6 +1241,31 @@ except Exception:
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+class RespondRequest(BaseModel):
+    response: Any
+
+
+@app.post("/api/tutorials/runs/{run_id}/respond")
+async def respond_to_interrupt(run_id: str, req: RespondRequest) -> dict[str, Any]:
+    """Pipe a JSON-encoded response into the running subprocess's stdin.
+
+    The bootstrap monkey-patches ``locus.core.interrupt`` to print an
+    InterruptEvent then read one line from stdin. The frontend POSTs
+    the user's answer here when they fill in the modal.
+    """
+    proc = _RUNS.get(run_id)
+    if proc is None:
+        raise HTTPException(404, f"unknown or finished run: {run_id}")
+    if proc.stdin is None or proc.stdin.is_closing():
+        raise HTTPException(409, "subprocess stdin is closed")
+    try:
+        proc.stdin.write((json.dumps(req.response) + "\n").encode())
+        await proc.stdin.drain()
+    except Exception as exc:
+        raise HTTPException(500, f"write failed: {exc}") from exc
+    return {"ok": True, "run_id": run_id}
 
 
 @app.get("/api/health")
