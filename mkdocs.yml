@@ -116,8 +116,7 @@ nav:
   - Functional API: concepts/multi-agent/functional.md
   - A2A protocol: concepts/multi-agent/a2a.md
   - Production-readiness: concepts/multi-agent/production.md
-- Tutorials: tutorials/index.md
-- Workbench: workbench.md
+- Capabilities: FEATURES.md
 - Concepts:
   - Agents:
     - Overview: concepts/agent.md
@@ -160,6 +159,13 @@ nav:
     - Safety & Guardrails: concepts/safety.md
     - Observability: concepts/observability.md
     - Evaluation: concepts/evaluation.md
+- Tutorials: tutorials/index.md
+- Workbench: workbench.md
+- API reference:
+  - Agent: api/agent.md
+  - Checkpointers: api/checkpointers.md
+  - Tools: api/tools.md
+  - Events: api/events.md
 - How-to:
   - Quickstart: how-to/quickstart.md
   - Deploy: how-to/deploy.md
@@ -168,9 +174,3 @@ nav:
   - Add a checkpointer backend: how-to/custom-checkpointer.md
   - OCI GenAI models: how-to/oci-models.md
   - OCI Dedicated AI Cluster (DAC): how-to/oci-dac.md
-- API reference:
-  - Agent: api/agent.md
-  - Checkpointers: api/checkpointers.md
-  - Tools: api/tools.md
-  - Events: api/events.md
-- Capabilities: FEATURES.md

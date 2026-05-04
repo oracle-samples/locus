@@ -39,10 +39,9 @@ export function defaultsFor(p: ProviderType): ProviderConfig {
       return {
         provider: "oci-session",
         model: "openai.gpt-5.5-2026-04-23",
-        profile: "BOAT-OC1",
+        profile: "DEFAULT",
         region: "us-chicago-1",
-        compartment_id:
-          "ocid1.compartment.oc1..aaaaaaaandceai675euuovyyazlymnglde2xknsq35rni43zzmwdhxxu4v7q",
+        compartment_id: "",
         oci_transport: "v1",
       };
     case "oci-apikey":

@@ -127,7 +127,7 @@
           <button class="modal__close" id="settings-close" aria-label="Close">×</button>
         </div>
         <p class="modal__lede">
-          Stored in your browser's localStorage. Never sent anywhere except the local BFF.
+          Held in this tab's memory only. Never persisted to localStorage and never sent anywhere except the local BFF — closing the tab discards everything.
         </p>
 
         <div class="field">
@@ -135,7 +135,7 @@
           <select id="cfg-provider" class="input" data-testid="cfg-provider">
             <option value="openai">OpenAI (api key)</option>
             <option value="anthropic">Anthropic (api key)</option>
-            <option value="oci-session">OCI · session token (BOAT-OC1 etc.)</option>
+            <option value="oci-session">OCI · session token</option>
             <option value="oci-apikey">OCI · API-key auth</option>
           </select>
         </div>
@@ -154,7 +154,7 @@
 
         <div class="field" id="row-profile" style="display: none">
           <label class="field__label">OCI profile</label>
-          <input id="cfg-profile" class="input" data-testid="cfg-profile" placeholder="DEFAULT, BOAT-OC1, …" />
+          <input id="cfg-profile" class="input" data-testid="cfg-profile" placeholder="DEFAULT" />
         </div>
 
         <div class="field" id="row-region" style="display: none">
