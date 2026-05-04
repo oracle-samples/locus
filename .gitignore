@@ -260,3 +260,6 @@ site/
 
 # Tutorial 49 audio output (regenerated each run).
 examples/tutorial_49_response.mp3
+examples/tutorial_50_question.wav
+examples/tutorial_50_answer.wav
+examples/tutorial_50_answer.mp3
