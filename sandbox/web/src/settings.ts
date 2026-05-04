@@ -1,19 +1,17 @@
 import type { ProviderConfig, ProviderType } from "./types";
 
-const KEY = "locus.sandbox.provider";
+// Provider config (including any pasted API key) is intentionally
+// session-only. We never persist it to localStorage / sessionStorage —
+// closing the tab discards it. This is an opsec choice: a key sitting
+// in localStorage on a shared machine is leakage waiting to happen.
+let memoryProvider: ProviderConfig | null = null;
 
 export function loadProvider(): ProviderConfig | null {
-  const raw = localStorage.getItem(KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as ProviderConfig;
-  } catch {
-    return null;
-  }
+  return memoryProvider;
 }
 
 export function saveProvider(cfg: ProviderConfig): void {
-  localStorage.setItem(KEY, JSON.stringify(cfg));
+  memoryProvider = cfg;
 }
 
 export function defaultModelFor(p: ProviderType): string {
