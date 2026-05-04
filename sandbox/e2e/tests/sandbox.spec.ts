@@ -19,7 +19,7 @@ async function configureOCI(page: Page, opts: { transport?: "auto" | "v1" | "sdk
   await page.getByTestId("cfg-region").fill(REGION);
   await page.getByTestId("cfg-compartment").fill(COMPARTMENT);
   if (opts.transport) await page.getByTestId("cfg-transport").selectOption(opts.transport);
-  const model = opts.model ?? "openai.gpt-5.5";
+  const model = opts.model ?? "openai.gpt-5.5-2026-04-23";
   await expect(async () => {
     const m = await page.getByTestId("cfg-model").locator("option").allTextContents();
     expect(m.includes(model)).toBe(true);
@@ -55,7 +55,7 @@ test.describe("locus sandbox · workbench", () => {
     await expect.poll(
       async () => {
         const opts = await page.getByTestId("cfg-model").locator("option").allTextContents();
-        return opts.some((m) => m.startsWith("openai.gpt-5.5"));
+        return opts.some((m) => m.startsWith("openai.gpt-5.5-2026-04-23"));
       },
       { timeout: 30_000 },
     ).toBe(true);

@@ -24,7 +24,7 @@ export function defaultModelFor(p: ProviderType): string {
       return "claude-sonnet-4-6";
     case "oci-session":
     case "oci-apikey":
-      return "openai.gpt-5.5";
+      return "openai.gpt-5.5-2026-04-23";
   }
 }
 
@@ -40,7 +40,7 @@ export function defaultsFor(p: ProviderType): ProviderConfig {
     case "oci-session":
       return {
         provider: "oci-session",
-        model: "openai.gpt-5.5",
+        model: "openai.gpt-5.5-2026-04-23",
         profile: "BOAT-OC1",
         region: "us-chicago-1",
         compartment_id:
@@ -50,7 +50,7 @@ export function defaultsFor(p: ProviderType): ProviderConfig {
     case "oci-apikey":
       return {
         provider: "oci-apikey",
-        model: "openai.gpt-5.5",
+        model: "openai.gpt-5.5-2026-04-23",
         profile: "DEFAULT",
         region: "us-chicago-1",
         compartment_id: "",

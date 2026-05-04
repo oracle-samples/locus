@@ -95,7 +95,7 @@ def build_model(cfg: ProviderConfig) -> Any:
         return AnthropicModel(model=cfg.model or "claude-sonnet-4-6")
 
     if cfg.provider in ("oci-session", "oci-apikey"):
-        model_id = cfg.model or "openai.gpt-5.5"
+        model_id = cfg.model or "openai.gpt-5.5-2026-04-23"
         profile = cfg.profile or "DEFAULT"
         # Honour an explicit transport choice; fall back to the
         # examples/config.py auto rule when "auto" or unset.
@@ -667,7 +667,7 @@ async def run(pattern_id: str, req: RunRequest) -> RunResponse:
     except Exception as exc:
         raise HTTPException(500, f"{type(exc).__name__}: {exc}") from exc
     # Echo back the exact model id the request asked for so the UI can
-    # show "via openai.gpt-5.5" instead of relying on stale localStorage.
+    # show "via openai.gpt-5.5-2026-04-23" instead of relying on stale localStorage.
     out.model = req.provider.model or ""
     out.provider = req.provider.provider
     return out
@@ -914,7 +914,7 @@ def _provider_env(cfg: ProviderConfig) -> dict[str, str]:
             env["ANTHROPIC_API_KEY"] = cfg.api_key
     elif cfg.provider in ("oci-session", "oci-apikey"):
         env["LOCUS_MODEL_PROVIDER"] = "oci"
-        env["LOCUS_MODEL_ID"] = cfg.model or "openai.gpt-5.5"
+        env["LOCUS_MODEL_ID"] = cfg.model or "openai.gpt-5.5-2026-04-23"
         if cfg.profile:
             env["LOCUS_OCI_PROFILE"] = cfg.profile
         if cfg.region:
@@ -1093,64 +1093,15 @@ try:
 except Exception:
     pass
 
-# 2. Wrap each provider's .complete() so it internally calls .stream()
-#    and emits one ModelChunkEvent per token. The agent loop still gets a
-#    normal ModelResponse back; the workbench accumulates the chunks
-#    *inside* the upcoming THINK chip and skips the redundant ThinkEvent
-#    body so there's no duplicate render.
-def __wrap_streaming__(cls):
-    if getattr(cls, "__locus_streamed__", False):
-        return
-    if not (hasattr(cls, "complete") and hasattr(cls, "stream")):
-        return
-    cls.__locus_streamed__ = True
-    _orig_complete = cls.complete
-
-    async def _streaming_complete(self, messages, tools=None, **kwargs):
-        from locus.core.messages import Message
-        from locus.models.base import ModelResponse
-        full = ""
-        tool_calls = None
-        try:
-            chunks_iter = self.stream(messages, tools, **kwargs)
-        except TypeError:
-            chunks_iter = self.stream(messages, tools)
-        async for chunk in chunks_iter:
-            content = getattr(chunk, "content", None) or ""
-            if content:
-                full += content
-                __le_emit__({"type": "ModelChunkEvent", "content": content})
-            tc = getattr(chunk, "tool_calls", None)
-            if tc:
-                tool_calls = tc
-            if getattr(chunk, "done", False):
-                break
-        if not full and tool_calls is None:
-            # Stream produced nothing; fall back to original complete.
-            return await _orig_complete(self, messages, tools, **kwargs)
-        return ModelResponse(
-            message=Message.assistant(content=full, tool_calls=tool_calls),
-            usage={},
-            stop_reason="end_turn",
-        )
-
-    cls.complete = _streaming_complete
-
-try:
-    from locus.models.providers.oci.openai_compat import OCIOpenAIModel as __O1
-    __wrap_streaming__(__O1)
-except Exception:
-    pass
-try:
-    from locus.models.native.openai import OpenAIModel as __O2
-    __wrap_streaming__(__O2)
-except Exception:
-    pass
-try:
-    from locus.models.native.anthropic import AnthropicModel as __O3
-    __wrap_streaming__(__O3)
-except Exception:
-    pass
+# Note: a previous version of this bootstrap also patched each model's
+# .complete() to internally call .stream() so the workbench could show
+# tokens land live inside the THINK chip. That patch reconstructs the
+# ModelResponse from chunks (Message.assistant(content=...)) and was
+# subtly losing fields like message-id metadata which broke
+# conversation memory in checkpointed tutorials. We rely on the agent's
+# ThinkEvent body for the chain-of-thought instead — the reasoning
+# field already carries the model's response and is rendered live as
+# soon as the event fires.
 
 # --- end bootstrap; user source follows ---
 '''

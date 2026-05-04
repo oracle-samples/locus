@@ -39,7 +39,7 @@ DEFAULT_COMPARTMENT = os.environ.get(
     "OCI_COMPARTMENT",
     "ocid1.compartment.oc1..aaaaaaaandceai675euuovyyazlymnglde2xknsq35rni43zzmwdhxxu4v7q",
 )
-DEFAULT_MODEL = os.environ.get("OCI_MODEL", "openai.gpt-5.5")
+DEFAULT_MODEL = os.environ.get("OCI_MODEL", "openai.gpt-5.5-2026-04-23")
 
 
 def fmt_duration(seconds: float) -> str:

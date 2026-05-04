@@ -670,6 +670,8 @@ code, pre { font-family: var(--mono); }
 .wb-output .ln--event .event__body {
   color: #e8e2da;
   font-size: 0.78rem;
+  margin-left: 0.5rem;
+  white-space: pre-wrap;
 }
 .wb-output .ln--chunk {
   color: #f5e9c8;
