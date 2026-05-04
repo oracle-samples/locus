@@ -35,7 +35,7 @@ Why this is differentiated:
 Run::
 
     LOCUS_MODEL_PROVIDER=oci \\
-    LOCUS_OCI_PROFILE=BOAT-OC1 \\
+    LOCUS_OCI_PROFILE=MY_PROFILE \\
     LOCUS_OCI_REGION=us-chicago-1 \\
     LOCUS_OCI_AUTH_TYPE=security_token \\
     LOCUS_OCI_COMPARTMENT=ocid1.compartment.oc1..…  \\

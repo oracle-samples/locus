@@ -237,7 +237,7 @@ def _get_oci_sdk_model(model_id: str, **kwargs: Any) -> Any:
     compartment = os.environ.get("LOCUS_OCI_COMPARTMENT")
     endpoint = os.environ.get("LOCUS_OCI_ENDPOINT")
     # The OCI profile's home region is often *not* the GenAI region
-    # (e.g. BOAT-OC1's us-ashburn-1 vs GenAI in us-chicago-1). Derive
+    # (e.g. MY_PROFILE's us-ashburn-1 vs GenAI in us-chicago-1). Derive
     # the endpoint from LOCUS_OCI_REGION when no explicit endpoint is
     # set so cross-tenancy / cross-region session tokens still hit the
     # right service.

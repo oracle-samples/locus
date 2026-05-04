@@ -2,8 +2,8 @@ import { test, expect, type Page } from "@playwright/test";
 
 const COMPARTMENT =
   process.env.OCI_COMPARTMENT ??
-  "ocid1.compartment.oc1..aaaaaaaandceai675euuovyyazlymnglde2xknsq35rni43zzmwdhxxu4v7q";
-const PROFILE = process.env.OCI_PROFILE ?? "BOAT-OC1";
+  "ocid1.compartment.oc1..aaaaaaaa00000000000000000000000000000000000000000000000000000000";
+const PROFILE = process.env.OCI_PROFILE ?? "MY_PROFILE";
 const REGION = process.env.OCI_REGION ?? "us-chicago-1";
 
 const OPENAI_KEY = process.env.OPENAI_API_KEY;

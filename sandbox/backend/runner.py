@@ -111,7 +111,7 @@ def build_model(cfg: ProviderConfig) -> Any:
         if use_sdk:
             # Cohere R-series → SDK transport. The OCI Python SDK builds
             # its endpoint from the *profile's* region in ~/.oci/config
-            # (e.g. BOAT-OC1 lists us-ashburn-1) which usually doesn't
+            # (e.g. MY_PROFILE lists us-ashburn-1) which usually doesn't
             # match where GenAI is deployed. Override service_endpoint
             # explicitly using the user-supplied region so the request
             # actually lands in us-chicago-1.

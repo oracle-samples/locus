@@ -130,7 +130,7 @@ The header's **Provider settings** modal accepts four shapes:
 - **OpenAI** — paste `sk-…` + pick a model (defaults to `gpt-5.5`).
 - **Anthropic** — paste `sk-ant-…` + pick a model
   (defaults to `claude-sonnet-4-6`).
-- **OCI session token** — `profile` (e.g. `BOAT-OC1`) +
+- **OCI session token** — `profile` (e.g. `MY_PROFILE`) +
   `compartment_id` + `region`. Reads `~/.oci/config` at runtime;
   needs a valid session token. Local-machine only.
 - **OCI api-key** — same shape, different OCI auth type. Local-machine

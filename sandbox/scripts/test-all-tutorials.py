@@ -37,11 +37,11 @@ import requests
 RED = {9, 45, 46, 47, 48}
 
 DEFAULT_BFF = os.environ.get("LOCUS_BFF", "http://127.0.0.1:3101")
-DEFAULT_PROFILE = os.environ.get("OCI_PROFILE", "BOAT-OC1")
+DEFAULT_PROFILE = os.environ.get("OCI_PROFILE", "MY_PROFILE")
 DEFAULT_REGION = os.environ.get("OCI_REGION", "us-chicago-1")
 DEFAULT_COMPARTMENT = os.environ.get(
     "OCI_COMPARTMENT",
-    "ocid1.compartment.oc1..aaaaaaaandceai675euuovyyazlymnglde2xknsq35rni43zzmwdhxxu4v7q",
+    "ocid1.compartment.oc1..aaaaaaaa00000000000000000000000000000000000000000000000000000000",
 )
 DEFAULT_MODEL = os.environ.get("OCI_MODEL", "openai.gpt-5.5-2026-04-23")
 

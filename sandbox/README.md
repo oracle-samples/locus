@@ -48,7 +48,7 @@ The web UI's **Provider settings** modal accepts one of:
 - **OpenAI** — `api_key` + `model` (defaults `gpt-5`)
 - **Anthropic** — `api_key` + `model` (defaults `claude-sonnet-4-6`)
 - **OCI session** — `profile` (any session-token profile in
-  `~/.oci/config`, e.g. `BOAT-OC1`) + `compartment_id` + `region`
+  `~/.oci/config`, e.g. `MY_PROFILE`) + `compartment_id` + `region`
 - **OCI api-key** — same shape, just a different OCI profile type
 
 Settings live in `localStorage` under `locus.sandbox.provider`. They're
@@ -92,8 +92,8 @@ cd sandbox/e2e && npm install && npx playwright install chromium
 npm test
 ```
 
-Default config talks to OCI session via the `BOAT-OC1` profile against
-the `observai` production compartment. Override with env:
+Default config talks to OCI session via the `MY_PROFILE` profile against
+your target compartment. Override with env:
 
 ```bash
 OCI_PROFILE=DEFAULT OCI_REGION=us-chicago-1 \

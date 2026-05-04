@@ -271,7 +271,7 @@ def oci_bucket_config() -> dict:
     - ``OCI_NAMESPACE`` — Object Storage namespace for the tenancy
     - ``OCI_BUCKET_PROFILE`` — optional override; profile to use for bucket
       access. Falls back to ``OCI_PROFILE``. Useful when GenAI tests use
-      one tenancy (e.g. BOAT-OC1) and the test bucket lives in another
+      one tenancy (e.g. MY_PROFILE) and the test bucket lives in another
       (e.g. API_FREE_TIER's free-tier bucket).
     - ``OCI_BUCKET_AUTH_TYPE`` — optional; falls back to
       ``OCI_AUTH_TYPE``, then ``api_key``.
