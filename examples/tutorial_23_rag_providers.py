@@ -130,13 +130,14 @@ async def oci_cohere_embeddings_example():
     try:
         from locus.rag.embeddings import OCIEmbeddings
 
-        # Create embedder
+        # OCIEmbeddings auto-derives the endpoint from LOCUS_OCI_REGION
+        # / OCI_REGION when service_endpoint is left empty.
         embedder = OCIEmbeddings(
             model_id="cohere.embed-english-v3.0",
-            profile_name=os.getenv("OCI_PROFILE", "DEFAULT"),
-            auth_type=os.getenv("OCI_AUTH_TYPE", "api_key"),
-            compartment_id=os.getenv("OCI_COMPARTMENT", ""),
-            service_endpoint=os.getenv("OCI_ENDPOINT", ""),
+            profile_name=os.getenv("LOCUS_OCI_PROFILE", os.getenv("OCI_PROFILE", "DEFAULT")),
+            auth_type=os.getenv("LOCUS_OCI_AUTH_TYPE", os.getenv("OCI_AUTH_TYPE", "api_key")),
+            compartment_id=os.getenv("LOCUS_OCI_COMPARTMENT", os.getenv("OCI_COMPARTMENT", "")),
+            service_endpoint=os.getenv("LOCUS_OCI_ENDPOINT", os.getenv("OCI_ENDPOINT", "")),
         )
 
         print("Model: cohere.embed-english-v3.0")
