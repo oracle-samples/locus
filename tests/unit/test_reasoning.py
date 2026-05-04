@@ -102,14 +102,55 @@ class TestReflector:
         assert reflector.diminishing_returns is False
 
     def test_reflect_empty_state(self):
-        """Reflect on empty state."""
+        """Reflect on empty state.
+
+        With ``completion_bonus`` (default ``0.05``), an iteration that
+        produced an assistant turn but no tool calls gets a small positive
+        delta — otherwise tool-less chat agents would never raise their
+        confidence above ``0.0``.
+        """
         reflector = Reflector()
         state = AgentState()
 
         result = reflector.reflect(state)
 
         assert result.assessment == AssessmentCategory.ON_TRACK
-        assert result.confidence_delta <= 0.0  # No executions = no positive delta
+        assert result.confidence_delta == pytest.approx(0.05)
+
+    def test_reflect_empty_state_with_completion_bonus_disabled(self):
+        """``completion_bonus=0.0`` opts out of the no-tool-activity bump.
+
+        Restores the legacy behaviour where a zero-success / zero-error
+        iteration produced no confidence change.
+        """
+        reflector = Reflector(completion_bonus=0.0)
+        state = AgentState()
+
+        result = reflector.reflect(state)
+
+        assert result.assessment == AssessmentCategory.ON_TRACK
+        assert result.confidence_delta == pytest.approx(0.0)
+
+    def test_completion_bonus_only_applies_with_no_tool_activity(self):
+        """The bonus is *replaced* by success/error scoring whenever
+        any tool actually fired — it doesn't stack.
+        """
+        reflector = Reflector(completion_bonus=0.5, success_weight=0.1)
+
+        executions = [
+            ToolExecution(
+                tool_name="search",
+                tool_call_id="call_1",
+                arguments={"q": "test"},
+                result="ok",
+            ),
+        ]
+
+        result = reflector.reflect(AgentState(), executions)
+
+        # success_weight=0.1, no error penalty, diminishing returns kick in
+        # but the value is the success-driven delta, NOT the larger 0.5 bonus.
+        assert result.confidence_delta < 0.5
 
     def test_reflect_with_successful_executions(self):
         """Reflect with successful tool executions."""

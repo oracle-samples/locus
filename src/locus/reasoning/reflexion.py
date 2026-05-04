@@ -88,6 +88,7 @@ class Reflector:
         error_penalty: float = 0.2,
         diminishing_returns: bool = True,
         min_progress_delta: float = 0.05,
+        completion_bonus: float = 0.05,
     ) -> None:
         """Initialize the Reflector.
 
@@ -97,12 +98,18 @@ class Reflector:
             error_penalty: Confidence decrease per failed tool call.
             diminishing_returns: Apply diminishing returns to positive deltas.
             min_progress_delta: Minimum delta to consider making progress.
+            completion_bonus: Small confidence bump applied when an
+                iteration produces an assistant turn but no tools fired
+                (i.e. a successful chat reply). Without this, tool-less
+                chat agents would never raise their confidence above
+                ``0.0``. Set to ``0.0`` to opt out.
         """
         self.loop_threshold = loop_threshold
         self.success_weight = success_weight
         self.error_penalty = error_penalty
         self.diminishing_returns = diminishing_returns
         self.min_progress_delta = min_progress_delta
+        self.completion_bonus = completion_bonus
 
     def reflect(
         self,
@@ -319,8 +326,13 @@ class Reflector:
         Returns:
             Confidence delta (-1.0 to 1.0).
         """
-        # Base delta from successes and errors
-        raw_delta = (success_count * self.success_weight) - (error_count * self.error_penalty)
+        # Base delta from successes and errors. Iterations with no tool
+        # activity get a small completion_bonus so chat-only agents still
+        # show a rising confidence trajectory over a multi-turn dialogue.
+        if success_count == 0 and error_count == 0:
+            raw_delta = self.completion_bonus
+        else:
+            raw_delta = (success_count * self.success_weight) - (error_count * self.error_penalty)
 
         # Apply diminishing returns for positive deltas
         if self.diminishing_returns and raw_delta > 0:
