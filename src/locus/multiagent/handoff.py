@@ -229,6 +229,24 @@ class HandoffAgent(BaseModel):
             )
             content = response.message.content or ""
 
+            # If the provider returned an empty body (some endpoints do this
+            # when the prompt is mostly structured headers), retry once with
+            # a more direct continuation instruction so callers don't silently
+            # receive an empty handoff result.
+            if not content.strip():
+                retry_messages = [
+                    *messages,
+                    Message.user(
+                        "Please respond now with your findings and conclusions "
+                        "as a short paragraph. Do not return an empty response."
+                    ),
+                ]
+                retry_response = await self.model.complete(
+                    messages=retry_messages,
+                    tools=tool_schemas,
+                )
+                content = retry_response.message.content or ""
+
             # Estimate new confidence
             confidence = self._estimate_confidence(content, context.confidence)
 
@@ -236,12 +254,13 @@ class HandoffAgent(BaseModel):
 
             return HandoffResult(
                 handoff_id=context.handoff_id,
-                success=True,
+                success=bool(content.strip()),
                 source_agent_id=context.source_agent_id,
                 target_agent_id=self.id,
                 output=content,
                 final_confidence=confidence,
                 duration_ms=duration_ms,
+                error=None if content.strip() else "model returned empty content twice",
             )
 
         except Exception as e:  # noqa: BLE001

@@ -768,6 +768,42 @@ class TestSwarm:
         assert result.success
         assert len(result.completed_tasks) == 0
 
+    def test_create_swarm_propagates_model_to_agents(self, mock_model):
+        """Agents passed to ``create_swarm`` inherit the swarm's model.
+
+        Without this, a caller who builds agents first and then passes them
+        and the model into ``create_swarm`` would later get
+        "No model configured for agent" at execute time — the original most
+        common silent-failure mode for swarm users.
+        """
+        agent_no_model = create_swarm_agent(name="Worker", capabilities=["analyze"])
+        assert agent_no_model.model is None
+
+        swarm = create_swarm(agents=[agent_no_model], model=mock_model)
+
+        assert swarm.agents[0].model is mock_model
+
+    def test_add_agent_inherits_swarm_model(self, mock_model):
+        """``swarm.add_agent`` after ``with_model``-style setup propagates
+        the swarm's model into the new agent if it doesn't carry one.
+        """
+        swarm = create_swarm(model=mock_model)
+        agent = create_swarm_agent(name="LateJoiner", capabilities=["x"])
+
+        swarm.add_agent(agent)
+
+        assert swarm.agents[0].model is mock_model
+
+    def test_add_agent_preserves_explicit_agent_model(self, mock_model):
+        """An agent that already carries a model keeps its own."""
+        own_model = MagicMock()
+        swarm = create_swarm(model=mock_model)
+        agent = create_swarm_agent(name="SelfModeled", capabilities=["x"], model=own_model)
+
+        swarm.add_agent(agent)
+
+        assert swarm.agents[0].model is own_model
+
 
 # =============================================================================
 # Handoff Tests
@@ -912,6 +948,79 @@ class TestHandoffAgent:
 
         assert not result.success
         assert "No model" in result.error
+
+    @pytest.mark.asyncio
+    async def test_receive_handoff_retries_on_empty_content(self):
+        """Empty model response triggers one retry with a directive nudge.
+
+        Some providers return an empty body when the prompt is mostly
+        structured headers. Without the retry, the handoff used to silently
+        report ``success=True`` with no output.
+        """
+        model = MagicMock()
+        model.complete = AsyncMock(
+            side_effect=[
+                ModelResponse(
+                    message=Message.assistant(""),  # first call: empty
+                    usage={"input_tokens": 10, "output_tokens": 0},
+                ),
+                ModelResponse(
+                    message=Message.assistant("Recovered findings."),
+                    usage={"input_tokens": 12, "output_tokens": 4},
+                ),
+            ]
+        )
+        agent = create_handoff_agent(
+            name="Retry Agent",
+            system_prompt="You are a specialist.",
+            model=model,
+        )
+
+        ctx = HandoffContext(
+            source_agent_id="source",
+            target_agent_id=agent.id,
+            reason=HandoffReason.DELEGATION,
+            original_task="Task",
+        )
+
+        result = await agent.receive_handoff(ctx)
+
+        assert model.complete.await_count == 2
+        assert result.output == "Recovered findings."
+        assert result.success is True
+
+    @pytest.mark.asyncio
+    async def test_receive_handoff_success_false_when_still_empty(self):
+        """If the retry also returns empty, ``success`` is False (was True).
+
+        Regression: previously ``success=True`` was hard-coded, so callers
+        had to check ``result.output`` themselves to detect the dud.
+        """
+        model = MagicMock()
+        empty = ModelResponse(
+            message=Message.assistant(""),
+            usage={"input_tokens": 10, "output_tokens": 0},
+        )
+        model.complete = AsyncMock(side_effect=[empty, empty])
+        agent = create_handoff_agent(
+            name="Stuck Agent",
+            system_prompt="You are a specialist.",
+            model=model,
+        )
+
+        ctx = HandoffContext(
+            source_agent_id="source",
+            target_agent_id=agent.id,
+            reason=HandoffReason.DELEGATION,
+            original_task="Task",
+        )
+
+        result = await agent.receive_handoff(ctx)
+
+        assert result.success is False
+        assert result.output == ""
+        assert result.error is not None
+        assert "empty" in result.error.lower()
 
 
 class TestHandoff:
