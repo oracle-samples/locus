@@ -159,34 +159,41 @@ function appendOutput(line: string, kind: "stdout" | "stderr" | "exit" | "error"
   wbOutput.scrollTop = wbOutput.scrollHeight;
 }
 
-let liveChunkEl: HTMLSpanElement | null = null;
+// A live THINK chip that accumulates ModelChunkEvent text as the model
+// emits it. When the matching ThinkEvent (with the same reasoning) fires
+// next, we just close this chip — no duplicate render.
+let liveThinkBody: HTMLElement | null = null;
+let liveThinkAccumulated = "";
 
-function ensureLiveChunkEl(): HTMLSpanElement {
-  if (liveChunkEl && liveChunkEl.isConnected) return liveChunkEl;
-  liveChunkEl = document.createElement("span");
-  liveChunkEl.className = "ln ln--chunk ln--chunk--live";
-  liveChunkEl.dataset.testid = "live-chunk";
-  wbOutput.appendChild(liveChunkEl);
-  return liveChunkEl;
+function openLiveThinkChip(): HTMLElement {
+  if (liveThinkBody && liveThinkBody.isConnected) return liveThinkBody;
+  const row = document.createElement("span");
+  row.className = "ln ln--event ln--event--live";
+  row.dataset.testid = "live-think";
+  const tag = document.createElement("span");
+  tag.className = "event__kind event__kind--think";
+  tag.textContent = "Think";
+  const body = document.createElement("span");
+  body.className = "event__body";
+  row.appendChild(tag);
+  row.appendChild(body);
+  row.appendChild(document.createTextNode("\n"));
+  wbOutput.appendChild(row);
+  liveThinkBody = body;
+  liveThinkAccumulated = "";
+  return body;
 }
 
-function closeLiveChunk() {
-  if (liveChunkEl?.isConnected && liveChunkEl.textContent) {
-    // Strip the "live" modifier (the blinking caret pseudo-element) and
-    // add a trailing newline so the next chip/line lands on its own row.
-    liveChunkEl.classList.remove("ln--chunk--live");
-    liveChunkEl.appendChild(document.createTextNode("\n"));
+function closeLiveThinkChip() {
+  if (liveThinkBody?.parentElement) {
+    liveThinkBody.parentElement.classList.remove("ln--event--live");
   }
-  liveChunkEl = null;
+  liveThinkBody = null;
+  liveThinkAccumulated = "";
 }
 
 export function endLiveStream() {
-  // Called from the run finalizer so the caret stops blinking even when
-  // the agent loop never emits TerminateEvent (raw stdout, errors, etc.).
-  if (liveChunkEl?.isConnected) {
-    liveChunkEl.classList.remove("ln--chunk--live");
-    liveChunkEl = null;
-  }
+  closeLiveThinkChip();
 }
 
 function appendEvent(ev: Record<string, unknown>) {
@@ -194,19 +201,27 @@ function appendEvent(ev: Record<string, unknown>) {
   if (kind === "ModelChunkEvent") {
     const piece = (ev.content as string | undefined) ?? "";
     if (!piece) return;
-    const node = ensureLiveChunkEl();
-    // Each chunk lands as its own span with a brief fade-in animation,
-    // so the user sees the model spitting tokens in real time.
+    const body = openLiveThinkChip();
+    liveThinkAccumulated += piece;
     const span = document.createElement("span");
     span.className = "chunk-piece";
     span.textContent = piece;
-    node.appendChild(span);
+    body.appendChild(span);
     wbOutput.scrollTop = wbOutput.scrollHeight;
     return;
   }
-  // Any non-chunk event terminates the current live transcript so the
-  // tag chip lands on its own line below.
-  closeLiveChunk();
+  // ThinkEvent normally carries the full reasoning. If a live THINK chip
+  // is already open and the chunks already painted that text, just close
+  // the live chip — no duplicate render. Otherwise (no streaming was
+  // used), fall through to the standard chip below with the reasoning
+  // text in the body.
+  if (kind === "ThinkEvent" && liveThinkBody?.isConnected) {
+    closeLiveThinkChip();
+    return;
+  }
+  // Any other non-chunk event terminates the current live chip so it
+  // lands as its own line.
+  closeLiveThinkChip();
   // Compact body text per event family.
   //   Query  — shows the user's prompt so it lands ABOVE the chip
   //            chain instead of below the tutorial's own print.
@@ -304,7 +319,7 @@ async function runEdited() {
     return;
   }
   wbOutput.innerHTML = "";
-  liveChunkEl = null;
+  closeLiveThinkChip();
   wbOutputPill.style.display = "inline-flex";
   wbOutputPill.className = "pill pill--busy";
   wbOutputPill.innerHTML = `<span class="pill__dot"></span>running…`;

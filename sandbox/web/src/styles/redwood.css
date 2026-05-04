@@ -947,3 +947,18 @@ code, pre { font-family: var(--mono); }
 .wb-output .ln--event:has(.event__kind--think) {
   align-items: flex-start;
 }
+
+/* ----- Live THINK chip while tokens are still streaming ----- */
+.wb-output .ln--event--live .event__kind--think {
+  background: rgba(240, 204, 113, 0.30);
+  color: #f0d391;
+}
+.wb-output .ln--event--live .event__body::after {
+  content: "▌";
+  color: #f0cc71;
+  animation: locus-caret 0.95s steps(1, end) infinite;
+  margin-left: 1px;
+}
+.wb-output .ln--event--live .chunk-piece {
+  color: #f5e9c8;
+}
