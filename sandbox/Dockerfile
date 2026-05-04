@@ -36,14 +36,14 @@ RUN microdnf install -y \
     && microdnf install -y nodejs \
     && microdnf clean all
 
-# Install locus via hatch wheel (same pattern optic uses), then drop hatch.
+# Install locus + the runtime extras the workbench actually needs:
+#   server  — fastapi + uvicorn (the runner is a FastAPI app)
+#   oci     — OCI SDK for the GenAI / embeddings transports
+#   openai  — openai SDK (used by the OpenAI provider + OCI v1 transport)
+#   anthropic — anthropic SDK (Anthropic provider)
 COPY pyproject.toml README.md /app/
 COPY src/ /app/src/
-RUN python3.12 -m pip install --no-cache-dir hatch \
-    && hatch build -t wheel \
-    && python3.12 -m pip install --no-cache-dir ./dist/*.whl \
-    && rm -rf dist build *.egg-info \
-    && python3.12 -m pip uninstall -y hatch
+RUN python3.12 -m pip install --no-cache-dir ".[server,oci,openai,anthropic]"
 
 # Workbench source. .dockerignore keeps node_modules / dist / .vite out
 # of the COPY context so we install fresh inside the image.
