@@ -64,17 +64,23 @@ def example_conversation_memory():
 # =============================================================================
 
 
+_NOTES: list[str] = []
+
+
 @tool
 def save_note(content: str) -> str:
     """Save a note for later reference."""
+    _NOTES.append(content)
     return f"Note saved: {content}"
 
 
 @tool
 def get_notes() -> str:
     """Get all saved notes."""
-    # In a real app, this would retrieve from storage
-    return "No notes saved yet."
+    if not _NOTES:
+        return "No notes saved yet."
+    lines = "\n".join(f"- {n}" for n in _NOTES)
+    return f"You have {len(_NOTES)} note(s):\n{lines}"
 
 
 def example_checkpointing_with_tools():
@@ -209,9 +215,11 @@ async def example_inspect_checkpoint():
     checkpointer = InMemoryCheckpointer()
 
     agent = Agent(
+        agent_id="inspector",
         model=model,
         system_prompt="You are a helpful assistant.",
         checkpointer=checkpointer,
+        reflexion=True,
     )
 
     thread_id = "inspect_thread"
