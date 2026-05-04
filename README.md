@@ -21,7 +21,18 @@
   <a href="https://oracle-samples.github.io/locus/concepts/multi-agent/">Multi-agent</a> ·
   <a href="https://oracle-samples.github.io/locus/concepts/gsar/">GSAR</a> ·
   <a href="examples/">Tutorials</a> ·
+  <a href="sandbox/">Workbench</a> ·
   <a href="CONTRIBUTING.md">Contributing</a>
+</p>
+
+<p align="center">
+  <a href="https://codespaces.new/oracle-samples/locus?ref=tutorials/destub-24-real-model-calls&devcontainer_path=.devcontainer%2Fdevcontainer.json">
+    <img src="https://github.com/codespaces/badge.svg" alt="Open the workbench in GitHub Codespaces">
+  </a>
+</p>
+
+<p align="center">
+  <em>Try the workbench in your browser — bring your own OpenAI / Anthropic key, no install.</em>
 </p>
 
 ---
