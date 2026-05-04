@@ -19,7 +19,7 @@
         <div class="app__brand">
           <img class="app__brand-icon" id="app-brand-icon" src="/locus-mark.svg" alt="locus" />
           <span class="app__brand-mark">locus</span>
-          <span class="app__brand-tag">multi-agent reasoning orchestrator SDK</span>
+          <span class="app__brand-tag">multi-agent workflows on Oracle Generative AI</span>
         </div>
         <div class="app__header-spacer"></div>
         <a class="app__oracle" href="https://www.oracle.com/artificial-intelligence/generative-ai/" target="_blank" rel="noopener noreferrer" aria-label="Oracle Generative AI">
@@ -49,14 +49,15 @@
 
         <div class="card" id="provider-warning" style="display: none">
           <div class="card__header">
-            <h2 class="card__title">No provider configured</h2>
+            <h2 class="card__title">Connect a model provider</h2>
             <span class="pill pill--down"><span class="pill__dot"></span>setup required</span>
           </div>
           <p>
-            Click <strong>Provider settings</strong> in the header to enter your model
-            credentials. The workbench accepts <em>OpenAI</em> + <em>Anthropic</em> API keys
-            and <em>OCI</em> profile names from <code>~/.oci/config</code> (session token or
-            API-key auth — instance / resource principals are intentionally unsupported).
+            Click <strong>Provider settings</strong> to authenticate. The workbench
+            runs against <strong>Oracle Generative AI</strong> (session-token or
+            API-key profiles from <code>~/.oci/config</code>) and accepts
+            <em>OpenAI</em> or <em>Anthropic</em> API keys for non-OCI demos.
+            Keys are session-only — closing the tab discards them.
           </p>
         </div>
 
@@ -67,7 +68,7 @@
             <div class="card__header">
               <div>
                 <h2 class="card__title" id="wb-title">…</h2>
-                <div class="card__sub" id="wb-sub">Edit the source. Hit Run to execute as a python subprocess against the configured provider.</div>
+                <div class="card__sub" id="wb-sub">Edit the source. Run executes a Python subprocess against your configured provider; events stream into the Output pane on the right.</div>
               </div>
               <div style="display: flex; gap: 0.4rem; align-items: center">
                 <button class="icon-btn" id="wb-prev-btn" data-testid="wb-prev-btn" title="Previous tutorial" aria-label="Previous tutorial">

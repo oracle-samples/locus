@@ -7,15 +7,17 @@ hide:
 <div class="locus-hero" markdown>
 <div class="locus-hero__copy" markdown>
 
-# Multi-agent workflows you'd actually <span class="accent">deploy.</span>
+# Production-grade multi-agent workflows on <span class="accent">Oracle Generative AI.</span>
 
-**Stream them. Branch them. Pause for a human. Resume next week.**
+**Stream events. Branch on state. Pause for human review.
+Resume across days, weeks, or queues.**
 
-Seven workflow shapes you compose in one process or scale across a
-mesh. **Compose** linear pipelines. **Orchestrate** specialists in
-parallel. **Swarm** for peer-to-peer research. **Handoff** for
-escalation desks. **StateGraph** loops until confident. **Functional**
-maps across agents. **A2A** meshes across processes.
+Seven first-class workflow primitives — composable in a single Python
+process, scalable across an agent mesh. **Compose** linear pipelines.
+**Orchestrate** specialists in parallel. **Swarm** for peer-to-peer
+research. **Handoff** for escalation desks. **StateGraph** for bounded
+retry loops. **Functional** for map-style composition. **A2A** for
+cross-process meshes.
 
 [See what you can build](#six-things-you-can-ship){ .md-button .md-button--primary }
 [GitHub](https://github.com/oracle-samples/locus){ .md-button }
