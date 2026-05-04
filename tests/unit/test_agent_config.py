@@ -244,3 +244,54 @@ class TestAgentConfig:
         """Test default system prompt."""
         config = AgentConfig(model="openai:gpt-4o")
         assert "helpful" in config.system_prompt.lower()
+
+
+class TestReasoningShorthand:
+    """Boolean shorthand for reflexion + grounding configs.
+
+    The docs advertise ``Agent(reflexion=True)`` / ``grounding=True``
+    as one-line activations. The before-validators on AgentConfig
+    coerce the bool into the corresponding default config object.
+    """
+
+    def test_reflexion_true_materializes_default_config(self):
+        config = AgentConfig(model="openai:gpt-4o", reflexion=True)
+        assert isinstance(config.reflexion, ReflexionConfig)
+        assert config.reflexion.enabled is True
+        assert config.reflexion.confidence_threshold == 0.85
+
+    def test_reflexion_false_disables(self):
+        config = AgentConfig(model="openai:gpt-4o", reflexion=False)
+        assert config.reflexion is None
+
+    def test_reflexion_explicit_config_passes_through(self):
+        cfg = ReflexionConfig(confidence_threshold=0.9)
+        config = AgentConfig(model="openai:gpt-4o", reflexion=cfg)
+        assert config.reflexion is cfg
+        assert config.reflexion.confidence_threshold == 0.9
+
+    def test_reflexion_none_stays_none(self):
+        config = AgentConfig(model="openai:gpt-4o", reflexion=None)
+        assert config.reflexion is None
+
+    def test_grounding_true_materializes_default_config(self):
+        config = AgentConfig(model="openai:gpt-4o", grounding=True)
+        assert isinstance(config.grounding, GroundingConfig)
+        assert config.grounding.enabled is True
+        assert config.grounding.threshold == 0.65
+
+    def test_grounding_false_disables(self):
+        config = AgentConfig(model="openai:gpt-4o", grounding=False)
+        assert config.grounding is None
+
+    def test_grounding_explicit_config_passes_through(self):
+        cfg = GroundingConfig(threshold=0.75, max_replans=5)
+        config = AgentConfig(model="openai:gpt-4o", grounding=cfg)
+        assert config.grounding is cfg
+        assert config.grounding.threshold == 0.75
+        assert config.grounding.max_replans == 5
+
+    def test_both_true_together(self):
+        config = AgentConfig(model="openai:gpt-4o", reflexion=True, grounding=True)
+        assert isinstance(config.reflexion, ReflexionConfig)
+        assert isinstance(config.grounding, GroundingConfig)
