@@ -935,3 +935,15 @@ code, pre { font-family: var(--mono); }
   font-weight: 600;
   line-height: 1;
 }
+
+/* ----- Query + Think chip styling ----- */
+.wb-output .ln--event .event__kind--query {
+  background: rgba(0, 104, 140, 0.30);
+  color: #9bd6e8;
+}
+/* Think chips often carry long reasoning — give the body a bit of
+   breathing room and a vertical bar so it reads as block-level
+   chain-of-thought, not a one-line tag. */
+.wb-output .ln--event:has(.event__kind--think) {
+  align-items: flex-start;
+}

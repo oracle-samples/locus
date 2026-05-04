@@ -207,15 +207,24 @@ function appendEvent(ev: Record<string, unknown>) {
   // Any non-chunk event terminates the current live transcript so the
   // tag chip lands on its own line below.
   closeLiveChunk();
-  // Compact body text per event family. The tutorial's own print()
-  // statements already render the final agent reply, so Think /
-  // Terminate chips don't need to echo the entire message — that just
-  // triples the noise. Tool events keep their tool name (the useful
-  // signal) and other events show a short truncated preview.
+  // Compact body text per event family.
+  //   Query  — shows the user's prompt so it lands ABOVE the chip
+  //            chain instead of below the tutorial's own print.
+  //   Think  — chain-of-thought; show the reasoning so the user can
+  //            follow the model's planning.
+  //   Tool*  — tool name (the useful signal).
+  //   Terminate — chip-only (the tutorial's print() carries the answer).
   let text = "";
-  if (kind === "ToolStartEvent" || kind === "ToolCompleteEvent") {
+  if (kind === "QueryEvent") {
+    text = (ev.prompt as string) ?? "";
+  } else if (kind === "ToolStartEvent" || kind === "ToolCompleteEvent") {
     text = (ev.tool_name as string) ?? "";
-  } else if (kind === "ThinkEvent" || kind === "TerminateEvent") {
+  } else if (kind === "ThinkEvent") {
+    const reasoning = (ev.reasoning as string) ?? "";
+    // Reasoning can be very long; cap to 600 chars so a 30-step
+    // think block doesn't dominate the panel.
+    text = reasoning.length > 600 ? reasoning.slice(0, 597) + "…" : reasoning;
+  } else if (kind === "TerminateEvent") {
     text = ""; // chip-only, body lives in the tutorial's prints
   } else {
     const raw =
@@ -230,13 +239,17 @@ function appendEvent(ev: Record<string, unknown>) {
   const row = document.createElement("span");
   row.className = "ln ln--event";
   const tag = document.createElement("span");
-  tag.className = `event__kind ${
+  const kindClass =
     kind === "TerminateEvent"
       ? "event__kind--terminate"
-      : kind.startsWith("Tool")
-        ? "event__kind--tool"
-        : ""
-  }`;
+      : kind === "QueryEvent"
+        ? "event__kind--query"
+        : kind === "ThinkEvent"
+          ? "event__kind--think"
+          : kind.startsWith("Tool")
+            ? "event__kind--tool"
+            : "";
+  tag.className = `event__kind ${kindClass}`;
   tag.textContent = kind.replace("Event", "");
   const body = document.createElement("span");
   body.className = "event__body";

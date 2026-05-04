@@ -1065,9 +1065,14 @@ def __locus_emit__(ev):
 # 1. After every Agent is constructed, attach a callback_handler so we
 #    see Think / Tool / Terminate events as they fire — regardless of
 #    whether the tutorial passed model=… directly or config=AgentConfig(…).
+#    Also wrap run_sync / run so we emit a "QueryEvent" at the very top
+#    of each call carrying the prompt — that way the UI shows
+#    QUERY → ... before the THINK / TOOL chips, instead of after.
 try:
     from locus.agent import Agent as __LocusAgent__
     __orig_init__ = __LocusAgent__.__init__
+    __orig_run_sync = __LocusAgent__.run_sync
+
     def __patched__(self, *a, **kw):
         __orig_init__(self, *a, **kw)
         try:
@@ -1077,6 +1082,14 @@ try:
         except Exception:
             pass
     __LocusAgent__.__init__ = __patched__
+
+    def __patched_run_sync__(self, prompt, *a, **kw):
+        try:
+            __le_emit__({"type": "QueryEvent", "prompt": str(prompt)})
+        except Exception:
+            pass
+        return __orig_run_sync(self, prompt, *a, **kw)
+    __LocusAgent__.run_sync = __patched_run_sync__
 except Exception:
     pass
 
