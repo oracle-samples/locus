@@ -7,20 +7,23 @@ hide:
 <div class="locus-hero" markdown>
 <div class="locus-hero__copy" markdown>
 
-# Multi-agent workflows you'd actually <span class="accent">deploy.</span>
+# Production-safe multi-agent <span class="accent">workflows.</span>
 
-**Stream events. Branch on state. Pause for human review.
-Resume across days, weeks, or queues.**
+**Idempotent tools that fire once on retry. Typed termination
+conditions you can `&` and `|`. Deterministic handoff with full
+chain-of-custody. Checkpoint and replay across days, weeks, or queues.**
 
-Seven first-class workflow primitives — composable in a single Python
-process, scalable across an agent mesh. **Compose** linear pipelines.
-**Orchestrate** specialists in parallel. **Swarm** for peer-to-peer
-research. **Handoff** for escalation desks. **StateGraph** for bounded
-retry loops. **Functional** for map-style composition. **A2A** for
-cross-process meshes.
+Five graph-shaped multi-agent patterns plus two composition helpers,
+all in pure Python. **StateGraph** for declarative DAGs with conditional
+edges and `Send` fan-out. **Orchestrator** + **Specialist** for
+router/expert teams. **Swarm** for shared-blackboard peers. **Handoff**
+for typed escalation chains. **A2A** for cross-process meshes over HTTP.
+Plus `SequentialPipeline` / `ParallelPipeline` / `LoopAgent` for
+straight-line composition, and a functional `@task` / `@entrypoint`
+API when you don't need a graph.
 
-Open source. Python. BYO provider — OCI GenAI, OpenAI, Anthropic, or
-Ollama, picked per agent.
+Open source. Python. BYO provider — OCI GenAI is native (90+ models,
+day-0); OpenAI, Anthropic, and Ollama through their official SDKs.
 
 [See what you can build](#six-things-you-can-ship){ .md-button .md-button--primary }
 [GitHub](https://github.com/oracle-samples/locus){ .md-button }

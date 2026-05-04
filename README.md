@@ -3,8 +3,9 @@
 </p>
 
 <p align="center">
-  <strong>Multi-agent workflows you'd actually deploy.</strong><br>
-  Stream them. Branch them. Pause for a human. Resume next week.
+  <strong>Production-safe multi-agent workflows.</strong><br>
+  Idempotent tools. Typed termination. Deterministic handoff.
+  Checkpoint and replay across days, weeks, or queues.
 </p>
 
 <p align="center">
@@ -42,11 +43,28 @@
 
 ---
 
-Seven workflow shapes you compose in one process or scale across a
-mesh. **Compose** linear pipelines. **Orchestrate** specialists in
-parallel. **Swarm** for peer-to-peer research. **Handoff** for
-escalation desks. **StateGraph** loops until confident. **Functional**
-maps across agents. **A2A** meshes across processes.
+Five graph-shaped multi-agent patterns plus two composition helpers,
+all in pure Python:
+
+- **`StateGraph`** — declarative DAG with conditional edges, `Send`
+  fan-out, cycles, and interrupts.
+- **`Orchestrator` + `Specialist`** — router/expert pattern with
+  capability matching.
+- **`Swarm`** — shared-blackboard peers with task queue + discovery.
+- **`Handoff`** — typed escalation chains with full conversation
+  carry-over and chain-of-custody.
+- **`A2AServer`** — cross-process mesh over HTTP with agent-card
+  discovery (no model dependency for the protocol layer).
+- Plus `SequentialPipeline` / `ParallelPipeline` / `LoopAgent` for
+  straight-line composition, and `@task` / `@entrypoint` decorators
+  when you don't need a graph.
+
+Differentiated against LangGraph / Strands / CrewAI / AutoGen on
+**production safety**: idempotent tools dedupe on `(name, args)` hash
+so retries can't double-fire side effects; termination is a typed
+algebra (`(ToolCalled("submit") & ConfidenceMet(0.9)) | MaxIterations(10)`)
+you can grep and unit-test; handoff carries conversation state and
+records `HandoffReason` for audit.
 
 ```bash
 pip install "locus[oci]"

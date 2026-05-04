@@ -58,6 +58,21 @@ class OpenAIConfig(ModelConfig):
     base_url: str | None = Field(default=None, description="Custom API base URL")
     organization: str | None = Field(default=None, description="OpenAI organization ID")
 
+    # Production-safety knobs — match the OCI provider's posture so a
+    # transient 429 / 503 / connection drop doesn't immediately kill the
+    # agent loop. The openai SDK's defaults are 2 retries / 600s timeout;
+    # 3 retries / 60s is a tighter, more agent-friendly default.
+    max_retries: int = Field(
+        default=3,
+        ge=0,
+        description="Retry budget for transient errors (429, 5xx, network).",
+    )
+    request_timeout: float = Field(
+        default=60.0,
+        gt=0,
+        description="Per-request timeout in seconds.",
+    )
+
     # OpenAI-specific settings
     frequency_penalty: float = 0.0
     presence_penalty: float = 0.0
@@ -114,7 +129,14 @@ class OpenAIModel(BaseModel):
 
     @property
     def client(self) -> openai.AsyncOpenAI:
-        """Get or create the OpenAI client."""
+        """Get or create the OpenAI client.
+
+        The client is configured with explicit ``max_retries`` and
+        ``timeout`` from :class:`OpenAIConfig` so transient errors
+        (429, 5xx, network resets) don't kill the agent loop on first
+        try. The openai SDK retries with exponential backoff between
+        attempts.
+        """
         if self._client is None:
             import openai
 
@@ -122,6 +144,8 @@ class OpenAIModel(BaseModel):
                 api_key=self.config.api_key,
                 base_url=self.config.base_url,
                 organization=self.config.organization,
+                max_retries=self.config.max_retries,
+                timeout=self.config.request_timeout,
             )
         return self._client
 
