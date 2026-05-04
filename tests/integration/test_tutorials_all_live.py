@@ -89,7 +89,10 @@ def test_tutorial_runs_clean(tutorial: Path):
         cwd=str(_TUTORIALS_DIR),
         env=env,
         capture_output=True,
-        timeout=180,
+        # Reasoning-class default model (openai.gpt-5.5-*) spends real
+        # wall-clock on thinking tokens; tutorials with multiple agent
+        # hops (16, 39, 48) routinely take >2 min. Allow 6 min per test.
+        timeout=360,
         check=False,
     )
 

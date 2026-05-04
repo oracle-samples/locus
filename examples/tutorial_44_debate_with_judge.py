@@ -100,7 +100,10 @@ def _make_agent(role: str, prompt: str, model: Any) -> Agent:
             model=model,
             system_prompt=prompt,
             max_iterations=2,
-            max_tokens=300,
+            # Reasoning-class models (gpt-5.x, o-series) consume thinking
+            # tokens before producing output; 2000 keeps debater turns
+            # short while still allowing a sensible thinking budget.
+            max_tokens=2000,
         )
     )
 
@@ -157,7 +160,10 @@ async def judge_turn(state: dict[str, Any]) -> dict[str, Any]:
             system_prompt=JUDGE_PROMPT,
             output_schema=Verdict,
             max_iterations=2,
-            max_tokens=400,
+            # Reasoning-class models (gpt-5.x, o-series) consume thinking
+            # tokens before producing output; 4000 leaves headroom for
+            # both the thinking budget and the structured-output JSON.
+            max_tokens=4000,
         )
     )
     transcript_text = "\n".join(
@@ -242,6 +248,13 @@ async def main() -> None:
     print(f"Running {N_ROUNDS} rounds of PRO vs CON, then judge…\n")
 
     result = await graph.execute(initial)
+    failed = [
+        (nid, nr.error) for nid, nr in result.node_results.items() if nr.status.value == "failed"
+    ]
+    if failed:
+        for nid, err in failed:
+            print(f"\n  ✗ node {nid} FAILED: {err}")
+        raise RuntimeError(f"graph had {len(failed)} failed node(s); see above")
     transcript: list[Turn] = result.final_state.get("transcript", [])
     verdict: Verdict = result.final_state["verdict"]
 
