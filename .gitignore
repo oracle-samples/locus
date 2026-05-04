@@ -257,3 +257,6 @@ examples/start_and_test.sh
 /tutorials/
 site/
 .claude/
+
+# Tutorial 49 audio output (regenerated each run).
+examples/tutorial_49_response.mp3
