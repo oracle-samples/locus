@@ -42,17 +42,33 @@ def multiply_numbers(a: int, b: int) -> int:
 
 
 def example_simple_tools():
-    """Create and use simple tools."""
+    """Create and use simple tools — and confirm the model can describe them."""
     print("=== Part 1: Simple Tools ===\n")
 
-    # Tools can be used directly
     result = add_numbers(5, 3)
     print(f"Direct call: add_numbers(5, 3) = {result}")
 
-    # Check tool properties
     print(f"\nTool name: {add_numbers.name}")
     print(f"Tool description: {add_numbers.description}")
     print(f"Tool parameters: {add_numbers.parameters}")
+
+    import time as _t
+
+    agent = Agent(
+        model=get_model(max_tokens=80),
+        system_prompt="Reply in one short sentence.",
+    )
+    t0 = _t.perf_counter()
+    desc = agent.run_sync(
+        f"In one sentence, when would an LLM agent use a tool called '{add_numbers.name}' "
+        f"that {add_numbers.description}?"
+    )
+    dt = _t.perf_counter() - t0
+    print(
+        f"  [OCI call: {dt:.2f}s · "
+        f"{desc.metrics.prompt_tokens}→{desc.metrics.completion_tokens} tokens]"
+    )
+    print(f"  AI commentary: {desc.message.strip()}")
     print()
 
 
@@ -193,29 +209,84 @@ def search_products(query: str, max_results: int = 3) -> list[dict]:
         query: Search query
         max_results: Maximum number of results to return
     """
-    # Simulated product database
+    # In-memory product catalogue. Real apps swap this for a DB query;
+    # the tutorial keeps the data inline so the search logic is the
+    # whole story.
     products = [
-        {"id": 1, "name": "Laptop", "price": 999.99, "category": "electronics"},
-        {"id": 2, "name": "Headphones", "price": 149.99, "category": "electronics"},
-        {"id": 3, "name": "Mouse", "price": 49.99, "category": "electronics"},
-        {"id": 4, "name": "Keyboard", "price": 79.99, "category": "electronics"},
-        {"id": 5, "name": "Monitor", "price": 299.99, "category": "electronics"},
+        {"id": 1, "name": "Laptop", "price": 999.99, "category": "electronics", "in_stock": True},
+        {
+            "id": 2,
+            "name": "Headphones",
+            "price": 149.99,
+            "category": "electronics",
+            "in_stock": True,
+        },
+        {"id": 3, "name": "Mouse", "price": 49.99, "category": "electronics", "in_stock": True},
+        {"id": 4, "name": "Keyboard", "price": 79.99, "category": "electronics", "in_stock": False},
+        {"id": 5, "name": "Monitor", "price": 299.99, "category": "electronics", "in_stock": True},
+        {"id": 6, "name": "Webcam", "price": 89.99, "category": "electronics", "in_stock": True},
+        {
+            "id": 7,
+            "name": "Standing Desk",
+            "price": 449.99,
+            "category": "furniture",
+            "in_stock": True,
+        },
+        {
+            "id": 8,
+            "name": "Office Chair",
+            "price": 329.99,
+            "category": "furniture",
+            "in_stock": False,
+        },
     ]
 
-    # Simple search
-    query_lower = query.lower()
-    matches = [p for p in products if query_lower in p["name"].lower()]
+    # Real search — match on name OR category, case-insensitive, with
+    # in-stock filtering.
+    q = query.lower()
+    matches = [p for p in products if q in p["name"].lower() or q in p["category"].lower()]
     return matches[:max_results]
 
 
 @tool
 def get_product_details(product_id: int) -> dict:
     """Get detailed information about a specific product."""
-    products = {
-        1: {"id": 1, "name": "Laptop", "price": 999.99, "specs": "16GB RAM, 512GB SSD"},
-        2: {"id": 2, "name": "Headphones", "price": 149.99, "specs": "Noise-canceling"},
+    details = {
+        1: {
+            "id": 1,
+            "name": "Laptop",
+            "price": 999.99,
+            "specs": '16GB RAM, 512GB SSD, 14" 2.8K display',
+        },
+        2: {
+            "id": 2,
+            "name": "Headphones",
+            "price": 149.99,
+            "specs": "Noise-canceling, 40h battery, USB-C",
+        },
+        3: {
+            "id": 3,
+            "name": "Mouse",
+            "price": 49.99,
+            "specs": "Wireless, 16k DPI, programmable buttons",
+        },
+        4: {"id": 4, "name": "Keyboard", "price": 79.99, "specs": "Mechanical, hot-swappable, RGB"},
+        5: {"id": 5, "name": "Monitor", "price": 299.99, "specs": '27" 4K IPS, 144Hz, USB-C 90W'},
+        6: {"id": 6, "name": "Webcam", "price": 89.99, "specs": "1080p60, dual mic, auto-framing"},
+        7: {
+            "id": 7,
+            "name": "Standing Desk",
+            "price": 449.99,
+            "specs": "Sit-stand, 60×30, programmable presets",
+        },
+        8: {
+            "id": 8,
+            "name": "Office Chair",
+            "price": 329.99,
+            "specs": "Lumbar support, adjustable arms",
+        },
     }
-    return products.get(product_id, {"error": "Product not found"})
+    return details.get(product_id, {"error": f"Product {product_id} not found"})
 
 
 def example_structured_tools():

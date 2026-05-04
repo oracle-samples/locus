@@ -328,18 +328,17 @@ Use the available tools to answer questions:
     tool_names = [t["name"] for t in tools_response.get("tools", [])]
     print(f"Available tools: {tool_names}")
 
-    # Test run_agent (if model is not mock)
-    if type(model).__name__ != "MockModel":
-        run_response = await server.handle_request(
-            {
-                "method": "tools/call",
-                "params": {
-                    "name": "run_agent",
-                    "arguments": {"prompt": "What's the weather in Tokyo?"},
-                },
-            }
-        )
-        print(f"\nAgent response: {run_response}")
+    # Test run_agent — exercises the full request through the agent.
+    run_response = await server.handle_request(
+        {
+            "method": "tools/call",
+            "params": {
+                "name": "run_agent",
+                "arguments": {"prompt": "What's the weather in Tokyo?"},
+            },
+        }
+    )
+    print(f"\nAgent response: {run_response}")
 
     print()
     print("This server can now be used by any MCP-compatible client!")

@@ -16,6 +16,7 @@ Run with:
 """
 
 import asyncio
+import time
 
 from config import get_model, print_config
 
@@ -27,6 +28,11 @@ from locus.multiagent.handoff import (
     create_handoff_agent,
     create_handoff_manager,
 )
+
+
+def _banner(label: str, dt: float, prompt_tok: int = 0, completion_tok: int = 0) -> None:
+    """Print a uniform [OCI call …] banner so each Part proves it hit the model."""
+    print(f"  [OCI call · {label}: {dt:.2f}s · {prompt_tok}→{completion_tok} tokens]")
 
 
 async def main():
@@ -75,6 +81,24 @@ async def main():
     print("  Triage -> Escalation (escalation)")
     print("  Technical -> Escalation (escalation)")
 
+    # Prove the agents talk to OCI: feed triage_with_model a tiny context.
+    # Use a generous output budget so handoff replies aren't cut off mid-token.
+    model = get_model(max_tokens=2000)
+    triage_with_model = triage_agent.with_model(model)
+    smoke_ctx = HandoffContext(
+        source_agent_id="user",
+        target_agent_id=triage_agent.id,
+        reason=HandoffReason.SPECIALIZATION,
+        original_task="Smoke test the triage agent",
+        conversation_summary="Need a one-line confirmation the agent is alive.",
+        confidence=0.5,
+        instructions="Reply 'triage agent online'.",
+    )
+    t0 = time.perf_counter()
+    smoke_result = await triage_with_model.receive_handoff(smoke_ctx)
+    _banner("Part 1", time.perf_counter() - t0)
+    print(f"  Smoke output: {(smoke_result.output or '')[:120]}")
+
     # =========================================================================
     # Part 2: Handoff Context
     # =========================================================================
@@ -109,6 +133,13 @@ async def main():
     print("-" * 40)
     print(prompt[:500] + "...")
 
+    # Run technical_agent against the live model on this context.
+    technical_with_model = technical_agent.with_model(model)
+    t0 = time.perf_counter()
+    ctx_result = await technical_with_model.receive_handoff(context)
+    _banner("Part 2", time.perf_counter() - t0)
+    print(f"  Technical agent's continuation: {(ctx_result.output or '')[:160]}")
+
     # =========================================================================
     # Part 3: Handoff Reasons
     # =========================================================================
@@ -124,6 +155,23 @@ async def main():
         }
         print(f"  {reason.value}: {descriptions[reason]}")
 
+    # Demonstrate ESCALATION reason against a real model.
+    escalation_with_model = escalation_agent.with_model(model)
+    esc_ctx = HandoffContext(
+        source_agent_id=technical_agent.id,
+        target_agent_id=escalation_agent.id,
+        reason=HandoffReason.ESCALATION,
+        original_task="Database is down",
+        conversation_summary="P0: total db outage at 14:02 UTC.",
+        findings={"impact": "100% of users", "duration_min": 8},
+        confidence=0.2,
+        instructions="Decide if we should declare an incident.",
+    )
+    t0 = time.perf_counter()
+    esc_result = await escalation_with_model.receive_handoff(esc_ctx)
+    _banner("Part 3", time.perf_counter() - t0)
+    print(f"  Escalation output: {(esc_result.output or '')[:160]}")
+
     # =========================================================================
     # Part 4: Handoff Manager
     # =========================================================================
@@ -138,6 +186,24 @@ async def main():
     print("Handoff Manager:")
     print(f"  Registered agents: {len(manager.agents)}")
     print(f"  Max chain length: {manager.max_handoff_chain}")
+
+    # Wire the model into all manager agents and run a real handoff.
+    for agent_id in list(manager.agents):
+        manager.agents[agent_id] = manager.agents[agent_id].with_model(model)
+    state_smoke = AgentState(agent_id=triage_agent.id).with_message(
+        Message.user("DB latency spiked to 5s, cpu normal.")
+    )
+    t0 = time.perf_counter()
+    mgr_result = await manager.execute_handoff(
+        source_agent=triage_agent,
+        target_agent_id=technical_agent.id,
+        task="Diagnose the latency spike",
+        reason=HandoffReason.SPECIALIZATION,
+        state=state_smoke,
+        findings={"p99_ms": 5000},
+    )
+    _banner("Part 4", time.perf_counter() - t0)
+    print(f"  Manager handoff output: {(mgr_result.output or '')[:160]}")
 
     # =========================================================================
     # Part 5: Creating Handoff Contexts Through Manager
@@ -168,13 +234,18 @@ async def main():
     print(f"  Chain: {' -> '.join(handoff_context.handoff_chain)}")
     print(f"  State snapshot: {handoff_context.state_snapshot}")
 
+    # Hand the freshly-built context straight to the target agent.
+    t0 = time.perf_counter()
+    p5_result = await manager.agents[technical_agent.id].receive_handoff(handoff_context)
+    _banner("Part 5", time.perf_counter() - t0)
+    print(f"  Target agent output: {(p5_result.output or '')[:160]}")
+
     # =========================================================================
     # Part 6: Executing Handoffs with Model
     # =========================================================================
     print("\n=== Part 6: Executing Handoffs ===\n")
 
-    # Get model and configure agents
-    model = get_model()
+    # Re-use the model we already prepared above.
     technical_with_model = technical_agent.with_model(model)
 
     # Register the model-enabled agent
@@ -229,6 +300,16 @@ async def main():
         print(f"  {ctx.handoff_id}: {ctx.source_agent_id} -> {ctx.target_agent_id}")
         print(f"    Reason: {ctx.reason.value}")
         print(f"    Created: {ctx.created_at.isoformat()}")
+
+    # Replay the most recent handoff against the live model.
+    if manager.history:
+        last = manager.history[-1]
+        target = manager.agents.get(last.target_agent_id)
+        if target is not None:
+            t0 = time.perf_counter()
+            p8 = await target.receive_handoff(last)
+            _banner("Part 8 (replay)", time.perf_counter() - t0)
+            print(f"  Replay output: {(p8.output or '')[:160]}")
 
     # =========================================================================
     # Part 9: Handoff Patterns

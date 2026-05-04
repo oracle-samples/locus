@@ -17,8 +17,26 @@ When to use StateGraph vs Agent:
 """
 
 import asyncio
+import time
 
+from config import get_model
+
+from locus.agent import Agent
 from locus.multiagent import END, START, StateGraph
+
+
+def _llm_call(
+    prompt: str, *, system: str = "Reply in one short sentence.", max_tokens: int = 80
+) -> str:
+    """Helper: real OCI call with timing/token banner — used by every Part."""
+    agent = Agent(model=get_model(max_tokens=max_tokens), system_prompt=system)
+    t0 = time.perf_counter()
+    res = agent.run_sync(prompt)
+    dt = time.perf_counter() - t0
+    print(
+        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+    )
+    return res.message.strip()
 
 
 # =============================================================================
@@ -27,18 +45,18 @@ from locus.multiagent import END, START, StateGraph
 
 
 async def example_first_graph():
-    """Create the simplest possible graph."""
+    """Create the simplest possible graph — node calls a real Agent."""
     print("=== Part 1: Your First Graph ===\n")
 
-    # Create a new graph
     graph = StateGraph()
 
-    # Define a node function
-    # - Receives: inputs (dict) containing all state
-    # - Returns: updates (dict) to merge into state
     async def greet(inputs):
         name = inputs.get("name", "World")
-        return {"greeting": f"Hello, {name}!"}
+        ai_line = _llm_call(
+            f"Greet {name} warmly in one sentence.",
+            system="You are a friendly assistant.",
+        )
+        return {"greeting": ai_line}
 
     # Add the node
     graph.add_node("greet", greet)
@@ -83,10 +101,15 @@ async def example_sequence():
             "word_count": len(text.split()),
         }
 
-    # Step 3: Create summary
+    # Step 3: Create summary using a real Agent
     async def summarize(inputs):
+        wc = inputs.get("word_count")
+        ai = _llm_call(
+            f"In one short sentence, comment on a text with {wc} words "
+            f"that was {'valid' if inputs.get('is_valid') else 'invalid'}.",
+        )
         return {
-            "summary": f"{inputs.get('word_count')} words, valid={inputs.get('is_valid')}",
+            "summary": f"{wc} words, valid={inputs.get('is_valid')} — {ai}",
         }
 
     graph.add_node("validate", validate)
@@ -125,14 +148,17 @@ async def example_state_flow():
 
     async def step_b(inputs):
         print(f"  Step B receives: {list(inputs.keys())}")
-        # Can access step A's output
         value = inputs.get("value", 0)
         return {"b_output": "from B", "doubled": value * 2}
 
     async def step_c(inputs):
         print(f"  Step C receives: {list(inputs.keys())}")
-        # Can access both A and B's outputs
-        return {"c_output": "from C", "final": inputs.get("doubled", 0) + 5}
+        # Final node delegates to a real Agent.
+        doubled = inputs.get("doubled", 0)
+        ai = _llm_call(
+            f"Briefly comment on a graph that doubled the value to {doubled}.",
+        )
+        return {"c_output": "from C", "final": doubled + 5, "ai_comment": ai}
 
     graph.add_node("step_a", step_a)
     graph.add_node("step_b", step_b)
@@ -167,10 +193,13 @@ async def example_parallel():
 
     async def analyze_sentiment(inputs):
         text = inputs.get("text", "")
-        # Simulate analysis
-        await asyncio.sleep(0.1)
-        is_positive = "good" in text.lower() or "great" in text.lower()
-        return {"sentiment": "positive" if is_positive else "neutral"}
+        label = _llm_call(
+            f"Classify the sentiment of '{text}' as positive, negative, or "
+            "neutral. Reply with one word.",
+            system="Output one of: positive | negative | neutral. Nothing else.",
+            max_tokens=10,
+        )
+        return {"sentiment": label.lower()}
 
     async def count_words(inputs):
         text = inputs.get("text", "")
@@ -232,7 +261,10 @@ async def example_results():
     graph = StateGraph()
 
     async def process(inputs):
-        return {"processed": True, "result": inputs.get("value", 0) * 2}
+        # Even Part 5's tiny graph drives a real LLM call.
+        v = inputs.get("value", 0)
+        comment = _llm_call(f"In one sentence, comment on doubling {v}.")
+        return {"processed": True, "result": v * 2, "comment": comment}
 
     graph.add_node("process", process)
     graph.add_edge(START, "process")
@@ -266,16 +298,19 @@ async def example_streaming():
     graph = StateGraph()
 
     async def step1(inputs):
-        # Push a CUSTOM progress event mid-execution. Outside a stream()
-        # context this is a silent no-op, so the same node code runs fine
-        # under execute() too.
+        # CUSTOM events stream out while a real Agent is generating.
         await emit_custom({"phase": "starting", "value": inputs.get("x", 0)})
-        await asyncio.sleep(0.05)
+        ai = _llm_call(
+            f"In one sentence, congratulate someone who reached {inputs.get('x', 0) * 2}.",
+        )
         await emit_custom({"phase": "halfway"})
-        return {"y": inputs.get("x", 0) * 2}
+        return {"y": inputs.get("x", 0) * 2, "ai": ai}
 
     async def step2(inputs):
-        return {"z": inputs.get("y", 0) + 10}
+        ai = _llm_call(
+            f"In one short sentence, narrate adding 10 to {inputs.get('y', 0)}.",
+        )
+        return {"z": inputs.get("y", 0) + 10, "ai": ai}
 
     graph.add_node("step1", step1)
     graph.add_node("step2", step2)
@@ -289,6 +324,42 @@ async def example_streaming():
             print(f"  [CUSTOM]  {event.node_id}: {event.data}")
         else:
             print(f"  [UPDATE]  {event.node_id}: {event.data}")
+    print()
+
+
+# =============================================================================
+# Part 7: Calling a real LLM from inside a graph node
+# =============================================================================
+
+
+async def example_graph_with_llm():
+    """A graph node that delegates work to a real Agent."""
+    print("=== Part 7: Graph + real LLM ===\n")
+
+    graph = StateGraph()
+
+    async def ai_summarize(inputs):
+        import time as _t
+
+        topic = inputs.get("topic", "")
+        agent = Agent(
+            model=get_model(max_tokens=80),
+            system_prompt="You write one-sentence factual summaries.",
+        )
+        t0 = _t.perf_counter()
+        result = agent.run_sync(f"Summarize the topic '{topic}' in one sentence.")
+        dt = _t.perf_counter() - t0
+        print(
+            f"  [OCI call: {dt:.2f}s · {result.metrics.prompt_tokens}→{result.metrics.completion_tokens} tokens]"
+        )
+        return {"summary": result.message}
+
+    graph.add_node("summarize", ai_summarize)
+    graph.add_edge(START, "summarize")
+    graph.add_edge("summarize", END)
+
+    result = await graph.execute({"topic": "Oracle Cloud Generative AI"})
+    print(f"AI summary: {result.final_state.get('summary')}")
     print()
 
 
@@ -310,6 +381,7 @@ async def main():
     await example_parallel()
     await example_results()
     await example_streaming()
+    await example_graph_with_llm()
 
     print("=" * 60)
     print("Next: Tutorial 07 - Conditional Routing")

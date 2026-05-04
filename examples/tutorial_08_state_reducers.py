@@ -12,10 +12,13 @@ Difficulty: Intermediate-Advanced
 """
 
 import asyncio
+import time
 from typing import Annotated
 
+from config import get_model
 from pydantic import BaseModel
 
+from locus.agent import Agent
 from locus.core import (
     Message,
     add_messages,
@@ -28,6 +31,20 @@ from locus.core.reducers import reducer
 from locus.multiagent import END, START, StateGraph
 
 
+def _llm_call(
+    prompt: str, *, system: str = "Reply in one short sentence.", max_tokens: int = 60
+) -> str:
+    """Helper: real OCI call with timing/token banner — used by every Part."""
+    agent = Agent(model=get_model(max_tokens=max_tokens), system_prompt=system)
+    t0 = time.perf_counter()
+    res = agent.run_sync(prompt)
+    dt = time.perf_counter() - t0
+    print(
+        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+    )
+    return res.message.strip()
+
+
 # =============================================================================
 # Part 1: Why Reducers?
 # =============================================================================
@@ -36,6 +53,8 @@ from locus.multiagent import END, START, StateGraph
 async def example_without_reducers():
     """The problem: state gets overwritten."""
     print("=== Part 1: The Problem Without Reducers ===\n")
+    note = _llm_call("In one sentence, explain why a graph that overwrites state can lose data.")
+    print(f"AI note: {note}")
 
     graph = StateGraph()
 
@@ -67,6 +86,8 @@ async def example_without_reducers():
 async def example_with_reducers():
     """The solution: reducers compose state updates."""
     print("=== Part 1b: With Reducers ===\n")
+    note = _llm_call("In one sentence, explain what a reducer does in a state graph.")
+    print(f"AI note: {note}")
 
     # Define state with a reducer
     class AppState(BaseModel):
@@ -106,6 +127,10 @@ async def example_with_reducers():
 async def example_builtin_reducers():
     """Demonstrate the built-in reducers."""
     print("=== Part 2: Built-in Reducers ===\n")
+    note = _llm_call(
+        "In one sentence, when would you use add_messages vs add_numbers in a Locus graph?"
+    )
+    print(f"AI note: {note}")
 
     # 1. add_messages - for conversation history
     class ChatState(BaseModel):
@@ -147,6 +172,8 @@ async def example_builtin_reducers():
 async def example_merge_dict():
     """The merge_dict reducer."""
     print("=== Part 2b: merge_dict Reducer ===\n")
+    note = _llm_call("In one sentence, give an example use-case for merge_dict.")
+    print(f"AI note: {note}")
 
     class ConfigState(BaseModel):
         config: Annotated[dict, merge_dict] = {}
@@ -185,6 +212,8 @@ async def example_merge_dict():
 async def example_custom_reducer():
     """Create your own reducer."""
     print("=== Part 3: Custom Reducers ===\n")
+    note = _llm_call("In one sentence, name two cases where a custom reducer beats add_messages.")
+    print(f"AI note: {note}")
 
     # Custom reducer: keep maximum value
     @reducer
@@ -240,6 +269,10 @@ async def example_custom_reducer():
 async def example_last_value():
     """Use last_value for fields that should be overwritten."""
     print("=== Part 4: last_value Reducer ===\n")
+    note = _llm_call(
+        "In one sentence, what kind of field is a good fit for the last_value reducer?"
+    )
+    print(f"AI note: {note}")
 
     class ProcessState(BaseModel):
         # last_value is the default behavior - just take the latest
@@ -281,6 +314,11 @@ async def example_last_value():
 async def example_complex_state():
     """Combine multiple reducers in a real scenario."""
     print("=== Part 5: Complex State ===\n")
+    note = _llm_call(
+        "In one sentence, explain why combining append_list, add_numbers, and "
+        "merge_dict reducers is useful for an order-processing graph."
+    )
+    print(f"AI note: {note}")
 
     class OrderState(BaseModel):
         # Order items accumulate
@@ -350,6 +388,60 @@ async def example_complex_state():
 
 
 # =============================================================================
+# Part 6: Reducers with a real LLM in the loop
+# =============================================================================
+
+
+async def example_reducer_with_llm():
+    """Multiple LLM-producing nodes append messages via add_messages."""
+    print("=== Part 6: Reducers + real LLM ===\n")
+
+    class ChatLog(BaseModel):
+        messages: Annotated[list, add_messages] = []
+
+    graph = StateGraph(state_schema=ChatLog)
+
+    import time as _t
+
+    async def headline(_inputs):
+        agent = Agent(
+            model=get_model(max_tokens=40),
+            system_prompt="You write punchy one-line product headlines.",
+        )
+        t0 = _t.perf_counter()
+        result = agent.run_sync("Write a headline for an SDK that orchestrates AI agents.")
+        dt = _t.perf_counter() - t0
+        print(
+            f"  [OCI call (headline): {dt:.2f}s · {result.metrics.prompt_tokens}→{result.metrics.completion_tokens} tokens]"
+        )
+        return {"messages": [Message.assistant(f"[headline] {result.message.strip()}")]}
+
+    async def tagline(_inputs):
+        agent = Agent(
+            model=get_model(max_tokens=40),
+            system_prompt="You write 6-word taglines.",
+        )
+        t0 = _t.perf_counter()
+        result = agent.run_sync("Tagline for a multi-agent reasoning SDK.")
+        dt = _t.perf_counter() - t0
+        print(
+            f"  [OCI call (tagline):  {dt:.2f}s · {result.metrics.prompt_tokens}→{result.metrics.completion_tokens} tokens]"
+        )
+        return {"messages": [Message.assistant(f"[tagline] {result.message.strip()}")]}
+
+    graph.add_node("headline", headline)
+    graph.add_node("tagline", tagline)
+    graph.add_edge(START, "headline")
+    graph.add_edge("headline", "tagline")
+    graph.add_edge("tagline", END)
+
+    result = await graph.execute({})
+    for msg in result.final_state.get("messages", []):
+        print(f"  {msg.content}")
+    print()
+
+
+# =============================================================================
 # Main
 # =============================================================================
 
@@ -368,6 +460,7 @@ async def main():
     await example_custom_reducer()
     await example_last_value()
     await example_complex_state()
+    await example_reducer_with_llm()
 
     print("=" * 60)
     print("Next: Tutorial 09 - Human-in-the-Loop")

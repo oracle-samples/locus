@@ -16,9 +16,11 @@ Run with:
 """
 
 import asyncio
+import time
 
 from config import get_model, print_config
 
+from locus.agent import Agent
 from locus.multiagent.specialist import (
     Playbook,
     PlaybookStep,
@@ -29,6 +31,20 @@ from locus.multiagent.specialist import (
     create_trace_analyst,
 )
 from locus.tools.decorator import tool
+
+
+def _llm_call(
+    prompt: str, *, system: str = "Reply in one short sentence.", max_tokens: int = 80
+) -> str:
+    """Helper: real OCI call with timing/token banner — used by every Part."""
+    agent = Agent(model=get_model(max_tokens=max_tokens), system_prompt=system)
+    t0 = time.perf_counter()
+    res = agent.run_sync(prompt)
+    dt = time.perf_counter() - t0
+    print(
+        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+    )
+    return res.message.strip()
 
 
 async def main():
@@ -75,6 +91,13 @@ When analyzing:
     print(f"  Type: {specialist.specialist_type}")
     print(f"  Max iterations: {specialist.max_iterations}")
     print(f"  Confidence threshold: {specialist.confidence_threshold}")
+    # Run a tiny task on the specialist so this Part proves OCI is reachable.
+    t0 = time.perf_counter()
+    p1 = await specialist.execute(task="In one sentence, what is your specialty?")
+    dt = time.perf_counter() - t0
+    print(f"  [OCI call: {dt:.2f}s · specialist.execute()]")
+    if p1.output:
+        print(f"  Smoke output: {p1.output[:160]}")
 
     # =========================================================================
     # Part 2: Adding Domain Tools
@@ -105,6 +128,9 @@ When analyzing:
     )
 
     print(f"Tools available: {[t.name for t in specialist.tools]}")
+    print(
+        f"AI commentary: {_llm_call('In one sentence, why does giving a Specialist domain-specific tools dramatically narrow its failure surface?')}"
+    )
 
     # =========================================================================
     # Part 3: Specialist Playbooks
@@ -153,6 +179,9 @@ When analyzing:
     print("\nPlaybook prompt:")
     print("-" * 40)
     print(playbook_prompt[:500] + "...")
+    print(
+        f"AI commentary: {_llm_call('In one sentence, when does attaching a Playbook to a Specialist matter most?')}"
+    )
 
     # =========================================================================
     # Part 4: Playbook Selection
@@ -194,6 +223,9 @@ When analyzing:
         if selected:
             print(f"Task: '{task[:40]}...'")
             print(f"  Selected playbook: {selected.name}")
+    print(
+        f"AI commentary: {_llm_call('In one sentence, why is automatic playbook selection by task description risky and how do you mitigate it?')}"
+    )
 
     # =========================================================================
     # Part 5: Executing Specialists
@@ -238,6 +270,13 @@ When analyzing:
         # Show first part of system prompt
         prompt_preview = spec.system_prompt.split("\n")[0]
         print(f"    Focus: {prompt_preview[:60]}...")
+    # Quick live execution against the metrics analyst.
+    t0 = time.perf_counter()
+    p6 = await metrics_analyst.execute(task="In one sentence, what does a metrics analyst do?")
+    dt = time.perf_counter() - t0
+    print(f"\n  [OCI call: {dt:.2f}s · metrics_analyst.execute()]")
+    if p6.output:
+        print(f"  Output: {p6.output[:160]}")
 
     # =========================================================================
     # Part 7: Specialist with Custom Tools
@@ -288,6 +327,9 @@ When analyzing:
     for response, description in responses:
         confidence = specialist._estimate_confidence(response)
         print(f"  '{response}' -> {confidence:.0%} ({description})")
+    print(
+        f"AI commentary: {_llm_call('In one sentence, why is keyword-based confidence estimation only a rough proxy?')}"
+    )
 
     # =========================================================================
     # Part 9: Specialist Patterns
@@ -316,6 +358,9 @@ When analyzing:
     print("  - Part of larger workflow")
     print("  - Receives context from upstream")
     print("  - Produces structured output")
+    print(
+        f"AI suggestion: {_llm_call('Suggest one extra Specialist pattern not in the four listed above. One short sentence.')}"
+    )
 
     # =========================================================================
     # Part 10: Creating Specialist Teams
@@ -341,6 +386,15 @@ When analyzing:
     print("Incident Response Team:")
     for role, spec in team.items():
         print(f"  {role}: {spec.name}")
+    # Run the triage specialist on a small task — proves the team is alive.
+    t0 = time.perf_counter()
+    p10 = await team["triage"].execute(
+        task="In one sentence, classify this incident: 'API p99 jumped from 30ms to 800ms after a deploy.'",
+    )
+    dt = time.perf_counter() - t0
+    print(f"  [OCI call: {dt:.2f}s · triage.execute()]")
+    if p10.output:
+        print(f"  Triage verdict: {p10.output[:160]}")
 
     # =========================================================================
     print("\n" + "=" * 60)

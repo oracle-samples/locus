@@ -27,12 +27,10 @@ from locus.agent import Agent
 
 
 def example_create_agent():
-    """Create a basic agent."""
+    """Create a basic agent — and immediately prove it talks to the provider."""
     print("=== Part 1: Creating an Agent ===\n")
 
-    # get_model() reads from environment variables
-    # Default is MockModel for testing without API calls
-    model = get_model()
+    model = get_model(max_tokens=40)
 
     agent = Agent(
         model=model,
@@ -41,6 +39,17 @@ def example_create_agent():
 
     print(f"Agent created with model: {type(model).__name__}")
     print(f"System prompt: {agent.system_prompt[:50]}...")
+
+    import time as _t
+
+    t0 = _t.perf_counter()
+    smoke = agent.run_sync("Say 'ready' in one word.")
+    dt = _t.perf_counter() - t0
+    print(
+        f"  [OCI smoke call: {dt:.2f}s · "
+        f"{smoke.metrics.prompt_tokens}→{smoke.metrics.completion_tokens} tokens]"
+    )
+    print(f"  Smoke reply: {smoke.message.strip()}")
     print()
 
     return agent
