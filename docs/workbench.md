@@ -1,70 +1,94 @@
-# Locus workbench — spin it up in 60 seconds
+# Locus workbench
 
-The workbench is a three-tier playground for exercising every locus
-pattern (basic agent, tools, structured output, orchestrator,
-map-reduce, critic loop, …) against your own model provider.
+A browser-based playground for every locus pattern. Pick a tutorial
+on the left, paste your model key once, hit **Run**, and watch a real
+agent stream events back. No CLI, no `pip install`, no editor setup.
 
-![locus workbench](img/workbench.png)
+![locus workbench](img/workbench.gif)
 
-It's a vanilla TypeScript front-end (Vite) talking to a Node Express
-BFF, talking to a FastAPI Python runner that imports `locus`. You
-paste your provider key once per tab — **the workbench never
-persists API keys to localStorage** — pick a tutorial in the sidebar,
-hit Run, and watch the agent stream events back.
+## What it is
 
-## Pick your path
+The workbench is the fastest way to *see* what locus does without
+installing anything locally. It's a single-page UI in front of every
+canonical locus pattern — a basic agent, an agent with tools, a
+structured-output schema, an orchestrator with specialists, a
+sequential pipeline, a map-reduce fan-out, a critic loop with
+`allow_cycles`. Each pattern is wired to a real Python coroutine
+that imports locus, builds the agent, and streams events through to
+your browser.
 
-| You want… | Run |
-|---|---|
-| Click and try, no install | [Open in GitHub Codespaces](https://codespaces.new/oracle-samples/locus?devcontainer_path=.devcontainer%2Fdevcontainer.json) |
-| Run on your machine | `docker run …` (below) |
-| Hack on the workbench source | `make backend / bff / web` (below) |
+It's also the canonical demo for Codespaces and Docker: visitors
+arrive at this app, pick a workflow, and learn the SDK by running
+real ones.
 
-## Path 1 — GitHub Codespaces (zero install)
+```
+┌───────────────────────────────────────┐
+│  sandbox/web   — vanilla TS + Vite    │  :5173
+│  Tutorial catalog · provider settings │
+└───────────────────┬───────────────────┘
+                    │ /api/*
+                    ▼
+┌───────────────────────────────────────┐
+│  sandbox/bff   — Node Express         │  :3101
+│  Same-origin proxy + cookie surface   │
+└───────────────────┬───────────────────┘
+                    │ /api/*
+                    ▼
+┌───────────────────────────────────────┐
+│  sandbox/backend — FastAPI runner     │  :8100
+│  One endpoint per locus pattern       │
+└───────────────────────────────────────┘
+```
 
-1. Click [Open in Codespaces](https://codespaces.new/oracle-samples/locus?devcontainer_path=.devcontainer%2Fdevcontainer.json).
+You paste your provider key once per tab — **the workbench never
+persists API keys to localStorage**, so closing the tab discards
+everything.
+
+## Two paths to spin it up
+
+Pick whichever fits.
+
+### Path A — GitHub Codespaces (zero install, free)
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/oracle-samples/locus?devcontainer_path=.devcontainer%2Fdevcontainer.json)
+
+Click the badge on the [repo home page](https://github.com/oracle-samples/locus).
+GitHub provisions a Linux container in your account, runs
+`.devcontainer/postCreate.sh` to install Python + Node deps, then
+forwards port 5173 publicly. ~2-min cold start. You burn your own
+free Codespaces minutes (60 hrs/month), nothing on the locus side.
+
+### Path B — Docker (local, BYO key)
+
+```bash
+git clone https://github.com/oracle-samples/locus.git && cd locus
+docker build -t locus-workbench -f sandbox/Dockerfile .
+docker run --rm -p 5173:5173 -p 3101:3101 -p 8100:8100 locus-workbench
+# open http://localhost:5173
+# → paste OpenAI / Anthropic key in Provider settings → Run a tutorial
+```
+
+Image is ~1.3 GB on first build (Oracle Linux 9-slim base + Python
+3.12 + Node 20 + locus + the workbench source). Subsequent builds
+hit the layer cache.
+
+## Codespaces — what to expect step by step
+
+1. Click the badge above (or [this link](https://codespaces.new/oracle-samples/locus?devcontainer_path=.devcontainer%2Fdevcontainer.json)).
 2. Wait ~2 minutes for `.devcontainer/postCreate.sh` to install
-   Python deps + npm deps + boot the three tiers.
-3. The "Ports" panel pops up; click the URL next to **5173 (Workbench
-   UI)**. New tab opens.
+   Python deps + npm deps and `.devcontainer/postStart.sh` to boot
+   the three tiers.
+3. The **Ports** panel pops up in VS Code; click the URL next to
+   *5173 (Workbench UI)*. A new tab opens.
 4. Click **Provider settings** → paste an OpenAI or Anthropic key →
    Save.
 5. Pick a tutorial in the sidebar → **Run**.
 
-You burn your own free Codespaces minutes (60 hrs/month), nothing on
-the locus side. OpenAI / Anthropic costs ride on your own key.
+The OCI options in the Provider settings modal will not work in
+Codespaces — they need a local `~/.oci/config` that doesn't exist
+in the container. Use OpenAI or Anthropic for the cloud demo path.
 
-The OCI options in the provider modal don't work in Codespaces —
-they expect a local `~/.oci/config` that doesn't exist in the
-container. Use OpenAI or Anthropic for the cloud demo path.
-
-## Path 2 — Docker (local, BYO key)
-
-The Dockerfile ships everything needed — Python 3.12 + Node 20 + the
-locus wheel + the workbench source — in one image based on Oracle
-Linux 9 slim.
-
-```bash
-git clone https://github.com/oracle-samples/locus.git
-cd locus
-
-# Build the image (~5 min cold, then layer cache).
-docker build -t locus-workbench -f sandbox/Dockerfile .
-
-# Run; published ports map to the canonical workbench layout.
-docker run --rm \
-  -p 5173:5173 \
-  -p 3101:3101 \
-  -p 8100:8100 \
-  locus-workbench
-
-# Then open http://localhost:5173
-```
-
-Container size is ~1.3 GB. Stop with `Ctrl-C`; `--rm` removes the
-container automatically.
-
-If the canonical ports are taken on your host, remap:
+## Docker — port-remap if 5173 is taken
 
 ```bash
 docker run --rm \
@@ -73,7 +97,9 @@ docker run --rm \
 # then http://localhost:5273
 ```
 
-## Path 3 — From source (development)
+Stop with `Ctrl-C`; `--rm` removes the container automatically.
+
+## Path C — From source (development)
 
 For iterating on the workbench itself:
 
