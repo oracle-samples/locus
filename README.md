@@ -3,9 +3,11 @@
 </p>
 
 <p align="center">
-  <strong>Production-safe multi-agent workflows.</strong><br>
-  Idempotent tools. Typed termination. Deterministic handoff.
-  Checkpoint and replay across days, weeks, or queues.
+  <strong>Oracle Generative AI · Multi-Agent Reasoning Orchestrator SDK</strong><br>
+  Production-safe multi-agent workflows. Idempotent tools. Typed
+  termination. Deterministic handoff. Checkpoint and replay across
+  days, weeks, or queues.<br>
+  <em>Built inside Oracle. Used in production. Open to everyone.</em>
 </p>
 
 <p align="center">
@@ -34,6 +36,8 @@
 
 <p align="center">
   <em>Try the workbench in your browser — bring your own OpenAI / Anthropic key, no install.<br/>
+  Provider settings supports <strong>three model slots (A / B / C)</strong> so multi-agent
+  tutorials can mix a fast triage model with a deeper specialist in one run.<br/>
   Step-by-step: <a href="docs/workbench.md">docs/workbench.md</a></em>
 </p>
 
@@ -59,12 +63,14 @@ all in pure Python:
   straight-line composition, and `@task` / `@entrypoint` decorators
   when you don't need a graph.
 
-Differentiated against LangGraph / Strands / CrewAI / AutoGen on
-**production safety**: idempotent tools dedupe on `(name, args)` hash
-so retries can't double-fire side effects; termination is a typed
-algebra (`(ToolCalled("submit") & ConfidenceMet(0.9)) | MaxIterations(10)`)
-you can grep and unit-test; handoff carries conversation state and
-records `HandoffReason` for audit.
+**What sets this apart on production safety:** idempotent tools dedupe
+on `(name, args)` hash so retries can't double-fire side effects;
+termination is a typed algebra
+(`(ToolCalled("submit") & ConfidenceMet(0.9)) | MaxIterations(10)`)
+you can grep and unit-test; handoff carries conversation state end-to-end
+and records `HandoffReason` for audit. Native day-0 support for Oracle
+Cloud Infrastructure (OCI) Generative AI — 90+ models across OpenAI,
+Meta, xAI, Cohere, and Google families through one auth surface.
 
 ```bash
 pip install "locus[oci]"
@@ -77,9 +83,7 @@ findings into one report — one `StateGraph.execute()` call. No
 `asyncio.gather`, no shared mutable state.
 
 ```python
-from locus import Agent
-from locus.core.send import Send
-from locus.multiagent.graph import END, START, StateGraph
+from locus import Agent, END, Send, START, StateGraph
 
 REVIEWERS = ["security", "performance", "style"]
 
@@ -123,12 +127,12 @@ the [documentation](https://oracle-samples.github.io/locus/).
 
 | | |
 |---|---|
-| **[🤝 Multi-agent workflows](https://oracle-samples.github.io/locus/concepts/multi-agent/)** | Seven shapes: Composition · Orchestrator + Specialists · Swarm · Handoff · StateGraph · Functional · A2A. One `Agent` class composes into all of them. Mix them in one process; stream events from any of them in the same `match` block. |
+| **[🤝 Multi-agent workflows](https://oracle-samples.github.io/locus/concepts/multi-agent/)** | Six in-process shapes (Composition · Orchestrator + Specialists · Swarm · Handoff · StateGraph · Functional) plus A2A across processes. One `Agent` class composes into all of them. Mix them in one process; stream events from any of them in the same `match` block. |
 | **[🧰 Workflow primitives](https://oracle-samples.github.io/locus/concepts/multi-agent/graph/)** | `Send` for scatter-gather. `interrupt()` for human-in-the-loop. `Command(goto=...)` for explicit routing. `Agent(output_schema=...)` for typed terminal artifacts. `GraphConfig(allow_cycles=True)` for refinement loops. |
 | **[🧠 Reasoning](https://oracle-samples.github.io/locus/concepts/reasoning/)** | `reflexion=True` (self-evaluate), `grounding=True` (LLM-as-judge claim verification), `CausalChain` for explicit cause-effect graphs. **[GSAR](https://oracle-samples.github.io/locus/concepts/gsar/)** typed-grounding layer for safety-critical pipelines — four-way claim partition + three-tier `{proceed, regenerate, replan}` decision ([`arXiv:2604.23366`](https://arxiv.org/abs/2604.23366)). |
 | **[🛡 Idempotent tools](https://oracle-samples.github.io/locus/concepts/idempotency/)** | `@tool(idempotent=True)` — the ReAct loop dedupes repeat calls. The model can't double-charge, double-book, or double-page. |
-| **[💾 Durable memory](https://oracle-samples.github.io/locus/concepts/checkpointers/)** | Four native checkpointers (OCI Object Storage, in-memory, file, HTTP) plus five storage backends (PostgreSQL, OpenSearch, Redis, SQLite, Oracle 26ai). One `BaseCheckpointer` Protocol — no adapter layer. |
-| **[🔎 RAG on your data](https://oracle-samples.github.io/locus/concepts/rag/)** | Seven vector stores, OCI Cohere + OpenAI embeddings, multimodal (PDF text + OCR, image OCR, audio transcription). Oracle 26ai is the day-1 native target. |
+| **[💾 Durable memory](https://oracle-samples.github.io/locus/concepts/checkpointers/)** | Four native checkpointers (OCI Object Storage, in-memory, file, HTTP) plus five storage backends (PostgreSQL, OpenSearch, Redis, SQLite, Oracle Database 26ai). One `BaseCheckpointer` Protocol — no adapter layer. |
+| **[🔎 RAG on your data](https://oracle-samples.github.io/locus/concepts/rag/)** | Seven vector stores, OCI Cohere + OpenAI embeddings, multimodal (PDF text + OCR, image OCR, audio transcription). Oracle Database 26ai is the day-1 native target. |
 | **[🧩 Skills + Playbooks](https://oracle-samples.github.io/locus/concepts/skills/)** | AgentSkills.io filesystem-first skills + declarative YAML/Python playbooks with a `PlaybookEnforcer` that validates tool calls against step constraints. |
 | **[📡 Streaming + Server](https://oracle-samples.github.io/locus/concepts/server/)** | Typed events for `match`-statement consumers · SSE · drop-in FastAPI `AgentServer` with `thread_id` persistence (scoped to the bearer principal so two API keys can't read each other's threads). |
 | **[🪝 Hooks](https://oracle-samples.github.io/locus/concepts/hooks/)** | `LoggingHook` / `StructuredLoggingHook` · `TelemetryHook` (OpenTelemetry) · `ModelRetryHook` · `GuardrailsHook` + `ContentFilterHook` · `SteeringHook` (LLM-as-judge tool approval). |
@@ -191,14 +195,13 @@ plus A2A share the same `Agent` class and the same event taxonomy.
 | **A2A** | cross-process / cross-runtime; capability discovery | [`a2a/protocol.py`](src/locus/a2a/protocol.py) |
 
 ```python
-from locus import Agent
-from locus.agent import SequentialPipeline
+from locus import Agent, SequentialPipeline
 
 researcher = Agent(model=model, system_prompt="Find three key facts.")
 critic     = Agent(model=model, system_prompt="Find flaws in the previous output.")
 finalizer  = Agent(model=model, system_prompt="Synthesize a one-paragraph answer.")
 
-result = await SequentialPipeline(researcher, critic, finalizer).run("…")
+result = await SequentialPipeline(agents=[researcher, critic, finalizer]).run("…")
 ```
 
 [All multi-agent patterns →](https://oracle-samples.github.io/locus/concepts/multi-agent/)
@@ -247,7 +250,7 @@ each tutorial is a working program against a real model.
 
 | Track | Highlights |
 |---|---|
-| **Foundations** | [`01_basic_agent`](examples/tutorial_01_basic_agent.py) · [`05_agent_hooks`](examples/tutorial_05_agent_hooks.py) · [`07_state_management`](examples/tutorial_07_state_management.py) |
+| **Foundations** | [`01_basic_agent`](examples/tutorial_01_basic_agent.py) · [`05_agent_hooks`](examples/tutorial_05_agent_hooks.py) · [`08_state_reducers`](examples/tutorial_08_state_reducers.py) |
 | **Tools & MCP** | [`12_mcp_integration`](examples/tutorial_12_mcp_integration.py) · [`38_multimodal_providers`](examples/tutorial_38_multimodal_providers.py) |
 | **Reasoning** | [`14_reasoning_patterns`](examples/tutorial_14_reasoning_patterns.py) · [`39_gsar_typed_grounding`](examples/tutorial_39_gsar_typed_grounding.py) |
 | **Multi-agent** | [`11_swarm_multiagent`](examples/tutorial_11_swarm_multiagent.py) · [`16_agent_handoff`](examples/tutorial_16_agent_handoff.py) · [`17_orchestrator_pattern`](examples/tutorial_17_orchestrator_pattern.py) · [`34_a2a_protocol`](examples/tutorial_34_a2a_protocol.py) |
@@ -263,9 +266,12 @@ deployment story:
 - Multi-stage [`Dockerfile`](Dockerfile) — non-root user, `HEALTHCHECK`
   on `/health`, `pip install ".[oci,server,checkpoints]"`.
 - Helm chart at [`deploy/helm/locus-agent/`](deploy/helm/locus-agent/) —
-  Deployment, Service, ServiceAccount (with workload-identity hooks),
+  Deployment, Service, ServiceAccount (with OCI workload-identity hooks),
   Secret, HPA, Ingress, all driven by `values.yaml`.
 - `pip install "locus[oci,server]"` for production installs.
+
+The example below pushes to Oracle Cloud Infrastructure Registry (OCIR)
+in Ashburn (`iad`) — substitute your tenancy namespace and image tag.
 
 ```bash
 docker build -t iad.ocir.io/$NAMESPACE/locus-agent:0.1.0 .
@@ -284,12 +290,12 @@ helm install locus-agent ./deploy/helm/locus-agent \
 
 ```text
 src/locus/
-├── agent/          Agent runtime, config, composition pipelines
-├── core/           AgentState, Message, events, termination algebra
+├── agent/          Agent runtime, config, SequentialPipeline / ParallelPipeline / LoopAgent
+├── core/           AgentState, Message, events, termination algebra, Send
 ├── loop/           ReAct nodes (Think, Execute, Reflect)
 ├── memory/         BaseCheckpointer + 9 backends
 ├── models/         Provider registry + OCI native, OpenAI, Anthropic, Ollama
-├── multiagent/     Composition, Orchestrator+Specialist, Swarm, Handoff, Graph, Functional
+├── multiagent/     Orchestrator + Specialist, Swarm, Handoff, StateGraph, Functional
 ├── a2a/            Cross-process Agent-to-Agent protocol
 ├── reasoning/      Reflexion, Grounding, Causal, GSAR (typed grounding)
 ├── rag/            Embeddings + 7 vector stores + retrievers
@@ -299,12 +305,17 @@ src/locus/
 ├── skills/         AgentSkills.io filesystem-first capability disclosure
 ├── playbooks/      Declarative step plans + PlaybookEnforcer
 ├── server/         FastAPI AgentServer with thread persistence
-├── eval/           EvalCase + EvalRunner + EvalReport
+├── evaluation/     EvalCase + EvalRunner + EvalReport
 └── integrations/   MCP (client + server)
+
+workbench/          Codespaces-ready playground app — three-tier
+                    (FastAPI runner + Express BFF + Vite UI) that drives
+                    every tutorial through a browser. Provider settings
+                    supports Model A / B / C slots for multi-model demos.
 
 tests/
 ├── unit/           Deterministic, no external deps. Runs in CI on every PR.
-└── integration/    Live LLM / OCI / Oracle 26ai. Gated on credentials.
+└── integration/    Live LLM / Oracle Cloud Infrastructure / Oracle Database 26ai. Gated on credentials.
 ```
 
 ## Contributing
