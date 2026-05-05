@@ -1,7 +1,8 @@
 {
   "src/locus/__init__.py": 100.0,
   "src/locus/a2a/__init__.py": 100.0,
-  "src/locus/a2a/protocol.py": 96.92,
+  "src/locus/a2a/protocol.py": 69.98,
+  "src/locus/a2a/spec.py": 95.0,
   "src/locus/agent/__init__.py": 100.0,
   "src/locus/agent/agent.py": 88.41,
   "src/locus/agent/composition.py": 90.74,
