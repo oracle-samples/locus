@@ -18,7 +18,7 @@ Run with:
 import asyncio
 import time
 
-from config import get_model, print_config
+from config import get_model, get_model_b, print_config
 
 from locus.agent import Agent
 from locus.multiagent import (
@@ -37,13 +37,15 @@ from locus.tools.decorator import tool
 def _llm_call(
     prompt: str, *, system: str = "Reply in one short sentence.", max_tokens: int = 80
 ) -> str:
-    """Helper: real OCI call with timing/token banner — used by every Part."""
-    agent = Agent(model=get_model(max_tokens=max_tokens), system_prompt=system)
+    """Helper: real model call with timing/token banner — used by every Part.
+    Uses slot B (a faster model when configured) since the commentary
+    calls don't need the heavy specialist model."""
+    agent = Agent(model=get_model_b(max_tokens=max_tokens), system_prompt=system)
     t0 = time.perf_counter()
     res = agent.run_sync(prompt)
     dt = time.perf_counter() - t0
     print(
-        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+        f"  [model call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
     )
     return res.message.strip()
 
@@ -79,7 +81,7 @@ async def main():
     t0 = time.perf_counter()
     p1 = await log_analyst.execute(task="In one sentence, summarise what a log analyst does.")
     dt = time.perf_counter() - t0
-    print(f"  [OCI call: {dt:.2f}s · log_analyst.execute()]")
+    print(f"  [model call: {dt:.2f}s · log_analyst.execute()]")
     if p1.output:
         print(f"  Output: {p1.output[:160]}")
 
@@ -273,7 +275,7 @@ Prioritize based on urgency indicated in the task.""",
         task="In one short sentence, what would you check first if a service had intermittent timeouts?",
     )
     dt = time.perf_counter() - t0
-    print(f"  [OCI call: {dt:.2f}s · network_specialist.execute()]")
+    print(f"  [model call: {dt:.2f}s · network_specialist.execute()]")
     if p8.output:
         print(f"  Output: {p8.output[:160]}")
 

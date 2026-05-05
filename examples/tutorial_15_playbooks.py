@@ -4,7 +4,7 @@ Tutorial 15: Playbooks — every part runs against a real LLM
 Every Part exercises both a Locus playbook SDK feature *and* the
 configured GenAI provider, so you can see the structured-execution
 mechanics next to live agent reasoning. Each section prints
-``[OCI call: X.XXs · prompt→completion tokens]`` so you can see the
+``[model call: X.XXs · prompt→completion tokens]`` so you can see the
 network round-trip happen.
 
 Run with:
@@ -35,7 +35,7 @@ def _llm_call(
     res = agent.run_sync(prompt)
     dt = time.perf_counter() - t0
     print(
-        f"  [OCI call: {dt:.2f}s · "
+        f"  [model call: {dt:.2f}s · "
         f"{res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
     )
     return res.message.strip()
@@ -316,7 +316,7 @@ def main():
     triage_result = triage_agent.run_sync("Triage incident INC-42.")
     dt = time.perf_counter() - t0
     print(
-        f"  [OCI call: {dt:.2f}s · "
+        f"  [model call: {dt:.2f}s · "
         f"{triage_result.metrics.prompt_tokens}→{triage_result.metrics.completion_tokens} tokens · "
         f"iters={triage_result.metrics.iterations}]"
     )
