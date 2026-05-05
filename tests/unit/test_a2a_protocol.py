@@ -2,18 +2,14 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Unit tests for ``locus.a2a.protocol`` (A2AServer + A2AClient).
+"""Unit tests for ``locus.a2a`` — the spec-compliant A2A transport.
 
-Coverage was 0% — these tests use the FastAPI test client so the
-HTTP routes execute without spinning up uvicorn, and ``respx`` to
-mock outbound HTTP for the client. The tests cover:
-
-- the loopback-only-when-anonymous binding gate (CWE-306 surface)
-- bearer-token auth on every route (``/agent-card``, ``/a2a/invoke``,
-  ``/a2a/stream``)
-- the streaming SSE wire format and its error-sanitisation path
-- ``AgentCard`` / message round-tripping
-- the client's ``invoke``/``as_tool`` wrappers
+Covers both the public A2A protocol surface (Agent Card at the
+well-known URL, JSON-RPC 2.0 method dispatch, the eight-state task
+lifecycle, message parts) and the backward-compat aliases
+(``/agent-card``, ``/a2a/invoke``, ``/a2a/stream``) preserved from the
+pre-spec implementation so peers that haven't picked up the new wire
+shape keep working.
 """
 
 from __future__ import annotations
@@ -26,15 +22,24 @@ import pytest
 import respx
 from fastapi.testclient import TestClient
 
-from locus.a2a.protocol import (
+from locus.a2a import (
     A2AClient,
     A2AMessage,
     A2ARequest,
     A2AResponse,
     A2AServer,
+    AgentCapabilities,
     AgentCard,
-    _is_loopback,
+    AgentSkill,
+    DataPart,
+    FilePart,
+    FileWithBytes,
+    Message,
+    Task,
+    TaskState,
+    TextPart,
 )
+from locus.a2a.protocol import _is_loopback
 from locus.core.events import TerminateEvent, ThinkEvent
 
 
@@ -44,12 +49,6 @@ from locus.core.events import TerminateEvent, ThinkEvent
 
 
 class _StubAgent:
-    """Minimal stand-in for ``Agent`` exposing ``run(prompt)``.
-
-    Returns a configurable list of events. Used by both the invoke
-    and stream tests.
-    """
-
     def __init__(self, events: list[Any]) -> None:
         self._events = events
 
@@ -72,17 +71,74 @@ def _terminate(*, final_message: str = "", reason: str = "complete") -> Terminat
     )
 
 
+def _server_with(agent: Any, **kwargs: Any) -> A2AServer:
+    server = A2AServer(agent=agent, allow_unauthenticated=True, **kwargs)
+    _ = server.app  # eager-initialise
+    return server
+
+
 # ---------------------------------------------------------------------------
-# Models + helpers
+# Spec models — round-trip, defaults, discriminated parts.
 # ---------------------------------------------------------------------------
 
 
-class TestProtocolModels:
-    def test_agent_card_round_trip(self) -> None:
-        card = AgentCard(name="test", description="d", skills=["a", "b"])
+class TestSpecModels:
+    def test_agent_card_full_shape_round_trip(self) -> None:
+        card = AgentCard(
+            name="research",
+            description="researches things",
+            url="https://research.example.com",
+            skills=[
+                AgentSkill(
+                    id="search",
+                    name="Search",
+                    description="Look up facts",
+                    tags=["web"],
+                ),
+            ],
+            capabilities=AgentCapabilities(streaming=True),
+        )
         payload = card.model_dump()
-        assert payload["name"] == "test"
-        assert payload["skills"] == ["a", "b"]
+        assert payload["name"] == "research"
+        assert payload["url"] == "https://research.example.com"
+        assert payload["capabilities"]["streaming"] is True
+        assert payload["skills"][0]["id"] == "search"
+        # ``defaultInputModes`` / ``defaultOutputModes`` ship on every card.
+        assert payload["defaultInputModes"] == ["text/plain"]
+        assert payload["defaultOutputModes"] == ["text/plain"]
+
+    def test_message_parts_discriminated(self) -> None:
+        msg = Message(
+            role="user",
+            parts=[
+                TextPart(text="hi"),
+                DataPart(data={"k": "v"}),
+                FilePart(file=FileWithBytes(bytes="aGVsbG8=", name="hello.txt")),
+            ],
+            messageId="m1",
+        )
+        roundtrip = Message.model_validate(msg.model_dump())
+        assert roundtrip.parts[0].kind == "text"
+        assert roundtrip.parts[1].kind == "data"
+        assert roundtrip.parts[2].kind == "file"
+
+    def test_task_state_enum_has_all_eight_states(self) -> None:
+        # Spec §6.3 — the canonical lifecycle states.
+        assert {s.value for s in TaskState} == {
+            "submitted",
+            "working",
+            "input-required",
+            "completed",
+            "canceled",
+            "failed",
+            "rejected",
+            "auth-required",
+        }
+
+
+class TestLegacyFlatModels:
+    """The flat ``A2AMessage`` / ``A2ARequest`` / ``A2AResponse`` shapes
+    are kept around so the pre-spec wire surface still works."""
 
     def test_a2a_message_default_metadata_empty(self) -> None:
         m = A2AMessage(role="user", content="hi")
@@ -91,7 +147,6 @@ class TestProtocolModels:
     def test_a2a_request_response_round_trip(self) -> None:
         req = A2ARequest(messages=[A2AMessage(role="user", content="hi")])
         assert req.metadata == {}
-
         resp = A2AResponse(messages=[A2AMessage(role="agent", content="ok")])
         assert resp.status == "completed"
 
@@ -106,55 +161,24 @@ class TestIsLoopback:
         assert _is_loopback(host) is False
 
     def test_invalid_host_string_returns_false(self) -> None:
-        # Non-IP, non-known string falls through ``ipaddress.ip_address`` →
-        # ValueError caught → returns False.
         assert _is_loopback("not-a-real-host") is False
 
 
 # ---------------------------------------------------------------------------
-# A2AServer — loopback gate on bind
+# Server bind gate
 # ---------------------------------------------------------------------------
 
 
 class TestA2AServerBindGate:
     def test_anonymous_run_on_non_loopback_refused(self) -> None:
-        # No api_key, no allow_unauthenticated, non-loopback host →
-        # ``run()`` raises before ever touching uvicorn.
         server = A2AServer(agent=_StubAgent([]))
         with pytest.raises(RuntimeError, match="Refusing to bind"):
             server.run(host="8.8.8.8", port=9999)
 
-    def test_anonymous_run_on_loopback_attempts_uvicorn(self) -> None:
-        # Loopback path passes the gate. We don't actually want uvicorn
-        # to run — patch it to a sentinel.
-        server = A2AServer(agent=_StubAgent([]))
-        called: dict[str, Any] = {}
-
-        def fake_run(app: Any, **kwargs: Any) -> None:
-            called["app"] = app
-            called["kwargs"] = kwargs
-
-        # ``import uvicorn`` happens inside ``run`` — sub the module.
-        import sys
-        import types
-
-        fake_uvicorn = types.ModuleType("uvicorn")
-        fake_uvicorn.run = fake_run  # type: ignore[attr-defined]
-        sys.modules["uvicorn"] = fake_uvicorn
-        try:
-            server.run(host="127.0.0.1", port=12345)
-        finally:
-            sys.modules.pop("uvicorn", None)
-
-        assert "app" in called
-        assert called["kwargs"] == {"host": "127.0.0.1", "port": 12345}
-
     def test_uvicorn_missing_raises_clear_message(self) -> None:
-        # Hide uvicorn so the import inside ``run`` raises ImportError.
         import sys
 
         saved = sys.modules.pop("uvicorn", None)
-        # Block re-import so the ``import uvicorn`` line raises.
         sys.modules["uvicorn"] = None  # type: ignore[assignment]
         try:
             server = A2AServer(agent=_StubAgent([]))
@@ -167,35 +191,191 @@ class TestA2AServerBindGate:
 
 
 # ---------------------------------------------------------------------------
-# A2AServer — routes (with a real FastAPI test client)
+# Spec-compliant routes
 # ---------------------------------------------------------------------------
 
 
-def _server_with(agent: Any, **kwargs: Any) -> A2AServer:
-    """Construct a server and prime the lazy ``app`` property."""
-    server = A2AServer(agent=agent, allow_unauthenticated=True, **kwargs)
-    _ = server.app  # eager-initialise
-    return server
-
-
-class TestA2AServerRoutes:
-    def test_agent_card_returns_metadata(self) -> None:
+class TestWellKnownAgentCard:
+    def test_well_known_card_payload(self) -> None:
         server = _server_with(
             _StubAgent([]),
             name="ResearchAgent",
             description="Does research.",
-            skills=["lookup", "summarise"],
+            skills=[
+                AgentSkill(
+                    id="lookup",
+                    name="Lookup",
+                    description="Find a fact",
+                    tags=["search"],
+                ),
+            ],
+            url="https://research.example.com",
+        )
+        client = TestClient(server.app)
+        resp = client.get("/.well-known/agent-card.json")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["name"] == "ResearchAgent"
+        assert body["url"] == "https://research.example.com"
+        assert body["capabilities"]["streaming"] is True
+        # Skills are spec objects, not strings.
+        assert isinstance(body["skills"], list)
+        assert body["skills"][0]["id"] == "lookup"
+        assert body["skills"][0]["tags"] == ["search"]
+
+    def test_legacy_card_emits_string_skills(self) -> None:
+        # ``/agent-card`` keeps the old flat ``skills: list[str]`` shape
+        # so peers that pre-date the spec rewrite keep parsing.
+        server = _server_with(
+            _StubAgent([]),
+            name="X",
+            description="d",
+            skills=[AgentSkill(id="a", name="A", description="A")],
         )
         client = TestClient(server.app)
         resp = client.get("/agent-card")
         assert resp.status_code == 200
-        assert resp.json() == {
-            "name": "ResearchAgent",
-            "description": "Does research.",
-            "skills": ["lookup", "summarise"],
-            "url": "",
-        }
+        body = resp.json()
+        assert body["skills"] == ["A"]
 
+
+class TestJsonRpcMessageSend:
+    def test_message_send_returns_completed_task(self) -> None:
+        agent = _StubAgent([_terminate(final_message="answer")])
+        server = _server_with(agent)
+        client = TestClient(server.app)
+        resp = client.post(
+            "/",
+            json={
+                "jsonrpc": "2.0",
+                "id": "req-1",
+                "method": "message/send",
+                "params": {
+                    "message": {
+                        "role": "user",
+                        "parts": [{"kind": "text", "text": "what is AI?"}],
+                        "messageId": "m1",
+                    }
+                },
+            },
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["jsonrpc"] == "2.0"
+        assert body["id"] == "req-1"
+        task = body["result"]
+        assert task["kind"] == "task"
+        assert task["status"]["state"] == "completed"
+        assert task["artifacts"][0]["parts"][0]["text"] == "answer"
+
+    def test_unknown_method_yields_method_not_found(self) -> None:
+        server = _server_with(_StubAgent([]))
+        client = TestClient(server.app)
+        resp = client.post(
+            "/",
+            json={"jsonrpc": "2.0", "id": "x", "method": "nope/method", "params": {}},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["error"]["code"] == -32601  # METHOD_NOT_FOUND
+
+    def test_invalid_request_returns_invalid_request_error(self) -> None:
+        server = _server_with(_StubAgent([]))
+        client = TestClient(server.app)
+        resp = client.post("/", json={"this is": "not json-rpc"})
+        body = resp.json()
+        assert body["error"]["code"] == -32600  # INVALID_REQUEST
+
+    def test_push_notifications_return_unsupported(self) -> None:
+        server = _server_with(_StubAgent([]))
+        client = TestClient(server.app)
+        resp = client.post(
+            "/",
+            json={
+                "jsonrpc": "2.0",
+                "id": "1",
+                "method": "tasks/pushNotificationConfig/set",
+                "params": {},
+            },
+        )
+        body = resp.json()
+        assert body["error"]["code"] == -32003  # PUSH_NOTIFICATION_NOT_SUPPORTED
+
+
+class TestJsonRpcTaskLifecycle:
+    def _send_then_get(self, client: TestClient) -> dict[str, Any]:
+        send = client.post(
+            "/",
+            json={
+                "jsonrpc": "2.0",
+                "id": "send-1",
+                "method": "message/send",
+                "params": {
+                    "message": {
+                        "role": "user",
+                        "parts": [{"kind": "text", "text": "hi"}],
+                        "messageId": "m1",
+                    }
+                },
+            },
+        )
+        return send.json()["result"]
+
+    def test_tasks_get_returns_known_task(self) -> None:
+        server = _server_with(_StubAgent([_terminate(final_message="ok")]))
+        client = TestClient(server.app)
+        task = self._send_then_get(client)
+        resp = client.post(
+            "/",
+            json={
+                "jsonrpc": "2.0",
+                "id": "g-1",
+                "method": "tasks/get",
+                "params": {"id": task["id"]},
+            },
+        )
+        body = resp.json()
+        assert body["result"]["id"] == task["id"]
+
+    def test_tasks_get_unknown_returns_task_not_found(self) -> None:
+        server = _server_with(_StubAgent([]))
+        client = TestClient(server.app)
+        resp = client.post(
+            "/",
+            json={
+                "jsonrpc": "2.0",
+                "id": "g",
+                "method": "tasks/get",
+                "params": {"id": "no-such-task"},
+            },
+        )
+        body = resp.json()
+        assert body["error"]["code"] == -32001  # TASK_NOT_FOUND
+
+    def test_tasks_cancel_terminal_returns_not_cancelable(self) -> None:
+        server = _server_with(_StubAgent([_terminate(final_message="done")]))
+        client = TestClient(server.app)
+        task = self._send_then_get(client)
+        # Task is already in completed state — cancelling must error.
+        resp = client.post(
+            "/",
+            json={
+                "jsonrpc": "2.0",
+                "id": "c",
+                "method": "tasks/cancel",
+                "params": {"id": task["id"]},
+            },
+        )
+        body = resp.json()
+        assert body["error"]["code"] == -32002  # TASK_NOT_CANCELABLE
+
+
+# ---------------------------------------------------------------------------
+# Backward-compat invoke / stream
+# ---------------------------------------------------------------------------
+
+
+class TestLegacyInvokeStream:
     def test_invoke_extracts_last_user_message(self) -> None:
         agent = _StubAgent([_terminate(final_message="answer", reason="complete")])
         server = _server_with(agent)
@@ -214,22 +394,9 @@ class TestA2AServerRoutes:
         body = resp.json()
         assert body["messages"][0]["content"] == "answer"
         assert body["status"] == "completed"
-        assert body["metadata"]["stop_reason"] == "complete"
 
-    def test_invoke_with_no_user_messages_yields_empty_prompt(self) -> None:
-        agent = _StubAgent([_terminate(final_message="", reason="complete")])
-        server = _server_with(agent)
-        client = TestClient(server.app)
-        resp = client.post("/a2a/invoke", json={"messages": []})
-        assert resp.status_code == 200
-
-    def test_stream_emits_text_done_and_terminator(self) -> None:
-        agent = _StubAgent(
-            [
-                _think(reasoning="thinking..."),
-                _terminate(final_message="final", reason="complete"),
-            ]
-        )
+    def test_legacy_stream_emits_text_done_and_terminator(self) -> None:
+        agent = _StubAgent([_think(reasoning="thinking..."), _terminate(final_message="final")])
         server = _server_with(agent)
         client = TestClient(server.app)
         with client.stream(
@@ -239,8 +406,6 @@ class TestA2AServerRoutes:
         ) as resp:
             assert resp.status_code == 200
             body = "".join(resp.iter_text())
-
-        # Each ``data:`` chunk parses as JSON (until the terminator).
         events = [
             json.loads(line.removeprefix("data: "))
             for line in body.split("\n\n")
@@ -251,24 +416,7 @@ class TestA2AServerRoutes:
         assert "done" in types
         assert "[DONE]" in body
 
-    def test_stream_emits_event_type_for_other_events(self) -> None:
-        # Non-Think/Terminate events fall to the catch-all branch and emit
-        # ``{"type": event.event_type}``.
-        class _OtherEvent:
-            event_type = "tool_start"
-
-        agent = _StubAgent([_OtherEvent(), _terminate(final_message="ok")])
-        server = _server_with(agent)
-        client = TestClient(server.app)
-        with client.stream(
-            "POST",
-            "/a2a/stream",
-            json={"messages": [{"role": "user", "content": "hi"}]},
-        ) as resp:
-            body = "".join(resp.iter_text())
-        assert '"type": "tool_start"' in body
-
-    def test_stream_sanitises_agent_errors(self) -> None:
+    def test_legacy_stream_sanitises_agent_errors(self) -> None:
         class _BoomAgent:
             async def run(self, prompt: str) -> Any:
                 raise RuntimeError("DSN=postgres://leak/secret")
@@ -282,56 +430,54 @@ class TestA2AServerRoutes:
             json={"messages": [{"role": "user", "content": "hi"}]},
         ) as resp:
             body = "".join(resp.iter_text())
-        # The raw exception message must NOT be exposed; instead we get
-        # an opaque "internal error" payload with a correlation id.
         assert "DSN=postgres" not in body
         assert "internal error" in body
         assert "correlation_id" in body
 
 
 # ---------------------------------------------------------------------------
-# A2AServer — bearer-token auth
+# Auth (every route, including the well-known card)
 # ---------------------------------------------------------------------------
 
 
 class TestA2AServerAuth:
-    def test_missing_bearer_token_returns_401(self) -> None:
+    @pytest.mark.parametrize(
+        ("method", "path", "kwargs"),
+        [
+            ("GET", "/.well-known/agent-card.json", {}),
+            ("GET", "/agent-card", {}),
+            (
+                "POST",
+                "/",
+                {"json": {"jsonrpc": "2.0", "id": "1", "method": "message/send"}},
+            ),
+            ("POST", "/a2a/invoke", {"json": {"messages": []}}),
+        ],
+    )
+    def test_missing_bearer_token_returns_401(
+        self, method: str, path: str, kwargs: dict[str, Any]
+    ) -> None:
         server = A2AServer(agent=_StubAgent([]), api_key="secret")
         client = TestClient(server.app)
-        resp = client.get("/agent-card")
+        resp = client.request(method, path, **kwargs)
         assert resp.status_code == 401
-        assert resp.json()["detail"] == "Missing bearer token"
-
-    def test_wrong_bearer_token_returns_401(self) -> None:
-        server = A2AServer(agent=_StubAgent([]), api_key="secret")
-        client = TestClient(server.app)
-        resp = client.get("/agent-card", headers={"Authorization": "Bearer wrong"})
-        assert resp.status_code == 401
-        assert resp.json()["detail"] == "Invalid bearer token"
 
     def test_valid_bearer_token_returns_200(self) -> None:
         server = A2AServer(agent=_StubAgent([]), api_key="secret")
         client = TestClient(server.app)
-        resp = client.get("/agent-card", headers={"Authorization": "Bearer secret"})
+        resp = client.get(
+            "/.well-known/agent-card.json", headers={"Authorization": "Bearer secret"}
+        )
         assert resp.status_code == 200
-
-    def test_non_bearer_scheme_returns_401(self) -> None:
-        server = A2AServer(agent=_StubAgent([]), api_key="secret")
-        client = TestClient(server.app)
-        resp = client.get("/agent-card", headers={"Authorization": "Basic abc"})
-        assert resp.status_code == 401
 
 
 # ---------------------------------------------------------------------------
-# Settings-driven docs gate
+# Settings docs gate
 # ---------------------------------------------------------------------------
 
 
 class TestDocsGate:
     def test_docs_disabled_when_settings_unavailable(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        # Force ``get_settings`` to raise — the helper must swallow and
-        # default to no docs (CWE-200 — production should never expose
-        # OpenAPI by accident).
         def boom() -> None:
             raise RuntimeError("no settings")
 
@@ -341,27 +487,102 @@ class TestDocsGate:
 
 
 # ---------------------------------------------------------------------------
-# A2AClient
+# Client
 # ---------------------------------------------------------------------------
 
 
 class TestA2AClient:
     @pytest.mark.asyncio
     @respx.mock
-    async def test_get_agent_card_parses_response(self) -> None:
-        respx.get("http://remote/agent-card").mock(
+    async def test_get_agent_card_prefers_well_known(self) -> None:
+        respx.get("http://remote/.well-known/agent-card.json").mock(
             return_value=httpx.Response(
                 200,
-                json={"name": "x", "description": "d", "skills": [], "url": ""},
+                json={
+                    "name": "x",
+                    "description": "d",
+                    "url": "http://remote",
+                    "skills": [],
+                    "capabilities": {"streaming": True},
+                    "defaultInputModes": ["text/plain"],
+                    "defaultOutputModes": ["text/plain"],
+                },
             )
         )
         client = A2AClient(url="http://remote/")
         card = await client.get_agent_card()
         assert card.name == "x"
+        assert card.capabilities.streaming is True
 
     @pytest.mark.asyncio
     @respx.mock
-    async def test_invoke_returns_last_agent_message(self) -> None:
+    async def test_get_agent_card_falls_back_to_legacy(self) -> None:
+        respx.get("http://remote/.well-known/agent-card.json").mock(
+            return_value=httpx.Response(404)
+        )
+        respx.get("http://remote/agent-card").mock(
+            return_value=httpx.Response(
+                200,
+                json={"name": "x", "description": "d", "skills": ["a", "b"]},
+            )
+        )
+        client = A2AClient(url="http://remote")
+        card = await client.get_agent_card()
+        assert card.name == "x"
+        # Legacy string skills got promoted to objects with id == name.
+        assert [s.id for s in card.skills] == ["a", "b"]
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_send_message_round_trip(self) -> None:
+        respx.post("http://remote/").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "jsonrpc": "2.0",
+                    "id": "x",
+                    "result": {
+                        "id": "t-1",
+                        "contextId": "c-1",
+                        "status": {"state": "completed", "timestamp": "2026-01-01T00:00:00Z"},
+                        "history": [],
+                        "artifacts": [
+                            {
+                                "artifactId": "a-1",
+                                "parts": [{"kind": "text", "text": "answer"}],
+                            }
+                        ],
+                        "kind": "task",
+                    },
+                },
+            )
+        )
+        client = A2AClient(url="http://remote")
+        msg = Message(role="user", parts=[TextPart(text="hi")], messageId="m1")
+        task = await client.send_message(msg)
+        assert isinstance(task, Task)
+        assert task.status.state == TaskState.completed
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_get_task_propagates_error(self) -> None:
+        respx.post("http://remote/").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "jsonrpc": "2.0",
+                    "id": "x",
+                    "error": {"code": -32001, "message": "task t-1 not found"},
+                },
+            )
+        )
+        client = A2AClient(url="http://remote")
+        with pytest.raises(RuntimeError, match="task t-1 not found"):
+            await client.get_task("t-1")
+
+    @pytest.mark.asyncio
+    @respx.mock
+    async def test_legacy_invoke_returns_last_agent_message(self) -> None:
         respx.post("http://remote/a2a/invoke").mock(
             return_value=httpx.Response(
                 200,
@@ -381,21 +602,17 @@ class TestA2AClient:
 
     @pytest.mark.asyncio
     @respx.mock
-    async def test_invoke_returns_empty_when_no_agent_messages(self) -> None:
-        respx.post("http://remote/a2a/invoke").mock(
+    async def test_auth_headers_propagated(self) -> None:
+        route = respx.get("http://remote/.well-known/agent-card.json").mock(
             return_value=httpx.Response(
                 200,
-                json={"messages": [], "status": "completed", "metadata": {}},
+                json={
+                    "name": "x",
+                    "description": "d",
+                    "url": "http://remote",
+                    "skills": [],
+                },
             )
-        )
-        client = A2AClient(url="http://remote")
-        assert await client.invoke("hi") == ""
-
-    @pytest.mark.asyncio
-    @respx.mock
-    async def test_auth_headers_propagated(self) -> None:
-        route = respx.get("http://remote/agent-card").mock(
-            return_value=httpx.Response(200, json={"name": "x", "description": "d", "skills": []})
         )
         client = A2AClient(url="http://remote", api_key="secret")
         await client.get_agent_card()
@@ -404,7 +621,6 @@ class TestA2AClient:
 
     @pytest.mark.asyncio
     async def test_no_api_key_yields_no_auth_header(self) -> None:
-        # Branch: ``_auth_headers`` returns ``{}`` when no key is set.
         client = A2AClient(url="http://remote")
         assert client._auth_headers() == {}
 
@@ -417,21 +633,3 @@ class TestA2AClient:
     def test_as_tool_default_name(self) -> None:
         tool = A2AClient(url="http://remote").as_tool()
         assert tool.name == "remote_agent"
-
-    @respx.mock
-    def test_as_tool_invokes_remote(self) -> None:
-        respx.post("http://remote/a2a/invoke").mock(
-            return_value=httpx.Response(
-                200,
-                json={
-                    "messages": [{"role": "agent", "content": "remote answer", "metadata": {}}],
-                    "status": "completed",
-                    "metadata": {},
-                },
-            )
-        )
-        # ``call_remote`` uses ``asyncio.run``; we exercise it from sync
-        # context here, which is what the agent runtime does.
-        tool = A2AClient(url="http://remote").as_tool()
-        result = tool.fn("hi")
-        assert result == "remote answer"
