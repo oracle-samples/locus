@@ -41,14 +41,15 @@ class AnthropicConfig(ModelConfig):
 
     # Production-safety knobs — same posture as the OpenAI provider.
     # The anthropic SDK retries 5xx + connection errors with exponential
-    # backoff between attempts; default of 3 / 60s matches OpenAIConfig.
+    # backoff between attempts; default of 3 / 120s matches OpenAIConfig
+    # and gives reasoning + tool-heavy turns enough headroom.
     max_retries: int = Field(
         default=3,
         ge=0,
         description="Retry budget for transient errors (overloaded, 5xx, network).",
     )
     request_timeout: float = Field(
-        default=60.0,
+        default=120.0,
         gt=0,
         description="Per-request timeout in seconds.",
     )
@@ -118,6 +119,28 @@ class AnthropicModel(BaseModel):
                 timeout=self.config.request_timeout,
             )
         return self._client
+
+    async def close(self) -> None:
+        """Close the underlying httpx client.
+
+        ``Agent.run_sync`` calls this in a ``finally`` block so the
+        loop-bound httpx connections are shut down inside the same
+        event loop that opened them. Without this, the next
+        ``asyncio.run`` invocation closes the prior loop and the
+        leftover client's ``__del__`` later tries to ``aclose`` against
+        it, raising ``RuntimeError: Event loop is closed``.
+        """
+        if self._client is not None:
+            try:
+                await self._client.close()
+            finally:
+                self._client = None
+
+    async def __aenter__(self) -> AnthropicModel:
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        await self.close()
 
     def _convert_messages(self, messages: list[Message]) -> tuple[str | None, list[dict[str, Any]]]:
         """Convert Locus messages to Anthropic format.

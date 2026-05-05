@@ -1,5 +1,5 @@
 /**
- * Locus sandbox BFF.
+ * Locus workbench BFF.
  *
  * Thin Node forwarder between the SPA and the Python pattern runner. The
  * BFF exists so the browser sees one same-origin endpoint surface, secrets

@@ -34,13 +34,13 @@ from locus.multiagent import END, START, StateGraph
 def _llm_call(
     prompt: str, *, system: str = "Reply in one short sentence.", max_tokens: int = 60
 ) -> str:
-    """Helper: real OCI call with timing/token banner — used by every Part."""
+    """Helper: real model call with timing/token banner — used by every Part."""
     agent = Agent(model=get_model(max_tokens=max_tokens), system_prompt=system)
     t0 = time.perf_counter()
     res = agent.run_sync(prompt)
     dt = time.perf_counter() - t0
     print(
-        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+        f"  [model call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
     )
     return res.message.strip()
 
@@ -412,7 +412,7 @@ async def example_reducer_with_llm():
         result = agent.run_sync("Write a headline for an SDK that orchestrates AI agents.")
         dt = _t.perf_counter() - t0
         print(
-            f"  [OCI call (headline): {dt:.2f}s · {result.metrics.prompt_tokens}→{result.metrics.completion_tokens} tokens]"
+            f"  [model call (headline): {dt:.2f}s · {result.metrics.prompt_tokens}→{result.metrics.completion_tokens} tokens]"
         )
         return {"messages": [Message.assistant(f"[headline] {result.message.strip()}")]}
 
@@ -425,7 +425,7 @@ async def example_reducer_with_llm():
         result = agent.run_sync("Tagline for a multi-agent reasoning SDK.")
         dt = _t.perf_counter() - t0
         print(
-            f"  [OCI call (tagline):  {dt:.2f}s · {result.metrics.prompt_tokens}→{result.metrics.completion_tokens} tokens]"
+            f"  [model call (tagline):  {dt:.2f}s · {result.metrics.prompt_tokens}→{result.metrics.completion_tokens} tokens]"
         )
         return {"messages": [Message.assistant(f"[tagline] {result.message.strip()}")]}
 

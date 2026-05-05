@@ -134,31 +134,37 @@ class ParallelPipeline(BaseModel):
             result = await loop.run_in_executor(None, agent.run_sync, prompt)
             return result.message or ""
 
-        try:
-            tasks = [run_agent(i, agent) for i, agent in enumerate(self.agents)]
-            outputs = list(await asyncio.gather(*tasks))
+        # ``return_exceptions=True`` so one stuck/failed agent doesn't
+        # collapse the whole result into an empty ``outputs=[]`` (which
+        # forced every caller into defensive ``if result.success`` and
+        # ate which-agent-failed context). Now each slot in ``outputs``
+        # is either the agent's reply text or the stringified exception,
+        # and ``error`` summarises the per-agent failures.
+        tasks = [run_agent(i, agent) for i, agent in enumerate(self.agents)]
+        gathered = await asyncio.gather(*tasks, return_exceptions=True)
 
-            if self.merge_strategy == "last":
-                final = outputs[-1] if outputs else ""
+        outputs: list[str] = []
+        agent_errors: list[str] = []
+        for i, item in enumerate(gathered):
+            if isinstance(item, BaseException):
+                outputs.append("")
+                agent_errors.append(f"agent[{i}] {type(item).__name__}: {item}")
             else:
-                final = self.separator.join(outputs)
+                outputs.append(item)
 
-            duration_ms = (time.perf_counter() - start_time) * 1000
-            return PipelineResult(
-                success=True,
-                outputs=outputs,
-                final_output=final,
-                duration_ms=duration_ms,
-            )
+        if self.merge_strategy == "last":
+            final = outputs[-1] if outputs else ""
+        else:
+            final = self.separator.join(o for o in outputs if o)
 
-        except Exception as e:  # noqa: BLE001
-            duration_ms = (time.perf_counter() - start_time) * 1000
-            return PipelineResult(
-                success=False,
-                outputs=[],
-                duration_ms=duration_ms,
-                error=str(e),
-            )
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        return PipelineResult(
+            success=not agent_errors,
+            outputs=outputs,
+            final_output=final,
+            duration_ms=duration_ms,
+            error="; ".join(agent_errors) if agent_errors else None,
+        )
 
 
 class LoopAgent(BaseModel):

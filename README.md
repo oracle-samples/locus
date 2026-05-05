@@ -22,7 +22,7 @@
   <a href="https://oracle-samples.github.io/locus/concepts/multi-agent/">Multi-agent</a> ·
   <a href="https://oracle-samples.github.io/locus/concepts/gsar/">GSAR</a> ·
   <a href="examples/">Tutorials</a> ·
-  <a href="sandbox/">Workbench</a> ·
+  <a href="workbench/">Workbench</a> ·
   <a href="CONTRIBUTING.md">Contributing</a>
 </p>
 

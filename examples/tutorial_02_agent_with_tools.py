@@ -65,7 +65,7 @@ def example_simple_tools():
     )
     dt = _t.perf_counter() - t0
     print(
-        f"  [OCI call: {dt:.2f}s · "
+        f"  [model call: {dt:.2f}s · "
         f"{desc.metrics.prompt_tokens}→{desc.metrics.completion_tokens} tokens]"
     )
     print(f"  AI commentary: {desc.message.strip()}")

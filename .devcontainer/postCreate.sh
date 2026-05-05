@@ -10,10 +10,10 @@ echo "[postCreate] installing locus + dev deps"
 pip install --upgrade pip
 pip install -e ".[dev]"
 
-echo "[postCreate] installing sandbox/bff deps"
-(cd sandbox/bff && npm install --no-audit --no-fund)
+echo "[postCreate] installing workbench/bff deps"
+(cd workbench/bff && npm install --no-audit --no-fund)
 
-echo "[postCreate] installing sandbox/web deps"
-(cd sandbox/web && npm install --no-audit --no-fund)
+echo "[postCreate] installing workbench/web deps"
+(cd workbench/web && npm install --no-audit --no-fund)
 
 echo "[postCreate] done"

@@ -13,6 +13,10 @@ export type OciTransport = "auto" | "v1" | "sdk";
 export type ProviderConfig = {
   provider: ProviderType;
   model: string;
+  // Optional secondary models. Empty/undefined means "fall back to model".
+  // Same provider + credentials as the primary slot.
+  model_b?: string;
+  model_c?: string;
   api_key?: string;
   profile?: string;
   region?: string;

@@ -1,4 +1,4 @@
-"""Locus sandbox backend — pattern runner.
+"""Locus workbench backend — pattern runner.
 
 A single FastAPI app that exposes one endpoint per locus pattern. Each
 endpoint accepts a JSON body with the user's provider config, builds an
@@ -30,7 +30,7 @@ Adding a new pattern is ~20 lines: write a builder function that returns
 ``(agent_or_runnable, run_fn)``, then register it in ``PATTERNS``.
 """
 
-# This is sandbox / playground code — relax a handful of ruff rules that
+# This is workbench / playground code — relax a handful of ruff rules that
 # only matter for production. Keep ruff format on; just silence the lint
 # nits that don't apply here.
 # ruff: noqa: BLE001, E402, N806, N814, ASYNC230
@@ -58,7 +58,12 @@ class ProviderConfig(BaseModel):
     """User-supplied model credentials. One config per request."""
 
     provider: Literal["openai", "anthropic", "oci-session", "oci-apikey"]
-    model: str = Field(default="", description="provider-specific model id")
+    model: str = Field(default="", description="primary model id (slot A)")
+    # Optional secondary slots so a tutorial can mix models — e.g. haiku
+    # for triage, sonnet for the deep specialist. Both fall through to
+    # ``model`` (slot A) when empty. Same provider + credentials as A.
+    model_b: str | None = None
+    model_c: str | None = None
     api_key: str | None = None
     profile: str | None = None
     region: str = "us-chicago-1"
@@ -652,7 +657,7 @@ PATTERN_RUNNERS: dict[str, Any] = {
 # ---------------------------------------------------------------------------
 
 
-app = FastAPI(title="locus sandbox runner", version="0.1.0")
+app = FastAPI(title="locus workbench runner", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -941,6 +946,14 @@ def _provider_env(cfg: ProviderConfig) -> dict[str, str]:
     elif cfg.provider in ("oci-session", "oci-apikey"):
         env["LOCUS_MODEL_PROVIDER"] = "oci"
         env["LOCUS_MODEL_ID"] = cfg.model or "openai.gpt-5.5-2026-04-23"
+    # Optional secondary slots — tutorials read these via get_model_b()
+    # / get_model_c() in examples/config.py. Empty means "fall back to
+    # slot A" so existing tutorials stay correct.
+    if cfg.model_b:
+        env["LOCUS_MODEL_ID_B"] = cfg.model_b
+    if cfg.model_c:
+        env["LOCUS_MODEL_ID_C"] = cfg.model_c
+    if cfg.provider in ("oci-session", "oci-apikey"):
         if cfg.profile:
             env["LOCUS_OCI_PROFILE"] = cfg.profile
         if cfg.region:
@@ -1052,7 +1065,7 @@ __LE_PREFIX = "__LE__:"
 # directly. Wraps `from config import get_model` so the returned object
 # is asserted real before the tutorial uses it.
 __SB_PROVIDER = "__SB_PROVIDER_VALUE__"
-__le_sys.stdout.write(f"[locus-sandbox] running against {__SB_PROVIDER}\\n")
+__le_sys.stdout.write(f"[locus-workbench] running against {__SB_PROVIDER}\\n")
 __le_sys.stdout.flush()
 try:
     import config as __sb_config
@@ -1061,13 +1074,13 @@ try:
         m = __orig_get_model(*a, **kw)
         if type(m).__name__ == "MockModel":
             raise RuntimeError(
-                "locus-sandbox: refusing to run with MockModel. "
+                "locus-workbench: refusing to run with MockModel. "
                 "Set OpenAI / Anthropic / OCI provider in Provider settings."
             )
         return m
     __sb_config.get_model = __guarded_get_model
 except Exception as __sb_err:
-    __le_sys.stderr.write(f"[locus-sandbox] guard install failed: {__sb_err}\\n")
+    __le_sys.stderr.write(f"[locus-workbench] guard install failed: {__sb_err}\\n")
 
 def __le_emit__(payload):
     try:
@@ -1096,7 +1109,7 @@ try:
     __orig_init__ = __LocusAgent__.__init__
     __orig_run_sync = __LocusAgent__.run_sync
 
-    __SB_FORCE_REFLEXION = __le_os.environ.get("LOCUS_SANDBOX_REFLEXION") == "1"
+    __SB_FORCE_REFLEXION = __le_os.environ.get("LOCUS_WORKBENCH_REFLEXION") == "1"
 
     def __patched__(self, *a, **kw):
         __orig_init__(self, *a, **kw)
@@ -1192,7 +1205,7 @@ except Exception:
         **_provider_env(req.provider),
         "PYTHONPATH": f"{src_dir}{os.pathsep}{examples_dir}",
         "PYTHONUNBUFFERED": "1",
-        "LOCUS_SANDBOX_REFLEXION": "1" if req.reflexion else "0",
+        "LOCUS_WORKBENCH_REFLEXION": "1" if req.reflexion else "0",
     }
 
     run_id = _uuid.uuid4().hex

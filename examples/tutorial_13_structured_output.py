@@ -3,7 +3,7 @@ Tutorial 13: Structured Output — every part runs against a real LLM
 
 This tutorial demonstrates structured output capabilities of the Locus
 SDK. Every Part fires a real OCI gpt-5 call and prints
-``[OCI call: X.XXs · prompt→completion tokens]`` so you can see the
+``[model call: X.XXs · prompt→completion tokens]`` so you can see the
 network round-trip happen. The structured-output APIs being shown are
 all real SDK features:
 
@@ -42,7 +42,7 @@ def _banner(result, label: str = "") -> None:
     m = result.metrics
     tag = f" {label}" if label else ""
     print(
-        f"  [OCI call{tag}: {m.duration_ms / 1000.0:.2f}s · "
+        f"  [model call{tag}: {m.duration_ms / 1000.0:.2f}s · "
         f"{m.prompt_tokens}→{m.completion_tokens} tokens]"
     )
 
@@ -53,7 +53,7 @@ def _llm_call(prompt: str, *, system: str = "Reply in one sentence.", max_tokens
     res = agent.run_sync(prompt)
     dt = time.perf_counter() - t0
     print(
-        f"  [OCI call: {dt:.2f}s · "
+        f"  [model call: {dt:.2f}s · "
         f"{res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
     )
     return res.message.strip()
@@ -277,7 +277,7 @@ def main() -> None:
     live = live_agent.run_sync("Top three cloud vendors for a $2M enterprise compute spend.")
     dt = time.perf_counter() - t0
     print(
-        f"  [OCI call: {dt:.2f}s · "
+        f"  [model call: {dt:.2f}s · "
         f"{live.metrics.prompt_tokens}→{live.metrics.completion_tokens} tokens]"
     )
     picks: VendorList | None = live.parsed

@@ -36,13 +36,13 @@ from locus.tools.decorator import tool
 def _llm_call(
     prompt: str, *, system: str = "Reply in one short sentence.", max_tokens: int = 80
 ) -> str:
-    """Helper: real OCI call with timing/token banner — used by every Part."""
+    """Helper: real model call with timing/token banner — used by every Part."""
     agent = Agent(model=get_model(max_tokens=max_tokens), system_prompt=system)
     t0 = time.perf_counter()
     res = agent.run_sync(prompt)
     dt = time.perf_counter() - t0
     print(
-        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+        f"  [model call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
     )
     return res.message.strip()
 
@@ -95,7 +95,7 @@ When analyzing:
     t0 = time.perf_counter()
     p1 = await specialist.execute(task="In one sentence, what is your specialty?")
     dt = time.perf_counter() - t0
-    print(f"  [OCI call: {dt:.2f}s · specialist.execute()]")
+    print(f"  [model call: {dt:.2f}s · specialist.execute()]")
     if p1.output:
         print(f"  Smoke output: {p1.output[:160]}")
 
@@ -274,7 +274,7 @@ When analyzing:
     t0 = time.perf_counter()
     p6 = await metrics_analyst.execute(task="In one sentence, what does a metrics analyst do?")
     dt = time.perf_counter() - t0
-    print(f"\n  [OCI call: {dt:.2f}s · metrics_analyst.execute()]")
+    print(f"\n  [model call: {dt:.2f}s · metrics_analyst.execute()]")
     if p6.output:
         print(f"  Output: {p6.output[:160]}")
 
@@ -392,7 +392,7 @@ When analyzing:
         task="In one sentence, classify this incident: 'API p99 jumped from 30ms to 800ms after a deploy.'",
     )
     dt = time.perf_counter() - t0
-    print(f"  [OCI call: {dt:.2f}s · triage.execute()]")
+    print(f"  [model call: {dt:.2f}s · triage.execute()]")
     if p10.output:
         print(f"  Triage verdict: {p10.output[:160]}")
 

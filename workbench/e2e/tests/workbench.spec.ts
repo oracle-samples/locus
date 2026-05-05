@@ -28,7 +28,7 @@ async function configureOCI(page: Page, opts: { transport?: "auto" | "v1" | "sdk
   await page.getByTestId("settings-save").click();
 }
 
-test.describe("locus sandbox · workbench", () => {
+test.describe("locus workbench · main", () => {
   test("loads tutorial catalog from BFF", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator(".app__brand-mark")).toHaveText("locus");
@@ -103,7 +103,7 @@ print(agent.run_sync("ping").message)
 
   test("theme toggle switches data-theme + persists in localStorage", async ({ page }) => {
     await page.goto("/");
-    await page.evaluate(() => localStorage.removeItem("locus.sandbox.theme"));
+    await page.evaluate(() => localStorage.removeItem("locus.workbench.theme"));
     await page.reload();
     const html = page.locator("html");
     // Click toggle, expect data-theme to flip and persist across reload.
@@ -119,7 +119,7 @@ print(agent.run_sync("ping").message)
   test("split divider is draggable and persists", async ({ page }) => {
     await page.setViewportSize({ width: 1400, height: 900 });
     await page.goto("/");
-    await page.evaluate(() => localStorage.removeItem("locus.sandbox.split"));
+    await page.evaluate(() => localStorage.removeItem("locus.workbench.split"));
     await page.reload();
     const editorCard = page.getByTestId("wb-editor-card");
     const handle = page.getByTestId("wb-resize");
@@ -195,7 +195,7 @@ print(agent.run_sync("ping").message)
 
   test("default theme is dark when no preference is saved", async ({ page }) => {
     await page.goto("/");
-    await page.evaluate(() => localStorage.removeItem("locus.sandbox.theme"));
+    await page.evaluate(() => localStorage.removeItem("locus.workbench.theme"));
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   });
@@ -243,7 +243,7 @@ print(agent.run_sync("ping").message)
 });
 
 const openaiTest = OPENAI_KEY ? test : test.skip;
-test.describe("locus sandbox · OpenAI", () => {
+test.describe("locus workbench · OpenAI", () => {
   openaiTest("workbench runs against OpenAI gpt-5", async ({ page }) => {
     test.setTimeout(180_000);
     await page.goto("/");
@@ -269,7 +269,7 @@ test.describe("locus sandbox · OpenAI", () => {
 });
 
 const anthropicTest = ANTHROPIC_KEY ? test : test.skip;
-test.describe("locus sandbox · Anthropic", () => {
+test.describe("locus workbench · Anthropic", () => {
   anthropicTest("workbench runs against Anthropic claude-sonnet-4-6", async ({ page }) => {
     test.setTimeout(180_000);
     await page.goto("/");

@@ -1,9 +1,9 @@
 {
-  "name": "locus-sandbox-web",
+  "name": "locus-workbench-web",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Plain-TypeScript front-end for the locus sandbox. Talks to the BFF, renders the playground.",
+  "description": "Plain-TypeScript front-end for the locus workbench. Talks to the BFF, renders the playground.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

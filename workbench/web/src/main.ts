@@ -21,6 +21,8 @@ const settingsSave = $<HTMLButtonElement>("#settings-save");
 const cfgProvider = $<HTMLSelectElement>("#cfg-provider");
 const cfgApiKey = $<HTMLInputElement>("#cfg-apikey");
 const cfgModel = $<HTMLSelectElement>("#cfg-model");
+const cfgModelB = $<HTMLSelectElement>("#cfg-model-b");
+const cfgModelC = $<HTMLSelectElement>("#cfg-model-c");
 const cfgModelStatus = $("#cfg-model-status");
 const cfgProfile = $<HTMLInputElement>("#cfg-profile");
 const cfgRegion = $<HTMLInputElement>("#cfg-region");
@@ -50,12 +52,36 @@ function fillFromConfig(cfg: ProviderConfig) {
   cfgRegion.value = cfg.region ?? "us-chicago-1";
   cfgCompartment.value = cfg.compartment_id ?? "";
   cfgTransport.value = cfg.oci_transport ?? "v1";
-  const want = cfg.model ?? defaultModelFor(cfg.provider);
-  setModelOptions([want], want);
+  // Stash the desired B/C selections; setModelOptions() reads these
+  // when it paints the dropdowns after credentials validate.
+  pendingModelB = cfg.model_b ?? "";
+  pendingModelC = cfg.model_c ?? "";
+  // Leave the dropdown empty until refreshModels() either validates the
+  // credentials and fetches the live list, or surfaces a hint that the
+  // form is incomplete. Pre-painting a default would defeat the
+  // "no models until validated" rule.
+  clearModelOptions();
 }
+
+// Remembered B/C selections waiting on a model list. Preserved across
+// the (initially empty) → (live list) transition so reopening Settings
+// keeps the user's prior pick.
+let pendingModelB = "";
+let pendingModelC = "";
 
 function setModelOptions(models: string[], selected?: string) {
   cfgModel.innerHTML = "";
+  cfgModelB.innerHTML = "";
+  cfgModelC.innerHTML = "";
+  if (models.length === 0) {
+    cfgModel.disabled = true;
+    cfgModelB.disabled = true;
+    cfgModelC.disabled = true;
+    return;
+  }
+  cfgModel.disabled = false;
+  cfgModelB.disabled = false;
+  cfgModelC.disabled = false;
   if (selected && !models.includes(selected)) models = [selected, ...models];
   for (const m of models) {
     const opt = document.createElement("option");
@@ -64,7 +90,60 @@ function setModelOptions(models: string[], selected?: string) {
     cfgModel.appendChild(opt);
   }
   if (selected) cfgModel.value = selected;
+  // B and C share the same model list, plus a leading "(use Model A)"
+  // entry so the user can explicitly opt out without typing.
+  for (const dd of [cfgModelB, cfgModelC]) {
+    const blank = document.createElement("option");
+    blank.value = "";
+    blank.textContent = "(use Model A)";
+    dd.appendChild(blank);
+    for (const m of models) {
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = m;
+      dd.appendChild(opt);
+    }
+  }
+  cfgModelB.value = models.includes(pendingModelB) ? pendingModelB : "";
+  cfgModelC.value = models.includes(pendingModelC) ? pendingModelC : "";
 }
+
+function clearModelOptions() {
+  cfgModel.innerHTML = "";
+  cfgModelB.innerHTML = "";
+  cfgModelC.innerHTML = "";
+  cfgModel.disabled = true;
+  cfgModelB.disabled = true;
+  cfgModelC.disabled = true;
+}
+
+// True when the form has enough credentials that an /api/models call is
+// worth firing. We never auto-fetch on partial input — pasting a key
+// of length 5 shouldn't burn a request to the provider, and we never
+// want to render a curated/canned list before the key validates.
+function hasEnoughCredentials(p: ProviderType): boolean {
+  if (p === "openai") return cfgApiKey.value.startsWith("sk-") && cfgApiKey.value.length >= 30;
+  if (p === "anthropic") return cfgApiKey.value.startsWith("sk-ant-") && cfgApiKey.value.length >= 30;
+  // OCI: needs a profile and a compartment OCID. The compartment OCID
+  // shape is ``ocid1.compartment.oc1..<base64>`` — wait until it's
+  // recognisably complete before hitting the control plane.
+  if (p === "oci-session" || p === "oci-apikey") {
+    return (
+      !!cfgProfile.value.trim()
+      && cfgCompartment.value.trim().startsWith("ocid1.compartment.")
+      && cfgCompartment.value.trim().length >= 40
+    );
+  }
+  return false;
+}
+
+function promptFor(p: ProviderType): string {
+  if (p === "openai") return "enter API key to load models";
+  if (p === "anthropic") return "enter API key to load models";
+  if (p === "oci-session" || p === "oci-apikey") return "enter compartment OCID to load models";
+  return "";
+}
+
 
 let modelsRefreshSeq = 0;
 
@@ -129,6 +208,8 @@ function saveSettings() {
     provider: p,
     model: cfgModel.value || defaultModelFor(p),
   };
+  if (cfgModelB.value) cfg.model_b = cfgModelB.value;
+  if (cfgModelC.value) cfg.model_c = cfgModelC.value;
   if (p === "openai" || p === "anthropic") {
     cfg.api_key = cfgApiKey.value.trim();
     if (!cfg.api_key) {
@@ -177,7 +258,7 @@ cfgTransport.addEventListener("change", queueRefresh);
 const themeBtn = $<HTMLButtonElement>("#theme-btn");
 const themeSun = $<HTMLElement>("#theme-icon-sun");
 const themeMoon = $<HTMLElement>("#theme-icon-moon");
-const THEME_KEY = "locus.sandbox.theme";
+const THEME_KEY = "locus.workbench.theme";
 
 function applyTheme(t: "light" | "dark") {
   document.documentElement.setAttribute("data-theme", t);
@@ -186,7 +267,7 @@ function applyTheme(t: "light" | "dark") {
 }
 
 const savedTheme = localStorage.getItem(THEME_KEY) as "light" | "dark" | null;
-// Default to dark — the sandbox is for hands-on coding, dark is the
+// Default to dark — the workbench is for hands-on coding, dark is the
 // natural fit. User can flip to light via the header toggle.
 const initialTheme: "light" | "dark" = savedTheme ?? "dark";
 applyTheme(initialTheme);

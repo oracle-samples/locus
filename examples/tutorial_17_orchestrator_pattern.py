@@ -18,7 +18,7 @@ Run with:
 import asyncio
 import time
 
-from config import get_model, print_config
+from config import get_model, get_model_b, print_config
 
 from locus.agent import Agent
 from locus.multiagent import (
@@ -37,13 +37,15 @@ from locus.tools.decorator import tool
 def _llm_call(
     prompt: str, *, system: str = "Reply in one short sentence.", max_tokens: int = 80
 ) -> str:
-    """Helper: real OCI call with timing/token banner — used by every Part."""
-    agent = Agent(model=get_model(max_tokens=max_tokens), system_prompt=system)
+    """Helper: real model call with timing/token banner — used by every Part.
+    Uses slot B (a faster model when configured) since the commentary
+    calls don't need the heavy specialist model."""
+    agent = Agent(model=get_model_b(max_tokens=max_tokens), system_prompt=system)
     t0 = time.perf_counter()
     res = agent.run_sync(prompt)
     dt = time.perf_counter() - t0
     print(
-        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+        f"  [model call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
     )
     return res.message.strip()
 
@@ -79,7 +81,7 @@ async def main():
     t0 = time.perf_counter()
     p1 = await log_analyst.execute(task="In one sentence, summarise what a log analyst does.")
     dt = time.perf_counter() - t0
-    print(f"  [OCI call: {dt:.2f}s · log_analyst.execute()]")
+    print(f"  [model call: {dt:.2f}s · log_analyst.execute()]")
     if p1.output:
         print(f"  Output: {p1.output[:160]}")
 
@@ -154,9 +156,8 @@ When analyzing, look for connection leaks, slow queries, and lock contention."""
     print("Registered specialists:")
     for spec_id, spec in orchestrator.specialists.items():
         print(f"  - {spec.name} ({spec_id})")
-    print(
-        f"AI commentary: {_llm_call('In one sentence, what does an Orchestrator add on top of a list of Specialists?')}"
-    )
+    # AI commentary call dropped — Part 7's full orchestration run
+    # exercises the same Orchestrator code path live.
 
     # =========================================================================
     # Part 5: Orchestrator Configuration
@@ -187,9 +188,8 @@ Prioritize based on urgency indicated in the task.""",
     custom_orchestrator.register_specialists([log_analyst, metrics_analyst])
 
     print(f"\nCustom orchestrator with {len(custom_orchestrator.specialists)} specialists")
-    print(
-        f"AI commentary: {_llm_call('In one sentence, why customise the orchestrator system_prompt vs reusing the default?')}"
-    )
+    # The custom_orchestrator object above is the demo itself — no
+    # need for a separate LLM commentary call.
 
     # =========================================================================
     # Part 6: Routing Decisions
@@ -214,9 +214,7 @@ Prioritize based on urgency indicated in the task.""",
     print(f"  Specialists: {routing.specialists}")
     print(f"  Reasoning: {routing.reasoning}")
     print(f"  Subtasks: {routing.context.get('subtasks', {})}")
-    print(
-        f"AI commentary: {_llm_call('In one sentence, why is RoutingDecision a structured object instead of just a list of specialist IDs?')}"
-    )
+    # RoutingDecision is a typed object — the field set above is the demo.
 
     # =========================================================================
     # Part 7: Full Orchestration
@@ -273,7 +271,7 @@ Prioritize based on urgency indicated in the task.""",
         task="In one short sentence, what would you check first if a service had intermittent timeouts?",
     )
     dt = time.perf_counter() - t0
-    print(f"  [OCI call: {dt:.2f}s · network_specialist.execute()]")
+    print(f"  [model call: {dt:.2f}s · network_specialist.execute()]")
     if p8.output:
         print(f"  Output: {p8.output[:160]}")
 
@@ -303,9 +301,6 @@ Prioritize based on urgency indicated in the task.""",
     print("  - Multiple specialists analyze the same data")
     print("  - Compare and validate findings")
     print("  - Flag disagreements for human review")
-    print(
-        f"AI suggestion: {_llm_call('Suggest one less-common orchestrator pattern beyond parallel/sequential/hierarchical/consensus. One sentence.')}"
-    )
 
     # =========================================================================
     # Part 10: Best Practices
@@ -319,9 +314,6 @@ Prioritize based on urgency indicated in the task.""",
     print("5. Include correlation logic in summarization")
     print("6. Handle specialist failures gracefully")
     print("7. Track specialist performance metrics")
-    print(
-        f"AI cheatsheet: {_llm_call('Add one more best-practice for orchestrator-led incident response not in the list above. One short sentence.', max_tokens=80)}"
-    )
 
     # =========================================================================
     print("\n" + "=" * 60)

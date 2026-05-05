@@ -12,7 +12,7 @@ SDK capability:
 - `CausalChain` / `build_causal_chain` (causal reasoning)
 
 Every section prints
-``[OCI call: X.XXs · prompt→completion tokens]`` so you can see the
+``[model call: X.XXs · prompt→completion tokens]`` so you can see the
 network round-trip happen.
 
 Run with:
@@ -43,11 +43,11 @@ from locus.tools import tool
 
 
 def _banner(result, label: str = "") -> None:
-    """Print [OCI call: …] line from an AgentResult."""
+    """Print [model call: …] line from an AgentResult."""
     m = result.metrics
     tag = f" {label}" if label else ""
     print(
-        f"  [OCI call{tag}: {m.duration_ms / 1000.0:.2f}s · "
+        f"  [model call{tag}: {m.duration_ms / 1000.0:.2f}s · "
         f"{m.prompt_tokens}→{m.completion_tokens} tokens · iters={m.iterations}]"
     )
 
@@ -59,7 +59,7 @@ def _llm_call(prompt: str, *, system: str = "Reply in one sentence.", max_tokens
     result = agent.run_sync(prompt)
     dt = time.perf_counter() - t0
     print(
-        f"  [OCI call: {dt:.2f}s · "
+        f"  [model call: {dt:.2f}s · "
         f"{result.metrics.prompt_tokens}→{result.metrics.completion_tokens} tokens]"
     )
     return result.message.strip()

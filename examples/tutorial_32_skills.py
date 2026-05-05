@@ -91,7 +91,7 @@ def example_filesystem():
     )
     dt = _t.perf_counter() - t0
     print(
-        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+        f"  [model call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
     )
     print(f"  AI rationale: {res.message.strip()}")
 
@@ -138,7 +138,7 @@ Place additional files in:
     )
     dt = _t.perf_counter() - t0
     print(
-        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+        f"  [model call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
     )
     print(f"  AI-authored sample description:\n  {res.message.strip()}")
 

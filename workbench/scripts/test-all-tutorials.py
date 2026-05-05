@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Sandbox helper script — relax lint rules that don't apply here.
+# Workbench helper script — relax lint rules that don't apply here.
 # ruff: noqa: BLE001, PLW2901, T201
 
 """Run every model-only tutorial through the workbench harness.
@@ -10,13 +10,13 @@ any attempted tutorial finished with a non-zero exit.
 
 Usage:
     # With runner :8100 + BFF :3101 already up + valid OCI session.
-    python sandbox/scripts/test-all-tutorials.py
+    python workbench/scripts/test-all-tutorials.py
 
     # Scope to specific tutorials:
-    python sandbox/scripts/test-all-tutorials.py --include 1,2,11
+    python workbench/scripts/test-all-tutorials.py --include 1,2,11
 
     # Bigger budget per tutorial (default 180s):
-    python sandbox/scripts/test-all-tutorials.py --timeout 240
+    python workbench/scripts/test-all-tutorials.py --timeout 240
 """
 
 from __future__ import annotations

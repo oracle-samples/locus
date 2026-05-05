@@ -2,7 +2,7 @@
 Tutorial 19: Guardrails & Security — every part runs a real Agent
 
 Every Part fires the configured GenAI provider. Each section prints
-``[OCI call: X.XXs · prompt→completion tokens]`` so you can see the
+``[model call: X.XXs · prompt→completion tokens]`` so you can see the
 network round-trip happen, and the SDK feature being demonstrated
 (``GuardrailsHook``, ``ContentFilterHook``, ``HookRegistry``,
 ``GuardrailConfig``, ``GuardrailAction``) is exercised on top of a real
@@ -59,7 +59,7 @@ def _llm_call(
     result = agent.run_sync(prompt)
     dt = time.perf_counter() - t0
     print(
-        f"  [OCI call: {dt:.2f}s · "
+        f"  [model call: {dt:.2f}s · "
         f"{result.metrics.prompt_tokens}→{result.metrics.completion_tokens} tokens]"
     )
     return result.message.strip()
@@ -362,7 +362,7 @@ async def main():
     safe_result = safe_agent.run_sync("How can I improve the security posture of a small SaaS app?")
     dt = time.perf_counter() - t0
     print(
-        f"  [OCI call: {dt:.2f}s · "
+        f"  [model call: {dt:.2f}s · "
         f"{safe_result.metrics.prompt_tokens}→{safe_result.metrics.completion_tokens} tokens]"
     )
     print(f"Guarded answer: {safe_result.message[:300]}")

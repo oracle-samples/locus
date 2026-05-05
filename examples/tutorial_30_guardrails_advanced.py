@@ -80,7 +80,7 @@ def example_topic_policy():
     )
     dt = _t.perf_counter() - t0
     print(
-        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+        f"  [model call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
     )
     print(f"  AI caveat: {res.message.strip()}")
 
@@ -108,7 +108,7 @@ def example_content_safety():
     )
     dt = _t.perf_counter() - t0
     print(
-        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+        f"  [model call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
     )
     print(f"  AI guidance: {res.message.strip()}")
 

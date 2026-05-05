@@ -61,14 +61,16 @@ class OpenAIConfig(ModelConfig):
     # Production-safety knobs — match the OCI provider's posture so a
     # transient 429 / 503 / connection drop doesn't immediately kill the
     # agent loop. The openai SDK's defaults are 2 retries / 600s timeout;
-    # 3 retries / 60s is a tighter, more agent-friendly default.
+    # 3 retries / 120s is a tighter, more agent-friendly default with
+    # enough headroom for reasoning + tool-heavy turns where 60s starts
+    # cutting things close.
     max_retries: int = Field(
         default=3,
         ge=0,
         description="Retry budget for transient errors (429, 5xx, network).",
     )
     request_timeout: float = Field(
-        default=60.0,
+        default=120.0,
         gt=0,
         description="Per-request timeout in seconds.",
     )

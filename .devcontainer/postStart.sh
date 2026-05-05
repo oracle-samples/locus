@@ -10,21 +10,21 @@ mkdir -p /tmp
 
 # Backend — FastAPI runner on :8100. Use the project's installed locus
 # package; PYTHONPATH src so any local-only modules resolve.
-nohup python -m uvicorn --app-dir sandbox/backend runner:app \
+nohup python -m uvicorn --app-dir workbench/backend runner:app \
   --host 127.0.0.1 --port 8100 \
   > /tmp/wb-backend.log 2>&1 &
 echo "[postStart] backend pid=$! → /tmp/wb-backend.log"
 
 # BFF — Express on :3101.
 (
-  cd sandbox/bff
+  cd workbench/bff
   nohup npm run dev > /tmp/wb-bff.log 2>&1 &
   echo "[postStart] bff pid=$! → /tmp/wb-bff.log"
 )
 
 # Web — Vite dev server on :5173.
 (
-  cd sandbox/web
+  cd workbench/web
   nohup npm run dev > /tmp/wb-web.log 2>&1 &
   echo "[postStart] web pid=$! → /tmp/wb-web.log"
 )

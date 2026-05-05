@@ -26,13 +26,13 @@ from locus.multiagent import END, START, StateGraph
 def _llm_call(
     prompt: str, *, system: str = "Reply in one short sentence.", max_tokens: int = 80
 ) -> str:
-    """Helper: real OCI call with timing/token banner — used by every Part."""
+    """Helper: real model call with timing/token banner — used by every Part."""
     agent = Agent(model=get_model(max_tokens=max_tokens), system_prompt=system)
     t0 = time.perf_counter()
     res = agent.run_sync(prompt)
     dt = time.perf_counter() - t0
     print(
-        f"  [OCI call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
+        f"  [model call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
     )
     return res.message.strip()
 
@@ -455,7 +455,7 @@ async def example_command_with_llm():
         result = agent.run_sync(message)
         dt = _t.perf_counter() - t0
         print(
-            f"  [OCI call: {dt:.2f}s · {result.metrics.prompt_tokens}→{result.metrics.completion_tokens} tokens]"
+            f"  [model call: {dt:.2f}s · {result.metrics.prompt_tokens}→{result.metrics.completion_tokens} tokens]"
         )
         label = result.message.strip().lower()
         if label not in {"refund", "ship", "escalate"}:

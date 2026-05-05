@@ -119,7 +119,7 @@ def example_cancel():
     live_result = live_agent.run_sync("In one sentence, why does an agent need a cancel signal?")
     dt = time.perf_counter() - t0
     print(
-        f"  [OCI call: {dt:.2f}s · "
+        f"  [model call: {dt:.2f}s · "
         f"{live_result.metrics.prompt_tokens}→{live_result.metrics.completion_tokens} tokens]"
     )
     print(f"  AI rationale: {live_result.message.strip()}")
