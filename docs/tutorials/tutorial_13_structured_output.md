@@ -2,7 +2,7 @@
 
 This tutorial demonstrates structured output capabilities of the Locus
 SDK. Every Part fires a real OCI gpt-5 call and prints
-``[OCI call: X.XXs · prompt→completion tokens]`` so you can see the
+``[model call: X.XXs · prompt→completion tokens]`` so you can see the
 network round-trip happen. The structured-output APIs being shown are
 all real SDK features:
 
