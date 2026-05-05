@@ -287,16 +287,24 @@ class OCIOpenAIModel(OpenAIModel):
             from locus.models.providers.oci._signing import OCIRequestSigner
 
             signer = self._build_signer()
+            # Pin the same timeout/retry knobs the parent OpenAIModel
+            # uses so a stuck OCI request can't hang asyncio.gather()
+            # forever (see ParallelPipeline) — without an explicit
+            # timeout, the httpx default + openai-SDK default stack
+            # together to ~10 minutes per call.
             http_client = httpx.AsyncClient(
                 auth=OCIRequestSigner(
                     signer,
                     compartment_id=self.config.compartment_id,
                 ),
+                timeout=httpx.Timeout(self.config.request_timeout),
             )
             self._client = openai.AsyncOpenAI(
                 api_key="not-used",
                 base_url=self.config.base_url,
                 http_client=http_client,
+                max_retries=self.config.max_retries,
+                timeout=self.config.request_timeout,
             )
         return self._client
 

@@ -307,17 +307,53 @@ class Agent(AgentRuntimeMixin, BaseModel):
                 gsar_decision=gsar_decision,
             )
 
+        async def _run_and_close_clients() -> AgentResult:
+            # Wrap _run() so any model-level httpx client is shut down
+            # *inside* this asyncio.run loop. Otherwise the client's
+            # connections remain bound to the loop we're about to close;
+            # when ``run_sync`` is called again, the next ``asyncio.run``
+            # opens a fresh loop and the old client's ``__del__`` tries
+            # to ``aclose`` against the now-closed loop, raising
+            # ``RuntimeError: Event loop is closed``.
+            try:
+                return await _run()
+            finally:
+                close = getattr(self.model, "close", None)
+                if close is not None:
+                    try:
+                        await close()
+                    except Exception:  # noqa: BLE001 — cleanup must never mask a real error from _run()
+                        pass
+
+                # Drain any background tasks the SDK spawned (httpx's TLS
+                # teardown schedules ``loop.call_soon`` callbacks via
+                # anyio that fire after ``client.close()`` returns). If
+                # we don't await them, the loop closes mid-flight and the
+                # callbacks raise "Event loop is closed" on the asyncio
+                # default exception handler — visible in stderr as
+                # "Task exception was never retrieved".
+                try:
+                    pending = [
+                        t
+                        for t in asyncio.all_tasks()
+                        if t is not asyncio.current_task() and not t.done()
+                    ]
+                    if pending:
+                        await asyncio.wait(pending, timeout=2.0)
+                except Exception:  # noqa: BLE001 — best-effort drain; never block teardown
+                    pass
+
         try:
             asyncio.get_running_loop()
         except RuntimeError:
             # No running loop, create a new one
-            return asyncio.run(_run())
+            return asyncio.run(_run_and_close_clients())
         else:
             # There's a running loop, run in a thread to avoid nesting
             import concurrent.futures
 
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(asyncio.run, _run())
+                future = executor.submit(asyncio.run, _run_and_close_clients())
                 return future.result()
 
     def invoke(
