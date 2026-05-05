@@ -1,8 +1,8 @@
 {
-  "name": "locus-sandbox-bff",
+  "name": "locus-workbench-bff",
   "version": "0.1.0",
   "private": true,
-  "description": "Node BFF for the locus sandbox: front-end talks to this, this talks to locus python A2A peers.",
+  "description": "Node BFF for the locus workbench: front-end talks to this, this talks to locus python A2A peers.",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",

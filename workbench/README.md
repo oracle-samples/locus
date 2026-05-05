@@ -1,6 +1,6 @@
-# sandbox — locus pattern playground
+# workbench — locus pattern playground
 
-A self-contained 3-tier sandbox: **vanilla TypeScript front-end** ↔
+A self-contained 3-tier workbench: **vanilla TypeScript front-end** ↔
 **Node BFF** ↔ **Locus Python pattern runner**. Bring your own provider
 credentials (OpenAI / Anthropic / OCI session / OCI api-key) — no
 instance principals, no external dependencies beyond the model
@@ -8,19 +8,19 @@ provider.
 
 ```
 ┌──────────────────────────────────────┐
-│  sandbox/web — vanilla TS + Vite     │  :5173
+│  workbench/web — vanilla TS + Vite   │  :5173
 │  Pattern catalog · provider settings │
 └────────────────┬─────────────────────┘
                  │ /api/*
                  ▼
 ┌──────────────────────────────────────┐
-│  sandbox/bff — Node Express          │  :3001
+│  workbench/bff — Node Express        │  :3001
 │  Thin proxy + same-origin surface    │
 └────────────────┬─────────────────────┘
                  │ /api/*
                  ▼
 ┌──────────────────────────────────────┐
-│  sandbox/backend — FastAPI runner    │  :8100
+│  workbench/backend — FastAPI runner  │  :8100
 │  One endpoint per locus pattern      │
 └──────────────────────────────────────┘
 ```
@@ -51,14 +51,14 @@ The web UI's **Provider settings** modal accepts one of:
   `~/.oci/config`, e.g. `MY_PROFILE`) + `compartment_id` + `region`
 - **OCI api-key** — same shape, just a different OCI profile type
 
-Settings live in `localStorage` under `locus.sandbox.provider`. They're
+Settings live in `localStorage` under `locus.workbench.provider`. They're
 sent on every request body to the backend; never persisted server-side.
 
 ## Run locally
 
 ```bash
 # 1. Start the python runner (in a venv with locus + the project deps).
-cd sandbox/backend
+cd workbench/backend
 PYTHONPATH=../../src \
   uvicorn --app-dir . runner:app --host 127.0.0.1 --port 8100
 
@@ -71,7 +71,7 @@ cd ../web && npm install && npm run dev
 # 4. Open http://localhost:5173 → Provider settings → run.
 ```
 
-Or via the sandbox `Makefile`:
+Or via the workbench `Makefile`:
 
 ```bash
 make install
@@ -85,10 +85,10 @@ make e2e
 
 ## Tests
 
-`sandbox/e2e/` — Playwright + chromium.
+`workbench/e2e/` — Playwright + chromium.
 
 ```bash
-cd sandbox/e2e && npm install && npx playwright install chromium
+cd workbench/e2e && npm install && npx playwright install chromium
 npm test
 ```
 
@@ -103,7 +103,7 @@ OCI_COMPARTMENT=ocid1.compartment.oc1..xxxxx \
 
 ## Adding a new pattern
 
-`sandbox/backend/runner.py`:
+`workbench/backend/runner.py`:
 
 1. Write `async def _run_<id>(req: RunRequest) -> RunResponse:` —
    build agents/graph from `req.provider` and call `_drive_agent` /

@@ -1,4 +1,4 @@
-# locus sandbox — full stack: locus python A2A peers, Node BFF, vanilla TS web,
+# locus workbench — full stack: locus python A2A peers, Node BFF, vanilla TS web,
 # Playwright e2e. Each `make` target runs in the foreground so you can chain
 # them across panes / terminals.
 

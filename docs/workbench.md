@@ -23,19 +23,19 @@ real ones.
 
 ```
 ┌───────────────────────────────────────┐
-│  sandbox/web   — vanilla TS + Vite    │  :5173
+│  workbench/web   — vanilla TS + Vite  │  :5173
 │  Tutorial catalog · provider settings │
 └───────────────────┬───────────────────┘
                     │ /api/*
                     ▼
 ┌───────────────────────────────────────┐
-│  sandbox/bff   — Node Express         │  :3101
+│  workbench/bff   — Node Express       │  :3101
 │  Same-origin proxy + cookie surface   │
 └───────────────────┬───────────────────┘
                     │ /api/*
                     ▼
 ┌───────────────────────────────────────┐
-│  sandbox/backend — FastAPI runner     │  :8100
+│  workbench/backend — FastAPI runner   │  :8100
 │  One endpoint per locus pattern       │
 └───────────────────────────────────────┘
 ```
@@ -62,7 +62,7 @@ free Codespaces minutes (60 hrs/month), nothing on the locus side.
 
 ```bash
 git clone https://github.com/oracle-samples/locus.git && cd locus
-docker build -t locus-workbench -f sandbox/Dockerfile .
+docker build -t locus-workbench -f workbench/Dockerfile .
 docker run --rm -p 5173:5173 -p 3101:3101 -p 8100:8100 locus-workbench
 # open http://localhost:5173
 # → paste OpenAI / Anthropic key in Provider settings → Run a tutorial
@@ -109,15 +109,15 @@ cd locus
 pip install -e ".[server,oci,openai,anthropic]"  # core + extras
 
 # Three terminals, one per tier:
-cd sandbox/bff && npm install && npm run dev      # :3101
-cd sandbox/web && npm install && npm run dev      # :5173
-cd sandbox/backend && python -m uvicorn --app-dir . runner:app --port 8100
+cd workbench/bff && npm install && npm run dev      # :3101
+cd workbench/web && npm install && npm run dev      # :5173
+cd workbench/backend && python -m uvicorn --app-dir . runner:app --port 8100
 ```
 
-Or use the `Makefile` in `sandbox/`:
+Or use the `Makefile` in `workbench/`:
 
 ```bash
-cd sandbox && make install
+cd workbench && make install
 make backend   # in pane 1
 make bff       # in pane 2
 make web       # in pane 3

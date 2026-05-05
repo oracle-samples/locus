@@ -2,12 +2,12 @@
 #
 # Layout (mirrors optic + webapp Dockerfiles in observai):
 #   • Oracle Linux 9-slim base, microdnf for installs.
-#   • Python 3.12 hosts the FastAPI runner (sandbox/backend).
-#   • Node 20 runs the Express BFF (sandbox/bff) and Vite UI (sandbox/web).
+#   • Python 3.12 hosts the FastAPI runner (workbench/backend).
+#   • Node 20 runs the Express BFF (workbench/bff) and Vite UI (workbench/web).
 #   • All three tiers boot via one CMD; the container exposes 5173/3101/8100.
 #
 # Build (from repo root):
-#   docker build -t locus-workbench -f sandbox/Dockerfile .
+#   docker build -t locus-workbench -f workbench/Dockerfile .
 #
 # Run (BYO model key — paste it in the UI's Provider settings):
 #   docker run --rm -p 5173:5173 -p 3101:3101 -p 8100:8100 locus-workbench
@@ -47,7 +47,7 @@ RUN python3.12 -m pip install --no-cache-dir ".[server,oci,openai,anthropic]"
 
 # Workbench source. .dockerignore keeps node_modules / dist / .vite out
 # of the COPY context so we install fresh inside the image.
-COPY sandbox/ /app/sandbox/
+COPY workbench/ /app/workbench/
 
 # Tutorial catalog. The runner walks `<repo>/examples/tutorial_*.py`
 # to populate the sidebar — without this COPY the catalog is empty
@@ -55,7 +55,7 @@ COPY sandbox/ /app/sandbox/
 COPY examples/ /app/examples/
 
 # Node dependency install for both BFF and web.
-RUN cd sandbox/bff && npm ci --no-audit --no-fund \
+RUN cd workbench/bff && npm ci --no-audit --no-fund \
     && cd ../web   && npm ci --no-audit --no-fund
 
 EXPOSE 5173 3101 8100
@@ -66,7 +66,7 @@ EXPOSE 5173 3101 8100
 # outside the container.
 CMD ["bash", "-c", "\
 set -e; \
-python3.12 -m uvicorn --app-dir sandbox/backend runner:app --host 0.0.0.0 --port 8100 & \
-( cd sandbox/bff && npm run dev ) & \
-( cd sandbox/web && npx vite --host 0.0.0.0 --port 5173 ) & \
+python3.12 -m uvicorn --app-dir workbench/backend runner:app --host 0.0.0.0 --port 8100 & \
+( cd workbench/bff && npm run dev ) & \
+( cd workbench/web && npx vite --host 0.0.0.0 --port 5173 ) & \
 wait -n"]

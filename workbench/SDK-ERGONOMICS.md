@@ -1,4 +1,4 @@
-# Locus SDK ergonomics — sandbox audit
+# Locus SDK ergonomics — workbench audit
 
 How much code does a developer need to write to do something useful with
 Locus? This is a short, honest snapshot from running the workbench

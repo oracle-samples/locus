@@ -177,7 +177,7 @@ cfgTransport.addEventListener("change", queueRefresh);
 const themeBtn = $<HTMLButtonElement>("#theme-btn");
 const themeSun = $<HTMLElement>("#theme-icon-sun");
 const themeMoon = $<HTMLElement>("#theme-icon-moon");
-const THEME_KEY = "locus.sandbox.theme";
+const THEME_KEY = "locus.workbench.theme";
 
 function applyTheme(t: "light" | "dark") {
   document.documentElement.setAttribute("data-theme", t);
@@ -186,7 +186,7 @@ function applyTheme(t: "light" | "dark") {
 }
 
 const savedTheme = localStorage.getItem(THEME_KEY) as "light" | "dark" | null;
-// Default to dark — the sandbox is for hands-on coding, dark is the
+// Default to dark — the workbench is for hands-on coding, dark is the
 // natural fit. User can flip to light via the header toggle.
 const initialTheme: "light" | "dark" = savedTheme ?? "dark";
 applyTheme(initialTheme);

@@ -1,4 +1,4 @@
-"""Locus sandbox backend — pattern runner.
+"""Locus workbench backend — pattern runner.
 
 A single FastAPI app that exposes one endpoint per locus pattern. Each
 endpoint accepts a JSON body with the user's provider config, builds an
@@ -30,7 +30,7 @@ Adding a new pattern is ~20 lines: write a builder function that returns
 ``(agent_or_runnable, run_fn)``, then register it in ``PATTERNS``.
 """
 
-# This is sandbox / playground code — relax a handful of ruff rules that
+# This is workbench / playground code — relax a handful of ruff rules that
 # only matter for production. Keep ruff format on; just silence the lint
 # nits that don't apply here.
 # ruff: noqa: BLE001, E402, N806, N814, ASYNC230
@@ -652,7 +652,7 @@ PATTERN_RUNNERS: dict[str, Any] = {
 # ---------------------------------------------------------------------------
 
 
-app = FastAPI(title="locus sandbox runner", version="0.1.0")
+app = FastAPI(title="locus workbench runner", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -1052,7 +1052,7 @@ __LE_PREFIX = "__LE__:"
 # directly. Wraps `from config import get_model` so the returned object
 # is asserted real before the tutorial uses it.
 __SB_PROVIDER = "__SB_PROVIDER_VALUE__"
-__le_sys.stdout.write(f"[locus-sandbox] running against {__SB_PROVIDER}\\n")
+__le_sys.stdout.write(f"[locus-workbench] running against {__SB_PROVIDER}\\n")
 __le_sys.stdout.flush()
 try:
     import config as __sb_config
@@ -1061,13 +1061,13 @@ try:
         m = __orig_get_model(*a, **kw)
         if type(m).__name__ == "MockModel":
             raise RuntimeError(
-                "locus-sandbox: refusing to run with MockModel. "
+                "locus-workbench: refusing to run with MockModel. "
                 "Set OpenAI / Anthropic / OCI provider in Provider settings."
             )
         return m
     __sb_config.get_model = __guarded_get_model
 except Exception as __sb_err:
-    __le_sys.stderr.write(f"[locus-sandbox] guard install failed: {__sb_err}\\n")
+    __le_sys.stderr.write(f"[locus-workbench] guard install failed: {__sb_err}\\n")
 
 def __le_emit__(payload):
     try:
@@ -1096,7 +1096,7 @@ try:
     __orig_init__ = __LocusAgent__.__init__
     __orig_run_sync = __LocusAgent__.run_sync
 
-    __SB_FORCE_REFLEXION = __le_os.environ.get("LOCUS_SANDBOX_REFLEXION") == "1"
+    __SB_FORCE_REFLEXION = __le_os.environ.get("LOCUS_WORKBENCH_REFLEXION") == "1"
 
     def __patched__(self, *a, **kw):
         __orig_init__(self, *a, **kw)
@@ -1192,7 +1192,7 @@ except Exception:
         **_provider_env(req.provider),
         "PYTHONPATH": f"{src_dir}{os.pathsep}{examples_dir}",
         "PYTHONUNBUFFERED": "1",
-        "LOCUS_SANDBOX_REFLEXION": "1" if req.reflexion else "0",
+        "LOCUS_WORKBENCH_REFLEXION": "1" if req.reflexion else "0",
     }
 
     run_id = _uuid.uuid4().hex

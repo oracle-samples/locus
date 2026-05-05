@@ -3,7 +3,7 @@
 //
 //   docker run --rm -p 5173:5173 -p 3101:3101 -p 8100:8100 locus-workbench
 //   # in another shell:
-//   node sandbox/scripts/capture/capture-demo.mjs
+//   node workbench/e2e/scripts/capture-demo.mjs
 //
 // Outputs:
 //   docs/img/workbench.png
