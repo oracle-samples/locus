@@ -149,6 +149,8 @@ def get_model(**kwargs: Any) -> Any:
 
     Args:
         **kwargs: Override any model parameters (max_tokens, temperature, etc.)
+                  Pass ``model_id="..."`` to use a specific model id without
+                  changing ``LOCUS_MODEL_ID``.
 
     Returns:
         Configured model instance (MockModel, OCIModel, or OpenAIModel)
@@ -156,13 +158,44 @@ def get_model(**kwargs: Any) -> Any:
     provider = os.environ.get("LOCUS_MODEL_PROVIDER", "mock").lower()
 
     if provider == "mock":
+        kwargs.pop("model_id", None)  # MockModel ignores model_id
         return MockModel(**kwargs)
     elif provider == "oci":
         return _get_oci_model(**kwargs)
     elif provider == "openai":
         return _get_openai_model(**kwargs)
+    elif provider == "anthropic":
+        return _get_anthropic_model(**kwargs)
     else:
-        raise ValueError(f"Unknown model provider: {provider}. Use 'mock', 'oci', or 'openai'")
+        raise ValueError(
+            f"Unknown model provider: {provider}. Use 'mock', 'oci', 'openai', or 'anthropic'."
+        )
+
+
+def get_model_b(**kwargs: Any) -> Any:
+    """Secondary model slot — typically a cheaper/faster variant for
+    triage, routing, or color commentary in multi-agent tutorials.
+
+    Reads ``LOCUS_MODEL_ID_B`` (set by the workbench's "Model B" slot).
+    Falls back to ``LOCUS_MODEL_ID`` (= slot A) when unset, so tutorials
+    that call ``get_model_b()`` still work in plain CLI runs where only
+    one model is configured.
+    """
+    kwargs.setdefault(
+        "model_id",
+        os.environ.get("LOCUS_MODEL_ID_B") or os.environ.get("LOCUS_MODEL_ID", ""),
+    )
+    return get_model(**kwargs)
+
+
+def get_model_c(**kwargs: Any) -> Any:
+    """Tertiary model slot — same fall-through rules as :func:`get_model_b`,
+    typically used for a judge / critic role distinct from both A and B."""
+    kwargs.setdefault(
+        "model_id",
+        os.environ.get("LOCUS_MODEL_ID_C") or os.environ.get("LOCUS_MODEL_ID", ""),
+    )
+    return get_model(**kwargs)
 
 
 def _pick_oci_transport(model_id: str) -> str:
@@ -189,7 +222,7 @@ def _pick_oci_transport(model_id: str) -> str:
 
 def _get_oci_model(**kwargs: Any) -> Any:
     """Get an OCI GenAI model — picks V1 vs SDK transport per model family."""
-    model_id = os.environ.get("LOCUS_MODEL_ID", "openai.gpt-5.5-2026-04-23")
+    model_id = kwargs.pop("model_id", os.environ.get("LOCUS_MODEL_ID", "openai.gpt-5.5-2026-04-23"))
     transport = _pick_oci_transport(model_id)
     if transport == "v1":
         return _get_oci_v1_model(model_id, **kwargs)
@@ -269,13 +302,30 @@ def _get_openai_model(**kwargs: Any) -> Any:
     """Get OpenAI model."""
     from locus.models import OpenAIModel
 
-    model_id = os.environ.get("LOCUS_MODEL_ID", "gpt-4o")
+    model_id = kwargs.pop("model_id", os.environ.get("LOCUS_MODEL_ID", "gpt-4o"))
     api_key = os.environ.get("OPENAI_API_KEY")
 
     if not api_key:
         raise ValueError("OPENAI_API_KEY environment variable required")
 
     return OpenAIModel(
+        model=model_id,
+        api_key=api_key,
+        **kwargs,
+    )
+
+
+def _get_anthropic_model(**kwargs: Any) -> Any:
+    """Get Anthropic model."""
+    from locus.models.native.anthropic import AnthropicModel
+
+    model_id = kwargs.pop("model_id", os.environ.get("LOCUS_MODEL_ID", "claude-sonnet-4-20250514"))
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+
+    if not api_key:
+        raise ValueError("ANTHROPIC_API_KEY environment variable required")
+
+    return AnthropicModel(
         model=model_id,
         api_key=api_key,
         **kwargs,

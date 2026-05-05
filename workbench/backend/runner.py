@@ -58,7 +58,12 @@ class ProviderConfig(BaseModel):
     """User-supplied model credentials. One config per request."""
 
     provider: Literal["openai", "anthropic", "oci-session", "oci-apikey"]
-    model: str = Field(default="", description="provider-specific model id")
+    model: str = Field(default="", description="primary model id (slot A)")
+    # Optional secondary slots so a tutorial can mix models — e.g. haiku
+    # for triage, sonnet for the deep specialist. Both fall through to
+    # ``model`` (slot A) when empty. Same provider + credentials as A.
+    model_b: str | None = None
+    model_c: str | None = None
     api_key: str | None = None
     profile: str | None = None
     region: str = "us-chicago-1"
@@ -941,6 +946,14 @@ def _provider_env(cfg: ProviderConfig) -> dict[str, str]:
     elif cfg.provider in ("oci-session", "oci-apikey"):
         env["LOCUS_MODEL_PROVIDER"] = "oci"
         env["LOCUS_MODEL_ID"] = cfg.model or "openai.gpt-5.5-2026-04-23"
+    # Optional secondary slots — tutorials read these via get_model_b()
+    # / get_model_c() in examples/config.py. Empty means "fall back to
+    # slot A" so existing tutorials stay correct.
+    if cfg.model_b:
+        env["LOCUS_MODEL_ID_B"] = cfg.model_b
+    if cfg.model_c:
+        env["LOCUS_MODEL_ID_C"] = cfg.model_c
+    if cfg.provider in ("oci-session", "oci-apikey"):
         if cfg.profile:
             env["LOCUS_OCI_PROFILE"] = cfg.profile
         if cfg.region:
