@@ -11,7 +11,7 @@ SDK capability:
 - `CausalChain` / `build_causal_chain` (causal reasoning)
 
 Every section prints
-``[OCI call: X.XXs · prompt→completion tokens]`` so you can see the
+``[model call: X.XXs · prompt→completion tokens]`` so you can see the
 network round-trip happen.
 
 Run with:

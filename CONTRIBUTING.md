@@ -1,6 +1,11 @@
 # Contributing to Locus
 
-Thank you for your interest in contributing to Locus! This document provides guidelines and instructions for contributing.
+Locus — *Oracle Generative AI · Multi-Agent Reasoning Orchestrator SDK* —
+is built inside Oracle, used in production, and open to everyone.
+This document covers how to set up a development environment, the
+review and sign-off process, the coding standards we hold the codebase
+to, and how to verify your change against the workbench end-to-end
+before opening a pull request.
 
 ## Table of Contents
 
@@ -168,10 +173,16 @@ git commit -s -m "docs(tutorials): add RAG with Oracle 26ai example"
 3. **Run checks** before committing:
 
    ```bash
-   hatch run lint      # Ruff + mypy
-   hatch run test      # Unit tests
-   hatch run fmt       # Auto-format code
+   hatch run check          # ruff format-check + ruff lint + mypy strict (all-in-one)
+   hatch run format         # auto-format with ruff format
+   hatch run test           # unit tests on the active Python
+   hatch run test-all       # unit tests across the 3.11 / 3.12 / 3.13 / 3.14 matrix
+   hatch run test-cov       # unit tests with coverage report
+   hatch run test-integration  # integration tests (gated on credentials)
    ```
+
+   When the `check` group is clean and `test` passes, your commit will sail
+   through every required CI job.
 
 4. **Commit** with sign-off:
 
@@ -358,6 +369,34 @@ class TestAgent:
 - `tests/integration/` - Integration tests (require services)
 - Markers: `@pytest.mark.requires_oci`, `@pytest.mark.requires_redis`, etc.
 
+### Workbench end-to-end sweeps
+
+The workbench app (`workbench/`) ships three Playwright specs that drive
+every non-stdin tutorial through the UI against a single provider:
+
+```bash
+# Bring up the three workbench tiers (terminal 1).
+hatch run python -m uvicorn --app-dir workbench/backend runner:app --port 8100
+( cd workbench/bff && npm install && npm run dev )    # terminal 2 — :3101
+( cd workbench/web && npm install && npm run dev )    # terminal 3 — :5173
+( cd workbench/e2e && npm install && npx playwright install chromium )
+
+# Run a sweep against your provider of choice (terminal 4).
+ANTHROPIC_API_KEY=sk-ant-... \
+  npx --prefix workbench/e2e playwright test tests/all-anthropic.spec.ts --workers=3
+
+OPENAI_API_KEY=sk-... \
+  npx --prefix workbench/e2e playwright test tests/all-openai.spec.ts --workers=3
+
+OCI_PROFILE=YOUR_PROFILE OCI_AUTH=session OCI_REGION=us-chicago-1 \
+OCI_COMPARTMENT=ocid1.compartment.oc1.... \
+  npx --prefix workbench/e2e playwright test tests/all-oci.spec.ts --workers=2
+```
+
+The OCI sweep also honours `OCI_MODEL` (slot A) and `OCI_MODEL_B` /
+`OCI_MODEL_C` so you can validate multi-model tutorials end-to-end.
+Headless by default; pass `--headed` to watch the run.
+
 ## Documentation
 
 ### Code Documentation
@@ -374,7 +413,13 @@ When adding tutorials to `examples/`:
 1. Follow naming: `XX_topic_name.py`
 2. Include header comment explaining the tutorial
 3. Use clear, educational code
-4. Test that it runs successfully
+4. Test that it runs successfully against a real provider via the workbench
+5. If the tutorial fits naturally as a multi-model demo (orchestrator,
+   handoff, debate, supervisor-critic), use `get_model_b()` for the
+   lighter role(s) — it falls back to slot A when the workbench's
+   "Model B" dropdown is empty, so plain CLI runs stay correct.
+6. Add a matching markdown stub under `docs/tutorials/` — the docs
+   tooling generates one page per `examples/tutorial_*.py`.
 
 ### README Updates
 

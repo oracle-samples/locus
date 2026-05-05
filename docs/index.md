@@ -39,9 +39,7 @@ pip install "locus[oci]"
 <div class="locus-hero__code" markdown>
 
 ```python
-from locus import Agent
-from locus.core.send import Send
-from locus.multiagent.graph import END, START, StateGraph
+from locus import Agent, END, Send, START, StateGraph
 
 REVIEWERS = ["security", "performance", "style"]
 
@@ -159,9 +157,7 @@ specialist to specialist. The customer sees one continuous reply;
 each team ships their specialist on its own schedule, in its own repo.
 
 ```python
-from locus.multiagent.handoff import (
-    create_handoff_agent, create_handoff_manager, HandoffReason,
-)
+from locus import create_handoff_agent, create_handoff_manager, HandoffReason
 
 triage = create_handoff_agent(
     name="Triage",

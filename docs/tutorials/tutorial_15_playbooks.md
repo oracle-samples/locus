@@ -3,7 +3,7 @@
 Every Part exercises both a Locus playbook SDK feature *and* the
 configured GenAI provider, so you can see the structured-execution
 mechanics next to live agent reasoning. Each section prints
-``[OCI call: X.XXs · prompt→completion tokens]`` so you can see the
+``[model call: X.XXs · prompt→completion tokens]`` so you can see the
 network round-trip happen.
 
 Run with:

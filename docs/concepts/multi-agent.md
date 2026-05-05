@@ -71,7 +71,7 @@ The pieces every shape is built from. Drop them into any graph node.
 ### `Send` — scatter / map-reduce
 
 ```python
-from locus.core.send import Send
+from locus import Send
 
 async def split(state):
     return [Send("worker", {"task": t}) for t in state["tasks"]]
@@ -133,7 +133,7 @@ gives you a validated Pydantic instance. Used by tutorials 44, 46, 47, 48.
 ### `GraphConfig(allow_cycles=True)` — refinement loops
 
 ```python
-from locus.multiagent.graph import GraphConfig, StateGraph
+from locus import GraphConfig, StateGraph
 
 graph = StateGraph(config=GraphConfig(allow_cycles=True, max_iterations=20))
 graph.add_edge("critic", "writer")   # loop edge — only legal with allow_cycles

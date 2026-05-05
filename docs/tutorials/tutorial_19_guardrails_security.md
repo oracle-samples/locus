@@ -1,7 +1,7 @@
 # Tutorial 19: Guardrails & Security — every part runs a real Agent
 
 Every Part fires the configured GenAI provider. Each section prints
-``[OCI call: X.XXs · prompt→completion tokens]`` so you can see the
+``[model call: X.XXs · prompt→completion tokens]`` so you can see the
 network round-trip happen, and the SDK feature being demonstrated
 (``GuardrailsHook``, ``ContentFilterHook``, ``HookRegistry``,
 ``GuardrailConfig``, ``GuardrailAction``) is exercised on top of a real
