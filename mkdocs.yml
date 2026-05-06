@@ -116,6 +116,7 @@ nav:
   - StateGraph: concepts/multi-agent/graph.md
   - Functional API: concepts/multi-agent/functional.md
   - A2A protocol: concepts/multi-agent/a2a.md
+  - Router (bounded graph generation): concepts/router.md
   - Production-readiness: concepts/multi-agent/production.md
 - Concepts:
   - Capabilities: FEATURES.md

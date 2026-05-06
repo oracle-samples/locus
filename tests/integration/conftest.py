@@ -125,6 +125,12 @@ def openai_available() -> bool:
 
 
 @lru_cache(maxsize=1)
+def anthropic_available() -> bool:
+    """Check if Anthropic API key is set."""
+    return bool(os.getenv("ANTHROPIC_API_KEY"))
+
+
+@lru_cache(maxsize=1)
 def oracle_available() -> bool:
     """Check if Oracle credentials are available."""
     # Support both direct credentials and ADB wallet-based auth
@@ -138,8 +144,8 @@ def oracle_available() -> bool:
 
 @lru_cache(maxsize=1)
 def any_model_available() -> bool:
-    """Check if any model (OpenAI or OCI) is available."""
-    return openai_available() or oci_config_available()
+    """Check if any model (Anthropic, OpenAI, or OCI) is available."""
+    return anthropic_available() or openai_available() or oci_config_available()
 
 
 # =============================================================================
@@ -179,6 +185,10 @@ skip_without_openai = pytest.mark.skipif(
     not openai_available(), reason="OpenAI API key not set (need OPENAI_API_KEY)"
 )
 
+skip_without_anthropic = pytest.mark.skipif(
+    not anthropic_available(), reason="Anthropic API key not set (need ANTHROPIC_API_KEY)"
+)
+
 skip_without_oracle = pytest.mark.skipif(
     not oracle_available(),
     reason="Oracle not configured (need ORACLE_DSN + ORACLE_PASSWORD or ORACLE_WALLET)",
@@ -197,9 +207,15 @@ skip_without_model = pytest.mark.skipif(
 def _build_model():
     """Build a model instance from environment variables.
 
-    Prefers OCI GenAI if configured (OCI_PROFILE + OCI_ENDPOINT),
-    falls back to OpenAI (OPENAI_API_KEY).
-    Model ID controlled by OCI_MODEL_ID (default: openai.gpt-5.4).
+    Resolution order (first match wins):
+
+    1. OCI GenAI — when ``OCI_PROFILE`` is set and the SDK can
+       construct ``OCIModel`` (needs ``OCI_ENDPOINT`` + ``OCI_COMPARTMENT``).
+    2. OpenAI — when ``OPENAI_API_KEY`` is set.
+    3. Anthropic — when ``ANTHROPIC_API_KEY`` is set.
+
+    Model id is controlled per-provider by ``OCI_MODEL_ID`` /
+    ``OPENAI_MODEL_ID`` / ``ANTHROPIC_MODEL_ID``.
     """
     # OCI GenAI (preferred)
     if oci_config_available():
@@ -222,7 +238,15 @@ def _build_model():
     if openai_available():
         from locus.models.native.openai import OpenAIModel
 
-        return OpenAIModel(model="gpt-4o-mini", max_tokens=512)
+        model_id = os.getenv("OPENAI_MODEL_ID", "gpt-4o-mini")
+        return OpenAIModel(model=model_id, max_tokens=512)
+
+    # Anthropic fallback — cheapest path for non-OCI iteration.
+    if anthropic_available():
+        from locus.models.native.anthropic import AnthropicModel
+
+        model_id = os.getenv("ANTHROPIC_MODEL_ID", "claude-haiku-4-5")
+        return AnthropicModel(model=model_id, max_tokens=512)
 
     return None
 
