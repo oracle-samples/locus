@@ -29,11 +29,24 @@ class TaskStatus(StrEnum):
 
 
 class SwarmTask(BaseModel):
-    """A task in the swarm task queue."""
+    """A task in the swarm task queue.
+
+    ``required_tags`` declares the capability tags an agent must
+    advertise to claim this task — set-membership against
+    :attr:`SwarmAgent.capabilities`. Empty means any agent may claim
+    it; ``preferred_tags`` boost an agent's priority score without
+    being a hard requirement.
+
+    Backwards-compat: agents that pre-date this change still work —
+    if no tags are set, the prior substring-match path runs as a
+    fallback (see ``SwarmAgent.can_handle``).
+    """
 
     id: str = Field(default_factory=lambda: f"task_{uuid4().hex[:8]}")
     description: str
     priority: int = 0  # Higher = more important
+    required_tags: list[str] = Field(default_factory=list)
+    preferred_tags: list[str] = Field(default_factory=list)
     status: TaskStatus = TaskStatus.PENDING
     claimed_by: str | None = None
     result: str | None = None
@@ -143,18 +156,51 @@ class SwarmAgent(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
     def can_handle(self, task: SwarmTask) -> bool:
-        """Check if this agent can handle a task based on capabilities."""
-        if not self.capabilities:
-            return True  # No specific capabilities = generalist
+        """Decide whether this agent is eligible to claim ``task``.
 
+        Resolution order:
+
+        1. **Tag set-membership** — if the task declares
+           ``required_tags``, every required tag must appear in
+           :attr:`capabilities`. This is the deterministic path —
+           the swarm's primary discovery mechanism.
+        2. **Generalist** — if neither side declares anything,
+           the agent claims the task (``capabilities=[]`` ⇒
+           generalist).
+        3. **Substring fallback** — kept for backwards compatibility
+           with pre-tag swarms: if the agent has capabilities but the
+           task has no tags, match keywords against the description.
+        """
+        if task.required_tags:
+            agent_tags = {c.lower() for c in self.capabilities}
+            return all(req.lower() in agent_tags for req in task.required_tags)
+        if not self.capabilities:
+            return True
         task_lower = task.description.lower()
         return any(cap.lower() in task_lower for cap in self.capabilities)
 
     def priority_for_task(self, task: SwarmTask) -> float:
-        """Calculate priority score for this agent handling this task."""
-        if not self.capabilities:
-            return 0.5  # Neutral priority for generalists
+        """Score this agent's fit for ``task`` in the range ``[0, 1]``.
 
+        Tag-driven scoring (when the task declares tags):
+
+        - Each required tag the agent advertises adds 1.0 weight.
+        - Each preferred tag the agent advertises adds 0.5 weight.
+        - Score = (sum of weights) / (max possible weights), clamped.
+
+        Falls through to the legacy substring score for tag-less
+        tasks so pre-tag swarms keep their old behaviour.
+        """
+        if task.required_tags or task.preferred_tags:
+            agent_tags = {c.lower() for c in self.capabilities}
+            req_hits = sum(1 for t in task.required_tags if t.lower() in agent_tags)
+            pref_hits = sum(1 for t in task.preferred_tags if t.lower() in agent_tags)
+            max_weight = float(len(task.required_tags)) + 0.5 * len(task.preferred_tags)
+            if max_weight == 0:
+                return 0.5
+            return min(1.0, (req_hits + 0.5 * pref_hits) / max_weight)
+        if not self.capabilities:
+            return 0.5
         task_lower = task.description.lower()
         matches = sum(1 for cap in self.capabilities if cap.lower() in task_lower)
         return min(1.0, matches / len(self.capabilities))

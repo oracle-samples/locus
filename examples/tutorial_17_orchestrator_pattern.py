@@ -164,8 +164,13 @@ When analyzing, look for connection leaks, slow queries, and lock contention."""
     # =========================================================================
     print("\n=== Part 5: Orchestrator Configuration ===\n")
 
-    # Configure orchestrator behavior
-    orchestrator.max_parallel_specialists = 3  # Run up to 3 in parallel
+    # Configure orchestrator behavior. ``max_parallel_specialists``
+    # caps the asyncio.Semaphore that bounds the parallel fan-out —
+    # the orchestrator runs every routed specialist concurrently
+    # behind this gate (per-specialist exception isolation, retry on
+    # the empty-completion blip). Drop to 1 if you want the old
+    # serialised behaviour (e.g. to debug a flaky specialist).
+    orchestrator.max_parallel_specialists = 3
     orchestrator.correlation_threshold = 0.7  # Correlation confidence
 
     print(f"Max parallel specialists: {orchestrator.max_parallel_specialists}")
@@ -230,6 +235,11 @@ Prioritize based on urgency indicated in the task.""",
     print("Orchestration Result:")
     print(f"  Success: {orch_result.success}")
     print(f"  Duration: {orch_result.duration_ms:.0f}ms")
+    # max_parallel_specialists=3 means the three routed specialists
+    # ran concurrently behind an asyncio.Semaphore, not back-to-back.
+    # With per-specialist budgets averaging ~5s, parallel finishes in
+    # ~5s; serial would take ~15s.
+    print(f"  Parallel cap: max_parallel_specialists={orchestrator.max_parallel_specialists}")
     print(f"  Decisions made: {len(orch_result.decisions)}")
 
     for i, decision in enumerate(orch_result.decisions):
