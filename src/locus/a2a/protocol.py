@@ -657,6 +657,22 @@ class A2AServer:
 
             params = req.params if isinstance(req.params, dict) else {}
 
+            # Lazy import — observability is opt-in.
+            import time as _time  # noqa: PLC0415
+
+            from locus.observability.emit import (  # noqa: PLC0415
+                EV_A2A_TASK_COMPLETED,
+                EV_A2A_TASK_RECEIVED,
+                emit,
+            )
+
+            await emit(
+                EV_A2A_TASK_RECEIVED,
+                method=req.method,
+                rpc_id=str(req.id) if req.id is not None else None,
+            )
+            _started = _time.perf_counter()
+
             try:
                 if req.method == "message/send":
                     result = await self._handle_message_send(params)
@@ -680,12 +696,25 @@ class A2AServer:
                 else:
                     raise _RpcError(METHOD_NOT_FOUND, f"unknown method {req.method!r}")
             except _RpcError as e:
+                await emit(
+                    EV_A2A_TASK_COMPLETED,
+                    method=req.method,
+                    success=False,
+                    error_code=e.code,
+                    duration_ms=(_time.perf_counter() - _started) * 1000,
+                )
                 return JSONResponse(
                     JsonRpcErrorResponse(
                         id=req.id, error=JsonRpcError(code=e.code, message=e.message)
                     ).model_dump()
                 )
 
+            await emit(
+                EV_A2A_TASK_COMPLETED,
+                method=req.method,
+                success=True,
+                duration_ms=(_time.perf_counter() - _started) * 1000,
+            )
             return JSONResponse(JsonRpcSuccessResponse(id=req.id, result=result).model_dump())
 
         # ----- backwards-compat invoke + stream ----------------------------
@@ -865,7 +894,15 @@ class A2AClient:
     # ---- JSON-RPC client helpers --------------------------------------
 
     async def _rpc(self, method: str, params: dict[str, Any]) -> Any:
+        import time as _time
+
         import httpx
+
+        from locus.observability.emit import (  # noqa: PLC0415
+            EV_A2A_CLIENT_RECEIVED,
+            EV_A2A_CLIENT_SEND,
+            emit,
+        )
 
         body = {
             "jsonrpc": "2.0",
@@ -873,10 +910,20 @@ class A2AClient:
             "method": method,
             "params": params,
         }
+        await emit(EV_A2A_CLIENT_SEND, target_url=self._url, method=method)
+        _started = _time.perf_counter()
         async with httpx.AsyncClient(timeout=120.0) as client:
             resp = await client.post(f"{self._url}/", json=body, headers=self._auth_headers())
             resp.raise_for_status()
             data = resp.json()
+        await emit(
+            EV_A2A_CLIENT_RECEIVED,
+            target_url=self._url,
+            method=method,
+            status_code=resp.status_code,
+            duration_ms=(_time.perf_counter() - _started) * 1000,
+            content_length=len(resp.content),
+        )
         if "error" in data:
             err = data["error"]
             msg = f"A2A error {err.get('code')}: {err.get('message')}"

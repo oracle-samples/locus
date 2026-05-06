@@ -50,6 +50,7 @@ from __future__ import annotations
 
 import asyncio
 import contextvars
+import time
 from collections import defaultdict
 from collections.abc import AsyncIterator, Callable
 from datetime import UTC, datetime
@@ -1050,15 +1051,34 @@ class StateGraph(BaseModel):
                         iterations=iterations,
                     )
 
+            # Lazy import — observability is opt-in.
+            from locus.observability.emit import (  # noqa: PLC0415
+                EV_GRAPH_NODE_COMPLETED,
+                EV_GRAPH_NODE_STARTED,
+                emit,
+            )
+
             # Execute current nodes (parallel if enabled)
             if cfg.parallel and len(current_nodes) > 1:
                 tasks = []
+                node_span_ids: dict[str, str] = {}
                 for node_id in current_nodes:
                     if node_id == END:
                         continue
                     node = self.nodes[node_id]
                     node_inputs = self._gather_inputs(node_id, state)
                     is_resume = node_id == resume_node
+                    span_id = uuid4().hex[:8]
+                    node_span_ids[node_id] = span_id
+                    await emit(
+                        EV_GRAPH_NODE_STARTED,
+                        graph_id=self.id,
+                        node_id=node_id,
+                        iteration=iterations,
+                        span_id=span_id,
+                        parallel=True,
+                        is_resuming=is_resume,
+                    )
                     tasks.append(
                         node.execute(
                             node_inputs,
@@ -1068,6 +1088,7 @@ class StateGraph(BaseModel):
                     )
 
                 if tasks:
+                    parallel_started = time.perf_counter()
                     results = await asyncio.gather(*tasks)
                     for node_id, result in zip(
                         [n for n in current_nodes if n != END],
@@ -1076,6 +1097,15 @@ class StateGraph(BaseModel):
                     ):
                         node_results[node_id] = result
                         execution_order.append(node_id)
+                        await emit(
+                            EV_GRAPH_NODE_COMPLETED,
+                            graph_id=self.id,
+                            node_id=node_id,
+                            span_id=node_span_ids.get(node_id),
+                            status=str(result.status),
+                            duration_ms=(time.perf_counter() - parallel_started) * 1000,
+                            parallel=True,
+                        )
                         await _emit_node_events(
                             _event_sink, node_id, result, state, cfg.stream_mode
                         )
@@ -1088,6 +1118,17 @@ class StateGraph(BaseModel):
                     node = self.nodes[node_id]
                     node_inputs = self._gather_inputs(node_id, state)
                     is_resume = node_id == resume_node
+                    span_id = uuid4().hex[:8]
+                    started_at = time.perf_counter()
+                    await emit(
+                        EV_GRAPH_NODE_STARTED,
+                        graph_id=self.id,
+                        node_id=node_id,
+                        iteration=iterations,
+                        span_id=span_id,
+                        parallel=False,
+                        is_resuming=is_resume,
+                    )
                     result = await node.execute(
                         node_inputs,
                         resume_value=resume_value if is_resume else None,
@@ -1095,6 +1136,15 @@ class StateGraph(BaseModel):
                     )
                     node_results[node_id] = result
                     execution_order.append(node_id)
+                    await emit(
+                        EV_GRAPH_NODE_COMPLETED,
+                        graph_id=self.id,
+                        node_id=node_id,
+                        span_id=span_id,
+                        status=str(result.status),
+                        duration_ms=(time.perf_counter() - started_at) * 1000,
+                        parallel=False,
+                    )
                     await _emit_node_events(_event_sink, node_id, result, state, cfg.stream_mode)
 
             # Clear resume context after first node

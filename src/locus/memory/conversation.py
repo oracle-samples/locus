@@ -103,8 +103,20 @@ class SlidingWindowManager(ConversationManager):
                 non_system_messages.append(msg)
 
         # Keep only the last window_size messages
-        if len(non_system_messages) > self.window_size:
+        before_count = len(non_system_messages)
+        if before_count > self.window_size:
             non_system_messages = non_system_messages[-self.window_size :]
+            from locus.observability.emit import (  # noqa: PLC0415
+                EV_MEMORY_CONVERSATION_PRUNED,
+                emit_sync,
+            )
+
+            emit_sync(
+                EV_MEMORY_CONVERSATION_PRUNED,
+                strategy="sliding_window",
+                window_size=self.window_size,
+                removed_count=before_count - self.window_size,
+            )
 
         result.extend(non_system_messages)
         return result
@@ -269,6 +281,22 @@ class SummarizingManager(ConversationManager):
         # Use async summarize_fn if available
         import asyncio
 
+        from locus.observability.emit import (  # noqa: PLC0415
+            EV_MEMORY_COMPACTOR_COMPLETED,
+            EV_MEMORY_COMPACTOR_TRIGGERED,
+            emit,
+        )
+
+        await emit(
+            EV_MEMORY_COMPACTOR_TRIGGERED,
+            strategy="summarizing",
+            messages_before=len(non_system_messages),
+            threshold=self.threshold,
+        )
+        import time as _time  # noqa: PLC0415
+
+        _started = _time.perf_counter()
+
         if self.summarize_fn is not None and asyncio.iscoroutinefunction(self.summarize_fn):
             summary_text = await self.summarize_fn(to_summarize)
         else:
@@ -283,6 +311,14 @@ class SummarizingManager(ConversationManager):
         )
         result.append(summary_message)
         result.extend(recent)
+        await emit(
+            EV_MEMORY_COMPACTOR_COMPLETED,
+            strategy="summarizing",
+            messages_before=len(non_system_messages),
+            messages_after=len(result),
+            summarized_count=len(to_summarize),
+            duration_ms=(_time.perf_counter() - _started) * 1000,
+        )
         return result
 
     def __repr__(self) -> str:

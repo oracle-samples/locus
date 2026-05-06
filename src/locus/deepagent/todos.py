@@ -99,6 +99,19 @@ def make_todo_tools(state: TodoState | None = None) -> list[Any]:
             except (TypeError, ValueError) as exc:
                 return f"invalid todo entry {entry!r}: {exc}"
         stored = state.replace(items)
+        from locus.observability.emit import (
+            EV_DEEPAGENT_TODO_ADDED,
+            EV_DEEPAGENT_TODO_COMPLETED,
+            emit_sync,
+        )
+
+        for todo in stored:
+            ev = (
+                EV_DEEPAGENT_TODO_COMPLETED
+                if todo.status == "completed"
+                else EV_DEEPAGENT_TODO_ADDED
+            )
+            emit_sync(ev, content=todo.content, status=todo.status)
         return json.dumps([t.model_dump() for t in stored])
 
     @tool

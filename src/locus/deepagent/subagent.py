@@ -105,8 +105,23 @@ def task_tool(
             return f"unknown subagent_type {subagent_type!r}; available: {available}"
         defn = by_name[subagent_type]
 
+        import time as _time
+
         from locus.agent.agent import Agent
         from locus.core.events import TerminateEvent
+        from locus.observability.emit import (
+            EV_DEEPAGENT_SUBAGENT_COMPLETED,
+            EV_DEEPAGENT_SUBAGENT_SPAWNED,
+            emit,
+        )
+
+        await emit(
+            EV_DEEPAGENT_SUBAGENT_SPAWNED,
+            subagent_type=subagent_type,
+            description_preview=description[:200],
+            max_iterations=defn.max_iterations,
+        )
+        _started = _time.perf_counter()
 
         sub_model = defn.model if defn.model is not None else parent_model
         sub_agent = Agent(
@@ -121,6 +136,13 @@ def task_tool(
         async for event in sub_agent.run(description):
             if isinstance(event, TerminateEvent):
                 final_message = event.final_message or ""
+        await emit(
+            EV_DEEPAGENT_SUBAGENT_COMPLETED,
+            subagent_type=subagent_type,
+            output_length=len(final_message),
+            duration_ms=(_time.perf_counter() - _started) * 1000,
+            success=bool(final_message),
+        )
         return final_message
 
     # Stash the catalogue on the tool so callers can inject it into

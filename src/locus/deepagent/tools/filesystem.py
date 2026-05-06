@@ -49,10 +49,13 @@ def make_filesystem_tools(backend: BackendProtocol) -> list[Any]:
         path on success, or a standardized error code on failure
         (``"is_directory"``, ``"permission_denied"``, ``"invalid_path"``).
         """
+        from locus.observability.emit import EV_DEEPAGENT_FS_WRITE, emit_sync
+
         try:
             backend.write(path, contents)
         except BackendError as exc:
             return exc.code
+        emit_sync(EV_DEEPAGENT_FS_WRITE, path=path, byte_count=len(contents))
         return path
 
     @tool
@@ -66,10 +69,14 @@ def make_filesystem_tools(backend: BackendProtocol) -> list[Any]:
         (``"file_not_found"``, ``"is_directory"``,
         ``"permission_denied"``, ``"invalid_path"``).
         """
+        from locus.observability.emit import EV_DEEPAGENT_FS_READ, emit_sync
+
         try:
-            return backend.read(path, offset=offset, limit=limit)
+            content = backend.read(path, offset=offset, limit=limit)
         except BackendError as exc:
             return exc.code
+        emit_sync(EV_DEEPAGENT_FS_READ, path=path, byte_count=len(content))
+        return content
 
     @tool
     def ls(path: str = "/", recursive: bool = False) -> str:

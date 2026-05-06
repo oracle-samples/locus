@@ -219,6 +219,18 @@ class GuardrailsHook(HookProvider):
         self._violations.append(violation)
         if self._on_violation:
             self._on_violation(violation)
+        from locus.observability.emit import (  # noqa: PLC0415
+            EV_HOOK_GUARDRAIL_TRIGGERED,
+            emit_sync,
+        )
+
+        emit_sync(
+            EV_HOOK_GUARDRAIL_TRIGGERED,
+            rule_name=violation.rule_name,
+            action=str(violation.action),
+            location=violation.location,
+            description=violation.description,
+        )
 
     def _check_pii(self, text: str, location: str) -> list[GuardrailViolation]:
         """Check text for PII patterns.
