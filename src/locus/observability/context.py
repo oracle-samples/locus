@@ -44,6 +44,31 @@ from uuid import uuid4
 _run_id_var: ContextVar[str | None] = ContextVar("locus_run_id", default=None)
 
 
+# Loop reference recorded inside ``run_context`` so worker threads
+# (the @tool decorator's executor, ``asyncio.to_thread`` callers) can
+# find the right loop to hop publishes back to via
+# ``run_coroutine_threadsafe``. Stored as a contextvar (not a global)
+# so it survives ``contextvars.copy_context()`` propagation into the
+# worker thread but doesn't leak between unrelated dispatches.
+import asyncio as _asyncio  # noqa: E402, PLC0415
+
+
+_owner_loop_var: ContextVar[_asyncio.AbstractEventLoop | None] = ContextVar(
+    "locus_owner_loop", default=None
+)
+
+
+def current_owner_loop() -> _asyncio.AbstractEventLoop | None:
+    """Return the asyncio loop bound by ``run_context``, or ``None``.
+
+    ``emit_sync`` reads this when called from a worker thread so it
+    can hop publishes back to the right loop. Bootstrapping the loop
+    at ``run_context`` entry costs nothing for callers who don't
+    publish — it's a single ``ContextVar.set`` per dispatch.
+    """
+    return _owner_loop_var.get()
+
+
 def current_run_id() -> str | None:
     """Return the run_id active on the current context, or ``None``.
 
@@ -94,7 +119,19 @@ async def run_context(run_id: str | None = None) -> AsyncIterator[str]:
     """
     rid = run_id or uuid4().hex
     token = _run_id_var.set(rid)
+    # Capture the running loop so worker-thread emit_sync calls can
+    # hop publishes back via run_coroutine_threadsafe. Cheap — one
+    # ``ContextVar.set`` per dispatch, even if no one ever subscribes.
+    loop_token = None
+    try:
+        loop_token = _owner_loop_var.set(_asyncio.get_running_loop())
+    except RuntimeError:
+        # Caller is using ``run_context`` from sync code — no loop to
+        # capture, but ``emit_sync`` will simply drop in that case.
+        pass
     try:
         yield rid
     finally:
+        if loop_token is not None:
+            _owner_loop_var.reset(loop_token)
         _run_id_var.reset(token)

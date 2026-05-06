@@ -110,6 +110,14 @@ class EventBus:
         # Drop counter for tests + diagnostics.
         self._dropped_events = 0
 
+        # Optional reference to the asyncio loop the bus runs on. Set
+        # lazily by ``emit()`` / ``emit_sync()`` on first use so worker
+        # threads (the ``@tool`` decorator's executor, ``asyncio.to_thread``
+        # callers) can reach back to the right loop via
+        # ``run_coroutine_threadsafe``. Never set unless someone actually
+        # publishes — preserves the SDK-without-SSE invariant.
+        self._owner_loop: asyncio.AbstractEventLoop | None = None
+
     # ------------------------------------------------------------------
     # Publishing
     # ------------------------------------------------------------------

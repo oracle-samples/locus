@@ -28,7 +28,7 @@ import asyncio
 import logging
 from typing import Any
 
-from locus.observability.context import current_run_id
+from locus.observability.context import current_owner_loop, current_run_id
 
 
 logger = logging.getLogger(__name__)
@@ -70,6 +70,56 @@ EV_SKILL_ACTIVATED = "skills.activated"
 EV_CHECKPOINT_SAVED = "memory.checkpoint.saved"
 EV_CHECKPOINT_LOADED = "memory.checkpoint.loaded"
 
+# --- Agent ReAct loop (bridge from yielded LocusEvent → bus) ---
+EV_AGENT_THINK = "agent.think"
+EV_AGENT_TOOL_STARTED = "agent.tool.started"
+EV_AGENT_TOOL_COMPLETED = "agent.tool.completed"
+EV_AGENT_REFLECT = "agent.reflect"
+EV_AGENT_GROUNDING = "agent.grounding"
+EV_AGENT_MODEL_CHUNK = "agent.model.chunk"
+EV_AGENT_MODEL_COMPLETED = "agent.model.completed"
+EV_AGENT_TOKENS_USED = "agent.tokens.used"
+EV_AGENT_INTERRUPT = "agent.interrupt"
+EV_AGENT_TERMINATE = "agent.terminate"
+
+# --- StateGraph node lifecycle ---
+EV_GRAPH_NODE_STARTED = "multiagent.graph.node.started"
+EV_GRAPH_NODE_COMPLETED = "multiagent.graph.node.completed"
+EV_GRAPH_NODE_ROUTED = "multiagent.graph.node.routed"
+
+# --- A2A protocol ---
+EV_A2A_TASK_RECEIVED = "a2a.task.received"
+EV_A2A_TASK_PROCESSING = "a2a.task.processing"
+EV_A2A_TASK_COMPLETED = "a2a.task.completed"
+EV_A2A_CLIENT_SEND = "a2a.client.send"
+EV_A2A_CLIENT_RECEIVED = "a2a.client.received"
+
+# --- RAG ---
+EV_RAG_QUERY_STARTED = "rag.query.started"
+EV_RAG_QUERY_COMPLETED = "rag.query.completed"
+EV_RAG_EMBEDDING_GENERATED = "rag.embedding.generated"
+EV_RAG_STORE_UPSERT = "rag.store.upsert"
+EV_RAG_STORE_SEARCH = "rag.store.search"
+
+# --- Memory operations ---
+EV_MEMORY_COMPACTOR_TRIGGERED = "memory.compactor.triggered"
+EV_MEMORY_COMPACTOR_COMPLETED = "memory.compactor.completed"
+EV_MEMORY_CONVERSATION_ADDED = "memory.conversation.added"
+EV_MEMORY_CONVERSATION_PRUNED = "memory.conversation.pruned"
+
+# --- DeepAgent ---
+EV_DEEPAGENT_SUBAGENT_SPAWNED = "deepagent.subagent.spawned"
+EV_DEEPAGENT_SUBAGENT_COMPLETED = "deepagent.subagent.completed"
+EV_DEEPAGENT_FS_READ = "deepagent.fs.read"
+EV_DEEPAGENT_FS_WRITE = "deepagent.fs.write"
+EV_DEEPAGENT_TODO_ADDED = "deepagent.todo.added"
+EV_DEEPAGENT_TODO_COMPLETED = "deepagent.todo.completed"
+
+# --- Hooks (built-in bridges) ---
+EV_HOOK_MODEL_RETRY = "agent.model.retry"
+EV_HOOK_STEERING_APPLIED = "agent.steering.applied"
+EV_HOOK_GUARDRAIL_TRIGGERED = "agent.guardrail.triggered"
+
 
 async def emit(event_type: str, /, **data: Any) -> None:
     """Publish a :class:`StreamEvent` if a run_id is in the current
@@ -89,8 +139,17 @@ async def emit(event_type: str, /, **data: Any) -> None:
     # until the first real emission.
     from locus.observability.event_bus import StreamEvent, get_event_bus  # noqa: PLC0415
 
+    bus = get_event_bus()
+    # Cache the running loop on the bus so worker-thread ``emit_sync``
+    # callers (sync ``@tool`` functions hopping through the executor)
+    # can hop publishes back into the right event loop.
+    if getattr(bus, "_owner_loop", None) is None:
+        try:
+            bus._owner_loop = asyncio.get_running_loop()  # noqa: SLF001 — bus owns this attr
+        except RuntimeError:
+            pass
     try:
-        await get_event_bus().publish(
+        await bus.publish(
             StreamEvent(run_id=rid, event_type=event_type, data=data),
         )
     except Exception:  # noqa: BLE001 — telemetry must never break the SDK
@@ -100,29 +159,45 @@ async def emit(event_type: str, /, **data: Any) -> None:
 def emit_sync(event_type: str, /, **data: Any) -> None:
     """Sync-call equivalent of :func:`emit`.
 
-    Schedules a publish on the running event loop. If there isn't one
-    (sync code outside any asyncio context), the event is dropped — we
-    don't bring up a loop just to publish telemetry. Use :func:`emit`
-    from coroutines whenever possible.
+    Schedules a publish on the running event loop. Two cases handled:
+
+    * Called from inside the loop's thread — uses ``loop.create_task``
+      and pins the task on ``_BACKGROUND_TASKS``.
+    * Called from a worker thread (``asyncio.to_thread`` / the @tool
+      decorator's executor) — uses ``run_coroutine_threadsafe`` to
+      hop back to the bus's event loop. The contextvar copy that the
+      decorator passes into the executor preserves ``run_id`` across
+      the thread boundary.
+
+    If neither path resolves a loop, the event is dropped — telemetry
+    must never spin up a fresh loop and fight asyncio singletons.
     """
     rid = current_run_id()
     if rid is None:
         return
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        # Sync code with no running loop — dropping is the right call.
-        # Spinning up a fresh loop here would fight the rest of the
-        # process for control of asyncio singletons.
-        return
     from locus.observability.event_bus import StreamEvent, get_event_bus  # noqa: PLC0415
 
     bus = get_event_bus()
-    coro = bus.publish(StreamEvent(run_id=rid, event_type=event_type, data=data))
-    # Fire-and-forget. We deliberately don't await the task — that
-    # would defeat the "telemetry never blocks" contract. We anchor
-    # the task on the event loop's pending set so the GC can't reap
-    # the coroutine mid-flight.
+    event = StreamEvent(run_id=rid, event_type=event_type, data=data)
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        # No running loop in *this* thread. We may still be inside a
+        # worker thread spawned by ``asyncio.to_thread`` /
+        # ``loop.run_in_executor`` — in which case the run_context's
+        # owner loop is reachable via the contextvar populated on
+        # ``run_context`` entry (and copied into the worker thread by
+        # the ``@tool`` decorator's ``ctx.run()``).
+        owner_loop = current_owner_loop()
+        if owner_loop is None or not owner_loop.is_running():
+            return
+        try:
+            asyncio.run_coroutine_threadsafe(bus.publish(event), owner_loop)
+        except Exception:  # noqa: BLE001 — telemetry must never break the SDK
+            logger.debug("emit_sync threadsafe schedule failed", exc_info=True)
+        return
+
+    coro = bus.publish(event)
     task = loop.create_task(coro)
     _BACKGROUND_TASKS.add(task)
     task.add_done_callback(_BACKGROUND_TASKS.discard)
