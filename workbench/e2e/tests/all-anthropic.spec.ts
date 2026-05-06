@@ -57,8 +57,21 @@ async function configureAnthropic(page: Page): Promise<void> {
     expect(opts.includes(MODEL)).toBe(true);
   }).toPass({ timeout: 15_000 });
   await page.getByTestId("cfg-model").selectOption(MODEL);
-  if (MODEL_B) await page.getByTestId("cfg-model-b").selectOption(MODEL_B);
-  if (MODEL_C) await page.getByTestId("cfg-model-c").selectOption(MODEL_C);
+  // The B/C dropdowns are populated by the same setModelOptions pass
+  // as A but the option list may not have flushed to the WebDriver
+  // layer by the time selectOption fires — poll for the target option
+  // to exist before attempting to set it.
+  for (const [tid, value] of [
+    ["cfg-model-b", MODEL_B] as const,
+    ["cfg-model-c", MODEL_C] as const,
+  ]) {
+    if (!value) continue;
+    await expect(async () => {
+      const opts = await page.getByTestId(tid).locator("option").allTextContents();
+      expect(opts.includes(value)).toBe(true);
+    }).toPass({ timeout: 15_000 });
+    await page.getByTestId(tid).selectOption(value);
+  }
   await page.getByTestId("settings-save").click();
 }
 
