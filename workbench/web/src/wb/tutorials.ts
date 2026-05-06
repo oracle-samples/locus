@@ -1,10 +1,18 @@
 /** Tutorial sidebar: catalog fetch, filter, render, prev/next nav. */
-import { getTutorial, listTutorials, type Tutorial, type TutorialDetail } from "../api";
+import {
+  getTutorial,
+  listTutorialCategories,
+  listTutorials,
+  type CategoryInfo,
+  type Tutorial,
+  type TutorialDetail,
+} from "../api";
 import { $ } from "./dom";
 import { setEditorContent } from "./editor";
 import { showEmptyState } from "./output";
 
 let tutorials: Tutorial[] = [];
+let categories: CategoryInfo[] = [];
 let current: TutorialDetail | null = null;
 
 export function getCurrent(): TutorialDetail | null {
@@ -24,8 +32,18 @@ function search(): HTMLInputElement {
 
 export async function bootstrapTutorials(): Promise<void> {
   try {
-    tutorials = await listTutorials();
-    console.info(`[wb/tutorials] loaded ${tutorials.length} tutorials`);
+    // Categories load is best-effort — if it fails the sidebar still
+    // renders, just without section headers.
+    [tutorials, categories] = await Promise.all([
+      listTutorials(),
+      listTutorialCategories().catch((err) => {
+        console.warn("[wb/tutorials] categories load failed", err);
+        return [] as CategoryInfo[];
+      }),
+    ]);
+    console.info(
+      `[wb/tutorials] loaded ${tutorials.length} tutorials in ${categories.length} categories`,
+    );
     renderList("");
     if (tutorials.length) {
       const first = tutorials.find((t) => t.id === "tutorial_01_basic_agent") ?? tutorials[0];
@@ -62,10 +80,34 @@ export async function selectTutorial(id: string): Promise<void> {
 }
 
 function renderList(filter: string): void {
-  sideTutorials().innerHTML = "";
+  const sidebar = sideTutorials();
+  sidebar.innerHTML = "";
   const q = filter.trim().toLowerCase();
+
+  // Index categories by id for quick lookup; tutorials are pre-sorted
+  // by the backend (category position, then category_order, then number)
+  // so a single pass with a "previous category" sentinel produces
+  // correctly ordered section headers.
+  const catById: Map<string, CategoryInfo> = new Map(categories.map((c) => [c.id, c]));
+  let lastCategory: string | null = null;
+
   for (const t of tutorials) {
     if (q && !`${t.number} ${t.title} ${t.id}`.toLowerCase().includes(q)) continue;
+
+    const catId = t.category ?? "misc";
+    if (catId !== lastCategory) {
+      const meta = catById.get(catId);
+      const header = document.createElement("div");
+      header.className = "side__category";
+      header.dataset.testid = `tutorial-category-${catId}`;
+      header.innerHTML = `
+        <div class="side__category-name">${meta?.name ?? catId}</div>
+        ${meta?.description ? `<div class="side__category-desc">${meta.description}</div>` : ""}
+      `;
+      sidebar.appendChild(header);
+      lastCategory = catId;
+    }
+
     const item = document.createElement("div");
     item.className = `side__item${current?.id === t.id ? " side__item--active" : ""}`;
     item.dataset.testid = `tutorial-${t.id}`;
@@ -78,7 +120,7 @@ function renderList(filter: string): void {
       ${stdinBadge}
     `;
     item.addEventListener("click", () => void selectTutorial(t.id));
-    sideTutorials().appendChild(item);
+    sidebar.appendChild(item);
   }
 }
 

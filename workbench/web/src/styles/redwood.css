@@ -329,6 +329,35 @@ code, pre { font-family: var(--mono); }
   color: var(--or-red-deep);
   font-weight: 600;
 }
+
+/* Topic-progression headers — each sidebar renders one of these per
+ * category before the items in that category. Sticky-ish: not pinned
+ * (the sidebar is short enough), but visually distinct from items so
+ * a learner reading top-to-bottom sees the section context first.
+ */
+.side__category {
+  padding: 0.65rem 0.75rem 0.25rem;
+  margin-top: 0.6rem;
+  border-top: 1px solid var(--or-border);
+}
+.side__category:first-child {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0.4rem;
+}
+.side__category-name {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--or-red-deep);
+}
+.side__category-desc {
+  font-size: 0.7rem;
+  color: var(--or-text-mute);
+  margin-top: 0.15rem;
+  line-height: 1.35;
+}
 .side__dot {
   width: 8px;
   height: 8px;

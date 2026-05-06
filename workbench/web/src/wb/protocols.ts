@@ -5,10 +5,18 @@
  *  to* at runtime — the inspectable shape that proves the bounded
  *  graph generation claim.
  */
-import { getProtocol, listProtocols, type ProtocolDetail, type ProtocolSummary } from "../api";
+import {
+  getProtocol,
+  listProtocolCategories,
+  listProtocols,
+  type CategoryInfo,
+  type ProtocolDetail,
+  type ProtocolSummary,
+} from "../api";
 import { $ } from "./dom";
 
 let protocols: ProtocolSummary[] = [];
+let categories: CategoryInfo[] = [];
 let current: ProtocolDetail | null = null;
 
 function sideProtocols(): HTMLElement {
@@ -20,8 +28,16 @@ function search(): HTMLInputElement {
 
 export async function bootstrapProtocols(): Promise<void> {
   try {
-    protocols = await listProtocols();
-    console.info(`[wb/protocols] loaded ${protocols.length} protocols`);
+    [protocols, categories] = await Promise.all([
+      listProtocols(),
+      listProtocolCategories().catch((err) => {
+        console.warn("[wb/protocols] categories load failed", err);
+        return [] as CategoryInfo[];
+      }),
+    ]);
+    console.info(
+      `[wb/protocols] loaded ${protocols.length} protocols in ${categories.length} categories`,
+    );
     renderList("");
   } catch (err) {
     console.error("[wb/protocols] catalog load failed", err);
@@ -46,11 +62,28 @@ async function selectProtocol(id: string): Promise<void> {
 }
 
 function renderList(filter: string): void {
-  sideProtocols().innerHTML = "";
+  const sidebar = sideProtocols();
+  sidebar.innerHTML = "";
   const q = filter.trim().toLowerCase();
+  const catById: Map<string, CategoryInfo> = new Map(categories.map((c) => [c.id, c]));
+  let lastCategory: string | null = null;
+
   for (const p of protocols) {
     if (q && !`${p.name} ${p.description} ${p.handles.join(" ")}`.toLowerCase().includes(q)) {
       continue;
+    }
+    const catId = p.category ?? "other";
+    if (catId !== lastCategory) {
+      const meta = catById.get(catId);
+      const header = document.createElement("div");
+      header.className = "side__category";
+      header.dataset.testid = `protocol-category-${catId}`;
+      header.innerHTML = `
+        <div class="side__category-name">${meta?.name ?? catId}</div>
+        ${meta?.description ? `<div class="side__category-desc">${meta.description}</div>` : ""}
+      `;
+      sidebar.appendChild(header);
+      lastCategory = catId;
     }
     const item = document.createElement("div");
     item.className = `side__item${current?.id === p.id ? " side__item--active" : ""}`;
@@ -64,7 +97,7 @@ function renderList(filter: string): void {
       ${costBadge}
     `;
     item.addEventListener("click", () => void selectProtocol(p.id));
-    sideProtocols().appendChild(item);
+    sidebar.appendChild(item);
   }
 }
 

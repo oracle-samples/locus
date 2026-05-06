@@ -228,3 +228,6 @@ class TestSkillsEndpoints:
         assert d["instructions"], f"skill {sid!r} has empty instructions body"
         # ``resources`` is a list (possibly empty) of relative file paths.
         assert isinstance(d["resources"], list)
+
+
+## End of live-BFF tests. ##

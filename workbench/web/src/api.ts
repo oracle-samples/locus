@@ -13,14 +13,30 @@ export type Tutorial = {
   summary: string;
   filename: string;
   needs_stdin?: boolean;
+  category?: string;
+  category_order?: number;
 };
 
 export type TutorialDetail = Tutorial & { source: string };
+
+// Topic-progression headers the sidebars render. Same shape across
+// the three catalogues — one record per declared category.
+export type CategoryInfo = {
+  id: string;
+  name: string;
+  description: string;
+};
 
 export async function listTutorials(): Promise<Tutorial[]> {
   const r = await fetch("/api/tutorials");
   if (!r.ok) throw new Error(`tutorials ${r.status}`);
   return (await r.json()) as Tutorial[];
+}
+
+export async function listTutorialCategories(): Promise<CategoryInfo[]> {
+  const r = await fetch("/api/tutorials/categories");
+  if (!r.ok) throw new Error(`tutorial categories ${r.status}`);
+  return (await r.json()) as CategoryInfo[];
 }
 
 export async function getTutorial(id: string): Promise<TutorialDetail> {
@@ -41,6 +57,7 @@ export type SkillSummary = {
   allowed_tools: string[];
   license: string | null;
   path: string;
+  category?: string;
 };
 
 export type SkillDetail = SkillSummary & {
@@ -52,6 +69,12 @@ export async function listSkills(): Promise<SkillSummary[]> {
   const r = await fetch("/api/skills");
   if (!r.ok) throw new Error(`skills ${r.status}`);
   return (await r.json()) as SkillSummary[];
+}
+
+export async function listSkillCategories(): Promise<CategoryInfo[]> {
+  const r = await fetch("/api/skills/categories");
+  if (!r.ok) throw new Error(`skill categories ${r.status}`);
+  return (await r.json()) as CategoryInfo[];
 }
 
 export async function getSkill(id: string): Promise<SkillDetail> {
@@ -76,6 +99,8 @@ export type ProtocolSummary = {
   latency: string;
   supports_streaming: boolean;
   supports_repair: boolean;
+  category?: string;
+  category_order?: number;
 };
 
 export type ProtocolDetail = ProtocolSummary & { runtime_shape: string };
@@ -84,6 +109,12 @@ export async function listProtocols(): Promise<ProtocolSummary[]> {
   const r = await fetch("/api/protocols");
   if (!r.ok) throw new Error(`protocols ${r.status}`);
   return (await r.json()) as ProtocolSummary[];
+}
+
+export async function listProtocolCategories(): Promise<CategoryInfo[]> {
+  const r = await fetch("/api/protocols/categories");
+  if (!r.ok) throw new Error(`protocol categories ${r.status}`);
+  return (await r.json()) as CategoryInfo[];
 }
 
 export async function getProtocol(id: string): Promise<ProtocolDetail> {

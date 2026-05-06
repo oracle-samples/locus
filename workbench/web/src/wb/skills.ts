@@ -5,10 +5,18 @@
  *  sidebar and swaps the main view. There is no URL routing — the
  *  workbench is single-page on purpose.
  */
-import { getSkill, listSkills, type SkillDetail, type SkillSummary } from "../api";
+import {
+  getSkill,
+  listSkillCategories,
+  listSkills,
+  type CategoryInfo,
+  type SkillDetail,
+  type SkillSummary,
+} from "../api";
 import { $ } from "./dom";
 
 let skills: SkillSummary[] = [];
+let categories: CategoryInfo[] = [];
 let current: SkillDetail | null = null;
 
 function sideSkills(): HTMLElement {
@@ -20,8 +28,16 @@ function search(): HTMLInputElement {
 
 export async function bootstrapSkills(): Promise<void> {
   try {
-    skills = await listSkills();
-    console.info(`[wb/skills] loaded ${skills.length} skills`);
+    [skills, categories] = await Promise.all([
+      listSkills(),
+      listSkillCategories().catch((err) => {
+        console.warn("[wb/skills] categories load failed", err);
+        return [] as CategoryInfo[];
+      }),
+    ]);
+    console.info(
+      `[wb/skills] loaded ${skills.length} skills in ${categories.length} categories`,
+    );
     renderList("");
   } catch (err) {
     console.error("[wb/skills] catalog load failed", err);
@@ -46,11 +62,28 @@ async function selectSkill(id: string): Promise<void> {
 }
 
 function renderList(filter: string): void {
-  sideSkills().innerHTML = "";
+  const sidebar = sideSkills();
+  sidebar.innerHTML = "";
   const q = filter.trim().toLowerCase();
+  const catById: Map<string, CategoryInfo> = new Map(categories.map((c) => [c.id, c]));
+  let lastCategory: string | null = null;
+
   for (const sk of skills) {
     if (q && !`${sk.name} ${sk.description} ${sk.domain}`.toLowerCase().includes(q)) {
       continue;
+    }
+    const catId = sk.category ?? "other";
+    if (catId !== lastCategory) {
+      const meta = catById.get(catId);
+      const header = document.createElement("div");
+      header.className = "side__category";
+      header.dataset.testid = `skill-category-${catId}`;
+      header.innerHTML = `
+        <div class="side__category-name">${meta?.name ?? catId}</div>
+        ${meta?.description ? `<div class="side__category-desc">${meta.description}</div>` : ""}
+      `;
+      sidebar.appendChild(header);
+      lastCategory = catId;
     }
     const item = document.createElement("div");
     item.className = `side__item${current?.id === sk.id ? " side__item--active" : ""}`;
@@ -66,7 +99,7 @@ function renderList(filter: string): void {
       ${domainBadge}
     `;
     item.addEventListener("click", () => void selectSkill(sk.id));
-    sideSkills().appendChild(item);
+    sidebar.appendChild(item);
   }
 }
 

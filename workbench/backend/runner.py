@@ -840,6 +840,90 @@ TUTORIAL_NEEDS_STDIN = {9, 45, 46, 47, 48}
 _TUTORIAL_DIR = (Path(__file__).resolve().parents[2] / "examples").resolve()
 
 
+# Topic progression for the workbench sidebar. Each tutorial number is
+# bound to one category; categories are rendered in the order declared
+# here. Keep ranges contiguous so adding a new tutorial slots in
+# without renumbering — gaps ("RAG suite blocked in workbench") leave
+# the category empty rather than reshuffling.
+TUTORIAL_CATEGORIES: list[dict[str, Any]] = [
+    {
+        "id": "fundamentals",
+        "name": "Fundamentals",
+        "description": "Build your first agent — model, tools, memory, streaming, hooks.",
+        "members": [1, 2, 3, 4, 5],
+    },
+    {
+        "id": "graphs",
+        "name": "Graphs & flow control",
+        "description": "StateGraph, conditional routing, reducers, HITL, advanced patterns.",
+        "members": [6, 7, 8, 9, 10, 35, 36, 37],
+    },
+    {
+        "id": "structured-output",
+        "name": "Structured reasoning",
+        "description": "Typed outputs, playbooks, reasoning patterns, GSAR grounding, evaluation.",
+        "members": [13, 14, 15, 26, 39],
+    },
+    {
+        "id": "composition",
+        "name": "Composition",
+        "description": "SequentialPipeline, ParallelPipeline, LoopAgent — wiring agents together.",
+        "members": [25],
+    },
+    {
+        "id": "multi-agent",
+        "name": "Multi-agent",
+        "description": "Swarm, handoff, orchestrator, specialists, A2A, debate, supervisor patterns.",
+        "members": [11, 16, 17, 18, 33, 34, 42, 43, 44],
+    },
+    {
+        "id": "production",
+        "name": "Production",
+        "description": "Guardrails, hooks (advanced), model providers, servers, checkpoint backends.",
+        "members": [19, 20, 21, 27, 28, 29, 30, 38, 40],
+    },
+    {
+        "id": "skills-plugins",
+        "name": "Skills & plugins",
+        "description": "Pluggable skill packs and integration plugins (MCP, fastmcp, more).",
+        "members": [12, 31, 32],
+    },
+    {
+        "id": "real-world",
+        "name": "Real-world workflows",
+        "description": "End-to-end use cases — incident response, contract review, audio chat.",
+        "members": [45, 46, 47, 48, 49, 50],
+    },
+    {
+        "id": "router",
+        "name": "Cognitive router (PRISM)",
+        "description": "Bounded graph generation — typed extraction → registry → compiler.",
+        "members": [51],
+    },
+    {
+        "id": "observability",
+        "name": "Observability & SSE",
+        "description": "Opt-in telemetry — run_context, event bus, agent yield bridge, token usage, full catalogue.",
+        "members": [52, 53, 54, 55],
+    },
+]
+
+
+def _tutorial_category(number: int) -> tuple[str, int]:
+    """Return ``(category_id, order_within_category)`` for a tutorial.
+
+    Tutorials not bound to a category fall under ``"misc"`` so a stray
+    ``tutorial_99_*`` still renders. ``order_within_category`` is the
+    member's index in the category's ``members`` list — preserves
+    declaration order rather than numeric sort, so we can manually
+    foreground a tutorial that's logically a prerequisite.
+    """
+    for cat in TUTORIAL_CATEGORIES:
+        if number in cat["members"]:
+            return cat["id"], cat["members"].index(number)
+    return "misc", number
+
+
 def _parse_tutorial(path: Path) -> dict[str, Any]:
     """Pull (id, number, title, summary, source) out of a tutorial file."""
     src = path.read_text()
@@ -865,6 +949,7 @@ def _parse_tutorial(path: Path) -> dict[str, Any]:
                 break
     num_match = re.match(r"tutorial_(\d+)_", path.name)
     number = int(num_match.group(1)) if num_match else 0
+    category_id, order_in_category = _tutorial_category(number)
     return {
         "id": path.stem,
         "number": number,
@@ -873,6 +958,8 @@ def _parse_tutorial(path: Path) -> dict[str, Any]:
         "filename": path.name,
         "source": src,
         "needs_stdin": number in TUTORIAL_NEEDS_STDIN,
+        "category": category_id,
+        "category_order": order_in_category,
     }
 
 
@@ -891,12 +978,37 @@ def _list_tutorials() -> list[dict[str, Any]]:
             out.append(_parse_tutorial(p))
         except Exception:  # pragma: no cover
             continue
+
+    # Sort by (category position, member position within the category,
+    # tutorial number) so the sidebar reads top-to-bottom as a curated
+    # learning path rather than a numeric file dump. ``misc`` falls to
+    # the end via the sentinel category index.
+    cat_index: dict[str, int] = {c["id"]: i for i, c in enumerate(TUTORIAL_CATEGORIES)}
+    cat_index.setdefault("misc", len(TUTORIAL_CATEGORIES))
+    out.sort(
+        key=lambda t: (
+            cat_index.get(t["category"], len(TUTORIAL_CATEGORIES)),
+            t.get("category_order", t["number"]),
+            t["number"],
+        )
+    )
     return out
 
 
 @app.get("/api/tutorials")
 def list_tutorials() -> list[dict[str, Any]]:
     return [{k: v for k, v in t.items() if k != "source"} for t in _list_tutorials()]
+
+
+@app.get("/api/tutorials/categories")
+def list_tutorial_categories() -> list[dict[str, Any]]:
+    """Topic-progression categories the workbench renders as section
+    headers. The ``members`` field is omitted from the wire payload —
+    membership is already encoded on each tutorial as ``category``."""
+    return [
+        {"id": c["id"], "name": c["name"], "description": c["description"]}
+        for c in TUTORIAL_CATEGORIES
+    ]
 
 
 @app.get("/api/tutorials/{tid}")
@@ -915,6 +1027,44 @@ def tutorial_source(tid: str) -> dict[str, Any]:
 _SKILLS_DIR = (Path(__file__).resolve().parents[2] / "examples" / "skills").resolve()
 
 
+# Topic groupings for the Skills sidebar. ``domain`` on a Skill is a
+# free-text metadata field; we map common values to a curated category
+# so the sidebar renders coherent groups. Skills whose domain doesn't
+# match any group fall under ``"other"``.
+SKILL_CATEGORIES: list[dict[str, Any]] = [
+    {
+        "id": "engineering",
+        "name": "Engineering",
+        "description": "Code review, API design, architecture rituals.",
+        "domains": {"engineering", "code", "code-review", "api", "api-design", "architecture"},
+    },
+    {
+        "id": "operations",
+        "name": "Operations",
+        "description": "Incident triage, on-call playbooks, observability runbooks.",
+        "domains": {"operations", "ops", "incident", "incident-response", "sre", "observability"},
+    },
+    {
+        "id": "data",
+        "name": "Data & analytics",
+        "description": "SQL queries, schema awareness, data exploration.",
+        "domains": {"data", "sql", "analytics", "warehouse"},
+    },
+]
+
+
+def _skill_category(skill: Any) -> str:
+    """Map a skill's free-text domain tag onto one of the curated
+    categories. Default ``"other"`` for anything unrecognised — the UI
+    renders it as its own section so nothing disappears."""
+    domain = ((skill.metadata or {}).get("domain") or "").lower().strip()
+    skill_name = (skill.name or "").lower()
+    for cat in SKILL_CATEGORIES:
+        if domain in cat["domains"] or skill_name in cat["domains"]:
+            return cat["id"]
+    return "other"
+
+
 def _skill_summary(skill: Any, dir_path: Path) -> dict[str, Any]:
     """Pick the catalogue-level fields off a Skill — full body is fetched
     per-skill via the detail endpoint."""
@@ -926,6 +1076,7 @@ def _skill_summary(skill: Any, dir_path: Path) -> dict[str, Any]:
         "allowed_tools": skill.allowed_tools or [],
         "license": skill.license,
         "path": str(dir_path),
+        "category": _skill_category(skill),
     }
 
 
@@ -954,7 +1105,20 @@ def _list_skills() -> list[tuple[Any, Path]]:
 @app.get("/api/skills")
 def list_skills() -> list[dict[str, Any]]:
     """Catalogue: name, description, domain tag, allowed-tools, license."""
-    return [_skill_summary(sk, p) for sk, p in _list_skills()]
+    raw = [_skill_summary(sk, p) for sk, p in _list_skills()]
+    cat_index: dict[str, int] = {c["id"]: i for i, c in enumerate(SKILL_CATEGORIES)}
+    cat_index.setdefault("other", len(SKILL_CATEGORIES))
+    raw.sort(key=lambda s: (cat_index.get(s["category"], len(SKILL_CATEGORIES)), s["name"]))
+    return raw
+
+
+@app.get("/api/skills/categories")
+def list_skill_categories() -> list[dict[str, Any]]:
+    """Topic groupings the workbench renders as Skills section headers."""
+    return [
+        {"id": c["id"], "name": c["name"], "description": c["description"]}
+        for c in SKILL_CATEGORIES
+    ]
 
 
 @app.get("/api/skills/{sid}")
@@ -992,9 +1156,55 @@ _RUNTIME_SHAPES: dict[str, str] = {
 }
 
 
+# Protocol groupings ordered by execution-shape complexity. Renders as
+# section headers in the Protocols sidebar so users see the cardinal
+# shapes (single, linear, parallel, gated) up front and the specialised
+# ones (a2a/handoff) further down.
+PROTOCOL_CATEGORIES: list[dict[str, Any]] = [
+    {
+        "id": "single",
+        "name": "Single shot",
+        "description": "One Agent call, optional output_schema. Fastest path.",
+        "members": ["direct_response"],
+    },
+    {
+        "id": "linear",
+        "name": "Linear pipelines",
+        "description": "Sequential plan → execute → validate, including loops with stop conditions.",
+        "members": ["plan_execute_validate", "codegen_test_validate"],
+    },
+    {
+        "id": "parallel",
+        "name": "Parallel fan-out",
+        "description": "Multiple agents running concurrently, results merged by an orchestrator or judge.",
+        "members": ["specialist_fanout", "debate"],
+    },
+    {
+        "id": "delegation",
+        "name": "Delegation",
+        "description": "Pass the conversation across agents (in-process or remote A2A peers).",
+        "members": ["handoff_chain", "a2a_delegate"],
+    },
+    {
+        "id": "gated",
+        "name": "Approval-gated",
+        "description": "High-risk paths interrupted for human approval before execution.",
+        "members": ["approval_gated_execution"],
+    },
+]
+
+
+def _protocol_category(protocol_id: str) -> tuple[str, int]:
+    for cat in PROTOCOL_CATEGORIES:
+        if protocol_id in cat["members"]:
+            return cat["id"], cat["members"].index(protocol_id)
+    return "other", 0
+
+
 def _protocol_summary(protocol: Any) -> dict[str, Any]:
     """Catalogue-level fields for one Protocol — same set the detail
     endpoint returns, just without the runtime_shape."""
+    cat_id, order_in_cat = _protocol_category(protocol.id)
     return {
         "id": protocol.id,
         "name": protocol.id,
@@ -1007,6 +1217,8 @@ def _protocol_summary(protocol: Any) -> dict[str, Any]:
         "latency": protocol.latency,
         "supports_streaming": protocol.supports_streaming,
         "supports_repair": protocol.supports_repair,
+        "category": cat_id,
+        "category_order": order_in_cat,
     }
 
 
@@ -1018,8 +1230,27 @@ def _list_protocols() -> list[Any]:
 
 @app.get("/api/protocols")
 def list_protocols() -> list[dict[str, Any]]:
-    """The eight router protocol definitions, in registration order."""
-    return [_protocol_summary(p) for p in _list_protocols()]
+    """The eight router protocol definitions, sorted by category."""
+    raw = [_protocol_summary(p) for p in _list_protocols()]
+    cat_index: dict[str, int] = {c["id"]: i for i, c in enumerate(PROTOCOL_CATEGORIES)}
+    cat_index.setdefault("other", len(PROTOCOL_CATEGORIES))
+    raw.sort(
+        key=lambda p: (
+            cat_index.get(p["category"], len(PROTOCOL_CATEGORIES)),
+            p["category_order"],
+            p["name"],
+        )
+    )
+    return raw
+
+
+@app.get("/api/protocols/categories")
+def list_protocol_categories() -> list[dict[str, Any]]:
+    """Topic groupings the workbench renders as Protocols section headers."""
+    return [
+        {"id": c["id"], "name": c["name"], "description": c["description"]}
+        for c in PROTOCOL_CATEGORIES
+    ]
 
 
 @app.get("/api/protocols/{pid}")

@@ -91,16 +91,26 @@ async function streamForward(path: string, req: Request, res: Response) {
 app.get("/api/tutorials", (req, res) => {
   void forward(req, res, { method: "GET" });
 });
+// /categories registered before /:tid so the parametric route doesn't match it.
+app.get("/api/tutorials/categories", (req, res) => {
+  void forward(req, res, { method: "GET" });
+});
 app.get("/api/tutorials/:tid", (req, res) => {
   void forward(req, res, { method: "GET" });
 });
 app.get("/api/skills", (req, res) => {
   void forward(req, res, { method: "GET" });
 });
+app.get("/api/skills/categories", (req, res) => {
+  void forward(req, res, { method: "GET" });
+});
 app.get("/api/skills/:sid", (req, res) => {
   void forward(req, res, { method: "GET" });
 });
 app.get("/api/protocols", (req, res) => {
+  void forward(req, res, { method: "GET" });
+});
+app.get("/api/protocols/categories", (req, res) => {
   void forward(req, res, { method: "GET" });
 });
 app.get("/api/protocols/:pid", (req, res) => {
