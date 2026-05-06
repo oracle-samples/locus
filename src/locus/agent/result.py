@@ -205,6 +205,16 @@ class AgentResult(BaseModel):
 
     @computed_field  # type: ignore[prop-decorator]
     @property
+    def text(self) -> str:
+        """Alias for ``message``.
+
+        Many AI SDKs surface the final assistant text as ``.text``;
+        Locus's primary field is ``.message``. Both names now work.
+        """
+        return self.message
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
     def messages(self) -> tuple[Message, ...]:
         """All messages from the conversation."""
         return self.state.messages
