@@ -235,6 +235,11 @@ Prioritize based on urgency indicated in the task.""",
     print("Orchestration Result:")
     print(f"  Success: {orch_result.success}")
     print(f"  Duration: {orch_result.duration_ms:.0f}ms")
+    # max_parallel_specialists=3 means the three routed specialists
+    # ran concurrently behind an asyncio.Semaphore, not back-to-back.
+    # With per-specialist budgets averaging ~5s, parallel finishes in
+    # ~5s; serial would take ~15s.
+    print(f"  Parallel cap: max_parallel_specialists={orchestrator.max_parallel_specialists}")
     print(f"  Decisions made: {len(orch_result.decisions)}")
 
     for i, decision in enumerate(orch_result.decisions):
