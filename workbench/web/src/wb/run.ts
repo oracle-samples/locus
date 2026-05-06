@@ -28,7 +28,11 @@ export function installRunControls(): void {
       setEditorContent(cur.source);
     }
   });
-  $<HTMLButtonElement>("#clear-btn")?.addEventListener("click", () => {
+  // #clear-btn was removed from the HTML; querySelector is the
+  // tolerant lookup so the entire init chain doesn't abort if the
+  // button is absent. (`$()` is strict and would throw.)
+  const clearBtn = document.querySelector<HTMLButtonElement>("#clear-btn");
+  clearBtn?.addEventListener("click", () => {
     clearOutput();
     $("#wb-output-pill").style.display = "none";
   });

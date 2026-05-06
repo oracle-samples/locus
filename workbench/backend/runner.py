@@ -907,6 +907,264 @@ def tutorial_source(tid: str) -> dict[str, Any]:
     raise HTTPException(404, f"unknown tutorial: {tid}")
 
 
+# ---------------------------------------------------------------------------
+# Skills — read-only catalogue of AgentSkills.io SKILL.md packages.
+# ---------------------------------------------------------------------------
+
+
+_SKILLS_DIR = (Path(__file__).resolve().parents[2] / "examples" / "skills").resolve()
+
+
+def _skill_summary(skill: Any, dir_path: Path) -> dict[str, Any]:
+    """Pick the catalogue-level fields off a Skill — full body is fetched
+    per-skill via the detail endpoint."""
+    return {
+        "id": skill.name,
+        "name": skill.name,
+        "description": skill.description,
+        "domain": (skill.metadata or {}).get("domain", ""),
+        "allowed_tools": skill.allowed_tools or [],
+        "license": skill.license,
+        "path": str(dir_path),
+    }
+
+
+def _list_skills() -> list[tuple[Any, Path]]:
+    """Load every SKILL.md package under examples/skills/.
+
+    Returns (Skill, dir_path) tuples in registration order. Invalid
+    SKILL.md packages are silently skipped (Skill.from_directory's
+    behaviour) so a single bad package doesn't take the catalogue
+    offline.
+    """
+    if not _SKILLS_DIR.is_dir():
+        return []
+    from locus.skills import Skill  # noqa: PLC0415 — import-light at module load
+
+    out: list[tuple[Any, Path]] = []
+    for child in sorted(_SKILLS_DIR.iterdir()):
+        if child.is_dir() and (child / "SKILL.md").exists():
+            try:
+                out.append((Skill.from_file(child), child))
+            except Exception:  # noqa: BLE001 — bad packages must not nuke the catalogue
+                continue
+    return out
+
+
+@app.get("/api/skills")
+def list_skills() -> list[dict[str, Any]]:
+    """Catalogue: name, description, domain tag, allowed-tools, license."""
+    return [_skill_summary(sk, p) for sk, p in _list_skills()]
+
+
+@app.get("/api/skills/{sid}")
+def skill_detail(sid: str) -> dict[str, Any]:
+    """Full SKILL.md body + resource file listing for one skill."""
+    for skill, dir_path in _list_skills():
+        if skill.name == sid:
+            return {
+                **_skill_summary(skill, dir_path),
+                "instructions": skill.instructions,
+                "resources": skill.list_resources(max_files=50),
+            }
+    raise HTTPException(404, f"unknown skill: {sid}")
+
+
+# ---------------------------------------------------------------------------
+# Router protocols — the eight built-in orchestration shapes.
+# ---------------------------------------------------------------------------
+
+
+# Per-protocol description of what its builder *emits* at compile time.
+# The router enforces these shapes via the structural-audit test suite
+# (tests/unit/test_router_compiled_shape.py); reproducing them here lets
+# the workbench display the runtime topology without importing the
+# builder closures themselves.
+_RUNTIME_SHAPES: dict[str, str] = {
+    "direct_response": "Agent (single call) with the requested capability tools",
+    "plan_execute_validate": "SequentialPipeline of 3 Agents: planner → executor → validator",
+    "specialist_fanout": "ParallelPipeline of N Agents — one tool-bound Agent per capability",
+    "debate": "ParallelPipeline of 2 debaters (pro/con) followed by a judge Agent",
+    "codegen_test_validate": "LoopAgent — iterates until first line of output starts with PASS",
+    "approval_gated_execution": "Single Agent wrapped by an approval interrupt before execution",
+    "a2a_delegate": "A2AClient.invoke against the configured remote endpoint",
+    "handoff_chain": "SequentialPipeline of N one-tool Agents — each link adds a fact and hands off",
+}
+
+
+def _protocol_summary(protocol: Any) -> dict[str, Any]:
+    """Catalogue-level fields for one Protocol — same set the detail
+    endpoint returns, just without the runtime_shape."""
+    return {
+        "id": protocol.id,
+        "name": protocol.id,
+        "description": protocol.description,
+        "handles": [t.value for t in protocol.handles],
+        "primary_for": [t.value for t in protocol.primary_for],
+        "requires_capabilities": list(protocol.requires_capabilities),
+        "risk_max": protocol.risk_max.value,
+        "cost": protocol.cost,
+        "latency": protocol.latency,
+        "supports_streaming": protocol.supports_streaming,
+        "supports_repair": protocol.supports_repair,
+    }
+
+
+def _list_protocols() -> list[Any]:
+    from locus.router import builtin_protocols  # noqa: PLC0415
+
+    return list(builtin_protocols())
+
+
+@app.get("/api/protocols")
+def list_protocols() -> list[dict[str, Any]]:
+    """The eight router protocol definitions, in registration order."""
+    return [_protocol_summary(p) for p in _list_protocols()]
+
+
+@app.get("/api/protocols/{pid}")
+def protocol_detail(pid: str) -> dict[str, Any]:
+    """Full Protocol metadata + a description of the emitted runtime shape."""
+    for p in _list_protocols():
+        if p.id == pid:
+            return {
+                **_protocol_summary(p),
+                "runtime_shape": _RUNTIME_SHAPES.get(p.id, "(no shape recorded)"),
+            }
+    raise HTTPException(404, f"unknown protocol: {pid}")
+
+
+# ---------------------------------------------------------------------------
+# Telemetry SSE endpoints — bridge ``locus.observability.EventBus`` over
+# the wire so the workbench (or any consumer with curl) can watch events
+# in real time.
+# ---------------------------------------------------------------------------
+
+
+def _sse_format(payload: dict[str, Any]) -> bytes:
+    """Encode one ``StreamEvent.to_dict()`` payload as an SSE frame.
+
+    Two carriage-return-terminated lines per event:
+    ``event: <type>\\ndata: <json>\\n\\n``. The ``event:`` line lets
+    EventSource consumers register typed listeners; the ``data:`` line
+    is the JSON payload.
+    """
+    event_type = payload.get("event_type", "message")
+    body = json.dumps(payload, default=str)
+    return f"event: {event_type}\ndata: {body}\n\n".encode()
+
+
+async def _sse_stream_run(run_id: str) -> _AI[bytes]:
+    """Async generator for one run's events. Yields SSE frames until
+    the bus closes the run, then yields a final ``done`` frame."""
+    from locus.observability import get_event_bus  # noqa: PLC0415 — import-light
+
+    yield b": connected\n\n"  # SSE comment, keeps proxies awake
+    async for event in get_event_bus().subscribe(run_id):
+        yield _sse_format(event.to_dict())
+    yield b"event: done\ndata: {}\n\n"
+
+
+async def _sse_stream_global() -> _AI[bytes]:
+    """Global SSE stream — every event from every run."""
+    from locus.observability import get_event_bus  # noqa: PLC0415 — import-light
+
+    yield b": connected\n\n"
+    async for event in get_event_bus().subscribe_global():
+        yield _sse_format(event.to_dict())
+
+
+# NB: `/__stats` MUST register before `/{run_id}` — FastAPI matches in
+# declaration order, and `__stats` would otherwise match as
+# ``run_id='__stats'`` and return an SSE stream instead of JSON.
+@app.get("/api/events/__stats")
+def sse_event_stats() -> dict[str, Any]:
+    """Read-only snapshot of bus internals for debugging slow consumers."""
+    from locus.observability import get_event_bus  # noqa: PLC0415
+
+    return get_event_bus().stats()
+
+
+@app.get("/api/events")
+async def sse_events_global() -> StreamingResponse:
+    """SSE stream of every event the bus publishes — monitoring view."""
+    return StreamingResponse(
+        _sse_stream_global(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
+
+
+@app.get("/api/events/{run_id}")
+async def sse_events_for_run(run_id: str) -> StreamingResponse:
+    """SSE stream for a single cognitive dispatch.
+
+    Subscribers receive every :class:`StreamEvent` with matching
+    ``run_id`` plus a ``done`` sentinel when the bus closes the run.
+    History (last N events) is replayed on connect.
+    """
+    return StreamingResponse(
+        _sse_stream_run(run_id),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",  # Nginx — disable proxy buffering
+            "Connection": "keep-alive",
+        },
+    )
+
+
+# Bootstrap-emitted structured event lines start with this prefix so the
+# parent can split them out from regular stdout. The subprocess writes
+# the prefix; we strip + parse + republish on the bus.
+_LE_PREFIX = "__LE__:"
+
+
+async def _bridge_subprocess_line_to_bus(run_id: str, kind: str, text: str) -> None:
+    """Republish one tutorial-subprocess output line on the EventBus.
+
+    Lines that start with ``__LE__:`` are typed locus events
+    (``ThinkEvent``, ``ToolStartEvent``, etc.) — the JSON payload
+    becomes the StreamEvent ``data``. Everything else is republished
+    as a plain ``tutorial.stdout`` / ``tutorial.stderr`` event so a
+    bus subscriber gets the full output stream from one channel.
+    """
+    from locus.observability import StreamEvent, get_event_bus  # noqa: PLC0415
+
+    bus = get_event_bus()
+    if text.startswith(_LE_PREFIX):
+        try:
+            payload = json.loads(text[len(_LE_PREFIX) :])
+        except json.JSONDecodeError:
+            payload = {"raw": text}
+        ev_type = payload.pop("type", "agent.event") if isinstance(payload, dict) else "agent.event"
+        # Locus's typed events use CamelCase class names ("ThinkEvent",
+        # "ToolStartEvent"); republish under a dotted lower-case shape
+        # so subscribers can filter by prefix without knowing class names.
+        normalised = "agent." + (
+            ev_type.replace("Event", "").lower() if isinstance(ev_type, str) else "event"
+        )
+        await bus.publish(
+            StreamEvent(
+                run_id=run_id,
+                event_type=normalised,
+                data=payload if isinstance(payload, dict) else {"raw": payload},
+            ),
+        )
+    else:
+        await bus.publish(
+            StreamEvent(
+                run_id=run_id,
+                event_type=f"tutorial.{kind}",
+                data={"text": text},
+            ),
+        )
+
+
 class WorkbenchRunRequest(BaseModel):
     source: str
     provider: ProviderConfig
@@ -1091,11 +1349,36 @@ def __le_emit__(payload):
 
 def __locus_emit__(ev):
     d = {"type": type(ev).__name__}
-    for k in ("tool_name", "final_message", "content", "reasoning", "message", "agent_name", "node_id"):
+    # Surface narrative + metadata fields that downstream visualisers
+    # (workbench timeline, paper export) actually use.
+    for k in (
+        "tool_name", "final_message", "content", "reasoning", "message",
+        "agent_name", "node_id", "stop_reason", "iteration",
+    ):
         v = getattr(ev, k, None)
         if v is None:
             continue
         d[k] = v if isinstance(v, str) else str(v)
+    # Token usage — comes through different shapes per event type. We
+    # try a few canonical paths and surface whatever we find.
+    for tok_attr in ("usage", "metrics", "state"):
+        obj = getattr(ev, tok_attr, None)
+        if obj is None:
+            continue
+        for tok_field, payload_key in (
+            ("prompt_tokens", "prompt_tokens"),
+            ("completion_tokens", "completion_tokens"),
+            ("total_tokens", "total_tokens"),
+            ("prompt_tokens_used", "prompt_tokens"),
+            ("completion_tokens_used", "completion_tokens"),
+            ("total_tokens_used", "total_tokens"),
+        ):
+            try:
+                v = getattr(obj, tok_field, None)
+                if isinstance(v, (int, float)) and v:
+                    d[payload_key] = v
+            except Exception:
+                pass
     __le_emit__(d)
 
 # 1. After every Agent is constructed, attach a callback_handler so we
@@ -1200,15 +1483,20 @@ except Exception:
     user_preamble, user_rest = _split_future_imports(req.source)
     tmp_file.write_text(user_preamble + rendered + user_rest)
 
+    run_id = _uuid.uuid4().hex
     env = {
         **os.environ,
         **_provider_env(req.provider),
         "PYTHONPATH": f"{src_dir}{os.pathsep}{examples_dir}",
         "PYTHONUNBUFFERED": "1",
         "LOCUS_WORKBENCH_REFLEXION": "1" if req.reflexion else "0",
+        # Forwarded into the subprocess so its bootstrap can stamp every
+        # __LE__:{...} line with the parent's run_id. The parent then
+        # republishes those lines on the EventBus under the same run_id
+        # so the unified /api/events/{run_id} SSE consumer sees the same
+        # structured events as the legacy /api/tutorials/run consumer.
+        "LOCUS_WORKBENCH_RUN_ID": run_id,
     }
-
-    run_id = _uuid.uuid4().hex
 
     async def gen() -> _AI[str]:
         try:
@@ -1265,9 +1553,29 @@ except Exception:
                 if item is None:
                     break
                 kind, text = item
+                # Bridge structured agent events (__LE__:{json}) onto the
+                # observability EventBus so the unified SSE endpoint
+                # /api/events/{run_id} sees the same telemetry the legacy
+                # /api/tutorials/run consumer sees. Plain stdout/stderr
+                # lines also flow as bus events so users can tail
+                # everything from one channel.
+                await _bridge_subprocess_line_to_bus(run_id, kind, text)
                 yield _sse({"type": kind, "text": text})
             rc = await proc.wait()
             yield _sse({"type": "exit", "code": rc})
+            # Final marker on the bus + close the run channel so SSE
+            # consumers see a clean termination instead of timing out.
+            from locus.observability import StreamEvent, get_event_bus  # noqa: PLC0415
+
+            bus = get_event_bus()
+            await bus.publish(
+                StreamEvent(
+                    run_id=run_id,
+                    event_type="tutorial.exited",
+                    data={"code": rc},
+                )
+            )
+            await bus.close_stream(run_id)
         finally:
             gather_task.cancel()
             _RUNS.pop(run_id, None)
