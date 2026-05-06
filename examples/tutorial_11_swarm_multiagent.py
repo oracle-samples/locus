@@ -169,17 +169,30 @@ def example_capability_matching():
         capabilities=["write", "document"],
     )
 
-    # Create test tasks
+    # ``SwarmTask`` carries a typed capability registry alongside the
+    # description: ``required_tags`` are the tags an agent MUST advertise
+    # to claim the task (set-membership), and ``preferred_tags`` boost
+    # the priority score without being a hard requirement. Tasks that
+    # don't declare tags fall through to the legacy substring match
+    # against the description, so pre-tag swarms keep working.
     tasks = [
-        SwarmTask(description="Research the competitor landscape"),
-        SwarmTask(description="Write documentation for the API"),
-        SwarmTask(description="Analyze the performance data"),
-        SwarmTask(description="Create a summary document"),
+        SwarmTask(
+            description="Research the competitor landscape",
+            required_tags=["research"],
+            preferred_tags=["analyze"],
+        ),
+        SwarmTask(
+            description="Write documentation for the API",
+            required_tags=["write", "document"],
+        ),
+        SwarmTask(description="Analyze the performance data", required_tags=["analyze"]),
+        SwarmTask(description="Create a summary document"),  # tagless → substring fallback
     ]
 
     print("Task-Agent matching:")
     for task in tasks:
         print(f"\n  Task: {task.description}")
+        print(f"    required_tags={task.required_tags} preferred_tags={task.preferred_tags}")
         print(f"    Researcher can handle: {researcher.can_handle(task)}")
         print(f"    Writer can handle: {writer.can_handle(task)}")
         print(f"    Researcher priority: {researcher.priority_for_task(task):.2f}")

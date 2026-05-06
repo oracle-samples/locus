@@ -164,8 +164,13 @@ When analyzing, look for connection leaks, slow queries, and lock contention."""
     # =========================================================================
     print("\n=== Part 5: Orchestrator Configuration ===\n")
 
-    # Configure orchestrator behavior
-    orchestrator.max_parallel_specialists = 3  # Run up to 3 in parallel
+    # Configure orchestrator behavior. ``max_parallel_specialists``
+    # caps the asyncio.Semaphore that bounds the parallel fan-out —
+    # the orchestrator runs every routed specialist concurrently
+    # behind this gate (per-specialist exception isolation, retry on
+    # the empty-completion blip). Drop to 1 if you want the old
+    # serialised behaviour (e.g. to debug a flaky specialist).
+    orchestrator.max_parallel_specialists = 3
     orchestrator.correlation_threshold = 0.7  # Correlation confidence
 
     print(f"Max parallel specialists: {orchestrator.max_parallel_specialists}")

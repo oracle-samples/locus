@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 from typing import Any
 from uuid import uuid4
@@ -216,38 +217,56 @@ Include:
         task: str,
         decision: RoutingDecision,
     ) -> dict[str, SpecialistResult]:
-        """Invoke selected specialists sequentially.
+        """Invoke selected specialists in parallel, bounded by
+        ``max_parallel_specialists``.
 
-        Serialized to avoid OCI GenAI empty response issues under
-        concurrent load. Each specialist gets a retry if its output is empty.
+        Each specialist gets a retry if its first response was empty,
+        and a per-specialist exception is captured into the
+        ``SpecialistResult.error`` field instead of bringing down the
+        whole batch — same shape ``ParallelPipeline`` uses.
+
+        Concurrency is capped by an :class:`asyncio.Semaphore` so the
+        orchestrator can fan out 10+ specialists without flooding the
+        provider's rate limits — set ``max_parallel_specialists=1`` to
+        get the old serial behaviour.
         """
-        results: dict[str, SpecialistResult] = {}
-
-        # Get subtasks if provided
         subtasks = decision.context.get("subtasks", {})
+        semaphore = asyncio.Semaphore(max(1, self.max_parallel_specialists))
 
-        for spec_id in decision.specialists:
+        async def _run_one(spec_id: str) -> tuple[str, SpecialistResult]:
             specialist = self.specialists.get(spec_id)
             if specialist is None:
-                results[spec_id] = SpecialistResult(
+                return spec_id, SpecialistResult(
                     specialist_id=spec_id,
                     specialist_type="unknown",
                     error=f"Specialist not found: {spec_id}",
                 )
-                continue
-
-            # Use specific subtask if provided, pass context only if different
             spec_task = subtasks.get(spec_id, task)
             context = {"original_task": task} if spec_task != task else None
-
-            # Retry once if specialist returns empty output
-            for _attempt in range(2):
+            async with semaphore:
+                # Retry once if the first attempt comes back empty.
                 result = await specialist.execute(task=spec_task, context=context)
-                if result.output:
-                    break
+                if not result.output:
+                    result = await specialist.execute(task=spec_task, context=context)
+            return spec_id, result
 
-            results[spec_id] = result
+        gathered = await asyncio.gather(
+            *(_run_one(sid) for sid in decision.specialists),
+            return_exceptions=True,
+        )
 
+        results: dict[str, SpecialistResult] = {}
+        for sid, item in zip(decision.specialists, gathered, strict=False):
+            if isinstance(item, BaseException):
+                spec = self.specialists.get(sid)
+                results[sid] = SpecialistResult(
+                    specialist_id=sid,
+                    specialist_type=spec.specialist_type if spec else "unknown",
+                    error=f"{type(item).__name__}: {item}",
+                )
+            else:
+                _spec_id, spec_result = item
+                results[_spec_id] = spec_result
         return results
 
     async def _correlate_findings(
