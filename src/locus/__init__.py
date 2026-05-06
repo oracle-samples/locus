@@ -80,6 +80,16 @@ _LAZY_IMPORTS = {
     "RAGRetriever": ("locus.rag.retriever", "RAGRetriever"),
     "OCIEmbeddings": ("locus.rag.embeddings.oci", "OCIEmbeddings"),
     "OracleVectorStore": ("locus.rag.stores.oracle", "OracleVectorStore"),
+    # Deep research — research-shaped Agent factory + provider protocol.
+    # Submodule is ``locus.deepagent`` (Pythonic path-name convention).
+    # Factory is ``create_deepagent`` (matches ``create_orchestrator``,
+    # ``create_handoff_agent`` — the existing locus naming for "build me
+    # a configured X").
+    "create_deepagent": ("locus.deepagent", "create_deepagent"),
+    "KnowledgeProvider": ("locus.deepagent", "KnowledgeProvider"),
+    "KnowledgeRow": ("locus.deepagent", "KnowledgeRow"),
+    "ItemRef": ("locus.deepagent", "ItemRef"),
+    "Grounding": ("locus.deepagent", "Grounding"),
 }
 
 
@@ -143,4 +153,10 @@ __all__ = [
     "RAGRetriever",
     "OCIEmbeddings",
     "OracleVectorStore",
+    # Deep research (lazy)
+    "create_deepagent",
+    "KnowledgeProvider",
+    "KnowledgeRow",
+    "ItemRef",
+    "Grounding",
 ]
