@@ -107,6 +107,12 @@ class TestAgentResult:
         assert result.message == "Hello"
         assert result.stop_reason == "complete"
 
+    def test_text_alias_mirrors_message(self, state):
+        """``.text`` is an alias for ``.message`` for SDK ergonomics parity."""
+        result = AgentResult(message="ping", state=state, stop_reason="complete")
+        assert result.text == "ping"
+        assert result.text == result.message
+
     def test_full_result(self, state):
         """Test creating result with all fields."""
         metrics = ExecutionMetrics(iterations=5)
