@@ -177,6 +177,21 @@ class SkillsPlugin(Plugin):
                 plugin._activated.remove(skill_name)
             plugin._activated.append(skill_name)
 
+            # Telemetry — opt-in. ``emit_sync`` no-ops outside an
+            # active run_context, so SDK users who never enter one
+            # pay nothing for this line.
+            try:
+                from locus.observability.emit import EV_SKILL_ACTIVATED, emit_sync  # noqa: PLC0415
+
+                emit_sync(
+                    EV_SKILL_ACTIVATED,
+                    skill_name=skill_name,
+                    has_resources=bool(skill.list_resources(max_files=1)),
+                    instructions_length=len(skill.instructions or ""),
+                )
+            except Exception:  # noqa: BLE001 — telemetry must never break the SDK
+                pass
+
             return plugin._format_skill_response(skill)
 
         return skills

@@ -13,7 +13,6 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from locus.core.events import OrchestratorDecisionEvent
 from locus.core.messages import Message
 from locus.multiagent.specialist import Specialist, SpecialistResult
 
@@ -327,16 +326,35 @@ Include:
         Returns:
             OrchestratorResult with summary and all findings
         """
+        # Local import — keeps observability optional. If the user
+        # never enters a run_context, ``emit`` is a no-op and the
+        # bus singleton is never instantiated.
+        from locus.observability.emit import (  # noqa: PLC0415
+            EV_ORCHESTRATOR_DECISION,
+            EV_ORCHESTRATOR_ROUTING,
+            EV_ORCHESTRATOR_SPECIALISTS_INVOKED,
+            EV_ORCHESTRATOR_SUMMARY,
+            emit,
+        )
+
         start_time = time.perf_counter()
         decisions: list[RoutingDecision] = []
 
         try:
+            await emit(
+                EV_ORCHESTRATOR_ROUTING,
+                orchestrator_id=self.id,
+                task_preview=task[:160],
+                specialist_count=len(self.specialists),
+            )
+
             # Step 1: Make routing decision
             routing_decision = await self._make_routing_decision(task)
             decisions.append(routing_decision)
 
-            # Emit decision event
-            OrchestratorDecisionEvent(
+            await emit(
+                EV_ORCHESTRATOR_DECISION,
+                orchestrator_id=self.id,
                 decision="invoke_specialist",
                 specialists_selected=routing_decision.specialists,
                 reasoning=routing_decision.reasoning,
@@ -345,6 +363,14 @@ Include:
             # Step 2: Invoke specialists
             specialist_results = await self._invoke_specialists(task, routing_decision)
 
+            await emit(
+                EV_ORCHESTRATOR_SPECIALISTS_INVOKED,
+                orchestrator_id=self.id,
+                specialists_invoked=list(specialist_results.keys()),
+                specialists_succeeded=[sid for sid, r in specialist_results.items() if r.success],
+                specialists_failed=[sid for sid, r in specialist_results.items() if not r.success],
+            )
+
             # Step 3: Correlate findings
             correlation_decision = RoutingDecision(
                 decision_type="correlate",
@@ -352,7 +378,9 @@ Include:
             )
             decisions.append(correlation_decision)
 
-            OrchestratorDecisionEvent(
+            await emit(
+                EV_ORCHESTRATOR_DECISION,
+                orchestrator_id=self.id,
                 decision="correlate",
                 reasoning="Correlating specialist findings",
             )
@@ -366,12 +394,19 @@ Include:
             )
             decisions.append(summary_decision)
 
-            OrchestratorDecisionEvent(
+            await emit(
+                EV_ORCHESTRATOR_DECISION,
+                orchestrator_id=self.id,
                 decision="summarize",
                 reasoning="Generating final summary",
             )
 
             summary = await self._summarize(task, correlation, specialist_results)
+            await emit(
+                EV_ORCHESTRATOR_SUMMARY,
+                orchestrator_id=self.id,
+                summary_length=len(summary or ""),
+            )
 
             duration_ms = (time.perf_counter() - start_time) * 1000
 

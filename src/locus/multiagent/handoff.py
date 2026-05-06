@@ -469,8 +469,25 @@ class Handoff(BaseModel):
             instructions=instructions,
         )
 
-        # Emit handoff event
-        HandoffEvent(
+        # Local import — observability is optional. The emit calls
+        # below are no-ops when there is no run_context active.
+        from locus.observability.emit import (  # noqa: PLC0415
+            EV_HANDOFF_COMPLETED,
+            EV_HANDOFF_INITIATED,
+            emit,
+        )
+
+        await emit(
+            EV_HANDOFF_INITIATED,
+            source_agent_id=source_agent.id,
+            target_agent_id=target_agent_id,
+            reason=getattr(reason, "value", str(reason)),
+            context_summary=context.progress_summary,
+        )
+
+        # Construct the typed event for back-compat consumers — emit
+        # above is the live publication path.
+        _handoff_event = HandoffEvent(  # noqa: F841
             source_agent_id=source_agent.id,
             target_agent_id=target_agent_id,
             reason=reason,
@@ -480,6 +497,14 @@ class Handoff(BaseModel):
         # Execute handoff
         result = await target_agent.receive_handoff(context)
         result.returned_context = context
+
+        await emit(
+            EV_HANDOFF_COMPLETED,
+            source_agent_id=source_agent.id,
+            target_agent_id=target_agent_id,
+            success=result.success,
+            output_length=len(result.output or ""),
+        )
 
         return result
 

@@ -982,6 +982,17 @@ class StateGraph(BaseModel):
                 if saved_state:
                     inputs = saved_state.metadata.get("graph_state", {})
                     resume_node = saved_state.metadata.get("interrupted_node")
+                    from locus.observability.emit import (  # noqa: PLC0415
+                        EV_CHECKPOINT_LOADED,
+                        emit,
+                    )
+
+                    await emit(
+                        EV_CHECKPOINT_LOADED,
+                        thread_id=cfg.thread_id,
+                        backend=type(cfg.checkpointer).__name__,
+                        resume_node=resume_node,
+                    )
             else:
                 # Without checkpointer, get resume node from state
                 state_data = inputs.update or {}
@@ -1118,6 +1129,18 @@ class StateGraph(BaseModel):
                                 "interrupted_node": node_id,
                                 "interrupt": interrupt_state.model_dump(),
                             },
+                        )
+                        from locus.observability.emit import (  # noqa: PLC0415
+                            EV_CHECKPOINT_SAVED,
+                            emit,
+                        )
+
+                        await emit(
+                            EV_CHECKPOINT_SAVED,
+                            thread_id=cfg.thread_id,
+                            backend=type(cfg.checkpointer).__name__,
+                            trigger="graph_interrupt",
+                            interrupted_node=node_id,
                         )
 
                     # Store resume node in state for checkpointer-less resumption

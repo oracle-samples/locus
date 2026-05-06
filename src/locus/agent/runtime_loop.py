@@ -706,9 +706,22 @@ class AgentRuntimeMixin:
                     and self.config.checkpoint_every_n_iterations > 0
                     and state.iteration % self.config.checkpoint_every_n_iterations == 0
                 ):
+                    _cp_thread = thread_id or state.run_id
                     await self.config.checkpointer.save(
                         state,
-                        thread_id or state.run_id,
+                        _cp_thread,
+                    )
+                    from locus.observability.emit import (  # noqa: PLC0415
+                        EV_CHECKPOINT_SAVED,
+                        emit,
+                    )
+
+                    await emit(
+                        EV_CHECKPOINT_SAVED,
+                        thread_id=_cp_thread,
+                        iteration=state.iteration,
+                        backend=type(self.config.checkpointer).__name__,
+                        trigger="every_n_iterations",
                     )
 
         except Exception as e:
@@ -747,6 +760,18 @@ class AgentRuntimeMixin:
             # Final checkpoint
             if self.config.checkpointer and thread_id:
                 await self.config.checkpointer.save(state, thread_id)
+                from locus.observability.emit import (  # noqa: PLC0415
+                    EV_CHECKPOINT_SAVED,
+                    emit,
+                )
+
+                await emit(
+                    EV_CHECKPOINT_SAVED,
+                    thread_id=thread_id,
+                    iteration=state.iteration,
+                    backend=type(self.config.checkpointer).__name__,
+                    trigger="final",
+                )
 
     async def _run_from_state(
         self,
@@ -939,6 +964,17 @@ class AgentRuntimeMixin:
         if self.config.checkpointer and thread_id:
             existing = await self.config.checkpointer.load(thread_id)
             if existing:
+                from locus.observability.emit import (  # noqa: PLC0415
+                    EV_CHECKPOINT_LOADED,
+                    emit,
+                )
+
+                await emit(
+                    EV_CHECKPOINT_LOADED,
+                    thread_id=thread_id,
+                    iteration=existing.iteration,
+                    backend=type(self.config.checkpointer).__name__,
+                )
                 # Add new user message and continue
                 resumed: AgentState = existing.with_message(Message.user(prompt))
                 return resumed
