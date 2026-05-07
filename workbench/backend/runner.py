@@ -823,7 +823,9 @@ TUTORIAL_BLOCKLIST = {
     23,  # RAG providers — requires OPENAI_API_KEY for the OpenAI embeddings demo;
     # graceful skip but confusing UX in the workbench
     34,  # A2A — requires a second process running on a separate port
-    40,  # OCI DAC — requires a real dedicated AI cluster endpoint OCID
+    # 40 is NOT blocked — tutorial 40 runs Part 1 (routing docs) and prints
+    # the wiring snippet for Parts 2-5, skipping live inference when
+    # OCI_DAC_ENDPOINT_OCID is not set. Graceful, educational, exit 0.
     # Tutorials 45-48 call locus.core.interrupt() and block waiting for
     # stdin that the workbench subprocess never receives.  They carry a
     # needs_stdin badge already; adding them here prevents the Run button
