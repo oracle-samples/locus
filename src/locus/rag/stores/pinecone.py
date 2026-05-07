@@ -11,7 +11,7 @@ designed for production AI applications at scale.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -22,10 +22,6 @@ from locus.rag.stores.base import (
     SearchResult,
     VectorStoreConfig,
 )
-
-
-if TYPE_CHECKING:
-    from pinecone import Index
 
 
 class PineconeVectorConfig(BaseModel):
@@ -95,7 +91,7 @@ class PineconeVectorStore(BaseModel, BaseVectorStore):
 
     pinecone_config: PineconeVectorConfig
     _pc: Any = None  # Pinecone client
-    _index: Index | None = None
+    _index: Any = None  # pinecone Index — type varies by SDK version
     _initialized: bool = False
 
     model_config = {"arbitrary_types_allowed": True}
@@ -148,7 +144,7 @@ class PineconeVectorStore(BaseModel, BaseVectorStore):
 
         return self._pc
 
-    def _get_index(self) -> Index:
+    def _get_index(self) -> Any:
         """Get or create Pinecone index."""
         if self._index is None:
             pc = self._get_client()
@@ -166,6 +162,7 @@ class PineconeVectorStore(BaseModel, BaseVectorStore):
                         "Install with: pip install pinecone"
                     ) from e
 
+                spec: Any  # PodSpec | ServerlessSpec — union varies by SDK version
                 if self.pinecone_config.environment:
                     # Pod-based
                     spec = PodSpec(
