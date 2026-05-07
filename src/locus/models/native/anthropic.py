@@ -189,6 +189,11 @@ class AnthropicModel(BaseModel):
             elif msg.role == Role.USER:
                 anthropic_messages.append({"role": "user", "content": msg.content or ""})
 
+        # Anthropic requires the last message to be a user turn.
+        # Strip any trailing assistant messages to prevent BadRequestError 400.
+        while anthropic_messages and anthropic_messages[-1]["role"] == "assistant":
+            anthropic_messages.pop()
+
         return system_prompt, anthropic_messages
 
     def _convert_tools(self, tools: list[dict[str, Any]] | None) -> list[dict[str, Any]] | None:
