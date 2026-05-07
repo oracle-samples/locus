@@ -172,9 +172,9 @@ async def part1_basic() -> None:
     )
 
     result = agent.run_sync("Research the locus.observability module.")
-    print("protocol terminated:", result.termination_reason)
-    if result.structured_output:
-        rpt: ModuleReport = result.structured_output
+    print("protocol terminated:", result.stop_reason)
+    if result.parsed:
+        rpt: ModuleReport = result.parsed  # type: ignore[assignment]
         print(f"module:    {rpt.module}")
         print(f"symbols:   {', '.join(rpt.public_symbols[:4])} …")
         print(f"confidence:{rpt.confidence:.0%}")
@@ -211,9 +211,9 @@ async def part2_filesystem_and_todos() -> None:
     )
 
     result = agent.run_sync("Research all three modules in the catalogue.")
-    print("terminated:", result.termination_reason)
+    print("terminated:", result.stop_reason)
     print("todos after run:")
-    for todo in todo_state.items:
+    for todo in todo_state.snapshot():
         print(f"  [{todo.status}] {todo.content[:60]}")
 
 
@@ -252,9 +252,9 @@ async def part3_subagents() -> None:
     )
 
     result = agent.run_sync("Research locus.router using the symbol_analyst subagent.")
-    print("terminated:", result.termination_reason)
-    if result.structured_output:
-        rpt: ModuleReport = result.structured_output
+    print("terminated:", result.stop_reason)
+    if result.parsed:
+        rpt: ModuleReport = result.parsed  # type: ignore[assignment]
         print(f"symbols from subagent: {rpt.public_symbols}")
 
 
@@ -313,7 +313,7 @@ async def part4_observability() -> None:
         count = deepagent_events.count(ev_type)
         print(f"  {ev_type} × {count}")
 
-    print("terminated:", result.termination_reason)
+    print("terminated:", result.stop_reason)
 
 
 # =============================================================================

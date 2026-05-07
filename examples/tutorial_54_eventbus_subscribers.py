@@ -54,7 +54,7 @@ async def part1_global_vs_per_run() -> None:
     async def global_sub() -> None:
         async for ev in bus.subscribe_global():
             global_kinds.append(f"{ev.run_id[:6]}/{ev.event_type}")
-            if ev.event_type == "agent.terminate" and len(global_kinds) > 4:
+            if ev.event_type == "agent.terminate" and len(global_kinds) >= 4:
                 return
 
     async def run_a_sub(rid: str) -> None:
