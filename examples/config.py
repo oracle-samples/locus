@@ -161,7 +161,10 @@ def check_structured_output_capable() -> None:
             "   MockModel returns plain text and cannot demonstrate these features.\n\n"
             "   Run with a real model — for example:\n\n"
             "     export LOCUS_MODEL_PROVIDER=oci\n"
-            "     export LOCUS_OCI_PROFILE=LUIGI_FRA_API\n"
+            "     export LOCUS_OCI_PROFILE=<your-profile>\n"
+            "     export LOCUS_OCI_AUTH_TYPE=security_token   # or api_key\n"
+            "     export LOCUS_OCI_REGION=us-chicago-1\n"
+            "     export LOCUS_OCI_COMPARTMENT=<your-compartment-ocid>\n"
             "     export LOCUS_MODEL_ID=openai.gpt-5.5-2026-04-23\n"
             f"     python {Path(sys.argv[0]).name}\n"
         )

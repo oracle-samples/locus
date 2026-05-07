@@ -819,16 +819,11 @@ from pathlib import Path
 # the model (Postgres, vector store, MCP server, multi-process A2A,
 # multimodal providers, dedicated AI cluster, etc.).
 TUTORIAL_BLOCKLIST = {
-    12,  # MCP integration
-    20,  # checkpoint backends — Redis/Postgres
-    21,  # SSE streaming — needs FastAPI server
-    22,
-    23,
-    24,  # RAG suite
-    28,  # agent server
-    34,  # A2A protocol — needs separate process
-    38,  # multimodal providers
-    40,  # OCI DAC
+    12,  # MCP — needs an external MCP server process
+    23,  # RAG providers — requires OPENAI_API_KEY for the OpenAI embeddings demo;
+    # graceful skip but confusing UX in the workbench
+    34,  # A2A — requires a second process running on a separate port
+    40,  # OCI DAC — requires a real dedicated AI cluster endpoint OCID
     # Tutorials 45-48 call locus.core.interrupt() and block waiting for
     # stdin that the workbench subprocess never receives.  They carry a
     # needs_stdin badge already; adding them here prevents the Run button
