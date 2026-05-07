@@ -80,6 +80,31 @@
           </p>
         </div>
 
+        <!-- Patterns run panel -->
+        <div id="patterns-view" data-testid="patterns-view" style="display: none">
+          <div class="card">
+            <div class="card__header">
+              <div>
+                <h2 class="card__title" id="pattern-title">…</h2>
+                <div class="card__sub" id="pattern-sub"></div>
+              </div>
+              <span class="pill" id="pattern-stream-badge" style="display:none">streamable</span>
+            </div>
+            <div class="field" style="margin-top: 0.6rem">
+              <label class="field__label">Prompt</label>
+              <textarea id="pattern-prompt" data-testid="pattern-prompt" class="input" rows="3"
+                style="width:100%;resize:vertical;font-family:var(--font-mono,monospace);font-size:0.82rem"></textarea>
+            </div>
+            <div class="form-row" style="margin-top: 0.5rem">
+              <div style="flex:1"></div>
+              <button class="btn btn--primary" id="pattern-run-btn" data-testid="pattern-run-btn">Run</button>
+              <button class="btn" id="pattern-stop-btn" data-testid="pattern-stop-btn" style="display:none">Stop</button>
+            </div>
+            <div id="pattern-error" style="display:none;color:var(--or-red-deep);font-size:0.82rem;margin-top:0.5rem" data-testid="pattern-error"></div>
+            <pre id="pattern-output" data-testid="pattern-output"
+              style="display:none;margin-top:0.8rem;white-space:pre-wrap;font-size:0.8rem;max-height:60vh;overflow:auto"></pre>
+          </div>
+        </div>
 
         <div id="patterns-view" data-testid="patterns-view" style="display: none">
           <div class="card">
