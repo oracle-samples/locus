@@ -16,7 +16,13 @@ Two complementary primitives for long-horizon research:
 ## Research workflow — StateGraph with quality loop
 
 ::: locus.deepagent.workflow.create_research_workflow
-::: locus.deepagent.workflow.ResearchWorkflowState
+::: locus.deepagent.workflow.make_execute_node
+::: locus.deepagent.workflow.make_causal_inference_node
+::: locus.deepagent.workflow.make_summarize_node
+::: locus.deepagent.workflow.make_grounding_eval_node
+::: locus.deepagent.workflow.make_regenerate_summary_node
+::: locus.deepagent.workflow.make_replan_node
+::: locus.deepagent.workflow.route_after_grounding
 
 ## Subagents
 
