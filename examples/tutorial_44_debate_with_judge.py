@@ -226,6 +226,9 @@ def build_debate_graph() -> StateGraph:
 
 
 async def main() -> None:
+    from config import check_structured_output_capable
+
+    check_structured_output_capable()
     print("Tutorial 44: Debate with structured-output judge")
     print("=" * 60)
 
