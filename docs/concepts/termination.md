@@ -74,7 +74,7 @@ through tests.
 
 ```python
 result = agent.run_sync(prompt)
-print(result.termination_reason)
+print(result.stop_reason)
 # → "ToolCalled('send_summary') and ConfidenceMet(0.85)"
 ```
 

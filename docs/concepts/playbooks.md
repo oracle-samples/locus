@@ -10,7 +10,8 @@ regulated, you want a playbook. The model still picks the wording;
 the *side effects* follow the plan.
 
 ```python
-from locus.playbooks import Playbook, PlaybookStep, PlaybookEnforcerHook
+from locus.playbooks import Playbook, PlaybookStep
+from locus.playbooks.hook import PlaybookEnforcerHook
 
 incident_triage = Playbook(
     id="incident-triage",
@@ -135,7 +136,7 @@ steps:
 ### 3. Wire the enforcer
 
 ```python
-from locus.playbooks import PlaybookEnforcerHook
+from locus.playbooks.hook import PlaybookEnforcerHook
 
 agent = Agent(
     model="oci:openai.gpt-5",

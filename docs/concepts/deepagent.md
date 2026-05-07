@@ -81,7 +81,7 @@ All are opt-in — add only what the task needs.
 
 ```python
 agent = create_deepagent(
-    ...
+    # model=..., tools=..., system_prompt=... (required)
     enable_filesystem=True,  # adds write_file, read_file, ls, edit_file, glob, grep
 )
 ```
@@ -97,13 +97,13 @@ from locus.deepagent import TodoState
 
 todo_state = TodoState()
 agent = create_deepagent(
-    ...
+    # model=..., tools=..., system_prompt=... (required)
     enable_todos=True,
     todo_state=todo_state,   # inspect after the run
 )
 
 result = agent.run_sync("...")
-for todo in todo_state.items:
+for todo in todo_state.snapshot():
     print(f"[{todo.status}] {todo.content}")
 ```
 
@@ -125,7 +125,7 @@ symbol_analyst = SubAgentDef(
 )
 
 agent = create_deepagent(
-    ...
+    # model=..., tools=..., system_prompt=... (required)
     subagents=[symbol_analyst],
 )
 ```
@@ -138,7 +138,7 @@ context, not the full subagent trajectory.
 
 ```python
 agent = create_deepagent(
-    ...
+    # model=..., tools=..., system_prompt=... (required)
     memory_files=["~/AGENTS.md", "./project-notes.md"],
 )
 ```
@@ -151,7 +151,7 @@ Missing paths are silently skipped so defaults like
 
 ```python
 agent = create_deepagent(
-    ...
+    # model=..., tools=..., system_prompt=... (required)
     summarize_after_messages=40,  # trigger threshold
     summarize_keep_recent=10,     # always preserve last 10 verbatim
 )

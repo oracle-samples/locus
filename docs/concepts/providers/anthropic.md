@@ -176,7 +176,7 @@ Don't have an Anthropic API key? Want Claude billed through your
 Oracle account on Oracle infrastructure? Switch the prefix:
 
 ```python
-agent = Agent(model="oci:anthropic.claude-sonnet", ...)
+agent = Agent(model="oci:anthropic.claude-sonnet")
 ```
 
 That routes through `OCIOpenAIModel` against the OCI Generative AI

@@ -155,7 +155,7 @@ agent = Agent(
 )
 
 result = agent.run_sync("Summarise the Q3 earnings call. Cite every number.")
-print(result.message)
+print(result.text)
 print(f"grounding score: {result.grounding_score:.2f}")
 # → grounding score: 0.94 — three claims grounded, one dropped (revenue mix)
 ```
@@ -308,7 +308,7 @@ agent = Agent(
 )
 
 result = agent.run_sync("Approve and submit the laptop PO.")
-print(result.termination_reason)
+print(result.stop_reason)
 # → ToolCalled('submit_po') and ConfidenceMet(0.92)
 ```
 

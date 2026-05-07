@@ -91,7 +91,8 @@ store = OracleVectorStore(
 ### 3. Wire the retriever
 
 ```python
-from locus.rag import RAGRetriever, ChunkConfig
+from locus.rag import RAGRetriever
+from locus.rag.retriever import ChunkConfig
 
 retriever = RAGRetriever(
     embedder=embedder,
