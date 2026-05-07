@@ -138,3 +138,97 @@ class TestFilesystemBackend:
         hits = b.grep("error", path="/log.txt")
         assert len(hits) >= 1
         assert any("error" in h.text for h in hits)
+
+    def test_grep_no_match(self, tmp_path: Path) -> None:
+        b = FilesystemBackend(root=tmp_path)
+        b.write("/clean.txt", "everything is fine")
+        hits = b.grep("error", path="/clean.txt")
+        assert hits == []
+
+    def test_grep_missing_path_raises(self, tmp_path: Path) -> None:
+        b = FilesystemBackend(root=tmp_path)
+        with pytest.raises(BackendError):
+            b.grep("anything", path="/nope.txt")
+
+    def test_grep_recursive_across_files(self, tmp_path: Path) -> None:
+        b = FilesystemBackend(root=tmp_path)
+        b.write("/a.txt", "alpha match")
+        b.write("/sub/b.txt", "beta match")
+        hits = b.grep("match")
+        assert len(hits) >= 2
+
+    def test_grep_non_recursive(self, tmp_path: Path) -> None:
+        b = FilesystemBackend(root=tmp_path)
+        b.write("/top.txt", "match here")
+        b.write("/sub/deep.txt", "match here too")
+        hits = b.grep("match", recursive=False)
+        paths = [h.path for h in hits]
+        assert any("top.txt" in p for p in paths)
+
+    def test_read_offset_beyond_end_returns_empty(self, tmp_path: Path) -> None:
+        b = FilesystemBackend(root=tmp_path)
+        b.write("/short.txt", "only one line")
+        assert b.read("/short.txt", offset=100) == ""
+
+    def test_read_with_limit_zero_returns_all(self, tmp_path: Path) -> None:
+        b = FilesystemBackend(root=tmp_path)
+        b.write("/multi.txt", "line1\nline2\nline3\nline4\nline5")
+        result = b.read("/multi.txt", limit=0)
+        assert "line1" in result
+        assert "line5" in result
+
+    def test_read_with_offset_and_limit(self, tmp_path: Path) -> None:
+        b = FilesystemBackend(root=tmp_path)
+        b.write("/paged.txt", "a\nb\nc\nd\ne")
+        result = b.read("/paged.txt", offset=1, limit=2)
+        assert "b" in result
+        assert "c" in result
+        assert "a" not in result
+
+    def test_read_directory_raises(self, tmp_path: Path) -> None:
+        b = FilesystemBackend(root=tmp_path)
+        b.write("/mydir/file.txt", "x")
+        with pytest.raises(BackendError):
+            b.read("/mydir")
+
+    def test_ls_on_single_file(self, tmp_path: Path) -> None:
+        b = FilesystemBackend(root=tmp_path)
+        b.write("/solo.txt", "content")
+        items = b.ls("/solo.txt")
+        assert len(items) == 1
+        assert "solo.txt" in items[0].path
+
+    def test_ls_missing_raises(self, tmp_path: Path) -> None:
+        b = FilesystemBackend(root=tmp_path)
+        with pytest.raises(BackendError):
+            b.ls("/nonexistent/")
+
+    def test_ls_recursive(self, tmp_path: Path) -> None:
+        b = FilesystemBackend(root=tmp_path)
+        b.write("/a/b/c.txt", "deep")
+        items = b.ls("/", recursive=True)
+        paths = [i.path for i in items]
+        assert any("c.txt" in p for p in paths)
+
+    def test_glob_missing_base_raises(self, tmp_path: Path) -> None:
+        b = FilesystemBackend(root=tmp_path)
+        with pytest.raises(BackendError):
+            b.glob("*.txt", path="/nope/")
+
+    def test_edit_ambiguous_raises(self, tmp_path: Path) -> None:
+        b = FilesystemBackend(root=tmp_path)
+        b.write("/dup.txt", "abc abc")
+        with pytest.raises(ValueError, match="2 times"):
+            b.edit("/dup.txt", "abc", "xyz")
+
+    def test_edit_missing_old_str_raises(self, tmp_path: Path) -> None:
+        b = FilesystemBackend(root=tmp_path)
+        b.write("/f.txt", "hello world")
+        with pytest.raises(ValueError, match="not found"):
+            b.edit("/f.txt", "nothere", "x")
+
+    def test_edit_directory_raises(self, tmp_path: Path) -> None:
+        b = FilesystemBackend(root=tmp_path)
+        b.write("/d/file.txt", "x")
+        with pytest.raises(BackendError):
+            b.edit("/d", "x", "y")

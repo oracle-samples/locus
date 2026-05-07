@@ -399,3 +399,254 @@ class TestCreateResearchWorkflow:
             grounding_model=_model(),
         )
         assert wf is not None
+
+
+# ---------------------------------------------------------------------------
+# SSE emission — nodes emit research.* events under run_context
+# ---------------------------------------------------------------------------
+
+
+class TestWorkflowSSEEmission:
+    @pytest.mark.asyncio
+    async def test_execute_node_emits_sse_events(self) -> None:
+        import asyncio
+
+        from locus.observability import get_event_bus, run_context
+        from locus.observability.event_bus import reset_event_bus
+
+        reset_event_bus()
+        node = make_execute_node(_model(), [], max_iterations=1)
+        collected: list[str] = []
+
+        async def drain(rid: str) -> None:
+            async for ev in get_event_bus().subscribe(rid):
+                collected.append(ev.event_type)
+                if ev.event_type == "research.execute.completed":
+                    return
+
+        async with run_context() as rid:
+            t = asyncio.create_task(drain(rid))
+            await asyncio.sleep(0)
+            await node({KEY_PROMPT: "test"})
+            await get_event_bus().close_stream(rid)
+            await asyncio.wait_for(t, timeout=5.0)
+
+        assert "research.execute.started" in collected
+        assert "research.execute.completed" in collected
+        reset_event_bus()
+
+    @pytest.mark.asyncio
+    async def test_replan_node_emits_sse_event(self) -> None:
+        import asyncio
+
+        from locus.observability import get_event_bus, run_context
+        from locus.observability.event_bus import reset_event_bus
+
+        reset_event_bus()
+        node = make_replan_node()
+        collected: list[str] = []
+
+        async def drain(rid: str) -> None:
+            async for ev in get_event_bus().subscribe(rid):
+                collected.append(ev.event_type)
+                if ev.event_type == "research.replan":
+                    return
+
+        async with run_context() as rid:
+            t = asyncio.create_task(drain(rid))
+            await asyncio.sleep(0)
+            await node({KEY_PROMPT: "p", KEY_UNGROUNDED_CLAIMS: ["c"], KEY_REPLAN_COUNT: 0})
+            await get_event_bus().close_stream(rid)
+            await asyncio.wait_for(t, timeout=5.0)
+
+        assert "research.replan" in collected
+        reset_event_bus()
+
+    @pytest.mark.asyncio
+    async def test_summarize_node_emits_sse_event(self) -> None:
+        import asyncio
+
+        from locus.observability import get_event_bus, run_context
+        from locus.observability.event_bus import reset_event_bus
+
+        reset_event_bus()
+        node = make_summarize_node(_model())
+        collected: list[str] = []
+
+        async def drain(rid: str) -> None:
+            async for ev in get_event_bus().subscribe(rid):
+                collected.append(ev.event_type)
+                if ev.event_type == "research.summarize.completed":
+                    return
+
+        async with run_context() as rid:
+            t = asyncio.create_task(drain(rid))
+            await asyncio.sleep(0)
+            await node({KEY_PROMPT: "p", KEY_EVIDENCE: ["e"], KEY_CAUSAL_HYPOTHESIS: ""})
+            await get_event_bus().close_stream(rid)
+            await asyncio.wait_for(t, timeout=5.0)
+
+        assert "research.summarize.completed" in collected
+        reset_event_bus()
+
+    @pytest.mark.asyncio
+    async def test_regenerate_node_emits_sse_events(self) -> None:
+        import asyncio
+
+        from locus.observability import get_event_bus, run_context
+        from locus.observability.event_bus import reset_event_bus
+
+        reset_event_bus()
+        node = make_regenerate_summary_node(_model())
+        collected: list[str] = []
+
+        async def drain(rid: str) -> None:
+            async for ev in get_event_bus().subscribe(rid):
+                collected.append(ev.event_type)
+                if ev.event_type == "research.regenerate.completed":
+                    return
+
+        async with run_context() as rid:
+            t = asyncio.create_task(drain(rid))
+            await asyncio.sleep(0)
+            await node(
+                {
+                    KEY_SUMMARY: "old",
+                    KEY_EVIDENCE: ["e"],
+                    KEY_UNGROUNDED_CLAIMS: [],
+                    KEY_REGENERATION_COUNT: 0,
+                }
+            )
+            await get_event_bus().close_stream(rid)
+            await asyncio.wait_for(t, timeout=5.0)
+
+        assert "research.regenerate.started" in collected
+        assert "research.regenerate.completed" in collected
+        reset_event_bus()
+
+    @pytest.mark.asyncio
+    async def test_grounding_eval_emits_sse_event(self) -> None:
+        import asyncio
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from locus.observability import get_event_bus, run_context
+        from locus.observability.event_bus import reset_event_bus
+
+        reset_event_bus()
+        mock_result = MagicMock()
+        mock_result.score = 0.8
+        mock_result.ungrounded_claims = []
+        mock_result.requires_replan = False
+
+        with patch(
+            "locus.reasoning.grounding.GroundingEvaluator.evaluate_with_llm",
+            new_callable=AsyncMock,
+            return_value=mock_result,
+        ):
+            node = make_grounding_eval_node(_model())
+            collected: list[str] = []
+
+            async def drain(rid: str) -> None:
+                async for ev in get_event_bus().subscribe(rid):
+                    collected.append(ev.event_type)
+                    if ev.event_type == "research.grounding.evaluated":
+                        return
+
+            async with run_context() as rid:
+                t = asyncio.create_task(drain(rid))
+                await asyncio.sleep(0)
+                await node({KEY_SUMMARY: "Claim one. Claim two.", KEY_EVIDENCE: ["e"]})
+                await get_event_bus().close_stream(rid)
+                await asyncio.wait_for(t, timeout=5.0)
+
+        assert "research.grounding.evaluated" in collected
+        reset_event_bus()
+
+
+class TestWorkflowEdgeCases:
+    @pytest.mark.asyncio
+    async def test_execute_node_tool_complete_event(self) -> None:
+        """Cover lines 164-173: ToolCompleteEvent handling in the async for loop."""
+        from unittest.mock import patch
+
+        from locus.agent.agent import Agent
+        from locus.core.events import TerminateEvent, ToolCompleteEvent
+
+        # Patch Agent.run to yield a ToolCompleteEvent then TerminateEvent
+        async def _mock_run(self_agent, prompt, **kw):
+            yield ToolCompleteEvent(
+                tool_name="search_kb",
+                tool_call_id="c1",
+                result="search results here",
+                success=True,
+            )
+            yield TerminateEvent(
+                reason="no_tool_calls",
+                final_message="done",
+                iterations_used=2,
+                total_tool_calls=1,
+                final_confidence=0.9,
+            )
+
+        with patch.object(Agent, "run", _mock_run):
+            node = make_execute_node(_model(), [], max_iterations=2)
+            result = await node({KEY_PROMPT: "find something"})
+
+        assert any("search results here" in e for e in result[KEY_EVIDENCE])
+        assert result[KEY_GROUNDING_FACTS][0]["source"] == "search_kb"
+        assert result[KEY_GROUNDING_FACTS][0]["id"] == "fact_000"
+
+    @pytest.mark.asyncio
+    async def test_summarize_node_with_output_schema(self) -> None:
+        """Cover line 316: structured output path when output_schema is set."""
+        from unittest.mock import patch
+
+        from pydantic import BaseModel
+
+        from locus.agent.agent import Agent
+
+        class Report(BaseModel):
+            summary: str
+            confidence: float = 0.8
+
+        report_instance = Report(summary="structured result", confidence=0.9)
+
+        # Mock AgentResult with parsed output
+        mock_result = MagicMock()
+        mock_result.message = '{"summary": "structured result", "confidence": 0.9}'
+        mock_result.parsed = report_instance
+
+        with patch.object(Agent, "run_sync", return_value=mock_result):
+            node = make_summarize_node(_model(), output_schema=Report)
+            result = await node(
+                {
+                    KEY_PROMPT: "test",
+                    KEY_EVIDENCE: ["evidence"],
+                    KEY_CAUSAL_HYPOTHESIS: "",
+                }
+            )
+
+        assert KEY_SUMMARY in result
+        assert result.get(KEY_STRUCTURED_OUTPUT) is report_instance
+
+    def test_create_research_workflow_with_checkpointer(self) -> None:
+        """Cover line 640: checkpointer kwarg path."""
+        from locus.memory.backends import MemoryCheckpointer
+
+        checkpointer = MemoryCheckpointer()
+        wf = create_research_workflow(model=_model(), tools=[], checkpointer=checkpointer)
+        assert wf is not None
+
+    @pytest.mark.asyncio
+    async def test_causal_node_json_parse_error(self) -> None:
+        """Cover lines 247-248: JSON parse exception path."""
+        m = _model()
+        # MockModel default response is plain text — will fail JSON parse
+        # but _responses default is "This is a mock response for testing purposes."
+        node = make_causal_inference_node(m)
+        # When JSON parsing fails, should return empty causal chain gracefully
+        result = await node({KEY_EVIDENCE: ["some evidence"], KEY_PROMPT: "diagnose"})
+        # Either None (parse failed) or a chain (if JSON accidentally valid) — must not raise
+        assert KEY_CAUSAL_CHAIN in result
+        assert KEY_CAUSAL_HYPOTHESIS in result
+        assert KEY_CAUSAL_CONFIDENCE in result
