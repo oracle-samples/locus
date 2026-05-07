@@ -475,29 +475,10 @@ def get_embedder():
 
 
 def get_model():
-    """Get LLM model based on available credentials."""
-    if os.environ.get("OPENAI_API_KEY"):
-        from locus.models.native.openai import OpenAIModel
+    """Get LLM model using the shared tutorial config (honours all env vars)."""
+    from config import get_model as _get_model
 
-        return OpenAIModel(model="gpt-4o-mini", max_tokens=512)
-
-    if os.path.exists(os.path.expanduser("~/.oci/config")):
-        try:
-            from locus.models.oci import OCIModel
-
-            return OCIModel(
-                model_id="cohere.command-r-plus",
-                profile_name=os.getenv("LOCUS_OCI_PROFILE", os.getenv("OCI_PROFILE", "DEFAULT")),
-                auth_type=os.getenv("LOCUS_OCI_AUTH_TYPE", os.getenv("OCI_AUTH_TYPE", "api_key")),
-                compartment_id=os.getenv("LOCUS_OCI_COMPARTMENT", os.getenv("OCI_COMPARTMENT", "")),
-                service_endpoint=os.getenv("LOCUS_OCI_ENDPOINT", os.getenv("OCI_ENDPOINT", "")),
-                max_tokens=512,
-            )
-        except Exception:
-            pass
-
-    print("No LLM credentials found")
-    return None
+    return _get_model(max_tokens=512)
 
 
 # =============================================================================

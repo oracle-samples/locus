@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
@@ -13,6 +14,27 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 from locus.core.messages import Message, ToolCall
+
+
+def _tool_call_signature(tc: ToolCall) -> tuple[str, str]:
+    """Stable (name, args) signature used by the tool-loop detector.
+
+    Loop detection must compare both the tool name and its arguments.
+    Same name with different arguments — paged discovery, sweeping a
+    list of inputs, retrying with a corrected parameter — is forward
+    progress, not a loop.
+
+    JSON with ``sort_keys=True`` canonicalizes dict argument order so
+    ``{"a": 1, "b": 2}`` matches ``{"b": 2, "a": 1}``. Falls back to a
+    sorted-items repr when arguments contain values json can't
+    serialize (rare; tool args are scalars/strings/lists/dicts in
+    practice).
+    """
+    try:
+        canonical = json.dumps(tc.arguments, sort_keys=True, default=str)
+    except (TypeError, ValueError):
+        canonical = repr(sorted(tc.arguments.items()))
+    return (tc.name, canonical)
 
 
 class ToolExecution(BaseModel):
@@ -243,28 +265,34 @@ class AgentState(BaseModel):
         """Check if agent is stuck in a tool loop across iterations.
 
         Multiple calls to the same tool in one turn (parallel execution)
-        is normal. A loop is the same tool pattern repeating across
-        consecutive iterations.
+        is normal. A loop is the same call signature — name **and**
+        arguments — repeating across consecutive iterations. Same name
+        with different arguments (paged discovery, sweeping inputs,
+        retrying with a corrected parameter) counts as forward progress
+        and is not a loop.
         """
         # Need at least threshold iterations with reasoning steps
         if len(self.reasoning_steps) < self.tool_loop_threshold:
             return False
 
-        # Check if last N iterations all used the exact same single tool
+        # Check if last N iterations all used the exact same call set,
+        # where "call set" = the multiset of (name, args) signatures
+        # invoked in that step. Frozenset collapses parallel-duplicate
+        # calls within a single step, but since duplicate calls within a
+        # step are themselves not a loop signal, that collapse is fine.
         recent_steps = self.reasoning_steps[-self.tool_loop_threshold :]
-        tool_sets = []
+        call_sets: list[frozenset[tuple[str, str]]] = []
         for step in recent_steps:
             if step.tool_calls:
-                tool_set = frozenset(tc.name for tc in step.tool_calls)
-                tool_sets.append(tool_set)
+                call_sets.append(frozenset(_tool_call_signature(tc) for tc in step.tool_calls))
             else:
                 return False  # An iteration without tools = not looping
 
-        if len(tool_sets) < self.tool_loop_threshold:
+        if len(call_sets) < self.tool_loop_threshold:
             return False
 
-        # All iterations used the exact same tool set
-        return len(set(tool_sets)) == 1
+        # All iterations used the exact same (name, args) call set
+        return len(set(call_sets)) == 1
 
     @property
     def last_tool_calls(self) -> list[ToolCall]:

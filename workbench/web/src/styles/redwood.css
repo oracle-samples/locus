@@ -208,6 +208,108 @@ code, pre { font-family: var(--mono); }
   color: var(--or-text-soft);
   padding: 0 0.6rem 0.5rem;
 }
+
+/* Sidebar tab switcher (Tutorials / Skills). */
+.side__tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--or-border);
+  margin-bottom: 0.5rem;
+}
+.side__tab {
+  flex: 1;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  padding: 0.4rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--or-text-soft);
+  cursor: pointer;
+  letter-spacing: 0.06em;
+}
+.side__tab:hover {
+  background: var(--or-bg-soft);
+  color: var(--or-text);
+}
+.side__tab--active {
+  background: var(--or-red-tint);
+  color: var(--or-red-deep);
+  border-color: transparent;
+}
+
+/* Protocol detail view. */
+.protocol-shape {
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  background: var(--or-bg-soft);
+  border: 1px solid var(--or-border);
+  border-left: 3px solid var(--or-red);
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius);
+  color: var(--or-text);
+  margin-top: 0.4rem;
+}
+.tt-chip-row {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+.tt-chip {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--or-bg-soft);
+  border: 1px solid var(--or-border);
+  color: var(--or-text-soft);
+}
+.tt-chip--primary {
+  background: var(--or-red-tint);
+  border-color: transparent;
+  color: var(--or-red-deep);
+  font-weight: 600;
+}
+.tt-chip-row__label {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--or-text-mute);
+  margin-right: 0.4rem;
+  align-self: center;
+}
+
+/* Skills detail view. */
+.skill-md {
+  font-size: 0.88rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  font-family: var(--mono);
+  background: var(--or-bg-soft);
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--or-border);
+  overflow-x: auto;
+}
+.skill-resources {
+  margin-top: 0.8rem;
+  font-size: 0.78rem;
+  color: var(--or-text-soft);
+}
+.skill-resources ul {
+  margin: 0.3rem 0 0 1rem;
+  padding: 0;
+}
+.skill-resources li {
+  font-family: var(--mono);
+  list-style: disc;
+}
 .side__item {
   display: flex;
   align-items: center;
@@ -226,6 +328,35 @@ code, pre { font-family: var(--mono); }
   background: var(--or-red-tint);
   color: var(--or-red-deep);
   font-weight: 600;
+}
+
+/* Topic-progression headers — each sidebar renders one of these per
+ * category before the items in that category. Sticky-ish: not pinned
+ * (the sidebar is short enough), but visually distinct from items so
+ * a learner reading top-to-bottom sees the section context first.
+ */
+.side__category {
+  padding: 0.65rem 0.75rem 0.25rem;
+  margin-top: 0.6rem;
+  border-top: 1px solid var(--or-border);
+}
+.side__category:first-child {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0.4rem;
+}
+.side__category-name {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--or-red-deep);
+}
+.side__category-desc {
+  font-size: 0.7rem;
+  color: var(--or-text-mute);
+  margin-top: 0.15rem;
+  line-height: 1.35;
 }
 .side__dot {
   width: 8px;

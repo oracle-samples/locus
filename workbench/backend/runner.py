@@ -819,16 +819,21 @@ from pathlib import Path
 # the model (Postgres, vector store, MCP server, multi-process A2A,
 # multimodal providers, dedicated AI cluster, etc.).
 TUTORIAL_BLOCKLIST = {
-    12,  # MCP integration
-    20,  # checkpoint backends — Redis/Postgres
-    21,  # SSE streaming — needs FastAPI server
-    22,
-    23,
-    24,  # RAG suite
-    28,  # agent server
-    34,  # A2A protocol — needs separate process
-    38,  # multimodal providers
-    40,  # OCI DAC
+    12,  # MCP — needs an external MCP server process
+    23,  # RAG providers — requires OPENAI_API_KEY for the OpenAI embeddings demo;
+    # graceful skip but confusing UX in the workbench
+    34,  # A2A — requires a second process running on a separate port
+    # 40 is NOT blocked — tutorial 40 runs Part 1 (routing docs) and prints
+    # the wiring snippet for Parts 2-5, skipping live inference when
+    # OCI_DAC_ENDPOINT_OCID is not set. Graceful, educational, exit 0.
+    # Tutorials 45-48 call locus.core.interrupt() and block waiting for
+    # stdin that the workbench subprocess never receives.  They carry a
+    # needs_stdin badge already; adding them here prevents the Run button
+    # from launching a subprocess that would hang until the harness timeout.
+    45,
+    46,
+    47,
+    48,
 }
 
 # Tutorials that pause for human input via locus.core.interrupt(). The
@@ -838,6 +843,90 @@ TUTORIAL_BLOCKLIST = {
 TUTORIAL_NEEDS_STDIN = {9, 45, 46, 47, 48}
 
 _TUTORIAL_DIR = (Path(__file__).resolve().parents[2] / "examples").resolve()
+
+
+# Topic progression for the workbench sidebar. Each tutorial number is
+# bound to one category; categories are rendered in the order declared
+# here. Keep ranges contiguous so adding a new tutorial slots in
+# without renumbering — gaps ("RAG suite blocked in workbench") leave
+# the category empty rather than reshuffling.
+TUTORIAL_CATEGORIES: list[dict[str, Any]] = [
+    {
+        "id": "fundamentals",
+        "name": "Fundamentals",
+        "description": "Build your first agent — model, tools, memory, streaming, hooks.",
+        "members": [1, 2, 3, 4, 5],
+    },
+    {
+        "id": "graphs",
+        "name": "Graphs & flow control",
+        "description": "StateGraph, conditional routing, reducers, HITL, advanced patterns.",
+        "members": [6, 7, 8, 9, 10, 35, 36, 37],
+    },
+    {
+        "id": "structured-output",
+        "name": "Structured reasoning",
+        "description": "Typed outputs, playbooks, reasoning patterns, GSAR grounding, evaluation.",
+        "members": [13, 14, 15, 26, 39],
+    },
+    {
+        "id": "composition",
+        "name": "Composition",
+        "description": "SequentialPipeline, ParallelPipeline, LoopAgent — wiring agents together.",
+        "members": [25],
+    },
+    {
+        "id": "multi-agent",
+        "name": "Multi-agent",
+        "description": "Swarm, handoff, orchestrator, specialists, A2A, debate, supervisor patterns, DeepAgent.",
+        "members": [11, 16, 17, 18, 33, 34, 41, 42, 43, 44],
+    },
+    {
+        "id": "production",
+        "name": "Production",
+        "description": "Guardrails, hooks (advanced), model providers, servers, checkpoint backends.",
+        "members": [19, 20, 21, 27, 28, 29, 30, 38, 40],
+    },
+    {
+        "id": "skills-plugins",
+        "name": "Skills & plugins",
+        "description": "Pluggable skill packs and integration plugins (MCP, fastmcp, more).",
+        "members": [12, 31, 32],
+    },
+    {
+        "id": "real-world",
+        "name": "Real-world workflows",
+        "description": "End-to-end use cases — incident response, contract review, audio chat.",
+        "members": [45, 46, 47, 48, 49, 50],
+    },
+    {
+        "id": "router",
+        "name": "Cognitive router (PRISM)",
+        "description": "Bounded graph generation — typed extraction → registry → compiler.",
+        "members": [51],
+    },
+    {
+        "id": "observability",
+        "name": "Observability & SSE",
+        "description": "Opt-in telemetry — run_context, event bus, agent yield bridge, token usage, full catalogue.",
+        "members": [52, 53, 54, 55],
+    },
+]
+
+
+def _tutorial_category(number: int) -> tuple[str, int]:
+    """Return ``(category_id, order_within_category)`` for a tutorial.
+
+    Tutorials not bound to a category fall under ``"misc"`` so a stray
+    ``tutorial_99_*`` still renders. ``order_within_category`` is the
+    member's index in the category's ``members`` list — preserves
+    declaration order rather than numeric sort, so we can manually
+    foreground a tutorial that's logically a prerequisite.
+    """
+    for cat in TUTORIAL_CATEGORIES:
+        if number in cat["members"]:
+            return cat["id"], cat["members"].index(number)
+    return "misc", number
 
 
 def _parse_tutorial(path: Path) -> dict[str, Any]:
@@ -865,6 +954,7 @@ def _parse_tutorial(path: Path) -> dict[str, Any]:
                 break
     num_match = re.match(r"tutorial_(\d+)_", path.name)
     number = int(num_match.group(1)) if num_match else 0
+    category_id, order_in_category = _tutorial_category(number)
     return {
         "id": path.stem,
         "number": number,
@@ -873,6 +963,8 @@ def _parse_tutorial(path: Path) -> dict[str, Any]:
         "filename": path.name,
         "source": src,
         "needs_stdin": number in TUTORIAL_NEEDS_STDIN,
+        "category": category_id,
+        "category_order": order_in_category,
     }
 
 
@@ -891,6 +983,20 @@ def _list_tutorials() -> list[dict[str, Any]]:
             out.append(_parse_tutorial(p))
         except Exception:  # pragma: no cover
             continue
+
+    # Sort by (category position, member position within the category,
+    # tutorial number) so the sidebar reads top-to-bottom as a curated
+    # learning path rather than a numeric file dump. ``misc`` falls to
+    # the end via the sentinel category index.
+    cat_index: dict[str, int] = {c["id"]: i for i, c in enumerate(TUTORIAL_CATEGORIES)}
+    cat_index.setdefault("misc", len(TUTORIAL_CATEGORIES))
+    out.sort(
+        key=lambda t: (
+            cat_index.get(t["category"], len(TUTORIAL_CATEGORIES)),
+            t.get("category_order", t["number"]),
+            t["number"],
+        )
+    )
     return out
 
 
@@ -899,12 +1005,400 @@ def list_tutorials() -> list[dict[str, Any]]:
     return [{k: v for k, v in t.items() if k != "source"} for t in _list_tutorials()]
 
 
+@app.get("/api/tutorials/categories")
+def list_tutorial_categories() -> list[dict[str, Any]]:
+    """Topic-progression categories the workbench renders as section
+    headers. The ``members`` field is omitted from the wire payload —
+    membership is already encoded on each tutorial as ``category``."""
+    return [
+        {"id": c["id"], "name": c["name"], "description": c["description"]}
+        for c in TUTORIAL_CATEGORIES
+    ]
+
+
 @app.get("/api/tutorials/{tid}")
 def tutorial_source(tid: str) -> dict[str, Any]:
     for t in _list_tutorials():
         if t["id"] == tid:
             return t
     raise HTTPException(404, f"unknown tutorial: {tid}")
+
+
+# ---------------------------------------------------------------------------
+# Skills — read-only catalogue of AgentSkills.io SKILL.md packages.
+# ---------------------------------------------------------------------------
+
+
+_SKILLS_DIR = (Path(__file__).resolve().parents[2] / "examples" / "skills").resolve()
+
+
+# Topic groupings for the Skills sidebar. ``domain`` on a Skill is a
+# free-text metadata field; we map common values to a curated category
+# so the sidebar renders coherent groups. Skills whose domain doesn't
+# match any group fall under ``"other"``.
+SKILL_CATEGORIES: list[dict[str, Any]] = [
+    {
+        "id": "engineering",
+        "name": "Engineering",
+        "description": "Code review, API design, architecture rituals.",
+        "domains": {"engineering", "code", "code-review", "api", "api-design", "architecture"},
+    },
+    {
+        "id": "operations",
+        "name": "Operations",
+        "description": "Incident triage, on-call playbooks, observability runbooks.",
+        "domains": {"operations", "ops", "incident", "incident-response", "sre", "observability"},
+    },
+    {
+        "id": "data",
+        "name": "Data & analytics",
+        "description": "SQL queries, schema awareness, data exploration.",
+        "domains": {"data", "sql", "analytics", "warehouse"},
+    },
+]
+
+
+def _skill_category(skill: Any) -> str:
+    """Map a skill's free-text domain tag onto one of the curated
+    categories. Default ``"other"`` for anything unrecognised — the UI
+    renders it as its own section so nothing disappears."""
+    domain = ((skill.metadata or {}).get("domain") or "").lower().strip()
+    skill_name = (skill.name or "").lower()
+    for cat in SKILL_CATEGORIES:
+        if domain in cat["domains"] or skill_name in cat["domains"]:
+            return cat["id"]
+    return "other"
+
+
+def _skill_summary(skill: Any, dir_path: Path) -> dict[str, Any]:
+    """Pick the catalogue-level fields off a Skill — full body is fetched
+    per-skill via the detail endpoint."""
+    return {
+        "id": skill.name,
+        "name": skill.name,
+        "description": skill.description,
+        "domain": (skill.metadata or {}).get("domain", ""),
+        "allowed_tools": skill.allowed_tools or [],
+        "license": skill.license,
+        "path": str(dir_path),
+        "category": _skill_category(skill),
+    }
+
+
+def _list_skills() -> list[tuple[Any, Path]]:
+    """Load every SKILL.md package under examples/skills/.
+
+    Returns (Skill, dir_path) tuples in registration order. Invalid
+    SKILL.md packages are silently skipped (Skill.from_directory's
+    behaviour) so a single bad package doesn't take the catalogue
+    offline.
+    """
+    if not _SKILLS_DIR.is_dir():
+        return []
+    from locus.skills import Skill  # noqa: PLC0415 — import-light at module load
+
+    out: list[tuple[Any, Path]] = []
+    for child in sorted(_SKILLS_DIR.iterdir()):
+        if child.is_dir() and (child / "SKILL.md").exists():
+            try:
+                out.append((Skill.from_file(child), child))
+            except Exception:  # noqa: BLE001 — bad packages must not nuke the catalogue
+                continue
+    return out
+
+
+@app.get("/api/skills")
+def list_skills() -> list[dict[str, Any]]:
+    """Catalogue: name, description, domain tag, allowed-tools, license."""
+    raw = [_skill_summary(sk, p) for sk, p in _list_skills()]
+    cat_index: dict[str, int] = {c["id"]: i for i, c in enumerate(SKILL_CATEGORIES)}
+    cat_index.setdefault("other", len(SKILL_CATEGORIES))
+    raw.sort(key=lambda s: (cat_index.get(s["category"], len(SKILL_CATEGORIES)), s["name"]))
+    return raw
+
+
+@app.get("/api/skills/categories")
+def list_skill_categories() -> list[dict[str, Any]]:
+    """Topic groupings the workbench renders as Skills section headers."""
+    return [
+        {"id": c["id"], "name": c["name"], "description": c["description"]}
+        for c in SKILL_CATEGORIES
+    ]
+
+
+@app.get("/api/skills/{sid}")
+def skill_detail(sid: str) -> dict[str, Any]:
+    """Full SKILL.md body + resource file listing for one skill."""
+    for skill, dir_path in _list_skills():
+        if skill.name == sid:
+            return {
+                **_skill_summary(skill, dir_path),
+                "instructions": skill.instructions,
+                "resources": skill.list_resources(max_files=50),
+            }
+    raise HTTPException(404, f"unknown skill: {sid}")
+
+
+# ---------------------------------------------------------------------------
+# Router protocols — the eight built-in orchestration shapes.
+# ---------------------------------------------------------------------------
+
+
+# Per-protocol description of what its builder *emits* at compile time.
+# The router enforces these shapes via the structural-audit test suite
+# (tests/unit/test_router_compiled_shape.py); reproducing them here lets
+# the workbench display the runtime topology without importing the
+# builder closures themselves.
+_RUNTIME_SHAPES: dict[str, str] = {
+    "direct_response": "Agent (single call) with the requested capability tools",
+    "plan_execute_validate": "SequentialPipeline of 3 Agents: planner → executor → validator",
+    "specialist_fanout": "ParallelPipeline of N Agents — one tool-bound Agent per capability",
+    "debate": "ParallelPipeline of 2 debaters (pro/con) followed by a judge Agent",
+    "codegen_test_validate": "LoopAgent — iterates until first line of output starts with PASS",
+    "approval_gated_execution": "Single Agent wrapped by an approval interrupt before execution",
+    "a2a_delegate": "A2AClient.invoke against the configured remote endpoint",
+    "handoff_chain": "SequentialPipeline of N one-tool Agents — each link adds a fact and hands off",
+}
+
+
+# Protocol groupings ordered by execution-shape complexity. Renders as
+# section headers in the Protocols sidebar so users see the cardinal
+# shapes (single, linear, parallel, gated) up front and the specialised
+# ones (a2a/handoff) further down.
+PROTOCOL_CATEGORIES: list[dict[str, Any]] = [
+    {
+        "id": "single",
+        "name": "Single shot",
+        "description": "One Agent call, optional output_schema. Fastest path.",
+        "members": ["direct_response"],
+    },
+    {
+        "id": "linear",
+        "name": "Linear pipelines",
+        "description": "Sequential plan → execute → validate, including loops with stop conditions.",
+        "members": ["plan_execute_validate", "codegen_test_validate"],
+    },
+    {
+        "id": "parallel",
+        "name": "Parallel fan-out",
+        "description": "Multiple agents running concurrently, results merged by an orchestrator or judge.",
+        "members": ["specialist_fanout", "debate"],
+    },
+    {
+        "id": "delegation",
+        "name": "Delegation",
+        "description": "Pass the conversation across agents (in-process or remote A2A peers).",
+        "members": ["handoff_chain", "a2a_delegate"],
+    },
+    {
+        "id": "gated",
+        "name": "Approval-gated",
+        "description": "High-risk paths interrupted for human approval before execution.",
+        "members": ["approval_gated_execution"],
+    },
+]
+
+
+def _protocol_category(protocol_id: str) -> tuple[str, int]:
+    for cat in PROTOCOL_CATEGORIES:
+        if protocol_id in cat["members"]:
+            return cat["id"], cat["members"].index(protocol_id)
+    return "other", 0
+
+
+def _protocol_summary(protocol: Any) -> dict[str, Any]:
+    """Catalogue-level fields for one Protocol — same set the detail
+    endpoint returns, just without the runtime_shape."""
+    cat_id, order_in_cat = _protocol_category(protocol.id)
+    return {
+        "id": protocol.id,
+        "name": protocol.id,
+        "description": protocol.description,
+        "handles": [t.value for t in protocol.handles],
+        "primary_for": [t.value for t in protocol.primary_for],
+        "requires_capabilities": list(protocol.requires_capabilities),
+        "risk_max": protocol.risk_max.value,
+        "cost": protocol.cost,
+        "latency": protocol.latency,
+        "supports_streaming": protocol.supports_streaming,
+        "supports_repair": protocol.supports_repair,
+        "category": cat_id,
+        "category_order": order_in_cat,
+    }
+
+
+def _list_protocols() -> list[Any]:
+    from locus.router import builtin_protocols  # noqa: PLC0415
+
+    return list(builtin_protocols())
+
+
+@app.get("/api/protocols")
+def list_protocols() -> list[dict[str, Any]]:
+    """The eight router protocol definitions, sorted by category."""
+    raw = [_protocol_summary(p) for p in _list_protocols()]
+    cat_index: dict[str, int] = {c["id"]: i for i, c in enumerate(PROTOCOL_CATEGORIES)}
+    cat_index.setdefault("other", len(PROTOCOL_CATEGORIES))
+    raw.sort(
+        key=lambda p: (
+            cat_index.get(p["category"], len(PROTOCOL_CATEGORIES)),
+            p["category_order"],
+            p["name"],
+        )
+    )
+    return raw
+
+
+@app.get("/api/protocols/categories")
+def list_protocol_categories() -> list[dict[str, Any]]:
+    """Topic groupings the workbench renders as Protocols section headers."""
+    return [
+        {"id": c["id"], "name": c["name"], "description": c["description"]}
+        for c in PROTOCOL_CATEGORIES
+    ]
+
+
+@app.get("/api/protocols/{pid}")
+def protocol_detail(pid: str) -> dict[str, Any]:
+    """Full Protocol metadata + a description of the emitted runtime shape."""
+    for p in _list_protocols():
+        if p.id == pid:
+            return {
+                **_protocol_summary(p),
+                "runtime_shape": _RUNTIME_SHAPES.get(p.id, "(no shape recorded)"),
+            }
+    raise HTTPException(404, f"unknown protocol: {pid}")
+
+
+# ---------------------------------------------------------------------------
+# Telemetry SSE endpoints — bridge ``locus.observability.EventBus`` over
+# the wire so the workbench (or any consumer with curl) can watch events
+# in real time.
+# ---------------------------------------------------------------------------
+
+
+def _sse_format(payload: dict[str, Any]) -> bytes:
+    """Encode one ``StreamEvent.to_dict()`` payload as an SSE frame.
+
+    Two carriage-return-terminated lines per event:
+    ``event: <type>\\ndata: <json>\\n\\n``. The ``event:`` line lets
+    EventSource consumers register typed listeners; the ``data:`` line
+    is the JSON payload.
+    """
+    event_type = payload.get("event_type", "message")
+    body = json.dumps(payload, default=str)
+    return f"event: {event_type}\ndata: {body}\n\n".encode()
+
+
+async def _sse_stream_run(run_id: str) -> _AI[bytes]:
+    """Async generator for one run's events. Yields SSE frames until
+    the bus closes the run, then yields a final ``done`` frame."""
+    from locus.observability import get_event_bus  # noqa: PLC0415 — import-light
+
+    yield b": connected\n\n"  # SSE comment, keeps proxies awake
+    async for event in get_event_bus().subscribe(run_id):
+        yield _sse_format(event.to_dict())
+    yield b"event: done\ndata: {}\n\n"
+
+
+async def _sse_stream_global() -> _AI[bytes]:
+    """Global SSE stream — every event from every run."""
+    from locus.observability import get_event_bus  # noqa: PLC0415 — import-light
+
+    yield b": connected\n\n"
+    async for event in get_event_bus().subscribe_global():
+        yield _sse_format(event.to_dict())
+
+
+# NB: `/__stats` MUST register before `/{run_id}` — FastAPI matches in
+# declaration order, and `__stats` would otherwise match as
+# ``run_id='__stats'`` and return an SSE stream instead of JSON.
+@app.get("/api/events/__stats")
+def sse_event_stats() -> dict[str, Any]:
+    """Read-only snapshot of bus internals for debugging slow consumers."""
+    from locus.observability import get_event_bus  # noqa: PLC0415
+
+    return get_event_bus().stats()
+
+
+@app.get("/api/events")
+async def sse_events_global() -> StreamingResponse:
+    """SSE stream of every event the bus publishes — monitoring view."""
+    return StreamingResponse(
+        _sse_stream_global(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
+
+
+@app.get("/api/events/{run_id}")
+async def sse_events_for_run(run_id: str) -> StreamingResponse:
+    """SSE stream for a single cognitive dispatch.
+
+    Subscribers receive every :class:`StreamEvent` with matching
+    ``run_id`` plus a ``done`` sentinel when the bus closes the run.
+    History (last N events) is replayed on connect.
+    """
+    return StreamingResponse(
+        _sse_stream_run(run_id),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",  # Nginx — disable proxy buffering
+            "Connection": "keep-alive",
+        },
+    )
+
+
+# Bootstrap-emitted structured event lines start with this prefix so the
+# parent can split them out from regular stdout. The subprocess writes
+# the prefix; we strip + parse + republish on the bus.
+_LE_PREFIX = "__LE__:"
+
+
+async def _bridge_subprocess_line_to_bus(run_id: str, kind: str, text: str) -> None:
+    """Republish one tutorial-subprocess output line on the EventBus.
+
+    Lines that start with ``__LE__:`` are typed locus events
+    (``ThinkEvent``, ``ToolStartEvent``, etc.) — the JSON payload
+    becomes the StreamEvent ``data``. Everything else is republished
+    as a plain ``tutorial.stdout`` / ``tutorial.stderr`` event so a
+    bus subscriber gets the full output stream from one channel.
+    """
+    from locus.observability import StreamEvent, get_event_bus  # noqa: PLC0415
+
+    bus = get_event_bus()
+    if text.startswith(_LE_PREFIX):
+        try:
+            payload = json.loads(text[len(_LE_PREFIX) :])
+        except json.JSONDecodeError:
+            payload = {"raw": text}
+        ev_type = payload.pop("type", "agent.event") if isinstance(payload, dict) else "agent.event"
+        # Locus's typed events use CamelCase class names ("ThinkEvent",
+        # "ToolStartEvent"); republish under a dotted lower-case shape
+        # so subscribers can filter by prefix without knowing class names.
+        normalised = "agent." + (
+            ev_type.replace("Event", "").lower() if isinstance(ev_type, str) else "event"
+        )
+        await bus.publish(
+            StreamEvent(
+                run_id=run_id,
+                event_type=normalised,
+                data=payload if isinstance(payload, dict) else {"raw": payload},
+            ),
+        )
+    else:
+        await bus.publish(
+            StreamEvent(
+                run_id=run_id,
+                event_type=f"tutorial.{kind}",
+                data={"text": text},
+            ),
+        )
 
 
 class WorkbenchRunRequest(BaseModel):
@@ -1091,11 +1585,36 @@ def __le_emit__(payload):
 
 def __locus_emit__(ev):
     d = {"type": type(ev).__name__}
-    for k in ("tool_name", "final_message", "content", "reasoning", "message", "agent_name", "node_id"):
+    # Surface narrative + metadata fields that downstream visualisers
+    # (workbench timeline, paper export) actually use.
+    for k in (
+        "tool_name", "final_message", "content", "reasoning", "message",
+        "agent_name", "node_id", "stop_reason", "iteration",
+    ):
         v = getattr(ev, k, None)
         if v is None:
             continue
         d[k] = v if isinstance(v, str) else str(v)
+    # Token usage — comes through different shapes per event type. We
+    # try a few canonical paths and surface whatever we find.
+    for tok_attr in ("usage", "metrics", "state"):
+        obj = getattr(ev, tok_attr, None)
+        if obj is None:
+            continue
+        for tok_field, payload_key in (
+            ("prompt_tokens", "prompt_tokens"),
+            ("completion_tokens", "completion_tokens"),
+            ("total_tokens", "total_tokens"),
+            ("prompt_tokens_used", "prompt_tokens"),
+            ("completion_tokens_used", "completion_tokens"),
+            ("total_tokens_used", "total_tokens"),
+        ):
+            try:
+                v = getattr(obj, tok_field, None)
+                if isinstance(v, (int, float)) and v:
+                    d[payload_key] = v
+            except Exception:
+                pass
     __le_emit__(d)
 
 # 1. After every Agent is constructed, attach a callback_handler so we
@@ -1200,15 +1719,20 @@ except Exception:
     user_preamble, user_rest = _split_future_imports(req.source)
     tmp_file.write_text(user_preamble + rendered + user_rest)
 
+    run_id = _uuid.uuid4().hex
     env = {
         **os.environ,
         **_provider_env(req.provider),
         "PYTHONPATH": f"{src_dir}{os.pathsep}{examples_dir}",
         "PYTHONUNBUFFERED": "1",
         "LOCUS_WORKBENCH_REFLEXION": "1" if req.reflexion else "0",
+        # Forwarded into the subprocess so its bootstrap can stamp every
+        # __LE__:{...} line with the parent's run_id. The parent then
+        # republishes those lines on the EventBus under the same run_id
+        # so the unified /api/events/{run_id} SSE consumer sees the same
+        # structured events as the legacy /api/tutorials/run consumer.
+        "LOCUS_WORKBENCH_RUN_ID": run_id,
     }
-
-    run_id = _uuid.uuid4().hex
 
     async def gen() -> _AI[str]:
         try:
@@ -1265,9 +1789,29 @@ except Exception:
                 if item is None:
                     break
                 kind, text = item
+                # Bridge structured agent events (__LE__:{json}) onto the
+                # observability EventBus so the unified SSE endpoint
+                # /api/events/{run_id} sees the same telemetry the legacy
+                # /api/tutorials/run consumer sees. Plain stdout/stderr
+                # lines also flow as bus events so users can tail
+                # everything from one channel.
+                await _bridge_subprocess_line_to_bus(run_id, kind, text)
                 yield _sse({"type": kind, "text": text})
             rc = await proc.wait()
             yield _sse({"type": "exit", "code": rc})
+            # Final marker on the bus + close the run channel so SSE
+            # consumers see a clean termination instead of timing out.
+            from locus.observability import StreamEvent, get_event_bus  # noqa: PLC0415
+
+            bus = get_event_bus()
+            await bus.publish(
+                StreamEvent(
+                    run_id=run_id,
+                    event_type="tutorial.exited",
+                    data={"code": rc},
+                )
+            )
+            await bus.close_stream(run_id)
         finally:
             gather_task.cancel()
             _RUNS.pop(run_id, None)

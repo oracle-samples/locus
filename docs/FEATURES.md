@@ -12,6 +12,8 @@ Everything `locus` ships, what it does, and where to find it.
     - **GSAR** — typed-grounding layer from [arXiv:2604.23366](https://arxiv.org/abs/2604.23366) with four-way claim partition + tiered replanning.
     - **Termination algebra** — `MaxIterations(10) | TextMention("DONE") & ConfidenceMet(0.9)` is real Python (`__or__` / `__and__` operator overloads).
     - **Six multi-agent shapes plus A2A** — Composition, Orchestrator, Swarm, Handoff, StateGraph, Functional + A2A for cross-process meshes.
+    - **Cognitive router (PRISM)** — NL → typed `GoalFrame` → deterministic `ProtocolRegistry` → `PolicyGate` → compiled orchestration. LLM fills a schema; 8 built-in protocols; zero topology hand-writing.
+    - **In-process observability** — opt-in `EventBus` with agent yield bridge. Zero cost when unused; one `run_context()` to stream every event from every layer.
     - **OCI Generative AI day-zero** — two transports (V1 and native SDK), auto-routed by model id.
 
 ## Agent core
@@ -42,6 +44,31 @@ Everything `locus` ships, what it does, and where to find it.
 | **StateGraph** | Cycles, conditional edges, subgraphs — when DAG isn't enough | `locus.multiagent.graph` · [StateGraph](concepts/multi-agent/graph.md) |
 | **Functional API** | Map / reduce over agents with `@task` and `@entrypoint` | `locus.multiagent.functional` · [Functional](concepts/multi-agent/functional.md) |
 | **A2A** | Cross-process agent meshes — `AgentCard` discovery + HTTP/SSE transport | `locus.a2a` · [A2A](concepts/multi-agent/a2a.md) |
+
+## Cognitive Router (PRISM)
+
+| Feature | What it does | Surface |
+|---|---|---|
+| **`Router`** | `dispatch(NL)` → extract GoalFrame → select protocol → compile → execute | `locus.router.Router` · [Router](concepts/router.md) |
+| **`GoalFrame`** | Typed schema the LLM extractor fills — 13 `TaskType`s, `Risk`, `Complexity`, domain, capabilities | `locus.router.GoalFrame` |
+| **`ProtocolRegistry`** | Deterministic filter (`handles ∋ goal`, `risk_max ≥ frame.risk`) + four-tier ranking (distance · canonical · cost · specificity) | `locus.router.ProtocolRegistry` |
+| **`PolicyGate`** | Two thresholds: `max_risk` (hard deny) and `require_approval_above` (human-in-the-loop gate) | `locus.router.PolicyGate` |
+| **`CognitiveCompiler`** | Instantiates real locus primitives from frame + protocol; emits a `Runnable` adapter | `locus.router.CognitiveCompiler` |
+| **`builtin_protocols()`** | 8 v1 protocols: `direct_response` · `plan_execute_validate` · `specialist_fanout` · `debate` · `codegen_test_validate` · `approval_gated_execution` · `a2a_delegate` · `handoff_chain` | `locus.router.builtin_protocols` |
+| **`CapabilityIndex`** | Domain + risk overlay on `ToolRegistry` — no parallel storage | `locus.router.CapabilityIndex` |
+| **`SkillIndex`** | Domain-tagged view of installed `Skill` packs; scoped catalog attached to every emitted Agent | `locus.router.SkillIndex` |
+| Custom protocols | `Protocol(id=…, handles=[…], builder=fn)` registered via `ProtocolRegistry.register()` | `locus.router.Protocol` |
+| Error types | `FrameExtractionError` · `NoMatchingProtocolError` · `PolicyDeniedError` | `locus.router.runtime/protocol/policy` |
+
+## Observability
+
+| Feature | What it does | Surface |
+|---|---|---|
+| **`EventBus`** | Singleton in-process pub/sub — per-run + global subscribers, bounded queues, history replay, drop accounting | `locus.observability.EventBus` · [Observability](concepts/observability.md) |
+| **`run_context()`** | ContextVar-based opt-in gate — zero allocations when inactive | `locus.observability.run_context` |
+| **Agent yield bridge** | `@_bus_bridge` on `Agent.run` transparently republishes 9 `LocusEvent` types as `agent.*` SSE events | `locus.agent.runtime_loop` |
+| **`EventBusHook`** | `HookProvider` that bridges all agent lifecycle hooks onto the bus (for non-async / pre-built agents) | `locus.observability.EventBusHook` |
+| **Canonical event catalogue** | 40+ `EV_*` constants across 9 prefixes (`agent.*`, `multiagent.*`, `composition.*`, `router.*`, `rag.*`, `memory.*`, `a2a.*`, `skills.*`, `deepagent.*`) | `locus.observability.emit` · [SSE event catalogue](concepts/sse-events.md) |
 
 ## Reasoning
 

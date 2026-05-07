@@ -111,6 +111,9 @@ def query_metrics(host: str) -> str:
 
 
 def main():
+    from config import check_structured_output_capable
+
+    check_structured_output_capable()
     print("=" * 60)
     print("Tutorial 14: Reasoning Patterns (every part calls gpt-5)")
     print("=" * 60)

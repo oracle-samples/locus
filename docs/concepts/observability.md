@@ -134,8 +134,116 @@ anything leaves, see [Safety](safety.md).
 - [`locus.hooks.builtin.logging`](https://github.com/oracle-samples/locus/blob/main/src/locus/hooks/builtin/logging.py) — `LoggingHook`, `StructuredLoggingHook`.
 - [`locus.hooks.builtin.telemetry`](https://github.com/oracle-samples/locus/blob/main/src/locus/hooks/builtin/telemetry.py) — `TelemetryHook`, `NoOpTelemetryHook`.
 
+---
+
+## In-process SSE (EventBus)
+
+For workbench streaming, real-time dashboards, or any use case where you need
+to watch the full inner cognition of a run without standing up an OTLP stack,
+locus ships a zero-dependency in-process pub/sub bus.
+
+### How it works
+
+Every emission site in the SDK reads `current_run_id()` from a `ContextVar`.
+When no `run_context()` is active the emit returns immediately — no bus, no
+allocation, one `ContextVar.get()` per call site. The singleton is never
+instantiated.
+
+```python
+from locus.observability import run_context, get_event_bus
+
+async with run_context() as rid:
+    # Subscribe before or during a run — history replay delivers the last
+    # 500 events on connect, then switches to live mode.
+    async for event in get_event_bus().subscribe(rid):
+        print(event.event_type, event.data)
+```
+
+### The agent yield bridge
+
+`Agent.run` is decorated with `@_bus_bridge`. When a `run_context` is
+active, every `LocusEvent` the agent yields is silently republished on the
+bus as a canonical `agent.*` event — no hook registration, no config flag:
+
+| Inner event | Bus `event_type` |
+|---|---|
+| `ThinkEvent` | `agent.think` |
+| `ToolStartEvent` | `agent.tool.started` (with `span_id`) |
+| `ToolCompleteEvent` | `agent.tool.completed` (matching `span_id`) |
+| `ReflectEvent` | `agent.reflect` |
+| `GroundingEvent` | `agent.grounding` |
+| `ModelCompleteEvent` | `agent.model.completed` + `agent.tokens.used` |
+| `TerminateEvent` | `agent.terminate` |
+
+`span_id` on started/completed pairs lets consumers compute durations and
+survive interleaved events from concurrent runs without subtracting timestamps.
+
+### EventBusHook — when you can't use run_context
+
+For non-async host code or agents you don't control at construction time:
+
+```python
+from locus.observability import EventBusHook, get_event_bus
+from locus import Agent
+
+run_id = "my-run-1"
+agent = Agent(
+    model="oci:openai.gpt-5",
+    tools=[search, summarise],
+    hooks=[EventBusHook(run_id=run_id)],
+)
+result = agent.run_sync("Diagnose the checkout slowdown.")
+
+# Read the history after the fact.
+bus = get_event_bus()
+for event in bus._history.get(run_id, []):
+    print(event.event_type, event.data)
+```
+
+`EventBusHook` bridges every agent-lifecycle hook (`on_before_invocation`,
+`on_iteration_start/end`, `on_before/after_tool_call`, `on_before/after_model_call`)
+onto the bus. It never mutates events or breaks execution.
+
+### Subscribe shapes
+
+| Method | Scope | History replay |
+|---|---|---|
+| `bus.subscribe(run_id)` | One run | Yes — last 500 events, then live |
+| `bus.subscribe_global()` | All runs | No — live only |
+| `bus._history.get(run_id, ())` | One run | Yes — direct deque read (tests) |
+
+### Capacity and drop accounting
+
+The bus is bounded. When a subscriber's queue fills, the bus drops the event
+for that subscriber (1 s timeout) rather than blocking the publisher. Fast
+subscribers are unaffected.
+
+```python
+stats = bus.stats()
+print(stats["dropped_events"])    # cumulative drops across all subscribers
+print(stats["retained_runs"])     # number of runs with live history
+print(stats["subscriber_count"])  # current active subscribers
+```
+
+Default limits (all configurable at `EventBus(...)` construction time):
+
+| Parameter | Default |
+|---|---|
+| `max_queue_size` | 1024 events per subscriber |
+| `history_per_run` | 500 events |
+| `max_runs_retained` | 200 runs (LRU eviction) |
+
+### Full event catalogue
+
+See [SSE event catalogue](sse-events.md) for the complete wire-format
+reference — all `EV_*` constants, payload fields, span discipline, and
+the cost table for every subscription scenario.
+
+---
+
 ## See also
 
 - [Hooks](hooks.md) — both observability hooks plug into the same lifecycle as guardrails / steering / retry.
 - [Events](events.md) — what gets emitted before any hook runs.
+- [SSE event catalogue](sse-events.md) — full wire-format reference for every `event_type`.
 - [Safety](safety.md) — PII redaction *before* logs leave the box.

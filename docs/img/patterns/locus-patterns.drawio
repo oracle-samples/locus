@@ -142,6 +142,137 @@
     </mxGraphModel>
   </diagram>
 
+  <!-- =============== COGNITIVE ROUTER (PRISM) =============== -->
+  <diagram id="prism" name="Cognitive Router (PRISM)">
+    <mxGraphModel dx="900" dy="500" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="720" pageHeight="480" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="prism-title" value="Cognitive Router (PRISM) · bounded graph generation"
+          style="text;html=1;align=left;fontSize=14;fontStyle=1;fontColor=#2A2F2F;"
+          vertex="1" parent="1"><mxGeometry x="20" y="14" width="680" height="20" as="geometry"/></mxCell>
+
+        <!-- LLM-only annotation band -->
+        <mxCell id="llm-band" value="LLM fills one typed schema"
+          style="text;html=1;align=center;fontSize=9.5;fontStyle=3;fontColor=#6C3F49;"
+          vertex="1" parent="1"><mxGeometry x="140" y="44" width="160" height="16" as="geometry"/></mxCell>
+        <mxCell id="rule-band" value="rule-based · deterministic · no LLM"
+          style="text;html=1;align=center;fontSize=9.5;fontStyle=3;fontColor=#6C3F49;"
+          vertex="1" parent="1"><mxGeometry x="330" y="44" width="380" height="16" as="geometry"/></mxCell>
+        <!-- Dashed vertical divider -->
+        <mxCell id="divider" style="endArrow=none;html=1;strokeColor=#CCCCCC;strokeWidth=1;dashed=1;exitX=0;exitY=0;entryX=0;entryY=1;"
+          edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="325" y="44"/><mxPoint x="325" y="175"/></Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Step 1: NL input -->
+        <mxCell id="nl-input" value="&lt;b&gt;natural-language task&lt;/b&gt;&#10;&quot;Diagnose the checkout slowdown.&quot;"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FBF9F8;strokeColor=#2A2F2F;fontColor=#2A2F2F;fontSize=11;align=center;"
+          vertex="1" parent="1"><mxGeometry x="20" y="65" width="200" height="55" as="geometry"/></mxCell>
+
+        <!-- Step 2: GoalFrame Extractor -->
+        <mxCell id="extractor" value="GoalFrame Extractor&#10;Agent(output_schema=GoalFrame)"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#04536F;strokeColor=none;fontColor=#FFFFFF;fontSize=12;fontStyle=1;align=center;"
+          vertex="1" parent="1"><mxGeometry x="20" y="160" width="200" height="65" as="geometry"/></mxCell>
+        <!-- GoalFrame payload label -->
+        <mxCell id="gf-payload" value="GoalFrame(primary_goal=DIAGNOSE,&#10;  risk=MEDIUM, complexity=HIGH,&#10;  domain=&quot;observability&quot;)"
+          style="text;html=1;align=left;fontSize=9;fontColor=#04536F;fontStyle=2;"
+          vertex="1" parent="1"><mxGeometry x="20" y="238" width="200" height="52" as="geometry"/></mxCell>
+
+        <!-- Arrow nl → extractor -->
+        <mxCell id="e-nl-ext" style="endArrow=classic;html=1;strokeColor=#2A2F2F;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;"
+          edge="1" parent="1" source="nl-input" target="extractor"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- Step 3: ProtocolRegistry -->
+        <mxCell id="registry" value="ProtocolRegistry&#10;filter · rank · select"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#04536F;strokeColor=none;fontColor=#FFFFFF;fontSize=12;fontStyle=1;align=center;"
+          vertex="1" parent="1"><mxGeometry x="340" y="65" width="160" height="65" as="geometry"/></mxCell>
+
+        <!-- Arrow extractor → registry (curved: right then up) -->
+        <mxCell id="e-ext-reg" value="GoalFrame"
+          style="endArrow=classic;html=1;strokeColor=#2A2F2F;strokeWidth=2;fontColor=#2A2F2F;fontSize=10;fontStyle=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;"
+          edge="1" parent="1" source="extractor" target="registry">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="270" y="192"/><mxPoint x="270" y="97"/></Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Step 4: PolicyGate -->
+        <mxCell id="policy" value="PolicyGate&#10;risk ≤ max_risk?"
+          style="rhombus;whiteSpace=wrap;html=1;fillColor=#F0CC71;strokeColor=none;fontColor=#3A2A0F;fontSize=11;fontStyle=1;align=center;"
+          vertex="1" parent="1"><mxGeometry x="540" y="50" width="150" height="95" as="geometry"/></mxCell>
+
+        <!-- Arrow registry → policy -->
+        <mxCell id="e-reg-pol" value="Protocol selected"
+          style="endArrow=classic;html=1;strokeColor=#2A2F2F;strokeWidth=2;fontColor=#2A2F2F;fontSize=10;fontStyle=1;"
+          edge="1" parent="1" source="registry" target="policy"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- PolicyDeniedError -->
+        <mxCell id="denied" value="PolicyDeniedError"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C74634;strokeColor=none;fontColor=#FFFFFF;fontSize=11;fontStyle=1;align=center;"
+          vertex="1" parent="1"><mxGeometry x="580" y="185" width="120" height="40" as="geometry"/></mxCell>
+        <!-- Arrow policy → denied -->
+        <mxCell id="e-deny" value="deny"
+          style="endArrow=classic;html=1;strokeColor=#C74634;strokeWidth=2;fontColor=#C74634;fontSize=10;fontStyle=1;"
+          edge="1" parent="1" source="policy" target="denied"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- Approval callback note -->
+        <mxCell id="approval" value="on_approval callback"
+          style="text;html=1;align=center;fontSize=9;fontColor=#6C3F49;fontStyle=3;"
+          vertex="1" parent="1"><mxGeometry x="555" y="160" width="140" height="16" as="geometry"/></mxCell>
+
+        <!-- Step 5: CognitiveCompiler -->
+        <mxCell id="compiler" value="CognitiveCompiler&#10;compile onto real primitives"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#04536F;strokeColor=none;fontColor=#FFFFFF;fontSize=12;fontStyle=1;align=center;"
+          vertex="1" parent="1"><mxGeometry x="340" y="190" width="180" height="65" as="geometry"/></mxCell>
+
+        <!-- Arrow policy → compiler (allow) -->
+        <mxCell id="e-allow" value="allow"
+          style="endArrow=classic;html=1;strokeColor=#2A2F2F;strokeWidth=2;fontColor=#2A2F2F;fontSize=10;fontStyle=1;"
+          edge="1" parent="1" source="policy" target="compiler"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- 4 compiled shape boxes + overflow -->
+        <mxCell id="s-direct" value="direct_response&#10;single Agent"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#89B2B0;strokeColor=none;fontColor=#1F2828;fontSize=10;fontStyle=1;align=center;"
+          vertex="1" parent="1"><mxGeometry x="40" y="330" width="130" height="50" as="geometry"/></mxCell>
+        <mxCell id="s-fanout" value="specialist_fanout&#10;ParallelPipeline"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#89B2B0;strokeColor=none;fontColor=#1F2828;fontSize=10;fontStyle=1;align=center;"
+          vertex="1" parent="1"><mxGeometry x="185" y="330" width="130" height="50" as="geometry"/></mxCell>
+        <mxCell id="s-plan" value="plan_execute_validate&#10;SequentialPipeline"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#89B2B0;strokeColor=none;fontColor=#1F2828;fontSize=10;fontStyle=1;align=center;"
+          vertex="1" parent="1"><mxGeometry x="330" y="330" width="130" height="50" as="geometry"/></mxCell>
+        <mxCell id="s-loop" value="codegen_test_validate&#10;LoopAgent"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#89B2B0;strokeColor=none;fontColor=#1F2828;fontSize=10;fontStyle=1;align=center;"
+          vertex="1" parent="1"><mxGeometry x="475" y="330" width="130" height="50" as="geometry"/></mxCell>
+        <mxCell id="s-more" value="+ 4 more&#10;protocols"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#89B2B0;strokeWidth=2;fontColor=#89B2B0;fontSize=10;fontStyle=3;align=center;"
+          vertex="1" parent="1"><mxGeometry x="620" y="330" width="80" height="50" as="geometry"/></mxCell>
+
+        <!-- Arrows compiler → shapes -->
+        <mxCell id="e-cs1" style="endArrow=classic;html=1;strokeColor=#2A2F2F;" edge="1" parent="1" source="compiler" target="s-direct"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-cs2" style="endArrow=classic;html=1;strokeColor=#2A2F2F;" edge="1" parent="1" source="compiler" target="s-fanout"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-cs3" style="endArrow=classic;html=1;strokeColor=#2A2F2F;" edge="1" parent="1" source="compiler" target="s-plan"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-cs4" style="endArrow=classic;html=1;strokeColor=#2A2F2F;" edge="1" parent="1" source="compiler" target="s-loop"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <!-- RunnableResult -->
+        <mxCell id="result" value="RunnableResult · text · protocol_id · frame"
+          style="rounded=1;whiteSpace=wrap;html=1;fillColor=#C74634;strokeColor=none;fontColor=#FFFFFF;fontSize=13;fontStyle=1;align=center;"
+          vertex="1" parent="1"><mxGeometry x="185" y="420" width="360" height="45" as="geometry"/></mxCell>
+
+        <!-- Arrows shapes → result -->
+        <mxCell id="e-r1" style="endArrow=classic;html=1;strokeColor=#6C3F49;dashed=1;" edge="1" parent="1" source="s-direct" target="result"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-r2" style="endArrow=classic;html=1;strokeColor=#6C3F49;dashed=1;" edge="1" parent="1" source="s-fanout" target="result"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-r3" style="endArrow=classic;html=1;strokeColor=#6C3F49;dashed=1;" edge="1" parent="1" source="s-plan" target="result"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e-r4" style="endArrow=classic;html=1;strokeColor=#6C3F49;dashed=1;" edge="1" parent="1" source="s-loop" target="result"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+
   <!-- =============== A2A =============== -->
   <diagram id="a2a" name="A2A">
     <mxGraphModel dx="900" dy="500" grid="1" gridSize="10" pageWidth="720" pageHeight="380" math="0" shadow="0">

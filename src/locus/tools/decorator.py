@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import asyncio
-import functools
 import inspect
 import json
 from collections.abc import Callable
@@ -68,11 +67,17 @@ class Tool(BaseModel):
         if asyncio.iscoroutinefunction(self.fn):
             result = await self.fn(**kwargs)
         else:
-            # Run sync function in thread pool
+            # Run sync function in thread pool. Propagate the current
+            # contextvars context so observability emits (run_id) and
+            # any other contextvar-driven instrumentation see the same
+            # state inside the worker thread.
+            import contextvars  # noqa: PLC0415
+
             loop = asyncio.get_event_loop()
+            ctxvars_snapshot = contextvars.copy_context()
             result = await loop.run_in_executor(
                 None,
-                functools.partial(self.fn, **kwargs),
+                lambda: ctxvars_snapshot.run(self.fn, **kwargs),
             )
 
         return self._format_result(result)

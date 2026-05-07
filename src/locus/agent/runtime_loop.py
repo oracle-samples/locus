@@ -23,9 +23,10 @@ moved methods.
 
 from __future__ import annotations
 
+import functools
 import threading
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
@@ -55,6 +56,39 @@ if TYPE_CHECKING:
     from locus.memory.conversation import ConversationManager
     from locus.reasoning.grounding import GroundingEvaluator
     from locus.reasoning.reflexion import Reflector
+
+
+def _bus_bridge(
+    fn: Callable[..., AsyncIterator[LocusEvent]],
+) -> Callable[..., AsyncIterator[LocusEvent]]:
+    """Decorate an ``async def run(...)`` style generator so each yielded
+    :class:`LocusEvent` is also published on the SSE bus.
+
+    No-op when no ``run_context`` is active — the underlying ``emit()``
+    short-circuits on the contextvar. Failures inside the bridge are
+    swallowed by ``emit()``; the original event is always passed
+    through to the caller, so the bridge cannot break agent execution.
+    """
+
+    @functools.wraps(fn)
+    async def wrapper(*args: Any, **kwargs: Any) -> AsyncIterator[LocusEvent]:
+        # Local import — no cost when telemetry is unused.
+        from locus.observability.agent_bridge import (  # noqa: PLC0415
+            bridge_locus_event,
+        )
+
+        async for event in fn(*args, **kwargs):
+            try:
+                await bridge_locus_event(event)
+            except Exception:  # noqa: BLE001 — telemetry never breaks the loop
+                pass
+            yield event
+
+    return wrapper
+
+
+# Suppress an unused-import warning from the type alias.
+_ = Awaitable  # noqa: SLF001 — placeholder so mypy knows we imported it intentionally
 
 
 def _normalize_stop_reason(raw: str | None) -> StopReason:
@@ -135,6 +169,7 @@ class AgentRuntimeMixin:
 
         def _initialize(self) -> None: ...
 
+    @_bus_bridge
     async def run(
         self,
         prompt: str,
@@ -706,9 +741,22 @@ class AgentRuntimeMixin:
                     and self.config.checkpoint_every_n_iterations > 0
                     and state.iteration % self.config.checkpoint_every_n_iterations == 0
                 ):
+                    _cp_thread = thread_id or state.run_id
                     await self.config.checkpointer.save(
                         state,
-                        thread_id or state.run_id,
+                        _cp_thread,
+                    )
+                    from locus.observability.emit import (  # noqa: PLC0415
+                        EV_CHECKPOINT_SAVED,
+                        emit,
+                    )
+
+                    await emit(
+                        EV_CHECKPOINT_SAVED,
+                        thread_id=_cp_thread,
+                        iteration=state.iteration,
+                        backend=type(self.config.checkpointer).__name__,
+                        trigger="every_n_iterations",
                     )
 
         except Exception as e:
@@ -747,7 +795,20 @@ class AgentRuntimeMixin:
             # Final checkpoint
             if self.config.checkpointer and thread_id:
                 await self.config.checkpointer.save(state, thread_id)
+                from locus.observability.emit import (  # noqa: PLC0415
+                    EV_CHECKPOINT_SAVED,
+                    emit,
+                )
 
+                await emit(
+                    EV_CHECKPOINT_SAVED,
+                    thread_id=thread_id,
+                    iteration=state.iteration,
+                    backend=type(self.config.checkpointer).__name__,
+                    trigger="final",
+                )
+
+    @_bus_bridge
     async def _run_from_state(
         self,
         state: AgentState,
@@ -939,6 +1000,17 @@ class AgentRuntimeMixin:
         if self.config.checkpointer and thread_id:
             existing = await self.config.checkpointer.load(thread_id)
             if existing:
+                from locus.observability.emit import (  # noqa: PLC0415
+                    EV_CHECKPOINT_LOADED,
+                    emit,
+                )
+
+                await emit(
+                    EV_CHECKPOINT_LOADED,
+                    thread_id=thread_id,
+                    iteration=existing.iteration,
+                    backend=type(self.config.checkpointer).__name__,
+                )
                 # Add new user message and continue
                 resumed: AgentState = existing.with_message(Message.user(prompt))
                 return resumed

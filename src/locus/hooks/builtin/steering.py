@@ -201,15 +201,29 @@ class SteeringHook(HookProvider):
         decision = await self._evaluate_tool_call(event.tool_name, event.arguments)
         self.decisions.append(decision)
 
+        from locus.observability.emit import EV_HOOK_STEERING_APPLIED, emit  # noqa: PLC0415
+
         if decision.action == SteeringAction.GUIDE:
             event.cancel = decision.guidance
             logger.info(
                 "Steering GUIDE: %s(%s) — %s", event.tool_name, event.arguments, decision.reason
             )
+            await emit(
+                EV_HOOK_STEERING_APPLIED,
+                action="guide",
+                tool_name=event.tool_name,
+                reason=decision.reason,
+            )
 
         elif decision.action == SteeringAction.INTERRUPT:
             event.cancel = f"REQUIRES APPROVAL: {decision.reason}"
             logger.info("Steering INTERRUPT: %s — %s", event.tool_name, decision.reason)
+            await emit(
+                EV_HOOK_STEERING_APPLIED,
+                action="interrupt",
+                tool_name=event.tool_name,
+                reason=decision.reason,
+            )
 
         # Record in context
         self._context.record_tool_call(event.tool_name, event.arguments)

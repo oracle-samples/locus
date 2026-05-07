@@ -91,8 +91,65 @@ async function streamForward(path: string, req: Request, res: Response) {
 app.get("/api/tutorials", (req, res) => {
   void forward(req, res, { method: "GET" });
 });
+// /categories registered before /:tid so the parametric route doesn't match it.
+app.get("/api/tutorials/categories", (req, res) => {
+  void forward(req, res, { method: "GET" });
+});
 app.get("/api/tutorials/:tid", (req, res) => {
   void forward(req, res, { method: "GET" });
+});
+app.get("/api/skills", (req, res) => {
+  void forward(req, res, { method: "GET" });
+});
+app.get("/api/skills/categories", (req, res) => {
+  void forward(req, res, { method: "GET" });
+});
+app.get("/api/skills/:sid", (req, res) => {
+  void forward(req, res, { method: "GET" });
+});
+app.get("/api/protocols", (req, res) => {
+  void forward(req, res, { method: "GET" });
+});
+app.get("/api/protocols/categories", (req, res) => {
+  void forward(req, res, { method: "GET" });
+});
+app.get("/api/protocols/:pid", (req, res) => {
+  void forward(req, res, { method: "GET" });
+});
+
+// Telemetry SSE — these MUST stream; the existing `forward` helper buffers.
+async function streamSseForward(path: string, _req: Request, res: Response): Promise<void> {
+  const url = `${BFF_TARGET}${path}`;
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders?.();
+  const upstream = await fetch(url, { method: "GET" });
+  if (!upstream.ok || !upstream.body) {
+    res.statusCode = upstream.status;
+    res.end(`upstream ${upstream.status}: ${await upstream.text()}`);
+    return;
+  }
+  const reader = upstream.body.getReader();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    res.write(value);
+  }
+  res.end();
+}
+
+// `/__stats` registered first so it doesn't get swallowed by the
+// `:runId` parametric route below.
+app.get("/api/events/__stats", (req, res) => {
+  void forward(req, res, { method: "GET" });
+});
+app.get("/api/events", (req, res) => {
+  void streamSseForward("/api/events", req, res);
+});
+app.get("/api/events/:runId", (req, res) => {
+  void streamSseForward(`/api/events/${encodeURIComponent(req.params.runId)}`, req, res);
 });
 app.post("/api/tutorials/run", async (req, res) => {
   await streamForward("/api/tutorials/run", req, res);

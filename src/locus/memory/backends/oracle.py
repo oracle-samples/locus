@@ -16,6 +16,8 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, SecretStr
 
+from locus.core.state import AgentState
+
 
 if TYPE_CHECKING:
     import oracledb
@@ -226,22 +228,30 @@ class OracleBackend(BaseModel):
 
     async def save(
         self,
+        state: AgentState,
         thread_id: str,
-        data: dict[str, Any],
         checkpoint_id: str | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> str:
         """
-        Save checkpoint to Oracle Database.
+        Save agent state to Oracle Database.
+
+        Implements :meth:`BaseCheckpointer.save`. Parameter order is
+        ``(state, thread_id, ...)`` to match the abstract — the prior
+        ``(thread_id, data, ...)`` signature silently mismatched the
+        agent runtime, which calls ``save(state, thread_id)`` and would
+        end up trying to bind an :class:`AgentState` to the
+        ``VARCHAR2(255) thread_id`` column.
 
         Args:
-            thread_id: Thread identifier
-            data: Checkpoint data
-            checkpoint_id: Optional checkpoint ID
-            metadata: Optional metadata for querying
+            state: Current agent state. Serialized via
+                :meth:`AgentState.to_checkpoint` (Pydantic JSON dump).
+            thread_id: Thread identifier (column primary key).
+            checkpoint_id: Optional checkpoint ID. Generated if omitted.
+            metadata: Optional metadata for querying.
 
         Returns:
-            Checkpoint ID
+            Checkpoint ID.
         """
         await self._ensure_table()
         pool = await self._get_pool()
@@ -249,6 +259,7 @@ class OracleBackend(BaseModel):
         from uuid import uuid4
 
         checkpoint_id = checkpoint_id or uuid4().hex
+        data = state.to_checkpoint() if isinstance(state, AgentState) else state
 
         async with pool.acquire() as conn, conn.cursor() as cursor:
             # Use MERGE for upsert
@@ -270,7 +281,7 @@ class OracleBackend(BaseModel):
                 {
                     "thread_id": thread_id,
                     "checkpoint_id": checkpoint_id,
-                    "data": json.dumps(data),
+                    "data": json.dumps(data, default=str),
                     "metadata": json.dumps(metadata or {}),
                 },
             )
@@ -278,8 +289,19 @@ class OracleBackend(BaseModel):
 
         return checkpoint_id
 
-    async def load(self, thread_id: str) -> dict[str, Any] | None:
-        """Load checkpoint from Oracle Database."""
+    async def load(
+        self,
+        thread_id: str,
+        checkpoint_id: str | None = None,
+    ) -> AgentState | None:
+        """Load agent state from Oracle Database.
+
+        ``checkpoint_id`` is accepted for :class:`BaseCheckpointer`
+        signature parity but ignored — this backend stores one row per
+        ``thread_id`` (MERGE upsert), so latest-state is the only
+        retrievable checkpoint.
+        """
+        del checkpoint_id  # one-row-per-thread; arg present for parity
         await self._ensure_table()
         pool = await self._get_pool()
 
@@ -300,9 +322,10 @@ class OracleBackend(BaseModel):
 
         # oracledb might already return JSON as dict
         if isinstance(data, dict):
-            return data
-        parsed: dict[str, Any] = json.loads(data)
-        return parsed
+            payload = data
+        else:
+            payload = json.loads(data)
+        return AgentState.from_checkpoint(payload)
 
     async def delete(self, thread_id: str) -> bool:
         """Delete checkpoint from Oracle Database."""

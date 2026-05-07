@@ -38,7 +38,7 @@ Used by tutorials [44 (debate)][t44], [46 (incident)][t46],
 ## Idempotent tools — side effects fire once
 
 ```python
-from locus.tool import tool
+from locus import tool
 
 @tool(idempotent=True)
 def book_flight(flight_id: str, customer_id: str) -> dict:
@@ -100,7 +100,8 @@ attribution), use [GSAR](../gsar.md).
 ## Streaming events — every node visible
 
 ```python
-from locus.events import StreamEvent, StreamMode, ToolStartEvent, TerminateEvent
+from locus.core.events import ToolStartEvent, TerminateEvent
+from locus.streaming import StreamMode
 
 async for event in graph.stream(initial, mode=StreamMode.NODES):
     match event:
@@ -122,11 +123,13 @@ orchestrator, a swarm, or an A2A mesh.
 ## Observability — traces, metrics, hooks
 
 ```python
-from locus.observability import enable_otel
 from locus import Agent, AgentConfig
+from locus.hooks.builtin import TelemetryHook
 
-enable_otel(service_name="locus-incident-bot")
-agent = Agent(config=AgentConfig(model="oci:openai.gpt-5"))
+agent = Agent(config=AgentConfig(
+    model="oci:openai.gpt-5",
+    hooks=[TelemetryHook(service_name="locus-incident-bot")],
+))
 ```
 
 OpenTelemetry wired through every event. Hooks let you observe and
@@ -139,11 +142,11 @@ steer per-turn (`BeforeToolCallEvent`, `AfterToolCallEvent`,
 
 ```python
 from locus import Agent, AgentConfig
-from locus.guardrails import PIIPolicy, TopicPolicy
+from locus.hooks.builtin.guardrails import GuardrailsHook, GuardrailConfig
 
 agent = Agent(config=AgentConfig(
     model="oci:openai.gpt-5",
-    guardrails=[PIIPolicy(redact=True), TopicPolicy(blocked=["legal advice"])],
+    hooks=[GuardrailsHook(config=GuardrailConfig())],
 ))
 ```
 
@@ -156,13 +159,13 @@ freely.
 ## Evaluation
 
 ```python
-from locus.eval import EvalCase, run_eval
+from locus.evaluation import EvalCase, EvalRunner
 
 cases = [
     EvalCase(input="...", expected_terminate=True),
     EvalCase(input="...", expected_tools=["search_logs"]),
 ]
-report = run_eval(graph, cases)
+report = EvalRunner(agent=graph).run(cases)
 ```
 
 Run regression suites against any agent or graph. Failures point at the
@@ -189,8 +192,10 @@ graph = StateGraph(config=GraphConfig(
 # idempotent tools for paging, hooks for OTel spans.
 ```
 
-That's the moat. Pick a [shape](../multi-agent.md), wire the primitives
-above through it, ship it.
+That's the moat. Pick a [shape](../multi-agent.md) directly, or let
+[PRISM — the cognitive router](../router.md) select and compile the
+right one from a typed intent. Then wire the primitives above through
+it and ship it.
 
 [t44]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_44_debate_with_judge.py
 [t46]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_46_incident_response.py

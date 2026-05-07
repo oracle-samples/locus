@@ -4,12 +4,13 @@ A model is a string. Pick the provider's prefix; locus picks the
 client.
 
 ```python
-agent = Agent(model="oci:openai.gpt-5",                ...)  # OCI → V1
-agent = Agent(model="oci:cohere.command-r-plus",         ...)  # OCI → SDK
-agent = Agent(model="oci:meta.llama-3.3-70b-instruct",   ...)  # OCI → V1
-agent = Agent(model="openai:gpt-4o",                     ...)  # OpenAI direct
-agent = Agent(model="anthropic:claude-sonnet",           ...)  # Anthropic direct
-agent = Agent(model="ollama:llama3.2",                   ...)  # local
+# tools, system_prompt, and other kwargs are the same across all providers
+Agent(model="oci:openai.gpt-5")                 # OCI → V1
+Agent(model="oci:cohere.command-r-plus")         # OCI → SDK
+Agent(model="oci:meta.llama-3.3-70b-instruct")  # OCI → V1
+Agent(model="openai:gpt-4o")                    # OpenAI direct
+Agent(model="anthropic:claude-sonnet")           # Anthropic direct
+Agent(model="ollama:llama3.2")                   # local
 ```
 
 The same `Agent` works against any provider — only the model id and
@@ -82,7 +83,7 @@ class MyModel(BaseModel):
 
 register_provider("myco", lambda model_id, **kw: MyModel(model_id, **kw))
 
-agent = Agent(model="myco:my-model-id", ...)
+agent = Agent(model="myco:my-model-id")
 ```
 
 Source: [`register_provider` in `models/registry.py:21`](https://github.com/oracle-samples/locus/blob/main/src/locus/models/registry.py#L21).
@@ -99,7 +100,7 @@ agent = Agent(
         primary="oci:openai.gpt-5",
         fallbacks=["openai:gpt-4o", "anthropic:claude-sonnet"],
     ),
-    ...,
+    # tools=..., system_prompt=...,
 )
 ```
 

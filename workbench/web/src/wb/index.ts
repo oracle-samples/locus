@@ -6,6 +6,7 @@ import { $ } from "./dom";
 import { ensureEditor } from "./editor";
 import { installFullscreenToggle, installSplitResize } from "./layout";
 import { installRunControls } from "./run";
+import { installSidebarTabs } from "./protocols";
 import { bootstrapTutorials } from "./tutorials";
 
 export { endLiveStream } from "./output";
@@ -18,6 +19,7 @@ export function initWorkbench(): void {
   installSplitResize();
   installFullscreenToggle();
   installRunControls();
+  installSidebarTabs();
 }
 
 export function refreshWorkbenchProvider(): void {

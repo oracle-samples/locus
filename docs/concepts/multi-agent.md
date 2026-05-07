@@ -1,11 +1,17 @@
 # Multi-agent workflows
 
-Multi-agent workflows are what Locus is for. Seven shapes you compose
+Multi-agent workflows are what locus is for. Seven shapes you compose
 in one process or scale across a mesh, every shape backed by the same
 `Agent` class, the same event stream, and the same primitives. Pick a
-tutorial below, copy the code, ship it.
+shape directly, or let the **cognitive router** select and
+compile the right one from a natural-language task description.
 
 ![Seven multi-agent workflow shapes — Composition, Orchestrator + Specialists, Swarm, Handoff, StateGraph, Functional, A2A](../img/multi-agent-patterns.svg)
+
+!!! tip "Don't know which shape to use?"
+    [PRISM — the cognitive router](router.md) extracts a typed
+    `GoalFrame` from your task and selects a matching protocol from a
+    deterministic registry. Eight built-in protocols, zero topology hand-writing.
 
 ## What you can ship today
 
@@ -15,6 +21,7 @@ upgrades to live OCI / OpenAI by setting one env var.
 
 | | Workflow | One line | Code |
 |---|---|---|---|
+| **41** | DeepAgent — research factory | `create_deepagent` with reflexion + grounding + subagent dispatch + `deepagent.*` SSE events. | [`tutorial_41_deepagent.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_41_deepagent.py) |
 | **42** | Map-reduce code review | Scatter a diff to `N` reviewers via `Send`, reduce findings into one report. | [`tutorial_42_map_reduce_code_review.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_42_map_reduce_code_review.py) |
 | **43** | Supervisor + critic loop | Researcher → Writer → Critic, loop back to Writer until critic approves (cap'd revisions). | [`tutorial_43_supervisor_critic_loop.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_43_supervisor_critic_loop.py) |
 | **44** | Adversarial debate + judge | PRO and CON argue across N rounds; Judge emits a typed `Verdict` via `output_schema`. | [`tutorial_44_debate_with_judge.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_44_debate_with_judge.py) |
@@ -208,22 +215,35 @@ produced them. → [Streaming](streaming.md).
 
 ## One event stream across all of them
 
-The whole point of having one `Agent` class is that all seven in-process
-shapes plus A2A share the same event taxonomy:
+All seven patterns plus A2A share the same typed event
+taxonomy. Consume directly from the generator, or use the opt-in
+`EventBus` to get per-component SSE events (`agent.think`,
+`agent.tool.started`, `multiagent.orchestrator.routing`, etc.)
+from every layer simultaneously:
 
 ```python
-async for event in pipeline.run("Plan Q3"):
-    match event:
-        case ToolStartEvent(tool_name=n, agent_name=a):
-            print(f"{a} → {n}")
-        case TerminateEvent(final_message=m, agent_name=a):
-            print(f"{a} done: {m}")
+from locus.observability import run_context, get_event_bus
+
+async with run_context() as rid:
+    result = orchestrator.run_sync("Plan Q3 launch.")
+
+    async for ev in get_event_bus().subscribe(rid):
+        match ev.event_type:
+            case "multiagent.orchestrator.decision":
+                print("coordinator →", ev.data["specialists_selected"])
+            case "agent.tool.started":
+                print("  🔧", ev.data["tool_name"])
+            case "agent.terminate":
+                print("  ✓", ev.data["final_message_preview"])
 ```
 
 `agent_name` is set on every event so you can attribute output to the
-specialist that produced it. SSE streams from the `AgentServer` carry
-the same shape — your front-end consumer is unchanged whether the
-back-end is a single agent, an orchestrator, a swarm, or an A2A mesh.
+specialist that produced it. SSE streams from `AgentServer` carry the
+same shape — your front-end consumer is unchanged whether the back-end
+is a single agent, an orchestrator, a swarm, or an A2A mesh.
+
+→ [Observability — EventBus & SSE](observability.md) ·
+[SSE event catalogue](sse-events.md)
 
 ## Mixing shapes
 

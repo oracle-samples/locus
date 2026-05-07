@@ -13,9 +13,19 @@ export type Tutorial = {
   summary: string;
   filename: string;
   needs_stdin?: boolean;
+  category?: string;
+  category_order?: number;
 };
 
 export type TutorialDetail = Tutorial & { source: string };
+
+// Topic-progression headers the sidebars render. Same shape across
+// the three catalogues — one record per declared category.
+export type CategoryInfo = {
+  id: string;
+  name: string;
+  description: string;
+};
 
 export async function listTutorials(): Promise<Tutorial[]> {
   const r = await fetch("/api/tutorials");
@@ -23,10 +33,94 @@ export async function listTutorials(): Promise<Tutorial[]> {
   return (await r.json()) as Tutorial[];
 }
 
+export async function listTutorialCategories(): Promise<CategoryInfo[]> {
+  const r = await fetch("/api/tutorials/categories");
+  if (!r.ok) throw new Error(`tutorial categories ${r.status}`);
+  return (await r.json()) as CategoryInfo[];
+}
+
 export async function getTutorial(id: string): Promise<TutorialDetail> {
   const r = await fetch(`/api/tutorials/${encodeURIComponent(id)}`);
   if (!r.ok) throw new Error(`tutorial ${r.status}`);
   return (await r.json()) as TutorialDetail;
+}
+
+// ---------------------------------------------------------------------------
+// Skills (AgentSkills.io SKILL.md packages under examples/skills/).
+// ---------------------------------------------------------------------------
+
+export type SkillSummary = {
+  id: string;
+  name: string;
+  description: string;
+  domain: string;
+  allowed_tools: string[];
+  license: string | null;
+  path: string;
+  category?: string;
+};
+
+export type SkillDetail = SkillSummary & {
+  instructions: string;
+  resources: string[];
+};
+
+export async function listSkills(): Promise<SkillSummary[]> {
+  const r = await fetch("/api/skills");
+  if (!r.ok) throw new Error(`skills ${r.status}`);
+  return (await r.json()) as SkillSummary[];
+}
+
+export async function listSkillCategories(): Promise<CategoryInfo[]> {
+  const r = await fetch("/api/skills/categories");
+  if (!r.ok) throw new Error(`skill categories ${r.status}`);
+  return (await r.json()) as CategoryInfo[];
+}
+
+export async function getSkill(id: string): Promise<SkillDetail> {
+  const r = await fetch(`/api/skills/${encodeURIComponent(id)}`);
+  if (!r.ok) throw new Error(`skill ${r.status}`);
+  return (await r.json()) as SkillDetail;
+}
+
+// ---------------------------------------------------------------------------
+// Router protocols (the 8 built-in orchestration shapes).
+// ---------------------------------------------------------------------------
+
+export type ProtocolSummary = {
+  id: string;
+  name: string;
+  description: string;
+  handles: string[];
+  primary_for: string[];
+  requires_capabilities: string[];
+  risk_max: string;
+  cost: string;
+  latency: string;
+  supports_streaming: boolean;
+  supports_repair: boolean;
+  category?: string;
+  category_order?: number;
+};
+
+export type ProtocolDetail = ProtocolSummary & { runtime_shape: string };
+
+export async function listProtocols(): Promise<ProtocolSummary[]> {
+  const r = await fetch("/api/protocols");
+  if (!r.ok) throw new Error(`protocols ${r.status}`);
+  return (await r.json()) as ProtocolSummary[];
+}
+
+export async function listProtocolCategories(): Promise<CategoryInfo[]> {
+  const r = await fetch("/api/protocols/categories");
+  if (!r.ok) throw new Error(`protocol categories ${r.status}`);
+  return (await r.json()) as CategoryInfo[];
+}
+
+export async function getProtocol(id: string): Promise<ProtocolDetail> {
+  const r = await fetch(`/api/protocols/${encodeURIComponent(id)}`);
+  if (!r.ok) throw new Error(`protocol ${r.status}`);
+  return (await r.json()) as ProtocolDetail;
 }
 
 export type WorkbenchEvent =
@@ -60,7 +154,10 @@ export function runTutorialSource(
       const r = await fetch("/api/tutorials/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source, provider, timeout_seconds: 180 }),
+        // 8 minutes — long enough for the multi-protocol tutorial 51
+        // (5 prompts × multi-LLM-call protocols can stack to ~5min wall
+        // time). Shorter tutorials still finish in well under a minute.
+        body: JSON.stringify({ source, provider, timeout_seconds: 480 }),
         signal: ctrl.signal,
       });
       if (!r.ok || !r.body) {

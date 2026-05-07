@@ -437,6 +437,23 @@ class RAGRetriever(BaseModel):
         Returns:
             RetrievalResult with ranked documents
         """
+        import time as _time
+
+        from locus.observability.emit import (  # noqa: PLC0415
+            EV_RAG_QUERY_COMPLETED,
+            EV_RAG_QUERY_STARTED,
+            emit,
+        )
+
+        await emit(
+            EV_RAG_QUERY_STARTED,
+            query_preview=query[:160],
+            limit=limit,
+            store_type=type(self.store).__name__,
+            threshold=threshold,
+        )
+        _started = _time.perf_counter()
+
         # Embed the query
         query_result = await self.embedder.embed_query(query)
 
@@ -446,6 +463,14 @@ class RAGRetriever(BaseModel):
             limit=limit,
             threshold=threshold,
             metadata_filter=metadata_filter,
+        )
+
+        await emit(
+            EV_RAG_QUERY_COMPLETED,
+            hit_count=len(results),
+            top_score=results[0].score if results else None,
+            duration_ms=(_time.perf_counter() - _started) * 1000,
+            store_type=type(self.store).__name__,
         )
 
         return RetrievalResult(

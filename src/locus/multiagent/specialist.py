@@ -210,9 +210,27 @@ class Specialist(BaseModel):
                 error="No model configured for specialist",
             )
 
+        # Local import — observability is optional; this is a no-op
+        # outside a run_context.
+        from locus.observability.emit import (  # noqa: PLC0415
+            EV_SPECIALIST_COMPLETED,
+            EV_SPECIALIST_STARTED,
+            emit,
+        )
+
         start_time = time.perf_counter()
 
-        # Emit start event (stored for potential future use)
+        await emit(
+            EV_SPECIALIST_STARTED,
+            specialist_id=self.id,
+            specialist_type=self.specialist_type,
+            task_preview=task[:160],
+        )
+
+        # Construct the typed event for back-compat consumers that iterate
+        # the agent loop's event stream. Stored under a leading underscore
+        # because nothing currently consumes the local — the observability
+        # emit above is the live publication path.
         _start_event = SpecialistStartEvent(
             specialist_id=self.id,
             specialist_type=self.specialist_type,
@@ -264,7 +282,17 @@ class Specialist(BaseModel):
 
             duration_ms = (time.perf_counter() - start_time) * 1000
 
-            # Emit complete event
+            await emit(
+                EV_SPECIALIST_COMPLETED,
+                specialist_id=self.id,
+                specialist_type=self.specialist_type,
+                output_preview=(response.message.content or "")[:200],
+                confidence=confidence,
+                duration_ms=duration_ms,
+                success=True,
+            )
+
+            # Local construction kept for parity with other typed-event sites.
             complete_event = SpecialistCompleteEvent(  # noqa: F841
                 specialist_id=self.id,
                 specialist_type=self.specialist_type,
@@ -284,6 +312,14 @@ class Specialist(BaseModel):
 
         except Exception as e:  # noqa: BLE001
             duration_ms = (time.perf_counter() - start_time) * 1000
+            await emit(
+                EV_SPECIALIST_COMPLETED,
+                specialist_id=self.id,
+                specialist_type=self.specialist_type,
+                error=str(e),
+                duration_ms=duration_ms,
+                success=False,
+            )
             return SpecialistResult(
                 specialist_id=self.id,
                 specialist_type=self.specialist_type,

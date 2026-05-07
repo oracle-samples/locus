@@ -116,5 +116,15 @@ class ModelRetryHook(HookProvider):
             delay,
         )
 
+        from locus.observability.emit import EV_HOOK_MODEL_RETRY, emit  # noqa: PLC0415
+
+        await emit(
+            EV_HOOK_MODEL_RETRY,
+            attempt=self._attempt,
+            max_retries=self._max_retries,
+            delay_seconds=delay,
+            reason="empty_response",
+        )
+
         await asyncio.sleep(delay)
         event.retry = True

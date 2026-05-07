@@ -270,13 +270,14 @@ async def opensearch_store_example():
     """
     OpenSearch provides enterprise vector search with k-NN plugin.
 
-    Features:
-    - Combines full-text search with vectors
-    - Scalable and distributed
-    - Rich query DSL
-    - AWS and self-hosted options
+    Configure via environment variables:
+        OPENSEARCH_HOST  — hostname (default: localhost)
+        OPENSEARCH_PORT  — port (default: 9200)
+        OPENSEARCH_USER  — username (default: admin)
+        OPENSEARCH_PASS  — password (default: admin)
+        OPENSEARCH_SSL   — "true" to enable TLS (default: false for localhost)
 
-    Start OpenSearch locally:
+    Local docker:
         docker run -p 9200:9200 -e "discovery.type=single-node" \\
             -e "OPENSEARCH_INITIAL_ADMIN_PASSWORD=Admin123!" \\
             opensearchproject/opensearch:2.11.0
@@ -285,19 +286,31 @@ async def opensearch_store_example():
     print("Tutorial 23: OpenSearch Vector Store")
     print("=" * 60)
 
+    host = os.environ.get("OPENSEARCH_HOST", "localhost")
+    port = os.environ.get("OPENSEARCH_PORT", "9200")
+    user = os.environ.get("OPENSEARCH_USER", "admin")
+    password = os.environ.get("OPENSEARCH_PASS", "admin")
+    use_ssl = os.environ.get("OPENSEARCH_SSL", "false").lower() == "true" or host != "localhost"
+    scheme = "https" if use_ssl else "http"
+    url = f"{scheme}://{host}:{port}"
+
     try:
         import httpx
 
         response = httpx.get(
-            "http://localhost:9200",
-            auth=("admin", "admin"),
+            url,
+            auth=(user, password),
             verify=False,
             timeout=5.0,
         )
         response.raise_for_status()
-    except Exception:
-        print("Skipping: OpenSearch not available at localhost:9200")
-        print("Start with: docker-compose up opensearch")
+        body = response.json()
+        if "version" not in body or "cluster_name" not in body:
+            raise RuntimeError("not an OpenSearch instance")
+        print(f"Connected: cluster={body['cluster_name']} v{body['version']['number']}")
+    except Exception as e:
+        print(f"Skipping: OpenSearch not available at {url} ({e})")
+        print("Set OPENSEARCH_HOST / OPENSEARCH_USER / OPENSEARCH_PASS or start locally.")
         return
 
     from locus.rag import RAGRetriever
@@ -307,18 +320,16 @@ async def opensearch_store_example():
     if not embedder:
         return
 
-    # Create OpenSearch store
     store = OpenSearchVectorStore(
-        hosts=["localhost:9200"],
-        http_auth=("admin", "admin"),
-        use_ssl=False,
-        index_name="tutorial_11_demo",
+        hosts=[f"{host}:{port}"],
+        http_auth=(user, password),
+        use_ssl=use_ssl,
+        verify_certs=False,
+        index_name="tutorial_23_demo",
         dimension=embedder.config.dimension,
     )
 
-    print("Connected to OpenSearch at localhost:9200")
-    print("Index: tutorial_11_demo")
-    print(f"Dimension: {embedder.config.dimension}")
+    print(f"Index: tutorial_23_demo | Dimension: {embedder.config.dimension}")
 
     # Create retriever
     retriever = RAGRetriever(embedder=embedder, store=store)

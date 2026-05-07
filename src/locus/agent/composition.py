@@ -57,6 +57,14 @@ class SequentialPipeline(BaseModel):
 
     async def run(self, task: str) -> PipelineResult:
         """Execute agents sequentially, chaining outputs."""
+        # Local import — observability is optional; emit is a no-op
+        # outside an active run_context.
+        from locus.observability.emit import (  # noqa: PLC0415
+            EV_PIPELINE_STAGE_COMPLETED,
+            EV_PIPELINE_STAGE_STARTED,
+            emit,
+        )
+
         start_time = time.perf_counter()
         outputs: list[str] = []
         current_input = task
@@ -70,9 +78,24 @@ class SequentialPipeline(BaseModel):
                         task=task,
                     )
 
+                stage_started = time.perf_counter()
+                await emit(
+                    EV_PIPELINE_STAGE_STARTED,
+                    pipeline_kind="sequential",
+                    stage=i,
+                    stage_count=len(self.agents),
+                )
                 result = agent.run_sync(current_input)
                 output = result.message or ""
                 outputs.append(output)
+                await emit(
+                    EV_PIPELINE_STAGE_COMPLETED,
+                    pipeline_kind="sequential",
+                    stage=i,
+                    output_length=len(output),
+                    duration_ms=(time.perf_counter() - stage_started) * 1000,
+                    success=True,
+                )
 
             duration_ms = (time.perf_counter() - start_time) * 1000
             return PipelineResult(
@@ -126,7 +149,18 @@ class ParallelPipeline(BaseModel):
             task: Default task for all agents
             task_map: Optional mapping of agent index to custom task
         """
+        from locus.observability.emit import (  # noqa: PLC0415
+            EV_PIPELINE_FANOUT_COMPLETED,
+            EV_PIPELINE_FANOUT_STARTED,
+            emit,
+        )
+
         start_time = time.perf_counter()
+        await emit(
+            EV_PIPELINE_FANOUT_STARTED,
+            agent_count=len(self.agents),
+            merge_strategy=self.merge_strategy,
+        )
 
         async def run_agent(index: int, agent: Any) -> str:
             prompt = task_map.get(index, task) if task_map else task
@@ -158,6 +192,12 @@ class ParallelPipeline(BaseModel):
             final = self.separator.join(o for o in outputs if o)
 
         duration_ms = (time.perf_counter() - start_time) * 1000
+        await emit(
+            EV_PIPELINE_FANOUT_COMPLETED,
+            agents_succeeded=len(self.agents) - len(agent_errors),
+            agents_failed=len(agent_errors),
+            duration_ms=duration_ms,
+        )
         return PipelineResult(
             success=not agent_errors,
             outputs=outputs,
@@ -199,18 +239,38 @@ class LoopAgent(BaseModel):
 
     async def run(self, task: str) -> PipelineResult:
         """Execute agent in a loop until condition is met or max_loops reached."""
+        from locus.observability.emit import (  # noqa: PLC0415
+            EV_LOOP_ITERATION_COMPLETED,
+            EV_LOOP_ITERATION_STARTED,
+            EV_LOOP_TERMINATED,
+            emit,
+        )
+
         start_time = time.perf_counter()
         outputs: list[str] = []
         current_input = task
-
+        terminated_by = "max_loops"
         try:
             for i in range(self.max_loops):
+                await emit(
+                    EV_LOOP_ITERATION_STARTED,
+                    iteration=i,
+                    max_loops=self.max_loops,
+                )
                 result = self.agent.run_sync(current_input)
                 output = result.message or ""
                 outputs.append(output)
+                stopped = self.condition(output)
+                await emit(
+                    EV_LOOP_ITERATION_COMPLETED,
+                    iteration=i,
+                    output_length=len(output),
+                    condition_met=stopped,
+                )
 
                 # Check termination condition
-                if self.condition(output):
+                if stopped:
+                    terminated_by = "condition"
                     break
 
                 # Prepare next iteration prompt
@@ -221,6 +281,12 @@ class LoopAgent(BaseModel):
                     )
 
             duration_ms = (time.perf_counter() - start_time) * 1000
+            await emit(
+                EV_LOOP_TERMINATED,
+                terminated_by=terminated_by,
+                iterations=len(outputs),
+                duration_ms=duration_ms,
+            )
             return PipelineResult(
                 success=True,
                 outputs=outputs,

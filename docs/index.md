@@ -7,23 +7,17 @@ hide:
 <div class="locus-hero" markdown>
 <div class="locus-hero__copy" markdown>
 
-# Production-safe multi-agent <span class="accent">workflows.</span>
+# The right orchestration shape for every <span class="accent">task.</span>
 
-**Idempotent tools that fire once on retry. Typed termination
-conditions you can `&` and `|`. Deterministic handoff with full
-chain-of-custody. Checkpoint and replay across days, weeks, or queues.**
+**Describe your task. The multi-agent reasoning orchestrator selects
+from eight named protocols and instantiates the right primitive — the
+LLM fills a typed schema, topology is deterministic.**
 
-Five graph-shaped multi-agent patterns plus two composition helpers,
-all in pure Python. **StateGraph** for declarative DAGs with conditional
-edges and `Send` fan-out. **Orchestrator** + **Specialist** for
-router/expert teams. **Swarm** for shared-blackboard peers. **Handoff**
-for typed escalation chains. **A2A** for cross-process meshes over HTTP.
-Plus `SequentialPipeline` / `ParallelPipeline` / `LoopAgent` for
-straight-line composition, and a functional `@task` / `@entrypoint`
-API when you don't need a graph.
+- **8 coordination patterns** — direct answer · pipeline · fan-out · debate · code + test loop · approval gate · cross-process · handoff
+- **Production-safe** — tools that fire exactly once on retry · composable stop conditions · self-correcting reasoning · checkpoint/resume
+- **Full visibility** — opt-in `EventBus` (zero overhead, no external broker) · `TelemetryHook` for OpenTelemetry traces + metrics over OTLP
 
-Open source. Python. BYO provider — OCI GenAI is native (90+ models,
-day-0); OpenAI, Anthropic, and Ollama through their official SDKs.
+Open source. OCI GenAI native (90+ models); OpenAI, Anthropic, Ollama.
 
 [See what you can build](#six-things-you-can-ship){ .md-button .md-button--primary }
 [GitHub](https://github.com/oracle-samples/locus){ .md-button }
@@ -39,44 +33,98 @@ pip install "locus[oci]"
 <div class="locus-hero__code" markdown>
 
 ```python
-from locus import Agent, END, Send, START, StateGraph
+from locus import Agent, tool
+from locus.observability import run_context, get_event_bus
 
-REVIEWERS = ["security", "performance", "style"]
+@tool(idempotent=True)
+def get_metric(name: str) -> float:
+    """Return the current value of a named SRE metric."""
+    return monitoring.read(name)
 
-def reviewer(role):
-    return Agent(model="oci:openai.gpt-5", system_prompt=f"You're a {role} reviewer.")
+@tool(idempotent=True)
+def page_oncall(reason: str) -> str:
+    """Page the on-call engineer. Fires exactly once per reason."""
+    return pager.send(reason)
 
-async def split(state):
-    # Fan out: one Send per (file, role). The graph runs them in parallel.
-    return [Send("review", {"file": f, "role": r})
-            for f in state["files"] for r in REVIEWERS]
+agent = Agent(
+    model="oci:openai.gpt-5",
+    tools=[get_metric, page_oncall],
+    reflexion=True,   # self-evaluates every turn
+)
 
-async def review(state):
-    out = reviewer(state["role"]).run_sync(state["file"])
-    return {"finding": {"file": state["file"], "role": state["role"], "text": out.message}}
+async with run_context() as rid:
+    result = agent.run_sync(
+        "p99 latency spiked — investigate and page if critical."
+    )
 
-async def synthesize(state):
-    findings = [v["finding"] for v in state.values()
-                if isinstance(v, dict) and "finding" in v]
-    return {"report": "\n".join(f"[{f['role']}] {f['file']}: {f['text']}" for f in findings)}
-
-graph = StateGraph()
-graph.add_node("split", split)
-graph.add_node("review", review)
-graph.add_node("synthesize", synthesize)
-graph.add_edge(START, "split")
-graph.add_edge("split", "synthesize")
-graph.add_edge("synthesize", END)
-
-result = await graph.execute({"files": ["auth.py", "billing.py", "search.py"]})
-print(result.final_state["report"])
-# → 9 reviewers ran in parallel. Findings reduced into one report.
+    async for ev in get_event_bus().subscribe(rid):
+        match ev.event_type:
+            case "agent.think":
+                print("💭", ev.data["reasoning_preview"])
+            case "agent.tool.started":
+                print("🔧", ev.data["tool_name"])
+            case "agent.tokens.used":
+                print("🪙", ev.data["total_tokens"], "tokens")
+            case "agent.terminate":
+                print("✓", ev.data["final_message_preview"])
 ```
 
 </div>
 </div>
 
 ## Six things you can ship
+
+### Route any task to a named orchestration shape
+
+The **cognitive router** is a five-layer pipeline.
+The LLM fills exactly one typed `GoalFrame`. Everything after that —
+protocol selection, policy gating, mapping to a locus primitive —
+is deterministic.
+
+```python
+from locus.router import (
+    Router, CognitiveCompiler, ProtocolRegistry,
+    builtin_protocols, CapabilityIndex, PolicyGate, GoalFrame,
+)
+
+# Register the 8 built-in protocols.
+registry = ProtocolRegistry()
+registry.register_many(builtin_protocols())
+
+compiler = CognitiveCompiler(
+    protocols=registry,
+    capabilities=caps,          # annotated ToolRegistry view
+    policy=PolicyGate(          # risk thresholds
+        max_risk=Risk.HIGH,
+        require_approval_above=Risk.MEDIUM,
+    ),
+    model=model,
+)
+router = Router(
+    extractor=Agent(model=model, output_schema=GoalFrame),
+    compiler=compiler,
+)
+
+result = await router.dispatch("Diagnose the checkout API slowdown.")
+print(result.protocol_id)   # "specialist_fanout"
+print(result.text)          # findings from 3 parallel probes
+```
+
+Eight built-in protocols, each mapping to a different runtime shape:
+
+| Protocol | Compiled shape | Canonical for |
+|---|---|---|
+| `direct_response` | Single `Agent` | `ANSWER`, `EXPLAIN` |
+| `plan_execute_validate` | `SequentialPipeline` (planner → executor → validator) | `PLAN`, `BUILD`, `MODIFY` |
+| `specialist_fanout` | `ParallelPipeline` of N tool-bound Agents | `DIAGNOSE`, `MONITOR` |
+| `debate` | Two debaters + judge `Agent` | `COMPARE` |
+| `codegen_test_validate` | `LoopAgent` (stops on `PASS`) | `GENERATE_CODE` |
+| `approval_gated_execution` | `Agent` wrapped in approval interrupt | `ESCALATE`, `REMEDIATE` |
+| `a2a_delegate` | `A2AClient.invoke` (opt-in only) | — |
+| `handoff_chain` | `SequentialPipeline` of one-tool Agents | `COORDINATE` |
+
+→ [Cognitive router — full reference](concepts/router.md) ·
+[Tutorial 51: route five distinct tasks](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_51_cognitive_router.py)
 
 ### Claims grounded. Citations real. Hallucinations dropped
 
@@ -107,7 +155,7 @@ agent = Agent(
 )
 
 result = agent.run_sync("Summarise the Q3 earnings call. Cite every number.")
-print(result.message)
+print(result.text)
 print(f"grounding score: {result.grounding_score:.2f}")
 # → grounding score: 0.94 — three claims grounded, one dropped (revenue mix)
 ```
@@ -186,38 +234,53 @@ desk = create_handoff_manager(
 → [Handoff with chain-of-custody](concepts/multi-agent/handoff.md) ·
 [Wire a Triage / Billing / Shipping handoff desk](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_16_agent_handoff.py)
 
-### Agent meshes across teams and processes
+### Full visibility. Zero overhead when unused
 
-Each agent publishes an **`AgentCard`** at `/agent-card`. Your research
-agent fetches the card from the Finance team's URL, reads the skills
-list, and decides whether to delegate. HTTP+SSE under the hood, no
-shared infrastructure required.
+The **`EventBus`** streams every meaningful step from every
+layer — agent thinking, tool calls, model completions, token usage,
+multi-agent routing, RAG retrieval, checkpoint saves, router decisions.
+All under one stable `event_type` string per component.
+
+Opt-in with a single context manager. When no `run_context()` is
+active, every emission site short-circuits in one `ContextVar.get()`.
+No bus, no allocations, no overhead.
 
 ```python
-import asyncio
-from locus.a2a import A2AClient
+from locus import Agent, tool
+from locus.observability import run_context, get_event_bus
 
-async def main():
-    # The Finance team publishes their agent at this URL.
-    finance = A2AClient(url="https://finance.example.com")
+@tool
+def get_metric(name: str) -> float:
+    """Return the current value of a named metric."""
+    return monitoring.read(name)
 
-    # Discover capabilities (name, description, skills).
-    card = await finance.get_agent_card()
-    print(f"Calling {card.name} — {card.description}")
-    print(f"Skills: {card.skills}")
+agent = Agent(model="oci:openai.gpt-5", tools=[get_metric])
 
-    # Delegate.
-    answer = await finance.invoke(
-        "Pull Q3 OPEX vs forecast for line items 4100-4250."
-    )
-    print(answer)
-    # → Q3 OPEX: $47M vs forecast $51M (-8%, supply-chain delays).
+async with run_context() as rid:
+    result = agent.run_sync("What is the p99 latency right now?")
 
-asyncio.run(main())
+    async for ev in get_event_bus().subscribe(rid):
+        match ev.event_type:
+            case "agent.think":
+                print("💭", ev.data["reasoning_preview"])
+            case "agent.tool.started":
+                print("🔧", ev.data["tool_name"], ev.data["span_id"])
+            case "agent.tool.completed":
+                print("   ↳", ev.data["output_preview"])
+            case "agent.tokens.used":
+                print("🪙", ev.data["total_tokens"], "tokens")
+            case "agent.terminate":
+                print("✓", ev.data["final_message_preview"])
 ```
 
-→ [A2A — agents across processes](concepts/multi-agent/a2a.md) ·
-[Call another team's agent over A2A](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_34_a2a_protocol.py)
+Nine event prefixes, 40+ canonical types.
+`subscribe(run_id)` replays history then goes live.
+`subscribe_global()` watches all concurrent runs.
+Slow consumers get dropped events, never stall the publisher.
+
+→ [Observability — EventBus + agent yield bridge](concepts/observability.md) ·
+[SSE event catalogue](concepts/sse-events.md) ·
+[Tutorial 52: observability basics](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_52_observability_basics.py)
 
 ### Stop conditions you can compose
 
@@ -245,7 +308,7 @@ agent = Agent(
 )
 
 result = agent.run_sync("Approve and submit the laptop PO.")
-print(result.termination_reason)
+print(result.stop_reason)
 # → ToolCalled('submit_po') and ConfidenceMet(0.92)
 ```
 
@@ -291,26 +354,18 @@ server.run(host="0.0.0.0", port=8080)
 
 ## The locus agent loop
 
-Every locus agent runs the same four-node loop —
-**Think → Execute → Reflect → Terminate** — with one router deciding
-transitions and one immutable state value flowing through.
+Every locus agent — whether called directly or dispatched by the cognitive router —
+runs the same four-node loop: **Think → Execute → Reflect → Terminate**,
+with one immutable state value flowing through.
 
 ![locus agent loop — Think → Execute → Reflect → Terminate, with idempotent dedupe at Execute, Reflexion and Causal at Reflect, and composable termination algebra at Terminate](img/agent-loop.svg)
 
-- **Think** — the model decides the next action or the final answer.
-  Streams reasoning + tokens.
-- **Execute** — runs the tool calls Think returned, in parallel.
-  Tools tagged `@tool(idempotent=True)` are deduped against the
-  run's tool-execution history, so retries return the cached
-  receipt instead of re-firing the body. Booking, billing, paging —
-  safe by design.
-- **Reflect** — runs on cadence, on tool error, or when loop-detection
-  trips. Reflexion evaluates the agent's last step; **Grounding**
-  scores claims against tool results; **Causal** builds a
-  cause-effect graph from the trace. The router routes Reflect's
-  judgment back into the next Think.
-- **Terminate?** — typed stop conditions composable with `|` and `&`.
-  Inspect, unit-test, log; termination is just data.
+| Node | What it does |
+|---|---|
+| **Think** | Model decides next action or final answer. Streams reasoning + tokens. |
+| **Execute** | Runs tool calls in parallel. `@tool(idempotent=True)` dedupes on `(name, args)` — safe on retry or restart. |
+| **Reflect** | Self-evaluates turn quality. **Grounding** scores claims vs tool results. **Causal** traces root cause from the evidence trail. |
+| **Terminate?** | Typed stop conditions composed with `\|` and `&`. Inspectable, unit-testable, serialisable. |
 
 ```python
 from locus.core.termination import MaxIterations, ToolCalled, ConfidenceMet
@@ -329,21 +384,21 @@ consumer.
 
 ## Workflows you can build
 
-Six coordination patterns in-process — plus **A2A** for cross-process
-agent meshes. The same `Agent` class composes into all of them. Mix
-them in one process; stream events from any of them in the same
-`match` block.
+Seven coordination patterns — plus **A2A** for cross-process meshes.
+The same `Agent` class powers all of them. Mix them freely; every one
+streams events into the same `match` block.
 
 <div class="grid cards" markdown>
 
-- :material-arrow-right-thick:{ .lg .middle } **Composition**
+- :material-routes:{ .lg .middle } **Cognitive router**
 
     ---
 
-    Linear chain · fan-out + merge. The simplest shape — describe the
-    flow as a function.
+    NL → typed `GoalFrame` → deterministic protocol selection →
+    compiled `Agent` / `Pipeline` / `Orchestrator`. The LLM fills a
+    schema; the registry picks the shape.
 
-    [Composition →](concepts/multi-agent/composition.md)
+    [Cognitive router →](concepts/router.md)
 
 - :material-account-supervisor:{ .lg .middle } **Orchestrator + Specialists**
 
@@ -353,6 +408,15 @@ them in one process; stream events from any of them in the same
     Specialists run in parallel.
 
     [Orchestrator →](concepts/multi-agent/orchestrator.md)
+
+- :material-arrow-right-thick:{ .lg .middle } **Composition**
+
+    ---
+
+    Linear chain · fan-out + merge. The simplest shape — describe the
+    flow as a function.
+
+    [Composition →](concepts/multi-agent/composition.md)
 
 - :material-bee-flower:{ .lg .middle } **Swarm**
 
@@ -412,22 +476,34 @@ them in one process; stream events from any of them in the same
 
 ## What you get
 
+### Orchestration
+
 | | |
 |---|---|
-| **🧠 Reasoning** | Reflexion + Grounding — one line on `Agent(...)` (`reflexion=True`, `grounding=True`). `CausalChain` for explicit cause-effect chains. **GSAR** typed-grounding layer for safety-critical pipelines: four-way claim partition + three-tier decision (`arXiv:2604.23366`). |
-| **🤝 Multi-agent** | Composition · Orchestrator · Swarm · Handoff · StateGraph · Functional — six in-process patterns, plus A2A for cross-process meshes. |
-| **🛡 Idempotent tools** | `@tool(idempotent=True)`. The model can't double-charge. |
-| **💾 Durable memory** | Four native checkpointers (OCI Object Storage, in-memory, file, HTTP) plus five storage-backed (PostgreSQL, OpenSearch, Redis, SQLite, Oracle 26ai) auto-wrapped via `*_checkpointer()` factories. |
-| **🔎 RAG on your data** | Seven vector stores · OCI Cohere + OpenAI embeddings · multimodal (PDF + OCR + audio). |
-| **🧩 Skills + Playbooks** | Filesystem-first capability disclosure + declarative step plans. |
+| **🧭 Multi-agent reasoning orchestrator** | Picks one of eight protocols (`direct_response`, `plan_execute_validate`, `specialist_fanout`, `debate`, `codegen_test_validate`, `approval_gated_execution`, `a2a_delegate`, `handoff_chain`) and instantiates the matching locus primitive. The LLM fills a schema; routing is deterministic. |
+| **🤝 Multi-agent patterns** | Seven native patterns — Composition, Orchestrator, Swarm, Handoff, StateGraph, Functional, DeepAgent — plus cross-process A2A. Use them directly when you know what you need. |
+| **📡 Observability** | Opt-in `EventBus` — one `run_context()` streams 40+ canonical events, no external broker. `TelemetryHook` exports OpenTelemetry traces + metrics to Grafana, Honeycomb, OCI APM. Zero overhead when unused. |
+
+### Agent primitives
+
+| | |
+|---|---|
+| **🧠 Reasoning** | Reflexion + Grounding as first-class loop nodes. `CausalChain` for root-cause chains. **GSAR** (`arXiv:2604.23366`): four-way claim partition + tiered replanning. |
+| **🛂 Termination algebra** | `MaxIterations(10) \| TextMention("DONE") & ConfidenceMet(0.9)` — real Python `__or__`/`__and__` overloads. Greppable, unit-testable, serialisable. |
+| **🛡 Idempotent tools** | `@tool(idempotent=True)` dedupes on `(name, args)` inside Execute. No double-charge on model retry or checkpoint resume. |
+| **💾 Durable memory** | Four native checkpointers + five storage-backed (PostgreSQL, OpenSearch, Redis, SQLite, Oracle 26ai). |
+
+### Deployment & integration
+
+| | |
+|---|---|
 | **📡 Streaming + Server** | Typed events for `match` consumers · SSE · drop-in FastAPI `AgentServer`. |
 | **🪝 Hooks** | Logging · Telemetry · ModelRetry · Guardrails · Steering. |
+| **🔎 RAG** | Seven vector stores · OCI Cohere + OpenAI embeddings · multimodal. |
 | **🪙 MCP both ways** | `MCPClient` consumes external servers. `LocusMCPServer` exposes locus tools. |
-| **🌐 Multi-modal providers** | `web_search=`, `web_fetch=`, `image_generator=`, `speech_provider=` on `Agent(...)` auto-register matching tools. Built-in OpenAI + httpx implementations, four Protocols for bring-your-own. |
+| **🌐 Multi-modal** | `web_search=`, `web_fetch=`, `image_generator=`, `speech_provider=` on `Agent(...)`. |
 | **📊 Evaluation** | `EvalCase` / `EvalRunner` / `EvalReport` regression suites. |
-| **🛂 Termination algebra** | Eight composable stop conditions. `Or` and `And` compose them. |
-| **🧰 Models** | OCI GenAI native (V1 + SDK) · OpenAI · Anthropic · Ollama. |
-| **🏗 OCI Dedicated AI Cluster** | Pass an `ocid1.generativeaiendpoint....` OCID, get `DedicatedServingMode` with real SSE streaming. Live-tested on Qwen / London. |
+| **🧰 Models** | OCI GenAI (V1 + SDK, 90+ models, OpenAI commercial + xAI Grok) · OpenAI · Anthropic · Ollama. One `get_model()` call, any provider. |
 
 ## Hello, agent
 
@@ -462,44 +538,25 @@ Officer, the human approves, idempotent writes fire — runs end-to-end
 in the multi-agent and idempotency tutorials under
 [`examples/`](https://github.com/oracle-samples/locus/tree/main/examples).
 
-## Introspect
+## Source
 
-locus is small enough to read end-to-end. Every capability has its own
-concept page on this site, and every page links straight to its source
-path. No magic, no hidden registries, no import-time side-effects.
+locus is small enough to read end-to-end. No magic, no hidden registries, no import-time side-effects. A few entry points:
 
-| Capability | Source — class or section that does the work |
+| What | Where |
 |---|---|
-| Loop nodes — Think | [`ThinkNode` in `loop/nodes.py:59`](https://github.com/oracle-samples/locus/blob/main/src/locus/loop/nodes.py#L59-L135) |
-| Loop nodes — Execute (idempotent dedup) | [`ExecuteNode` in `loop/nodes.py:136`](https://github.com/oracle-samples/locus/blob/main/src/locus/loop/nodes.py#L136-L259) |
-| Loop nodes — Reflect | [`ReflectNode` in `loop/nodes.py:260`](https://github.com/oracle-samples/locus/blob/main/src/locus/loop/nodes.py#L260-L361) |
-| Termination algebra (`__or__` / `__and__` overloads) | [`TerminationCondition` in `core/termination.py:39`](https://github.com/oracle-samples/locus/blob/main/src/locus/core/termination.py#L39-L117) |
-| Tool decorator + idempotent flag | [`tool()` in `tools/decorator.py:113`](https://github.com/oracle-samples/locus/blob/main/src/locus/tools/decorator.py#L113-L165) · [`Tool` model `:26`](https://github.com/oracle-samples/locus/blob/main/src/locus/tools/decorator.py#L26-L112) |
-| Memory — example backend | [`OCIBucketBackend` in `memory/backends/oci_bucket.py:57`](https://github.com/oracle-samples/locus/blob/main/src/locus/memory/backends/oci_bucket.py#L57) (sibling backends in [`memory/backends/`](https://github.com/oracle-samples/locus/tree/main/src/locus/memory/backends)) |
-| Multi-agent — entry exports | [`multiagent/__init__.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/multiagent/__init__.py) (per-pattern files: `swarm.py`, `orchestrator.py`, `handoff.py`, `graph.py`, `functional.py`, `specialist.py`) |
-| A2A — server + client | [`A2AServer` in `a2a/protocol.py:84`](https://github.com/oracle-samples/locus/blob/main/src/locus/a2a/protocol.py#L84-L294) · [`A2AClient` `:295`](https://github.com/oracle-samples/locus/blob/main/src/locus/a2a/protocol.py#L295) |
-| Models — OCI two-transport | [`OCIOpenAIModel` in `models/providers/oci/openai_compat.py:163`](https://github.com/oracle-samples/locus/blob/main/src/locus/models/providers/oci/openai_compat.py#L163) |
-| RAG — retriever | [`RAGRetriever` in `rag/retriever.py:72`](https://github.com/oracle-samples/locus/blob/main/src/locus/rag/retriever.py#L72) · [`OCIEmbeddings` `embeddings/oci.py:85`](https://github.com/oracle-samples/locus/blob/main/src/locus/rag/embeddings/oci.py#L85) · [`OracleVectorStore` `stores/oracle.py:90`](https://github.com/oracle-samples/locus/blob/main/src/locus/rag/stores/oracle.py#L90) |
-| Reasoning — Reflexion | [`Reflector` in `reasoning/reflexion.py:70`](https://github.com/oracle-samples/locus/blob/main/src/locus/reasoning/reflexion.py#L70) |
-| Reasoning — Grounding (LLM-as-judge) | [`GroundingEvaluator` in `reasoning/grounding.py:106`](https://github.com/oracle-samples/locus/blob/main/src/locus/reasoning/grounding.py#L106) |
-| Reasoning — Causal | [`CausalChain` in `reasoning/causal.py:160`](https://github.com/oracle-samples/locus/blob/main/src/locus/reasoning/causal.py#L160) |
-| Hooks — built-in providers | [`hooks/builtin/__init__.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/hooks/builtin/__init__.py) (re-exports `LoggingHook`, `StructuredLoggingHook`, `TelemetryHook`, `GuardrailsHook`) · [`SteeringHook` `builtin/steering.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/hooks/builtin/steering.py) · [`ModelRetryHook` `builtin/retry.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/hooks/builtin/retry.py) |
-| Streaming — typed events | [`core/events.py:17` `LocusEvent`](https://github.com/oracle-samples/locus/blob/main/src/locus/core/events.py#L17) (frozen Pydantic models — `ThinkEvent`, `ToolStartEvent`, `ToolCompleteEvent`, `ReflectEvent`, `TerminateEvent`, `ModelChunkEvent`) |
-| Server — FastAPI wrapper | [`AgentServer` in `server/app.py:89`](https://github.com/oracle-samples/locus/blob/main/src/locus/server/app.py#L89) |
-| Skills — AgentSkills.io | [`SkillsPlugin` in `skills/plugin.py:24`](https://github.com/oracle-samples/locus/blob/main/src/locus/skills/plugin.py#L24) |
-| Playbooks — enforcer | [`PlaybookEnforcer` in `playbooks/enforcer.py:52`](https://github.com/oracle-samples/locus/blob/main/src/locus/playbooks/enforcer.py#L52) |
-| Evaluation harness | [`EvalCase` `evaluation/framework.py:22`](https://github.com/oracle-samples/locus/blob/main/src/locus/evaluation/framework.py#L22) · [`EvalRunner` `:119`](https://github.com/oracle-samples/locus/blob/main/src/locus/evaluation/framework.py#L119) |
-| MCP — server + client | [`LocusMCPServer` in `integrations/fastmcp.py:275`](https://github.com/oracle-samples/locus/blob/main/src/locus/integrations/fastmcp.py#L275) · [`MCPClient` `:414`](https://github.com/oracle-samples/locus/blob/main/src/locus/integrations/fastmcp.py#L414) |
-| MCP client + server | [`src/locus/integrations/fastmcp.py`](https://github.com/oracle-samples/locus/tree/main/src/locus/integrations/fastmcp.py) |
-| A2A protocol | [`src/locus/a2a/`](https://github.com/oracle-samples/locus/tree/main/src/locus/a2a) |
+| Agent + ReAct loop | [`loop/nodes.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/loop/nodes.py) — `ThinkNode:59`, `ExecuteNode:136`, `ReflectNode:260` |
+| Cognitive router | [`router/runtime.py:42`](https://github.com/oracle-samples/locus/blob/main/src/locus/router/runtime.py#L42) → `protocol.py` → `policy.py` → `compiler.py` |
+| Multi-agent shapes | [`multiagent/`](https://github.com/oracle-samples/locus/tree/main/src/locus/multiagent) — `orchestrator.py`, `swarm.py`, `handoff.py`, `graph.py`, `functional.py` |
+| Observability | [`observability/event_bus.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/observability/event_bus.py) · [`agent/runtime_loop.py:61`](https://github.com/oracle-samples/locus/blob/main/src/locus/agent/runtime_loop.py#L61) (`@_bus_bridge`) |
+| Idempotent tools | [`tools/decorator.py:113`](https://github.com/oracle-samples/locus/blob/main/src/locus/tools/decorator.py#L113) · `core/termination.py:39` |
+| OCI model transport | [`models/providers/oci/openai_compat.py:163`](https://github.com/oracle-samples/locus/blob/main/src/locus/models/providers/oci/openai_compat.py#L163) |
 
-Read the [concepts](concepts/agent.md) for the *why*; read the
-[API reference](api/agent.md) for the *what*.
+Full source map → [Capabilities](capabilities.md) · [API reference](api/agent.md)
 
 ## Learn locus in an afternoon
 
 The [`examples/`](https://github.com/oracle-samples/locus/tree/main/examples)
-tree is **40 progressive tutorials**. Every tutorial is one runnable
+tree is **55 progressive tutorials**. Every tutorial is one runnable
 file and adds exactly one idea on top of the previous.
 
 ### Track 1 — basics (first hour)
@@ -524,7 +581,7 @@ file and adds exactly one idea on top of the previous.
 
 ### Track 3 — multi-agent (11, 16–18, 25, 34, 36)
 
-The six in-process patterns plus A2A:
+The six native patterns plus A2A:
 [Swarm](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_11_swarm_multiagent.py) ·
 [Handoff](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_16_agent_handoff.py) ·
 [Orchestrator](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_17_orchestrator_pattern.py) ·
@@ -561,6 +618,15 @@ The six in-process patterns plus A2A:
 [Multi-modal providers](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_38_multimodal_providers.py) ·
 [GSAR typed grounding](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_39_gsar_typed_grounding.py) ·
 [OCI Dedicated AI Cluster (DAC)](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_40_oci_dac.py).
+
+### Track 6 — cognitive router + observability (41, 51–55)
+
+[DeepAgent](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_41_deepagent.py) ·
+[Cognitive router](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_51_cognitive_router.py) ·
+[Observability basics](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_52_observability_basics.py) ·
+[Agent yield bridge](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_53_agent_yield_bridge.py) ·
+[EventBus subscriber patterns](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_54_eventbus_subscribers.py) ·
+[Full event catalogue](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_55_event_catalogue.py).
 
 ## Then deploy
 

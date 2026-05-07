@@ -177,6 +177,60 @@ class TestAgentState:
 
         assert state.has_tool_loop is False
 
+    def test_no_tool_loop_with_same_name_different_args(self):
+        """Same tool with different arguments is forward progress, not a loop.
+
+        Regression for the false-positive that fired on paged-discovery
+        patterns: e.g. three sequential calls to ``list_metric_names``
+        with three different ``regex`` values are all making progress
+        and must not be flagged.
+        """
+        state = AgentState(tool_loop_threshold=3)
+
+        for i, regex in enumerate(["fusion:database_.*", "fusion:db_.*", "fusion:dbnode_.*"]):
+            step = ReasoningStep(
+                iteration=i + 1,
+                thought=f"Discovery batch {i}",
+                tool_calls=[ToolCall(name="list_metric_names", arguments={"regex": regex})],
+            )
+            state = state.with_reasoning_step(step)
+            exec_ = ToolExecution(
+                tool_name="list_metric_names",
+                tool_call_id=f"call_{i}",
+                arguments={"regex": regex},
+            )
+            state = state.with_tool_execution(exec_)
+
+        assert state.has_tool_loop is False
+
+    def test_tool_loop_canonical_arg_order(self):
+        """Loop detection ignores dict-key order in arguments.
+
+        ``{"a": 1, "b": 2}`` and ``{"b": 2, "a": 1}`` represent the same
+        call and must hash to the same signature so the detector
+        catches a real loop even when the model emits keys in different
+        orders across iterations.
+        """
+        state = AgentState(tool_loop_threshold=3)
+
+        arg_variants = [
+            {"a": 1, "b": 2},
+            {"b": 2, "a": 1},
+            {"a": 1, "b": 2},
+        ]
+        for i, args in enumerate(arg_variants):
+            step = ReasoningStep(
+                iteration=i + 1,
+                thought=f"Step {i}",
+                tool_calls=[ToolCall(name="search", arguments=args)],
+            )
+            state = state.with_reasoning_step(step)
+            state = state.with_tool_execution(
+                ToolExecution(tool_name="search", tool_call_id=f"call_{i}", arguments=args)
+            )
+
+        assert state.has_tool_loop is True
+
     def test_should_terminate_max_iterations(self):
         """Terminate at max iterations."""
         state = AgentState(max_iterations=5, iteration=5)

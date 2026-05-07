@@ -80,6 +80,40 @@ _LAZY_IMPORTS = {
     "RAGRetriever": ("locus.rag.retriever", "RAGRetriever"),
     "OCIEmbeddings": ("locus.rag.embeddings.oci", "OCIEmbeddings"),
     "OracleVectorStore": ("locus.rag.stores.oracle", "OracleVectorStore"),
+    # PRISM router — bounded-graph generation atop locus primitives.
+    "Router": ("locus.router.runtime", "Router"),
+    "GoalFrame": ("locus.router.goal_frame", "GoalFrame"),
+    "TaskType": ("locus.router.goal_frame", "TaskType"),
+    "Risk": ("locus.router.goal_frame", "Risk"),
+    "Complexity": ("locus.router.goal_frame", "Complexity"),
+    "Capability": ("locus.router.capability", "Capability"),
+    "CapabilityIndex": ("locus.router.capability", "CapabilityIndex"),
+    "Protocol": ("locus.router.protocol", "Protocol"),
+    "ProtocolRegistry": ("locus.router.protocol", "ProtocolRegistry"),
+    "PolicyGate": ("locus.router.policy", "PolicyGate"),
+    "PolicyVerdict": ("locus.router.policy", "PolicyVerdict"),
+    "CognitiveCompiler": ("locus.router.compiler", "CognitiveCompiler"),
+    "RunnableResult": ("locus.router.runnable", "RunnableResult"),
+    "SkillIndex": ("locus.router.skill_index", "SkillIndex"),
+    "builtin_protocols": ("locus.router.protocol", "builtin_protocols"),
+    # Deep research — research-shaped Agent factory + provider protocol.
+    # Submodule is ``locus.deepagent`` (Pythonic path-name convention).
+    # Factory is ``create_deepagent`` (matches ``create_orchestrator``,
+    # ``create_handoff_agent`` — the existing locus naming for "build me
+    # a configured X").
+    "create_deepagent": ("locus.deepagent", "create_deepagent"),
+    "create_research_workflow": ("locus.deepagent.workflow", "create_research_workflow"),
+    "make_execute_node": ("locus.deepagent.workflow", "make_execute_node"),
+    "make_causal_inference_node": ("locus.deepagent.workflow", "make_causal_inference_node"),
+    "make_summarize_node": ("locus.deepagent.workflow", "make_summarize_node"),
+    "make_grounding_eval_node": ("locus.deepagent.workflow", "make_grounding_eval_node"),
+    "make_regenerate_summary_node": ("locus.deepagent.workflow", "make_regenerate_summary_node"),
+    "make_replan_node": ("locus.deepagent.workflow", "make_replan_node"),
+    "route_after_grounding": ("locus.deepagent.workflow", "route_after_grounding"),
+    "KnowledgeProvider": ("locus.deepagent", "KnowledgeProvider"),
+    "KnowledgeRow": ("locus.deepagent", "KnowledgeRow"),
+    "ItemRef": ("locus.deepagent", "ItemRef"),
+    "Grounding": ("locus.deepagent", "Grounding"),
 }
 
 
@@ -143,4 +177,26 @@ __all__ = [
     "RAGRetriever",
     "OCIEmbeddings",
     "OracleVectorStore",
+    # PRISM router (lazy)
+    "Capability",
+    "CapabilityIndex",
+    "CognitiveCompiler",
+    "Complexity",
+    "GoalFrame",
+    "PolicyGate",
+    "PolicyVerdict",
+    "Protocol",
+    "ProtocolRegistry",
+    "Risk",
+    "Router",
+    "RunnableResult",
+    "SkillIndex",
+    "TaskType",
+    "builtin_protocols",
+    # Deep research (lazy)
+    "create_deepagent",
+    "KnowledgeProvider",
+    "KnowledgeRow",
+    "ItemRef",
+    "Grounding",
 ]

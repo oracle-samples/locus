@@ -63,7 +63,9 @@ See `docs/how-to/oci-models.md` for the full transport story.
 """
 
 import os
+import sys
 from collections.abc import AsyncIterator
+from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel
@@ -141,6 +143,32 @@ class MockModel(BaseModel):
         for i in range(0, len(content), chunk_size):
             yield ModelChunkEvent(content=content[i : i + chunk_size])
         yield ModelChunkEvent(done=True)
+
+
+def check_structured_output_capable() -> None:
+    """Exit cleanly with guidance if the current model cannot produce JSON.
+
+    Tutorials that rely on ``output_schema=``, ``extract_json()``, or any
+    constrained-decoding feature must call this at the top of ``main()``
+    before making any model calls.  MockModel always returns plain text and
+    will produce silent parse failures; this guard surfaces the issue early
+    with actionable instructions.
+    """
+    provider = os.environ.get("LOCUS_MODEL_PROVIDER", "mock").lower()
+    if provider == "mock":
+        print(
+            "\n⚠  This tutorial requires structured-output (JSON schema) support.\n"
+            "   MockModel returns plain text and cannot demonstrate these features.\n\n"
+            "   Run with a real model — for example:\n\n"
+            "     export LOCUS_MODEL_PROVIDER=oci\n"
+            "     export LOCUS_OCI_PROFILE=<your-profile>\n"
+            "     export LOCUS_OCI_AUTH_TYPE=security_token   # or api_key\n"
+            "     export LOCUS_OCI_REGION=us-chicago-1\n"
+            "     export LOCUS_OCI_COMPARTMENT=<your-compartment-ocid>\n"
+            "     export LOCUS_MODEL_ID=openai.gpt-5.5-2026-04-23\n"
+            f"     python {Path(sys.argv[0]).name}\n"
+        )
+        sys.exit(0)
 
 
 def get_model(**kwargs: Any) -> Any:

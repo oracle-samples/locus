@@ -195,6 +195,74 @@ class TestMcpToolToLocus:
         result = await locus_tool.execute(x=42)
         assert '"value": 42' in result or '"value":42' in result
 
+    def test_parameters_arg_propagates_to_tool(self):
+        """`parameters=` is preserved on the resulting Tool.
+
+        Regression test: previously the function accepted a
+        ``parameters`` arg but never used it — the ``@tool`` decorator
+        derived the schema from the wrapper's ``**kwargs`` signature,
+        so any call site that passed an MCP ``inputSchema`` saw it
+        silently dropped. The LLM then advertised the wrong shape
+        (a single ``kwargs`` field) and the MCP server rejected calls
+        with "unexpected additional properties".
+        """
+
+        async def my_func(tenant_id: str, regex: str, limit: int = 50) -> str:
+            return f"{tenant_id}:{regex}:{limit}"
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "tenant_id": {"type": "string"},
+                "regex": {"type": "string"},
+                "limit": {"type": "integer", "default": 50},
+            },
+            "required": ["tenant_id", "regex"],
+            "additionalProperties": False,
+        }
+
+        locus_tool = mcp_tool_to_locus(
+            name="search_metrics",
+            description="Search metric names by regex.",
+            func=my_func,
+            parameters=schema,
+        )
+
+        # The Tool's parameters must equal the supplied schema verbatim
+        # — not a kwargs-derived placeholder.
+        assert locus_tool.parameters == schema
+        assert "tenant_id" in locus_tool.parameters["properties"]
+        assert "regex" in locus_tool.parameters["properties"]
+        assert "limit" in locus_tool.parameters["properties"]
+        # And invocation forwards the flat fields to the source func.
+
+    @pytest.mark.asyncio
+    async def test_parameters_arg_executes_with_flat_fields(self):
+        """When ``parameters=`` is set, ``execute`` forwards flat kwargs."""
+
+        async def my_func(tenant_id: str, regex: str, limit: int = 50) -> dict:
+            return {"tenant": tenant_id, "regex": regex, "limit": limit}
+
+        locus_tool = mcp_tool_to_locus(
+            name="search_metrics",
+            description="Search metric names by regex.",
+            func=my_func,
+            parameters={
+                "type": "object",
+                "properties": {
+                    "tenant_id": {"type": "string"},
+                    "regex": {"type": "string"},
+                    "limit": {"type": "integer"},
+                },
+                "required": ["tenant_id", "regex"],
+                "additionalProperties": False,
+            },
+        )
+
+        result = await locus_tool.execute(tenant_id="fa", regex=".*pdb.*", limit=10)
+        assert '"tenant": "fa"' in result or '"tenant":"fa"' in result
+        assert '"regex": ".*pdb.*"' in result or '"regex":".*pdb.*"' in result
+
 
 class TestLocusToolToMcp:
     """Tests for locus_tool_to_mcp."""

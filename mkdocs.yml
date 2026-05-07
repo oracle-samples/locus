@@ -107,18 +107,21 @@ plugins:
 
 nav:
 - Home: index.md
-- Multi-agent workflows:
-  - Overview: concepts/multi-agent.md
-  - Composition: concepts/multi-agent/composition.md
-  - Orchestrator: concepts/multi-agent/orchestrator.md
-  - Swarm: concepts/multi-agent/swarm.md
-  - Handoff: concepts/multi-agent/handoff.md
-  - StateGraph: concepts/multi-agent/graph.md
-  - Functional API: concepts/multi-agent/functional.md
-  - A2A protocol: concepts/multi-agent/a2a.md
-  - Production-readiness: concepts/multi-agent/production.md
 - Concepts:
-  - Capabilities: FEATURES.md
+  - Capabilities: capabilities.md
+  - Multi-agent:
+    - Overview: concepts/multi-agent.md
+    - Composition: concepts/multi-agent/composition.md
+    - Orchestrator: concepts/multi-agent/orchestrator.md
+    - Swarm: concepts/multi-agent/swarm.md
+    - Handoff: concepts/multi-agent/handoff.md
+    - StateGraph: concepts/multi-agent/graph.md
+    - Functional API: concepts/multi-agent/functional.md
+    - A2A protocol: concepts/multi-agent/a2a.md
+    - DeepAgent: concepts/deepagent.md
+    - Production-readiness: concepts/multi-agent/production.md
+  - Cognitive Router:
+    - Cognitive router: concepts/router.md
   - Agents:
     - Overview: concepts/agent.md
     - Agent Loop: concepts/agent-loop.md
@@ -156,72 +159,99 @@ nav:
     - Skills: concepts/skills.md
     - Playbooks: concepts/playbooks.md
   - RAG: concepts/rag.md
-  - Safety & Observability:
-    - Safety & Guardrails: concepts/safety.md
+  - Observability:
     - Observability: concepts/observability.md
+    - SSE event catalogue: concepts/sse-events.md
+    - Safety & Guardrails: concepts/safety.md
     - Evaluation: concepts/evaluation.md
 - Tutorials:
+  - Quickstart: how-to/quickstart.md
   - Overview: tutorials/index.md
-  - 01 · Basic Agent - Your First Locus Agent: tutorials/tutorial_01_basic_agent.md
-  - 02 · Agent with Tools: tutorials/tutorial_02_agent_with_tools.md
-  - 03 · Agent Memory & Checkpointing: tutorials/tutorial_03_agent_memory.md
-  - 04 · Agent Streaming & Events: tutorials/tutorial_04_agent_streaming.md
-  - 05 · Agent Hooks & Lifecycle: tutorials/tutorial_05_agent_hooks.md
-  - 06 · Introduction to StateGraph: tutorials/tutorial_06_basic_graph.md
-  - 07 · Conditional Routing: tutorials/tutorial_07_conditional_routing.md
-  - 08 · State Reducers: tutorials/tutorial_08_state_reducers.md
-  - 09 · Human-in-the-Loop: tutorials/tutorial_09_human_in_the_loop.md
-  - 10 · Advanced Patterns: tutorials/tutorial_10_advanced_patterns.md
-  - 11 · Swarm Multi-Agent: tutorials/tutorial_11_swarm_multiagent.md
-  - 12 · MCP Integration: tutorials/tutorial_12_mcp_integration.md
-  - 13 · Structured Output — every part runs against a real LLM: tutorials/tutorial_13_structured_output.md
-  - 14 · Reasoning Patterns — every part drives a real LLM call: tutorials/tutorial_14_reasoning_patterns.md
-  - 15 · Playbooks — every part runs against a real LLM: tutorials/tutorial_15_playbooks.md
-  - 16 · Agent Handoff: tutorials/tutorial_16_agent_handoff.md
-  - 17 · Orchestrator Pattern: tutorials/tutorial_17_orchestrator_pattern.md
-  - 18 · Specialist Agents: tutorials/tutorial_18_specialist_agents.md
-  - 19 · Guardrails & Security — every part runs a real Agent: tutorials/tutorial_19_guardrails_security.md
-  - 20 · Checkpoint Backends: tutorials/tutorial_20_checkpoint_backends.md
-  - 21 · SSE Streaming: tutorials/tutorial_21_sse_streaming.md
-  - 22 · RAG Basics - Retrieval Augmented Generation: tutorials/tutorial_22_rag_basics.md
-  - 23 · RAG Providers - Embeddings and Vector Stores: tutorials/tutorial_23_rag_providers.md
-  - 24 · RAG Agents - Building Knowledge-Augmented Agents: tutorials/tutorial_24_rag_agents.md
-  - 25 · Agent Composition — Sequential, Parallel, and Loop Pipelines: tutorials/tutorial_25_composition.md
-  - 26 · Evaluation Framework — Systematic Agent Quality Testing: tutorials/tutorial_26_evaluation.md
-  - 27 · Advanced Hooks — Write-Protected Events, Cancel, Retry: tutorials/tutorial_27_hooks_advanced.md
-  - 28 · Agent Server — Deploy Agents as HTTP APIs: tutorials/tutorial_28_agent_server.md
-  - 29 · Model Providers — OCI, OpenAI, Anthropic, Ollama: tutorials/tutorial_29_model_providers.md
-  - 30 · Advanced Guardrails — Topic Policy, Content Safety, Output Filtering: tutorials/tutorial_30_guardrails_advanced.md
-  - 31 · Plugins — Composable Agent Extensions: tutorials/tutorial_31_plugins.md
-  - 32 · Skills — AgentSkills.io Progressive Disclosure: tutorials/tutorial_32_skills.md
-  - 33 · Steering — LLM-Powered Real-Time Tool Approval: tutorials/tutorial_33_steering.md
-  - 34 · A2A Protocol — Agent-to-Agent Communication: tutorials/tutorial_34_a2a_protocol.md
-  - 35 · Advanced Graph — RetryPolicy, CachePolicy, Visualization: tutorials/tutorial_35_graph_advanced.md
-  - 36 · Functional API — @entrypoint and @task Decorators: tutorials/tutorial_36_functional_api.md
-  - 37 · Composable Termination, output_key, Dynamic System Prompt: tutorials/tutorial_37_termination.md
-  - 38 · Multi-modal providers — web search, web fetch, image, speech: tutorials/tutorial_38_multimodal_providers.md
-  - 39 · GSAR — typed grounding for hallucination detection and recovery: tutorials/tutorial_39_gsar_typed_grounding.md
-  - 40 · OCI Dedicated AI Cluster (DAC) endpoints: tutorials/tutorial_40_oci_dac.md
-  - 42 · Map-Reduce code-review crew: tutorials/tutorial_42_map_reduce_code_review.md
-  - 43 · Supervisor + critic refinement loop: tutorials/tutorial_43_supervisor_critic_loop.md
-  - 44 · Adversarial debate with structured-output judge: tutorials/tutorial_44_debate_with_judge.md
-  - 45 · Multi-agent workflows with human-in-the-loop: tutorials/tutorial_45_multiagent_human_in_loop.md
-  - 46 · Incident-response runbook (SRE-grade workflow): tutorials/tutorial_46_incident_response.md
-  - 47 · Procurement approval with tiered human gates: tutorials/tutorial_47_procurement_approval.md
-  - 48 · Contract-review workflow (parallel review + negotiation loop): tutorials/tutorial_48_contract_review.md
-  - 49 · Voice output — turn an agent's reply into speech: tutorials/tutorial_49_audio_response.md
-  - 50 · Voice in → voice out chat via OCI gpt-audio: tutorials/tutorial_50_audio_chat.md
+  - Foundations:
+    - 01 · Basic Agent: tutorials/tutorial_01_basic_agent.md
+    - 02 · Agent with Tools: tutorials/tutorial_02_agent_with_tools.md
+    - 03 · Memory & Checkpointing: tutorials/tutorial_03_agent_memory.md
+    - 04 · Streaming & Events: tutorials/tutorial_04_agent_streaming.md
+    - 05 · Hooks & Lifecycle: tutorials/tutorial_05_agent_hooks.md
+    - 21 · SSE Streaming: tutorials/tutorial_21_sse_streaming.md
+    - 27 · Advanced Hooks: tutorials/tutorial_27_hooks_advanced.md
+    - 28 · Agent Server: tutorials/tutorial_28_agent_server.md
+    - 37 · Termination conditions: tutorials/tutorial_37_termination.md
+  - Graphs & composition:
+    - 06 · Basic Graph: tutorials/tutorial_06_basic_graph.md
+    - 07 · Conditional Routing: tutorials/tutorial_07_conditional_routing.md
+    - 08 · State Reducers: tutorials/tutorial_08_state_reducers.md
+    - 09 · Human-in-the-Loop: tutorials/tutorial_09_human_in_the_loop.md
+    - 10 · Advanced Patterns: tutorials/tutorial_10_advanced_patterns.md
+    - 25 · Composition (Sequential / Parallel / Loop): tutorials/tutorial_25_composition.md
+    - 35 · Advanced Graph: tutorials/tutorial_35_graph_advanced.md
+    - 36 · Functional API: tutorials/tutorial_36_functional_api.md
+  - Multi-agent:
+    - 11 · Swarm: tutorials/tutorial_11_swarm_multiagent.md
+    - 16 · Agent Handoff: tutorials/tutorial_16_agent_handoff.md
+    - 17 · Orchestrator: tutorials/tutorial_17_orchestrator_pattern.md
+    - 18 · Specialist Agents: tutorials/tutorial_18_specialist_agents.md
+    - 34 · A2A Protocol: tutorials/tutorial_34_a2a_protocol.md
+    - 42 · Map-Reduce code review: tutorials/tutorial_42_map_reduce_code_review.md
+    - 43 · Supervisor + critic loop: tutorials/tutorial_43_supervisor_critic_loop.md
+    - 44 · Adversarial debate + judge: tutorials/tutorial_44_debate_with_judge.md
+    - 45 · Multi-agent + HITL: tutorials/tutorial_45_multiagent_human_in_loop.md
+  - DeepAgent:
+    - 41 · DeepAgent — research factory: tutorials/tutorial_41_deepagent.md
+  - Reasoning:
+    - 13 · Structured Output: tutorials/tutorial_13_structured_output.md
+    - 14 · Reasoning Patterns: tutorials/tutorial_14_reasoning_patterns.md
+    - 39 · GSAR typed grounding: tutorials/tutorial_39_gsar_typed_grounding.md
+  - RAG:
+    - 22 · RAG Basics: tutorials/tutorial_22_rag_basics.md
+    - 23 · RAG Providers: tutorials/tutorial_23_rag_providers.md
+    - 24 · RAG Agents: tutorials/tutorial_24_rag_agents.md
+  - Skills, playbooks & plugins:
+    - 12 · MCP Integration: tutorials/tutorial_12_mcp_integration.md
+    - 15 · Playbooks: tutorials/tutorial_15_playbooks.md
+    - 31 · Plugins: tutorials/tutorial_31_plugins.md
+    - 32 · Skills: tutorials/tutorial_32_skills.md
+    - 33 · Steering: tutorials/tutorial_33_steering.md
+  - Production:
+    - 19 · Guardrails & Security: tutorials/tutorial_19_guardrails_security.md
+    - 20 · Checkpoint Backends: tutorials/tutorial_20_checkpoint_backends.md
+    - 26 · Evaluation: tutorials/tutorial_26_evaluation.md
+    - 29 · Model Providers: tutorials/tutorial_29_model_providers.md
+    - 30 · Advanced Guardrails: tutorials/tutorial_30_guardrails_advanced.md
+    - 38 · Multi-modal providers: tutorials/tutorial_38_multimodal_providers.md
+    - 40 · OCI Dedicated AI Cluster: tutorials/tutorial_40_oci_dac.md
+  - Real-world workflows:
+    - 46 · Incident-response runbook: tutorials/tutorial_46_incident_response.md
+    - 47 · Procurement approval: tutorials/tutorial_47_procurement_approval.md
+    - 48 · Contract review: tutorials/tutorial_48_contract_review.md
+    - 49 · Voice output: tutorials/tutorial_49_audio_response.md
+    - 50 · Voice in → voice out: tutorials/tutorial_50_audio_chat.md
+  - Cognitive router & observability:
+    - 51 · Cognitive router (PRISM): tutorials/tutorial_51_cognitive_router.md
+    - 52 · Observability basics: tutorials/tutorial_52_observability_basics.md
+    - 53 · Agent yield bridge: tutorials/tutorial_53_agent_yield_bridge.md
+    - 54 · EventBus subscriber patterns: tutorials/tutorial_54_eventbus_subscribers.md
+    - 55 · Full event catalogue: tutorials/tutorial_55_event_catalogue.md
+  - Guides:
+    - Deploy: how-to/deploy.md
+    - Persist conversations: how-to/persist-conversations.md
+    - Build a custom tool: how-to/custom-tools.md
+    - Add a checkpointer backend: how-to/custom-checkpointer.md
+    - OCI GenAI models: how-to/oci-models.md
+    - OCI Dedicated AI Cluster (DAC): how-to/oci-dac.md
 - Workbench: workbench.md
 - API reference:
   - Agent: api/agent.md
-  - Checkpointers: api/checkpointers.md
+  - Multi-agent: api/multiagent.md
+  - Cognitive Router: api/router.md
   - Tools: api/tools.md
+  - Termination: api/termination.md
+  - Hooks: api/hooks.md
+  - Checkpointers: api/checkpointers.md
+  - Reasoning: api/reasoning.md
+  - RAG: api/rag.md
+  - Models: api/models.md
+  - Agent Server: api/server.md
+  - Evaluation: api/evaluation.md
   - Events: api/events.md
-- How-to:
-  - Quickstart: how-to/quickstart.md
-  - Deploy: how-to/deploy.md
-  - Persist conversations: how-to/persist-conversations.md
-  - Build a custom tool: how-to/custom-tools.md
-  - Add a checkpointer backend: how-to/custom-checkpointer.md
-  - OCI GenAI models: how-to/oci-models.md
-  - OCI Dedicated AI Cluster (DAC): how-to/oci-dac.md
+  - DeepAgent: api/deepagent.md
