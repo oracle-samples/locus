@@ -30,10 +30,6 @@
   </a>
 </p>
 
-<p align="center">
-  <a href="docs/workbench.md"><img src="docs/img/workbench.gif" alt="locus workbench" width="900"></a>
-</p>
-
 ---
 
 ## Your first agent — 5 lines
