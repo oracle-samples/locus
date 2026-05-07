@@ -99,13 +99,20 @@ class TestOracleMemoryBackendLegitimate:
         )
 
         try:
-            # Use a JSON-simple payload — we're verifying the backend's SQL
-            # layer, not the AgentState serializer. A legitimate table name
-            # must still round-trip under the new identifier validator.
-            payload = {"hello": "world", "n": 42}
-            await backend.save("thread-sec-test", payload)
+            # Verify the backend's SQL layer round-trips under the new
+            # identifier validator. ``OracleBackend.save`` now matches
+            # the :class:`BaseCheckpointer` abstract — first arg is the
+            # :class:`AgentState`, second is the ``thread_id`` — so the
+            # test wraps a small dict in a real ``AgentState`` rather
+            # than passing a bare payload positionally.
+            from locus.core.messages import Message
+            from locus.core.state import AgentState
+
+            state = AgentState(messages=(Message.user("hello"),))
+            await backend.save(state, "thread-sec-test")
             loaded = await backend.load("thread-sec-test")
-            assert loaded == payload
+            assert loaded is not None
+            assert loaded.messages == state.messages
         finally:
             # Cleanup: drop the regression-test table so re-runs are idempotent.
             try:
