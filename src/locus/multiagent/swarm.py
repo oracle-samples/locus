@@ -357,7 +357,14 @@ class Swarm(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
     def add_agent(self, agent: SwarmAgent) -> Swarm:
-        """Add an agent to the swarm."""
+        """Add an agent to the swarm.
+
+        If the swarm has a model configured and the agent does not, the
+        swarm-level model is propagated so agents created without an
+        explicit ``model=`` argument still work when the swarm is executed.
+        """
+        if agent.model is None and self.model is not None:
+            agent.model = self.model
         self.agents.append(agent)
         return self
 

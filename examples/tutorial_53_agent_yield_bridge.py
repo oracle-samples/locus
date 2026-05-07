@@ -89,10 +89,13 @@ async def part1_full_lifecycle() -> None:
         consumer_task = asyncio.create_task(consumer())
         await asyncio.sleep(0)
 
-        result = await asyncio.to_thread(
-            agent.run_sync, "Compute (3 + 4) and then (5 * 7), and tell me both."
-        )
-        print(f"agent reply: {result.message[:160]}")
+        result = None
+        async for event in agent.run("Compute (3 + 4) and then (5 * 7), and tell me both."):
+            from locus.core.events import TerminateEvent
+
+            if isinstance(event, TerminateEvent):
+                result = event
+        print(f"agent reply: {result.final_message[:160] if result else '(no reply)'}")
         await asyncio.wait_for(consumer_task, timeout=20.0)
         await bus.close_stream(rid)
 
@@ -103,37 +106,44 @@ async def part1_full_lifecycle() -> None:
 
 
 async def part2_token_meter() -> None:
-    """A real-world pattern: a global token counter that subscribes to
-    every run and sums ``agent.tokens.used`` payloads. Plug this into
-    a cost dashboard or budget enforcer."""
-    print("\n--- Part 2: token meter ---")
+    """Token usage — the authoritative source is ``result.metrics``.
 
-    totals = {"prompt": 0, "completion": 0, "total": 0, "calls": 0}
+    Every ``AgentResult`` carries a ``metrics`` object with the
+    accumulated token counts for the entire run, regardless of how
+    many iterations or tool calls were made.  This is the recommended
+    pattern for cost dashboards and budget enforcers.
 
-    async def meter(rid: str) -> None:
-        bus = get_event_bus()
-        async for ev in bus.subscribe(rid):
-            if ev.event_type == "agent.tokens.used":
-                totals["prompt"] += ev.data.get("prompt_tokens", 0)
-                totals["completion"] += ev.data.get("completion_tokens", 0)
-                totals["total"] += ev.data.get("total_tokens", 0)
-                totals["calls"] += 1
-            if ev.event_type == "agent.terminate":
-                return
+    ``agent.tokens.used`` SSE events (fired when ``ModelCompleteEvent``
+    is yielded) are supported by the bridge for custom streaming
+    consumers — use ``result.metrics`` when you only need the final
+    total.
+    """
+    print("\n--- Part 2: token meter via result.metrics ---")
 
-    agent = Agent(model=get_model(), max_iterations=2)
+    running_prompt = running_completion = running_total = 0
 
-    async with run_context() as rid:
-        meter_task = asyncio.create_task(meter(rid))
-        await asyncio.sleep(0)
-        await asyncio.to_thread(agent.run_sync, "In one sentence: what is JSON?")
-        await asyncio.wait_for(meter_task, timeout=10.0)
-        await get_event_bus().close_stream(rid)
+    # Simulate a multi-run session and accumulate token totals.
+    prompts = [
+        "In one sentence: what is JSON?",
+        "In one sentence: what is a REST API?",
+    ]
+
+    for prompt in prompts:
+        agent = Agent(model=get_model(), max_iterations=2)
+        result = agent.run_sync(prompt)
+        m = result.metrics
+        running_prompt += m.prompt_tokens
+        running_completion += m.completion_tokens
+        running_total += m.total_tokens
+        print(
+            f"  run: prompt={m.prompt_tokens:4d}  "
+            f"completion={m.completion_tokens:3d}  "
+            f"total={m.total_tokens:4d}  | '{prompt[:40]}'"
+        )
 
     print(
-        f"  total LLM calls: {totals['calls']}  "
-        f"prompt={totals['prompt']}  completion={totals['completion']}  "
-        f"total={totals['total']}"
+        f"  ─── session total: prompt={running_prompt}  "
+        f"completion={running_completion}  total={running_total}"
     )
 
 

@@ -295,6 +295,10 @@ async def opensearch_store_example():
             timeout=5.0,
         )
         response.raise_for_status()
+        # Verify it's actually OpenSearch/Elasticsearch — not just any HTTP service
+        body = response.json()
+        if "version" not in body or "cluster_name" not in body:
+            raise RuntimeError("not an OpenSearch instance")
     except Exception:
         print("Skipping: OpenSearch not available at localhost:9200")
         print("Start with: docker-compose up opensearch")
