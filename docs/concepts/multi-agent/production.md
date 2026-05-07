@@ -189,8 +189,10 @@ graph = StateGraph(config=GraphConfig(
 # idempotent tools for paging, hooks for OTel spans.
 ```
 
-That's the moat. Pick a [shape](../multi-agent.md), wire the primitives
-above through it, ship it.
+That's the moat. Pick a [shape](../multi-agent.md) directly, or let
+[PRISM — the cognitive router](../router.md) select and compile the
+right one from a typed intent. Then wire the primitives above through
+it and ship it.
 
 [t44]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_44_debate_with_judge.py
 [t46]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_46_incident_response.py

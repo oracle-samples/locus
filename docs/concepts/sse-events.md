@@ -1,7 +1,7 @@
 # SSE event catalogue
 
 Locus publishes a single canonical stream of events on its in-process
-[`EventBus`](../../src/locus/observability/event_bus.py). Every event
+`EventBus` (see [Observability](observability.md)). Every event
 carries a stable `event_type` string keyed by the component that
 produced it (`agent.*`, `multiagent.*`, `composition.*`, `router.*`,
 `rag.*`, `memory.*`, `a2a.*`, `skills.*`, `deepagent.*`).

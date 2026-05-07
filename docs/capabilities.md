@@ -3,18 +3,37 @@
 Everything `locus` ships, what it does, and where to find it.
 
 !!! oracle-distinctive "Distinctive to locus"
-    These ship as core primitives, inside the ReAct loop — not as
-    middleware, plugins, or third-party libraries:
+    These are architectural choices no other Python agent framework ships
+    together in one coherent stack:
 
-    - **Idempotent tools** — `@tool(idempotent=True)` dedupes on `(name, args)` inside the loop. No double-charge, double-book, double-page.
+    - **Cognitive router — bounded graph generation** — describe a task in
+      natural language; a deterministic registry selects one of eight named
+      protocols and compiles it onto a real locus primitive. The LLM fills a
+      typed `GoalFrame` schema; topology is rule-based, not model-generated.
+      No other framework ships a compilation layer between intent and
+      orchestration shape.
+    - **Eight named orchestration protocols** — `direct_response`,
+      `plan_execute_validate`, `specialist_fanout`, `debate`,
+      `codegen_test_validate`, `approval_gated_execution`, `a2a_delegate`,
+      `handoff_chain`. Not a blank canvas — eight proven shapes, each a
+      battle-tested locus primitive.
+    - **Seven in-process multi-agent shapes plus A2A** — Composition,
+      Orchestrator, Swarm, Handoff, StateGraph, Functional API, DeepAgent +
+      cross-process A2A meshes. Every shape shares the same `Agent` class,
+      the same event stream, and the same primitives.
+    - **In-process observability** — opt-in `EventBus` with agent yield
+      bridge. One `run_context()` streams 40+ canonical events from every
+      layer (agent, multi-agent, router, RAG, memory, A2A). Zero allocations
+      when unused.
     - **Reasoning loop nodes** — Reflexion, Grounding, Causal as first-class
       Think → Execute → **Reflect** → Think nodes, not bolted-on libraries.
-    - **GSAR** — typed-grounding layer from [arXiv:2604.23366](https://arxiv.org/abs/2604.23366) with four-way claim partition + tiered replanning.
-    - **Termination algebra** — `MaxIterations(10) | TextMention("DONE") & ConfidenceMet(0.9)` is real Python (`__or__` / `__and__` operator overloads).
-    - **Six multi-agent shapes plus A2A** — Composition, Orchestrator, Swarm, Handoff, StateGraph, Functional + A2A for cross-process meshes.
-    - **Cognitive router (PRISM)** — NL → typed `GoalFrame` → deterministic `ProtocolRegistry` → `PolicyGate` → compiled orchestration. LLM fills a schema; 8 built-in protocols; zero topology hand-writing.
-    - **In-process observability** — opt-in `EventBus` with agent yield bridge. Zero cost when unused; one `run_context()` to stream every event from every layer.
-    - **OCI Generative AI day-zero** — two transports (V1 and native SDK), auto-routed by model id.
+    - **GSAR** — typed-grounding safety layer from
+      [arXiv:2604.23366](https://arxiv.org/abs/2604.23366): four-way claim
+      partition (cited / supported / unsupported / mismatched) + tiered
+      replanning decisions.
+    - **Termination algebra** — `MaxIterations(10) | TextMention("DONE") & ConfidenceMet(0.9)` is real Python (`__or__` / `__and__` overloads). Greppable, unit-testable, serialisable.
+    - **Idempotent tools** — `@tool(idempotent=True)` dedupes on `(name, args)` inside the Execute node. No double-charge, double-book, double-page — even on model retry or checkpoint resume.
+    - **OCI Generative AI day-zero** — two transports (V1 and native SDK), auto-routed by model id, 90+ models including OpenAI commercial and xAI Grok.
 
 ## Agent core
 
@@ -45,7 +64,15 @@ Everything `locus` ships, what it does, and where to find it.
 | **Functional API** | Map / reduce over agents with `@task` and `@entrypoint` | `locus.multiagent.functional` · [Functional](concepts/multi-agent/functional.md) |
 | **A2A** | Cross-process agent meshes — `AgentCard` discovery + HTTP/SSE transport | `locus.a2a` · [A2A](concepts/multi-agent/a2a.md) |
 
-## Cognitive Router (PRISM)
+## Cognitive Router
+
+Most agent frameworks force a choice: hand-code the topology (predictable
+but brittle) or let the LLM pick it (flexible but unpredictable). The
+cognitive router takes a third path — **bounded graph generation**. The LLM fills exactly
+one typed `GoalFrame`; a deterministic registry selects from eight
+named protocols; a compiler instantiates real locus primitives. The
+output is always one of the eight proven shapes — never an ad-hoc topology
+the model invented.
 
 | Feature | What it does | Surface |
 |---|---|---|

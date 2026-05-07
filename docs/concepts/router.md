@@ -25,34 +25,7 @@ routing without giving the model the steering wheel.
 
 ## The five layers
 
-```
-┌────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│ user input │ ──► │ Goal Frame      │ ──► │ Protocol        │
-└────────────┘     │ extraction      │     │ Registry        │
-                   │ (typed Pydantic)│     │ (deterministic) │
-                   └─────────────────┘     └────────┬────────┘
-                                                    │
-                                                    ▼
-                                       ┌────────────────────────┐
-                                       │ Policy Gate (allow /   │
-                                       │ require_approval /     │
-                                       │ deny)                  │
-                                       └────────────┬───────────┘
-                                                    │
-                                                    ▼
-                                       ┌────────────────────────┐
-                                       │ Cognitive Compiler     │
-                                       │ — emits a real         │
-                                       │ Agent / Pipeline /     │
-                                       │ Orchestrator           │
-                                       └────────────┬───────────┘
-                                                    │
-                                                    ▼
-                                       ┌────────────────────────┐
-                                       │ Runnable.execute()     │
-                                       │ → RunnableResult       │
-                                       └────────────────────────┘
-```
+![Cognitive router pipeline — NL input → GoalFrame Extractor (LLM) → ProtocolRegistry → PolicyGate → CognitiveCompiler → eight compiled shapes → RunnableResult](../img/patterns/router.svg)
 
 ### 1. GoalFrame — the typed contract
 
@@ -262,9 +235,74 @@ The same `Router` instance can serve multiple domains (observability,
 codegen, support) by swapping `CapabilityIndex` content — protocols
 themselves are domain-agnostic.
 
+## Error handling
+
+Three exception types can propagate out of `router.dispatch()`. Handle
+all three at the call site:
+
+```python
+from locus.router.runtime import FrameExtractionError
+from locus.router.protocol import NoMatchingProtocolError
+from locus.router.policy import PolicyDeniedError
+
+try:
+    result = await router.dispatch(user_input)
+except FrameExtractionError as e:
+    # The extractor's output failed GoalFrame schema validation.
+    # Retry with a better system prompt or a stricter model.
+    logger.warning("frame extraction failed: %s", e)
+except NoMatchingProtocolError as e:
+    # No protocol in the registry survived the filter pass
+    # (handles ∌ primary_goal, risk_max too low, or missing capabilities).
+    # Register a new protocol or broaden an existing one.
+    logger.warning("no matching protocol: %s", e)
+except PolicyDeniedError as e:
+    # The PolicyGate returned `deny` — frame.risk exceeded max_risk.
+    # Escalate to a human or reject the request.
+    logger.error("policy denied: %s", e)
+```
+
+## Observability
+
+Every `router.dispatch()` call emits a complete SSE trace on the in-process
+`EventBus` when a `run_context` is active. Subscribe before dispatching to
+watch the full pipeline in real time:
+
+```python
+from locus.observability import run_context, get_event_bus
+
+async with run_context() as rid:
+    sub = asyncio.create_task(_print_events(rid))
+    result = await router.dispatch("Diagnose the checkout slowdown.")
+    await sub
+
+async def _print_events(rid):
+    async for event in get_event_bus().subscribe(rid):
+        print(f"{event.event_type}: {event.data}")
+```
+
+Events emitted (in order):
+
+| `event_type` | When |
+|---|---|
+| `router.frame.extracted` | GoalFrame extracted successfully |
+| `router.frame.failed` | Schema validation failed |
+| `router.protocol.selected` | Registry picked a protocol |
+| `router.protocol.no_match` | No protocol survived filter |
+| `router.policy.verdict` | Gate returned allow / require_approval / deny |
+| `router.runnable.compiled` | Compiler emitted a Runnable |
+| `router.runnable.executing` | Runnable started |
+| `router.runnable.executed` | Runnable finished successfully |
+| `router.runnable.failed` | Runnable raised |
+
+See [SSE event catalogue](sse-events.md) for full payload field descriptions
+(search for the `router.*` section).
+
 ## See also
 
 - Tutorial: [`examples/tutorial_51_cognitive_router.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_51_cognitive_router.py)
+- [SSE event catalogue](sse-events.md) — `router.*` event payloads.
+- [Observability](observability.md) — `run_context`, `EventBus`, EventBusHook.
 - API reference: `locus.router` (`GoalFrame`, `Protocol`,
   `ProtocolRegistry`, `PolicyGate`, `CognitiveCompiler`, `Router`,
   `RunnableResult`).

@@ -829,6 +829,14 @@ TUTORIAL_BLOCKLIST = {
     34,  # A2A protocol — needs separate process
     38,  # multimodal providers
     40,  # OCI DAC
+    # Tutorials 45-48 call locus.core.interrupt() and block waiting for
+    # stdin that the workbench subprocess never receives.  They carry a
+    # needs_stdin badge already; adding them here prevents the Run button
+    # from launching a subprocess that would hang until the harness timeout.
+    45,
+    46,
+    47,
+    48,
 }
 
 # Tutorials that pause for human input via locus.core.interrupt(). The
@@ -873,8 +881,8 @@ TUTORIAL_CATEGORIES: list[dict[str, Any]] = [
     {
         "id": "multi-agent",
         "name": "Multi-agent",
-        "description": "Swarm, handoff, orchestrator, specialists, A2A, debate, supervisor patterns.",
-        "members": [11, 16, 17, 18, 33, 34, 42, 43, 44],
+        "description": "Swarm, handoff, orchestrator, specialists, A2A, debate, supervisor patterns, DeepAgent.",
+        "members": [11, 16, 17, 18, 33, 34, 41, 42, 43, 44],
     },
     {
         "id": "production",
