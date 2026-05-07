@@ -1,17 +1,64 @@
 import type { ProviderConfig, ProviderType } from "./types";
 
-// Provider config (including any pasted API key) is intentionally
-// session-only. We never persist it to localStorage / sessionStorage —
-// closing the tab discards it. This is an opsec choice: a key sitting
-// in localStorage on a shared machine is leakage waiting to happen.
+// API keys are session-only (never written to localStorage).
+// Non-sensitive OCI fields persist across reloads.
+const OCI_PREFS_KEY = "locus.workbench.oci-prefs";
+
+type OciPrefs = {
+  provider?: string;
+  profile?: string;
+  compartment_id?: string;
+  region?: string;
+  oci_transport?: string;
+  model?: string;
+  model_b?: string;
+  model_c?: string;
+};
+
+function saveOciPrefs(cfg: ProviderConfig): void {
+  if (cfg.provider !== "oci-session" && cfg.provider !== "oci-apikey") return;
+  localStorage.setItem(
+    OCI_PREFS_KEY,
+    JSON.stringify({
+      provider: cfg.provider,
+      profile: cfg.profile,
+      compartment_id: cfg.compartment_id,
+      region: cfg.region,
+      oci_transport: cfg.oci_transport,
+      model: cfg.model,
+      model_b: cfg.model_b ?? "",
+      model_c: cfg.model_c ?? "",
+    } satisfies OciPrefs),
+  );
+}
+
 let memoryProvider: ProviderConfig | null = null;
 
 export function loadProvider(): ProviderConfig | null {
-  return memoryProvider;
+  if (memoryProvider) return memoryProvider;
+  try {
+    const raw = localStorage.getItem(OCI_PREFS_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw) as OciPrefs;
+    if (p.provider !== "oci-session" && p.provider !== "oci-apikey") return null;
+    return {
+      provider: p.provider as ProviderConfig["provider"],
+      profile: p.profile ?? "DEFAULT",
+      compartment_id: p.compartment_id ?? "",
+      region: p.region ?? "us-chicago-1",
+      oci_transport: (p.oci_transport ?? "v1") as ProviderConfig["oci_transport"],
+      model: p.model ?? "openai.gpt-5.5-2026-04-23",
+      model_b: p.model_b ?? "",
+      model_c: p.model_c ?? "",
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function saveProvider(cfg: ProviderConfig): void {
   memoryProvider = cfg;
+  saveOciPrefs(cfg);
 }
 
 export function defaultModelFor(p: ProviderType): string {

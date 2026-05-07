@@ -75,13 +75,23 @@ async function runOne(page: Page, id: string): Promise<{ code: number; tail: str
   return { code, tail };
 }
 
+const SLOW_TUTORIALS = new Set<string>([
+  "tutorial_41_deepagent",
+  "tutorial_51_cognitive_router",
+  "tutorial_56_research_workflow",
+]);
+const SLOW_MULTIPLIER = 3;
+
 const guard = OPENAI_KEY ? test : test.skip;
 
 test.describe.configure({ mode: "parallel" });
 
 for (const entry of runnable) {
   guard(`#${String(entry.number).padStart(2, "0")} ${entry.id}`, async ({ page }) => {
-    test.setTimeout(PER_TUTORIAL_MS + 60_000);
+    const budget = SLOW_TUTORIALS.has(entry.id)
+      ? PER_TUTORIAL_MS * SLOW_MULTIPLIER
+      : PER_TUTORIAL_MS;
+    test.setTimeout(budget + 60_000);
     if (STAGGER_MS > 0) await page.waitForTimeout(Math.random() * STAGGER_MS);
     await configureOpenAI(page);
     const { code, tail } = await runOne(page, entry.id);
