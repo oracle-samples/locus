@@ -130,6 +130,11 @@ def make_execute_node(
     """
     from locus.agent.agent import Agent  # noqa: PLC0415
     from locus.core.events import TerminateEvent, ToolCompleteEvent  # noqa: PLC0415
+    from locus.observability.emit import (  # noqa: PLC0415
+        EV_RESEARCH_EXECUTE_COMPLETED,
+        EV_RESEARCH_EXECUTE_STARTED,
+        emit,
+    )
 
     base_prompt = system_prompt or (
         "You are a research agent. Use tools to investigate the given topic. "
@@ -138,6 +143,9 @@ def make_execute_node(
 
     async def _execute(state: dict[str, Any]) -> dict[str, Any]:
         prompt = state.get(KEY_EXECUTE_PROMPT) or state.get(KEY_PROMPT, "")
+        replan_count = state.get(KEY_REPLAN_COUNT, 0)
+
+        await emit(EV_RESEARCH_EXECUTE_STARTED, prompt_preview=prompt[:120], replan=replan_count)
 
         agent = Agent(
             model=model,
@@ -174,6 +182,7 @@ def make_execute_node(
                     }
                 )
 
+        await emit(EV_RESEARCH_EXECUTE_COMPLETED, fact_count=len(grounding_facts))
         return {KEY_EVIDENCE: evidence, KEY_GROUNDING_FACTS: grounding_facts}
 
     return _execute
@@ -198,6 +207,7 @@ def make_causal_inference_node(
     Writes: ``KEY_CAUSAL_CHAIN``, ``KEY_CAUSAL_HYPOTHESIS``, ``KEY_CAUSAL_CONFIDENCE``
     """
     from locus.agent.agent import Agent  # noqa: PLC0415
+    from locus.observability.emit import EV_RESEARCH_CAUSAL_BUILT, emit  # noqa: PLC0415
     from locus.reasoning.causal import build_causal_chain  # noqa: PLC0415
 
     async def _causal_inference(state: dict[str, Any]) -> dict[str, Any]:
@@ -257,6 +267,12 @@ def make_causal_inference_node(
         )
         confidence = root_causes[0].confidence if root_causes else 0.5
 
+        await emit(
+            EV_RESEARCH_CAUSAL_BUILT,
+            node_count=len(chain.nodes),
+            hypothesis_preview=hypothesis[:120],
+            confidence=confidence,
+        )
         return {
             KEY_CAUSAL_CHAIN: chain,
             KEY_CAUSAL_HYPOTHESIS: hypothesis,
@@ -284,6 +300,7 @@ def make_summarize_node(
     Writes: ``KEY_SUMMARY``, ``KEY_STRUCTURED_OUTPUT`` (if output_schema set)
     """
     from locus.agent.agent import Agent  # noqa: PLC0415
+    from locus.observability.emit import EV_RESEARCH_SUMMARIZE_COMPLETED, emit  # noqa: PLC0415
 
     async def _summarize(state: dict[str, Any]) -> dict[str, Any]:
         evidence = state.get(KEY_EVIDENCE, [])
@@ -319,6 +336,11 @@ def make_summarize_node(
         if output_schema and result.parsed:
             update[KEY_STRUCTURED_OUTPUT] = result.parsed
 
+        await emit(
+            EV_RESEARCH_SUMMARIZE_COMPLETED,
+            summary_length=len(result.message or ""),
+            has_structured_output=bool(output_schema and result.parsed),
+        )
         return update
 
     return _summarize
@@ -335,6 +357,7 @@ def make_grounding_eval_node(model: Any) -> Any:
     Reads:  ``KEY_SUMMARY``, ``KEY_EVIDENCE``
     Writes: ``KEY_GROUNDING_SCORE``, ``KEY_UNGROUNDED_CLAIMS``
     """
+    from locus.observability.emit import EV_RESEARCH_GROUNDING_EVALUATED, emit  # noqa: PLC0415
     from locus.reasoning.grounding import GroundingEvaluator  # noqa: PLC0415
 
     evaluator = GroundingEvaluator()
@@ -354,6 +377,13 @@ def make_grounding_eval_node(model: Any) -> Any:
             model=model,
         )
 
+        await emit(
+            EV_RESEARCH_GROUNDING_EVALUATED,
+            score=grounding_result.score,
+            claims_evaluated=len(claims),
+            ungrounded_count=len(grounding_result.ungrounded_claims),
+            requires_replan=grounding_result.requires_replan,
+        )
         return {
             KEY_GROUNDING_SCORE: grounding_result.score,
             KEY_UNGROUNDED_CLAIMS: grounding_result.ungrounded_claims,
@@ -381,12 +411,19 @@ def make_regenerate_summary_node(
     Writes: ``KEY_SUMMARY``, ``KEY_STRUCTURED_OUTPUT``, ``KEY_REGENERATION_COUNT``
     """
     from locus.agent.agent import Agent  # noqa: PLC0415
+    from locus.observability.emit import (  # noqa: PLC0415
+        EV_RESEARCH_REGENERATE_COMPLETED,
+        EV_RESEARCH_REGENERATE_STARTED,
+        emit,
+    )
 
     async def _regenerate(state: dict[str, Any]) -> dict[str, Any]:
         ungrounded = state.get(KEY_UNGROUNDED_CLAIMS, [])
         evidence = state.get(KEY_EVIDENCE, [])
         old_summary = state.get(KEY_SUMMARY, "")
         regen_count = state.get(KEY_REGENERATION_COUNT, 0)
+
+        await emit(EV_RESEARCH_REGENERATE_STARTED, ungrounded_count=len(ungrounded))
 
         ungrounded_block = "\n".join(f"- {c}" for c in ungrounded[:8])
         evidence_block = "\n\n".join(f"[{i + 1}] {e}" for i, e in enumerate(evidence))
@@ -421,6 +458,7 @@ def make_regenerate_summary_node(
         if output_schema and result.parsed:
             update[KEY_STRUCTURED_OUTPUT] = result.parsed
 
+        await emit(EV_RESEARCH_REGENERATE_COMPLETED, regeneration=regen_count + 1)
         return update
 
     return _regenerate
@@ -441,6 +479,8 @@ def make_replan_node() -> Any:
     Writes: ``KEY_EXECUTE_PROMPT``, ``KEY_REPLAN_COUNT``
     """
 
+    from locus.observability.emit import EV_RESEARCH_REPLAN, emit  # noqa: PLC0415
+
     async def _replan(state: dict[str, Any]) -> dict[str, Any]:
         ungrounded = state.get(KEY_UNGROUNDED_CLAIMS, [])
         prompt = state.get(KEY_PROMPT, "")
@@ -460,6 +500,12 @@ def make_replan_node() -> Any:
                 f"stronger, more specific evidence."
             )
 
+        await emit(
+            EV_RESEARCH_REPLAN,
+            replan=replan_count + 1,
+            ungrounded_count=len(ungrounded),
+            prompt_preview=execute_prompt[:120],
+        )
         return {
             KEY_EXECUTE_PROMPT: execute_prompt,
             KEY_REPLAN_COUNT: replan_count + 1,

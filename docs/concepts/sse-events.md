@@ -140,6 +140,23 @@ emits.
 | `deepagent.todo.added` | `content`, `status` |
 | `deepagent.todo.completed` | `content`, `status` |
 
+### `research.*` — research workflow nodes
+
+Emitted by `create_research_workflow` / individual node primitives from
+`locus.deepagent.workflow`. Requires an active `run_context()`.
+
+| Event | Payload |
+|---|---|
+| `research.execute.started` | `prompt_preview`, `replan` (iteration index) |
+| `research.execute.completed` | `fact_count` |
+| `research.causal.built` | `node_count`, `hypothesis_preview`, `confidence` |
+| `research.summarize.completed` | `summary_length`, `has_structured_output` |
+| `research.grounding.evaluated` | `score`, `claims_evaluated`, `ungrounded_count`, `requires_replan` |
+| `research.regenerate.started` | `ungrounded_count` |
+| `research.regenerate.completed` | `regeneration` (attempt index) |
+| `research.replan` | `replan` (iteration), `ungrounded_count`, `prompt_preview` |
+| `research.completed` | emitted by caller via `close_stream` |
+
 ## Span discipline
 
 Started/completed events that share a `span_id` (`agent.tool.*`,

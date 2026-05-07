@@ -115,6 +115,17 @@ EV_DEEPAGENT_FS_WRITE = "deepagent.fs.write"
 EV_DEEPAGENT_TODO_ADDED = "deepagent.todo.added"
 EV_DEEPAGENT_TODO_COMPLETED = "deepagent.todo.completed"
 
+# --- Research workflow ---
+EV_RESEARCH_EXECUTE_STARTED = "research.execute.started"
+EV_RESEARCH_EXECUTE_COMPLETED = "research.execute.completed"
+EV_RESEARCH_CAUSAL_BUILT = "research.causal.built"
+EV_RESEARCH_SUMMARIZE_COMPLETED = "research.summarize.completed"
+EV_RESEARCH_GROUNDING_EVALUATED = "research.grounding.evaluated"
+EV_RESEARCH_REGENERATE_STARTED = "research.regenerate.started"
+EV_RESEARCH_REGENERATE_COMPLETED = "research.regenerate.completed"
+EV_RESEARCH_REPLAN = "research.replan"
+EV_RESEARCH_COMPLETED = "research.completed"
+
 # --- Hooks (built-in bridges) ---
 EV_HOOK_MODEL_RETRY = "agent.model.retry"
 EV_HOOK_STEERING_APPLIED = "agent.steering.applied"
