@@ -143,7 +143,9 @@ nav:
   - Reasoning:
     - Overview: concepts/reasoning.md
     - GSAR (typed grounding): concepts/gsar.md
-  - Memory: concepts/checkpointers.md
+  - Memory:
+    - Checkpointers & Store: concepts/checkpointers.md
+    - Long-term Memory Manager: concepts/memory-manager.md
   - Streaming & Server:
     - Streaming: concepts/streaming.md
     - Events: concepts/events.md

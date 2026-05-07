@@ -123,6 +123,7 @@ class Agent(AgentRuntimeMixin, BaseModel):
     _hooks: list[Any] = PrivateAttr(default_factory=list)
     _hook_orchestrator: HookOrchestrator | None = PrivateAttr(default=None)
     _conversation_manager: ConversationManager | None = PrivateAttr(default=None)
+    _memory_manager: Any = PrivateAttr(default=None)  # BaseMemoryManager | None
     _reflector: Reflector | None = PrivateAttr(default=None)
     _grounding_evaluator: GroundingEvaluator | None = PrivateAttr(default=None)
     _grounding_model: Any = PrivateAttr(default=None)  # ModelProtocol

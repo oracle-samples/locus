@@ -1,7 +1,7 @@
 export type Pattern = {
   id: string;
   title: string;
-  tutorial: number;
+  tutorial: number | null;
   summary: string;
   streamable: boolean;
 };

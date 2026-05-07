@@ -24,6 +24,7 @@ const PER_TUTORIAL_MS = Number(process.env.PER_TUTORIAL_MS ?? 360_000);
 // Tutorials that hardcode an OCI dependency (oci.config.from_file) or
 // use OCI-only models like gpt-audio. Can't run against OpenAI.
 const OCI_ONLY = new Set<string>([
+  "tutorial_41_deepagent",        // >10 min with subagents; covered by CLI tests
   "tutorial_49_audio_response",
   "tutorial_50_audio_chat",
 ]);

@@ -269,6 +269,15 @@ PATTERNS: list[dict[str, Any]] = [
         "tutorial": 13,
         "summary": "Pydantic output_schema — typed Verdict, not free text.",
     },
+    {
+        "id": "memory_manager",
+        "title": "Long-term memory",
+        "tutorial": None,
+        "summary": (
+            "Two-session demo: agent extracts memories from session 1, "
+            "then injects them in session 2 — no raw history needed."
+        ),
+    },
 ]
 
 
@@ -477,6 +486,130 @@ async def _run_map_reduce(req: RunRequest) -> RunResponse:
     )
 
 
+async def _run_memory_manager(req: RunRequest) -> RunResponse:
+    """Two-session long-term memory demo.
+
+    Session 1: agent processes the user's prompt; an LLM-backed
+    extractor identifies durable facts and persists them to an
+    InMemoryStore.
+
+    Session 2: a fresh agent with the *same* store is given a follow-up
+    prompt. Before its first model call, ``on_session_start`` retrieves
+    the stored memories and injects a [Long-term Memory] block into the
+    system prompt — so the second agent knows what the first one learned,
+    with zero raw-history overhead.
+    """
+    from locus.agent import Agent, AgentConfig
+    from locus.memory.manager import LLMMemoryManager, Memory, MemoryType
+    from locus.memory.store import InMemoryStore
+
+    model = build_model(req.provider)
+    store = InMemoryStore()
+
+    # --- Extraction function — calls the real model to identify memories ---
+    async def extract_fn(messages: list) -> list[Memory]:
+        """Ask the model what's worth remembering from this conversation."""
+        from locus.core.messages import Message as Msg
+
+        rendered = "\n".join(
+            f"[{m.role.value}] {(m.content or '')[:300]}"
+            for m in messages
+            if m.content and m.role.value in ("user", "assistant")
+        )
+        if not rendered.strip():
+            return []
+
+        extraction_prompt = [
+            Msg.system(
+                "You are a memory extraction assistant. "
+                "From the conversation below, identify up to 3 facts worth "
+                "remembering across future sessions. "
+                "Each fact must be one of: user (who the user is), feedback "
+                "(behavioural rules), project (goals/decisions), or reference "
+                "(external system pointers). "
+                "Return ONLY a JSON array like: "
+                '[{"type":"user","key":"role","content":"Senior Python engineer"}]. '
+                "If nothing is worth remembering, return []."
+            ),
+            Msg.user(f"Conversation:\n{rendered}"),
+        ]
+        try:
+            resp = await model.complete(extraction_prompt, max_tokens=512)
+            raw = (resp.message.content or "").strip()
+            # Strip markdown code fences if the model wraps in them.
+            if raw.startswith("```"):
+                raw = raw.split("```")[1]
+                raw = raw.removeprefix("json")
+            items = json.loads(raw)
+            return [
+                Memory(
+                    type=MemoryType(item["type"]),
+                    key=str(item["key"]),
+                    content=str(item["content"]),
+                    metadata={"source": "workbench"},
+                )
+                for item in items
+                if item.get("type") in ("user", "feedback", "project", "reference")
+            ]
+        except Exception:
+            return []
+
+    manager = LLMMemoryManager(store=store, extract_fn=extract_fn)
+
+    # ---- Session 1: user's prompt ----------------------------------------
+    agent1 = Agent(
+        config=AgentConfig(
+            model=model,
+            system_prompt=(
+                "You are a concise assistant. Answer in 2–3 sentences. "
+                "If the user shares personal info (role, preferences, goals), "
+                "acknowledge it naturally."
+            ),
+            memory_manager=manager,
+            max_iterations=2,
+            max_tokens=300,
+        )
+    )
+    reply1, events1 = await _drive_agent(agent1, req.prompt)
+
+    # Retrieve what was persisted so we can show it.
+    stored = await manager.retrieve()
+    memory_summary = (
+        "\n".join(f"  [{m.type.value.upper()}] {m.key}: {m.content}" for m in stored)
+        if stored
+        else "  (nothing extracted — try sharing a preference or fact about yourself)"
+    )
+
+    # ---- Session 2: follow-up using injected memories --------------------
+    manager2 = LLMMemoryManager(store=store, extract_fn=lambda _: [])
+
+    agent2 = Agent(
+        config=AgentConfig(
+            model=model,
+            system_prompt=(
+                "You are a concise assistant. "
+                "When asked about the user, answer ONLY from your "
+                "[Long-term Memory] block — do not invent facts."
+            ),
+            memory_manager=manager2,
+            max_iterations=2,
+            max_tokens=300,
+        )
+    )
+    reply2, events2 = await _drive_agent(
+        agent2,
+        "Based only on your memory, describe what you know about me "
+        "and how you should work with me.",
+    )
+
+    combined = (
+        f"── Session 1 (your prompt) ──\n{reply1}\n\n"
+        f"── Memories extracted & stored ──\n{memory_summary}\n\n"
+        f"── Session 2 (fresh agent, memory injected) ──\n{reply2}"
+    )
+    return RunResponse(reply=combined, events=events1 + events2)
+
+
 async def _run_structured_output(req: RunRequest) -> RunResponse:
     """Verdict output_schema — typed Pydantic terminal artifact."""
     from locus.agent import Agent, AgentConfig
@@ -649,6 +782,7 @@ PATTERN_RUNNERS: dict[str, Any] = {
     "stategraph_loop": _run_stategraph_loop,
     "map_reduce": _run_map_reduce,
     "structured_output": _run_structured_output,
+    "memory_manager": _run_memory_manager,
 }
 
 

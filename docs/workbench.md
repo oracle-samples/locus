@@ -144,13 +144,58 @@ happen.
 ## What you can run
 
 The catalog populates from the BFF's `/api/tutorials` endpoint, which
-walks `examples/tutorial_*.py`. As of writing the workbench has 7
-patterns wired through dedicated FastAPI endpoints (basic agent,
-agent + tools, structured output, orchestrator + specialists,
-sequential composition, map-reduce, critic loop) and the rest run as
-plain Python subprocesses against your provider — same behaviour as
-running the tutorial from a terminal, just inside the workbench so
-you can watch streamed events instead of tailing stdout.
+walks `examples/tutorial_*.py`. As of writing the workbench has 8
+dedicated FastAPI pattern endpoints:
+
+| Pattern | What it shows |
+|---|---|
+| Basic agent | One-shot Q&A — hello world for the SDK |
+| Agent + tools | ReAct loop with `add` and `reverse` tools |
+| Structured output | `output_schema=Verdict` → typed Pydantic result |
+| Orchestrator + specialists | Coordinator dispatches to researcher + editor |
+| Sequential composition | Two agents chained: researcher → summariser |
+| Map-reduce code review | Fan-out to 3 reviewers, reduce findings |
+| StateGraph critic loop | Writer → Critic cycle with `allow_cycles` |
+| **Long-term memory** | Two-session demo — see below |
+
+The rest run as plain Python subprocesses against your provider —
+same behaviour as running the tutorial from a terminal, just inside
+the workbench so you can watch streamed events instead of tailing
+stdout.
+
+### Long-term memory pattern
+
+Pick **Long-term memory** in the sidebar and paste a prompt that
+reveals something about yourself — your role, a preference, a
+constraint. The workbench runs two back-to-back agent sessions:
+
+**Session 1** processes your prompt and runs LLM-backed extraction to
+identify durable facts worth keeping. Those facts are persisted to an
+in-memory store (scoped to the request; cleared between runs).
+
+**Session 2** is a fresh agent with no conversation history — only
+the injected `[Long-term Memory]` block. It answers "What do you know
+about me?" using only what was stored, demonstrating cross-session
+recall without passing any raw history.
+
+Sample prompts that produce interesting memory extraction:
+
+```
+I'm a senior Python engineer working on a compliance-driven auth rewrite.
+I prefer short answers and always want real database connections in tests —
+no mocks. Can you explain JWT vs session tokens briefly?
+```
+
+```
+I'm a data scientist focused on model evaluation. I work in Python and use
+Oracle ADB for storage. The project deadline is end of Q2. What's a good
+evaluation metric for imbalanced classification?
+```
+
+The reply shows three sections: the Session 1 answer, the extracted
+memories (key/content pairs), and the Session 2 recall — so you can
+see exactly what the model chose to remember and how it surfaced in a
+fresh context.
 
 ## Cost
 
