@@ -1,5 +1,18 @@
 # DeepAgent
 
+Locus ships two primitives for long-horizon research:
+
+| | `create_deepagent` | `create_research_workflow` |
+|---|---|---|
+| **Returns** | Plain `Agent` | `StateGraph` |
+| **Grounding** | Per-turn (inside the loop) | Post-hoc on the final summary |
+| **Replan** | Inside the ReAct loop | At the workflow level |
+| **Best for** | Quick research, embedded in larger graphs | Production, verifiable summaries |
+
+---
+
+## `create_deepagent` — single agent loop
+
 `create_deepagent` is a research-shaped `Agent` factory. It bundles
 the standard deep-research configuration into one call and stays a
 plain `locus.Agent` underneath — every hook, plugin, checkpointer,
@@ -213,12 +226,66 @@ class SchemaProvider(KnowledgeProvider):
 Feed the provider into your scan loop. Each item gets its own agent
 run; results are collected as typed rows.
 
+---
+
+## `create_research_workflow` — StateGraph with quality loop
+
+The production pattern for research that requires verifiable, grounded
+summaries. Instead of checking claims per-turn inside the agent loop,
+the workflow runs the full ReAct phase first, then evaluates the summary
+post-hoc with an LLM-as-judge, and replans at the graph level when the
+grounding score is too low.
+
+```
+START
+  ↓
+execute          ← Agent(reflexion=True) tool loop; collects evidence
+  ↓
+summarize        ← distill evidence into a summary (optionally structured)
+  ↓
+grounding_eval   ← GroundingEvaluator scores summary claims vs evidence
+  ├── score ≥ threshold ──► END
+  └── score < threshold ──► replan ──► execute   (up to max_replans)
+```
+
+```python
+from locus.deepagent.workflow import create_research_workflow
+from pydantic import BaseModel
+
+class Report(BaseModel):
+    summary: str
+    key_findings: list[str]
+    confidence: float
+
+workflow = create_research_workflow(
+    model=get_model(),
+    tools=[search_kb, inspect_record, submit_research],
+    output_schema=Report,
+    grounding_threshold=0.65,   # accept summary when ≥ 65% claims grounded
+    max_replans=2,               # retry up to 2× with focused re-plan
+)
+
+result = await workflow.execute({"prompt": "Investigate FUSION.AP_INVOICES_ALL"})
+report: Report = result.final_state["structured_output"]
+print(f"grounding: {result.final_state['grounding_score']:.0%}")
+print(f"replans used: {result.final_state['replan_count']}")
+```
+
+**When to use each:**
+
+- Use `create_deepagent` when the agent runs *inside* a larger graph
+  (e.g. as one specialist in an Orchestrator) or when per-turn grounding
+  is sufficient.
+- Use `create_research_workflow` when you need an end-to-end quality
+  guarantee on the final output — the grounding eval runs after all
+  evidence is collected, giving a more accurate picture of claim coverage.
+
 ## See also
 
 - [Tutorial 41](../tutorials/tutorial_41_deepagent.md) — four-part
   walkthrough: basic factory, filesystem + todos, subagents, observability.
 - [API reference — DeepAgent](../api/deepagent.md) — full class and
-  function signatures.
+  function signatures including `create_research_workflow`.
 - [Termination algebra](termination.md) — how `ToolCalled & ConfidenceMet`
   works under the hood.
 - [SSE event catalogue](sse-events.md) — `deepagent.*` event payloads.

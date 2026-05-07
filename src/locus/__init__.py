@@ -102,6 +102,8 @@ _LAZY_IMPORTS = {
     # ``create_handoff_agent`` — the existing locus naming for "build me
     # a configured X").
     "create_deepagent": ("locus.deepagent", "create_deepagent"),
+    "create_research_workflow": ("locus.deepagent.workflow", "create_research_workflow"),
+    "ResearchWorkflowState": ("locus.deepagent.workflow", "ResearchWorkflowState"),
     "KnowledgeProvider": ("locus.deepagent", "KnowledgeProvider"),
     "KnowledgeRow": ("locus.deepagent", "KnowledgeRow"),
     "ItemRef": ("locus.deepagent", "ItemRef"),

@@ -1,11 +1,22 @@
 # DeepAgent
 
-Research-shaped agent factory with reflexion + grounding on by default,
-typed termination algebra, and optional filesystem / todo / subagent layers.
+Two complementary primitives for long-horizon research:
 
-## Factory
+- **`create_deepagent`** — a plain `Agent` with reflexion + grounding, typed
+  termination, and optional filesystem / todo / subagent layers. Best for
+  single-agent loops.
+- **`create_research_workflow`** — a `StateGraph` with a post-execution quality
+  loop: execute (ReAct) → summarize → grounding eval → replan if needed. Best
+  for production research where you need verifiable, grounded summaries.
+
+## Factory — single agent
 
 ::: locus.deepagent.factory.create_deepagent
+
+## Research workflow — StateGraph with quality loop
+
+::: locus.deepagent.workflow.create_research_workflow
+::: locus.deepagent.workflow.ResearchWorkflowState
 
 ## Subagents
 

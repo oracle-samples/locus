@@ -67,6 +67,7 @@ from locus.deepagent.protocol import (
 from locus.deepagent.subagent import SubAgentDef, task_tool
 from locus.deepagent.todos import Todo, TodoState, make_todo_tools
 from locus.deepagent.tools import make_filesystem_tools
+from locus.deepagent.workflow import ResearchWorkflowState, create_research_workflow
 
 
 __all__ = [
@@ -84,7 +85,9 @@ __all__ = [
     "Todo",
     "TodoState",
     "create_deepagent",
+    "create_research_workflow",
     "load_agents_md",
+    "ResearchWorkflowState",
     "make_filesystem_tools",
     "make_todo_tools",
     "task_tool",
