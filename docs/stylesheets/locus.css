@@ -85,50 +85,67 @@
 [data-md-color-scheme="slate"] {
   --md-hue: 200;
 
-  /* Flip the locus brand greys for dark mode — everything that uses
-     these variables (text colour, header bg, card bg, tagline mute,
-     code surface, tables) now reads correctly without needing
-     per-rule overrides. */
-  --locus-ink:      #F0EBE6;            /* warm off-white ink */
-  --locus-mute:     #9F9892;            /* mid-grey for taglines / muted text */
-  --locus-paper:    #1B1A18;            /* deep warm near-black — page bg */
-  --locus-surface:  #1F1D1A;            /* slight elevation — header, cards */
+  /* Oracle FY26 warm-dark palette — identical to the workbench dark theme
+     (workbench/web/src/styles/redwood.css [data-theme="dark"]).
+     Same canvas, same red, same sage links. */
+  --locus-ink:        #F0EBE6;
+  --locus-mute:       #95908a;
+  --locus-paper:      #1B1A18;
+  --locus-surface:    #1F1D1A;
   --locus-table-stripe: rgba(240, 235, 230, 0.04);
-  --locus-code-inline: var(--or-red-light);
+  --locus-code-inline: #E2715F;
 
-  --or-text:        #F0EBE6;
-  --or-bg:          #1B1A18;            /* page background */
-  --or-bg-soft:     #25231F;            /* card / code surface — one step lighter */
-  --or-rule:        #36332E;            /* hairline borders */
+  --or-text:          #F0EBE6;
+  --or-text-soft:     #c9c4be;
+  --or-text-mute:     #95908a;
+  --or-bg:            #1B1A18;
+  --or-bg-soft:       #25231F;
+  --or-surface:       #1F1D1A;
+  --or-rule:          #36332E;
 
-  /* Material's variable surface */
-  --md-primary-fg-color:        var(--or-red);
-  --md-primary-fg-color--light:  var(--or-red-light);
-  --md-primary-fg-color--dark:   var(--or-red-deep);
+  /* Red stays Oracle red; deep variant lightens in dark (matches workbench) */
+  --or-red:           #C74634;
+  --or-red-deep:      #E2715F;
+  --or-red-light:     #F09080;
+  /* Sage teal becomes the link colour in dark (matches workbench) */
+  --or-teal:          #89B2B0;
+  --or-link:          #89B2B0;
+  --or-mauve:         #B07A85;
+  --or-sand:          #F0CC71;
+  --or-sage-teal:     #89B2B0;
+  --or-sage-green:    #86B596;
+
+  /* Material overrides */
+  --md-primary-fg-color:        #C74634;
+  --md-primary-fg-color--light: #E2715F;
+  --md-primary-fg-color--dark:  #A03828;
   --md-primary-bg-color:        #1B1A18;
   --md-primary-bg-color--light: #1B1A18cc;
 
-  --md-accent-fg-color:         var(--or-sand);
-  --md-accent-fg-color--transparent: rgba(240, 204, 113, 0.15);
+  --md-accent-fg-color:         #89B2B0;
+  --md-accent-fg-color--transparent: rgba(137, 178, 176, 0.15);
   --md-accent-bg-color:         #25231F;
 
-  --md-default-bg-color:        var(--or-bg);
-  --md-default-fg-color:        var(--or-text);
+  --md-default-bg-color:        #1B1A18;
+  --md-default-fg-color:        #F0EBE6;
   --md-default-fg-color--light: #c9c4be;
   --md-default-fg-color--lighter: #95908a;
   --md-default-fg-color--lightest: #4a4844;
 
-  --md-typeset-color:           var(--or-text);
-  --md-typeset-a-color:          var(--or-sand);
-  --md-typeset-mark-color:       rgba(240, 204, 113, 0.28);
+  --md-typeset-color:           #F0EBE6;
+  --md-typeset-a-color:         #89B2B0;   /* sage teal, matches workbench links */
+  --md-typeset-mark-color:      rgba(240, 204, 113, 0.28);
 
   --md-footer-bg-color:         #131211;
-  --md-footer-bg-color--dark:    #0c0b0a;
+  --md-footer-bg-color--dark:   #0c0b0a;
   --md-footer-fg-color:         #F0EBE6;
-  --md-footer-fg-color--light:   #b8b3ad;
+  --md-footer-fg-color--light:  #b8b3ad;
 
   --md-code-bg-color:           #25231F;
   --md-code-fg-color:           #E8E2DA;
+
+  --md-shadow-z1: 0 0 0.2rem rgba(0,0,0,.4), 0 0.2rem 0.4rem rgba(0,0,0,.3);
+  --md-shadow-z2: 0 0 0.2rem rgba(0,0,0,.5), 0 0.2rem 0.8rem rgba(0,0,0,.4);
 }
 
 /* ---------------------------------------------------------------------------
