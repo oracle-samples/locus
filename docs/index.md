@@ -9,15 +9,15 @@ hide:
 
 # The right orchestration shape for every <span class="accent">task.</span>
 
-**Describe your task. The cognitive router selects from eight named
-protocols and compiles it onto a real orchestration shape — the LLM
-fills a typed schema, topology is rule-based.**
+**Describe your task. The multi-agent reasoning orchestrator selects
+from eight named protocols and instantiates the right primitive — the
+LLM fills a typed schema, topology is deterministic.**
 
-- **8 named shapes** — direct answer · pipeline · fan-out · debate · code loop · approval gate · A2A · handoff
-- **Safe by default** — idempotent tools, typed termination algebra, reflexion + grounding, checkpoint/resume
-- **Full visibility** — opt-in `EventBus` streams every event from every layer, zero overhead when unused
+- **8 coordination patterns** — direct answer · pipeline · fan-out · debate · code + test loop · approval gate · cross-process · handoff
+- **Production-safe** — tools that fire exactly once on retry · composable stop conditions · self-correcting reasoning · checkpoint/resume
+- **Full visibility** — opt-in `EventBus` (zero overhead, no external broker) · `TelemetryHook` for OpenTelemetry traces + metrics over OTLP
 
-Open source. Pure Python. OCI GenAI native (90+ models); OpenAI, Anthropic, Ollama.
+Open source. OCI GenAI native (90+ models); OpenAI, Anthropic, Ollama.
 
 [See what you can build](#six-things-you-can-ship){ .md-button .md-button--primary }
 [GitHub](https://github.com/oracle-samples/locus){ .md-button }
@@ -76,10 +76,10 @@ async with run_context() as rid:
 
 ### Route any task to a named orchestration shape
 
-The **cognitive router** is a five-layer compilation pipeline.
-The LLM fills exactly one typed `GoalFrame` schema. Everything after
-that — protocol selection, policy gating, compilation onto real
-primitives — is rule-based and deterministic.
+The **cognitive router** is a five-layer pipeline.
+The LLM fills exactly one typed `GoalFrame`. Everything after that —
+protocol selection, policy gating, mapping to a locus primitive —
+is deterministic.
 
 ```python
 from locus.router import (
@@ -110,7 +110,7 @@ print(result.protocol_id)   # "specialist_fanout"
 print(result.text)          # findings from 3 parallel probes
 ```
 
-The eight built-in protocols and when the registry picks each one:
+Eight built-in protocols, each mapping to a different runtime shape:
 
 | Protocol | Compiled shape | Canonical for |
 |---|---|---|
@@ -236,7 +236,7 @@ desk = create_handoff_manager(
 
 ### Full visibility. Zero overhead when unused
 
-The in-process **`EventBus`** streams every meaningful step from every
+The **`EventBus`** streams every meaningful step from every
 layer — agent thinking, tool calls, model completions, token usage,
 multi-agent routing, RAG retrieval, checkpoint saves, router decisions.
 All under one stable `event_type` string per component.
@@ -354,10 +354,9 @@ server.run(host="0.0.0.0", port=8080)
 
 ## The locus agent loop
 
-Every locus agent — whether invoked directly or compiled by the cognitive router —
-runs the same four-node loop: **Think → Execute → Reflect → Terminate**
-— with one router deciding transitions and one immutable state value
-flowing through.
+Every locus agent — whether called directly or dispatched by the cognitive router —
+runs the same four-node loop: **Think → Execute → Reflect → Terminate**,
+with one immutable state value flowing through.
 
 ![locus agent loop — Think → Execute → Reflect → Terminate, with idempotent dedupe at Execute, Reflexion and Causal at Reflect, and composable termination algebra at Terminate](img/agent-loop.svg)
 
@@ -385,10 +384,9 @@ consumer.
 
 ## Workflows you can build
 
-Six coordination patterns in-process — plus **A2A** for cross-process
-agent meshes. The same `Agent` class composes into all of them. Mix
-them in one process; stream events from any of them in the same
-`match` block.
+Seven coordination patterns — plus **A2A** for cross-process meshes.
+The same `Agent` class powers all of them. Mix them freely; every one
+streams events into the same `match` block.
 
 <div class="grid cards" markdown>
 
@@ -482,9 +480,9 @@ them in one process; stream events from any of them in the same
 
 | | |
 |---|---|
-| **🧭 Cognitive router** | NL → typed `GoalFrame` → deterministic `ProtocolRegistry` → `PolicyGate` → compiled orchestration. LLM fills a schema; 8 named protocols; zero topology hand-writing. |
-| **🤝 Multi-agent** | Seven in-process shapes (Composition · Orchestrator · Swarm · Handoff · StateGraph · Functional · DeepAgent) + A2A for cross-process meshes. |
-| **📡 In-process observability** | Opt-in `EventBus` — one `run_context()` streams 40+ canonical events from every layer. Zero allocations when unused. |
+| **🧭 Multi-agent reasoning orchestrator** | Picks one of eight protocols (`direct_response`, `plan_execute_validate`, `specialist_fanout`, `debate`, `codegen_test_validate`, `approval_gated_execution`, `a2a_delegate`, `handoff_chain`) and instantiates the matching locus primitive. The LLM fills a schema; routing is deterministic. |
+| **🤝 Multi-agent patterns** | Seven native patterns — Composition, Orchestrator, Swarm, Handoff, StateGraph, Functional, DeepAgent — plus cross-process A2A. Use them directly when you know what you need. |
+| **📡 Observability** | Opt-in `EventBus` — one `run_context()` streams 40+ canonical events, no external broker. `TelemetryHook` exports OpenTelemetry traces + metrics to Grafana, Honeycomb, OCI APM. Zero overhead when unused. |
 
 ### Agent primitives
 
@@ -505,7 +503,7 @@ them in one process; stream events from any of them in the same
 | **🪙 MCP both ways** | `MCPClient` consumes external servers. `LocusMCPServer` exposes locus tools. |
 | **🌐 Multi-modal** | `web_search=`, `web_fetch=`, `image_generator=`, `speech_provider=` on `Agent(...)`. |
 | **📊 Evaluation** | `EvalCase` / `EvalRunner` / `EvalReport` regression suites. |
-| **🧰 Models** | OCI GenAI native (V1 + SDK, 90+ models) · OpenAI · Anthropic · Ollama. |
+| **🧰 Models** | OCI GenAI (V1 + SDK, 90+ models, OpenAI commercial + xAI Grok) · OpenAI · Anthropic · Ollama. One `get_model()` call, any provider. |
 
 ## Hello, agent
 
@@ -583,7 +581,7 @@ file and adds exactly one idea on top of the previous.
 
 ### Track 3 — multi-agent (11, 16–18, 25, 34, 36)
 
-The six in-process patterns plus A2A:
+The six native patterns plus A2A:
 [Swarm](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_11_swarm_multiagent.py) ·
 [Handoff](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_16_agent_handoff.py) ·
 [Orchestrator](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_17_orchestrator_pattern.py) ·

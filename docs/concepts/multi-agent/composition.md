@@ -94,6 +94,6 @@ result = end_to_end.run_sync("Brief on Q3 launch.")
 
 ## See also
 
-- [Multi-agent overview](../multi-agent.md) — all six in-process shapes plus A2A side-by-side.
+- [Multi-agent overview](../multi-agent.md) — all seven coordination patterns plus A2A.
 - [StateGraph](graph.md) — when you need cycles or conditional branches.
 - [Functional](functional.md) — when you'd rather use plain asyncio.gather.

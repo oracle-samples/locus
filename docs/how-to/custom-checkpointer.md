@@ -8,9 +8,13 @@ your instance directly to `Agent`.
 
 ```python
 from typing import Any
+from uuid import uuid4
+
 from locus.memory.checkpointer import BaseCheckpointer
 from locus.core.protocols import CheckpointerCapabilities
 from locus.core.state import AgentState
+
+# from your_storage import connect  ← replace with your actual import
 
 
 class MyCustomBackend(BaseCheckpointer):

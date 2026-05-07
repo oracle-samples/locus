@@ -215,7 +215,7 @@ produced them. → [Streaming](streaming.md).
 
 ## One event stream across all of them
 
-All seven in-process shapes plus A2A share the same typed event
+All seven patterns plus A2A share the same typed event
 taxonomy. Consume directly from the generator, or use the opt-in
 `EventBus` to get per-component SSE events (`agent.think`,
 `agent.tool.started`, `multiagent.orchestrator.routing`, etc.)

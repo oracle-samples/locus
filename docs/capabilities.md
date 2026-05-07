@@ -6,21 +6,20 @@ Everything `locus` ships, what it does, and where to find it.
     These are architectural choices no other Python agent framework ships
     together in one coherent stack:
 
-    - **Cognitive router — bounded graph generation** — describe a task in
-      natural language; a deterministic registry selects one of eight named
-      protocols and compiles it onto a real locus primitive. The LLM fills a
-      typed `GoalFrame` schema; topology is rule-based, not model-generated.
-      No other framework ships a compilation layer between intent and
-      orchestration shape.
-    - **Eight named orchestration protocols** — `direct_response`,
-      `plan_execute_validate`, `specialist_fanout`, `debate`,
-      `codegen_test_validate`, `approval_gated_execution`, `a2a_delegate`,
-      `handoff_chain`. Not a blank canvas — eight proven shapes, each a
-      battle-tested locus primitive.
-    - **Seven in-process multi-agent shapes plus A2A** — Composition,
-      Orchestrator, Swarm, Handoff, StateGraph, Functional API, DeepAgent +
-      cross-process A2A meshes. Every shape shares the same `Agent` class,
-      the same event stream, and the same primitives.
+    - **Multi-agent reasoning orchestrator** — describe a task; a
+      deterministic registry picks one of eight protocols and instantiates the
+      matching locus primitive. The LLM fills a typed `GoalFrame`; routing is
+      rule-based. Eight protocols: `direct_response` (single Agent),
+      `plan_execute_validate` (SequentialPipeline), `specialist_fanout`
+      (ParallelPipeline), `debate` (two debaters + judge),
+      `codegen_test_validate` (LoopAgent), `approval_gated_execution`
+      (Agent + interrupt), `a2a_delegate`, `handoff_chain`.
+    - **Seven native multi-agent patterns plus A2A** — Composition
+      (Sequential / Parallel / Loop), Orchestrator + Specialists, Swarm,
+      Handoff, StateGraph, Functional API (`@task` / `@entrypoint`), DeepAgent,
+      cross-process A2A. Use them directly, or let the reasoning orchestrator
+      dispatch to them. Every pattern shares the same `Agent` class and event
+      stream.
     - **In-process observability** — opt-in `EventBus` with agent yield
       bridge. One `run_context()` streams 40+ canonical events from every
       layer (agent, multi-agent, router, RAG, memory, A2A). Zero allocations
@@ -33,7 +32,11 @@ Everything `locus` ships, what it does, and where to find it.
       replanning decisions.
     - **Termination algebra** — `MaxIterations(10) | TextMention("DONE") & ConfidenceMet(0.9)` is real Python (`__or__` / `__and__` overloads). Greppable, unit-testable, serialisable.
     - **Idempotent tools** — `@tool(idempotent=True)` dedupes on `(name, args)` inside the Execute node. No double-charge, double-book, double-page — even on model retry or checkpoint resume.
-    - **OCI Generative AI day-zero** — two transports (V1 and native SDK), auto-routed by model id, 90+ models including OpenAI commercial and xAI Grok.
+    - **OCI, OpenAI, and Anthropic-compatible providers** — OCI Generative AI
+      day-zero (two transports, 90+ models including OpenAI commercial and xAI
+      Grok, auto-routed by model id); OpenAI and Anthropic through their
+      official SDKs; Ollama for local models. One `get_model()` call, any
+      provider.
 
 ## Agent core
 
