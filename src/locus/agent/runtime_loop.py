@@ -54,6 +54,7 @@ from locus.tools.registry import ToolRegistry
 if TYPE_CHECKING:
     from locus.agent.hook_orchestrator import HookOrchestrator
     from locus.memory.conversation import ConversationManager
+    from locus.memory.manager import BaseMemoryManager
     from locus.reasoning.grounding import GroundingEvaluator
     from locus.reasoning.reflexion import Reflector
 
@@ -151,6 +152,7 @@ class AgentRuntimeMixin:
         _hooks: list[Any]
         _hook_orchestrator: HookOrchestrator | None
         _conversation_manager: ConversationManager | None
+        _memory_manager: BaseMemoryManager | None
         _reflector: Reflector | None
         _grounding_evaluator: GroundingEvaluator | None
         _grounding_model: Any
@@ -210,6 +212,10 @@ class AgentRuntimeMixin:
 
         # Run hooks: before_invocation
         state = await self._run_before_invocation_hooks(prompt, state)
+
+        # Inject long-term memories into the system prompt.
+        if self._memory_manager is not None:
+            state = await self._memory_manager.on_session_start(state)
 
         try:
             # Main ReAct loop
@@ -791,6 +797,10 @@ class AgentRuntimeMixin:
             # Run hooks: after_invocation
             _duration_ms = (datetime.now(UTC) - started_at).total_seconds() * 1000  # noqa: F841
             await self._run_after_invocation_hooks(state, len(state.errors) == 0)
+
+            # Extract and persist long-term memories from this session.
+            if self._memory_manager is not None:
+                await self._memory_manager.on_session_end(state)
 
             # Final checkpoint
             if self.config.checkpointer and thread_id:

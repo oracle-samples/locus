@@ -316,6 +316,17 @@ class AgentConfig(BaseModel):
         description="Conversation manager for message pruning/summarization",
     )
 
+    memory_manager: Any | None = Field(
+        default=None,
+        description=(
+            "Long-term memory manager. When set, the agent retrieves stored "
+            "memories at session start (injected into the system prompt) and "
+            "extracts new memories at session end (persisted to the configured "
+            "store backend). Pass a BaseMemoryManager instance; use "
+            "LLMMemoryManager for LLM-backed extraction with any store backend."
+        ),
+    )
+
     checkpointer: Any | None = Field(
         default=None,
         description="Checkpointer for state persistence",

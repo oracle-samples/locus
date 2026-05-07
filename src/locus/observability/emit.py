@@ -106,6 +106,8 @@ EV_MEMORY_COMPACTOR_TRIGGERED = "memory.compactor.triggered"
 EV_MEMORY_COMPACTOR_COMPLETED = "memory.compactor.completed"
 EV_MEMORY_CONVERSATION_ADDED = "memory.conversation.added"
 EV_MEMORY_CONVERSATION_PRUNED = "memory.conversation.pruned"
+EV_MEMORY_MANAGER_INJECTED = "memory.manager.injected"
+EV_MEMORY_MANAGER_EXTRACTED = "memory.manager.extracted"
 
 # --- DeepAgent ---
 EV_DEEPAGENT_SUBAGENT_SPAWNED = "deepagent.subagent.spawned"

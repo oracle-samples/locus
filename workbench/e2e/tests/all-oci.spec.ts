@@ -38,6 +38,9 @@ const BFF = process.env.BFF_URL ?? "http://127.0.0.1:3101";
 const SKIP = new Set<string>([
   "tutorial_49_audio_response",
   "tutorial_50_audio_chat",
+  // DeepAgent runs 4 parts with subagents — takes >10 min on any real model.
+  // Covered by CLI tests; skipped here to keep the workbench sweep bounded.
+  "tutorial_41_deepagent",
 ]);
 
 test.use({ video: "off", trace: "off", screenshot: "off" });

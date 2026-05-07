@@ -129,6 +129,10 @@ def initialize_agent(agent: Agent) -> None:
 
         agent._hooks.append(PlaybookEnforcerHook(agent.config.playbook))
 
+    # --- Memory manager ---------------------------------------------------
+    if agent.config.memory_manager is not None:
+        agent._memory_manager = agent.config.memory_manager
+
     # --- Conversation manager ---------------------------------------------
     if agent.config.conversation_manager is not None:
         agent._conversation_manager = agent.config.conversation_manager

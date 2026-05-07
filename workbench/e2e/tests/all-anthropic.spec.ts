@@ -27,6 +27,7 @@ const PER_TUTORIAL_MS = Number(process.env.PER_TUTORIAL_MS ?? 360_000);
 // or use OCI-only models like gpt-audio. They can't run against
 // Anthropic and are skipped from this sweep.
 const OCI_ONLY = new Set<string>([
+  "tutorial_41_deepagent",        // >10 min with subagents; covered by CLI tests
   "tutorial_49_audio_response",
   "tutorial_50_audio_chat",
 ]);
