@@ -41,6 +41,10 @@ const SKIP = new Set<string>([
   // DeepAgent runs 4 parts with subagents — takes >10 min on any real model.
   // Covered by CLI tests; skipped here to keep the workbench sweep bounded.
   "tutorial_41_deepagent",
+  // Requires structured-output support; Cohere R-series returns 400 on
+  // json_schema response_format. The guard exits 0 with a helpful message
+  // only when LOCUS_MODEL_PROVIDER=oci+cohere — skip in the OCI sweep too.
+  "tutorial_14_reasoning_patterns",
 ]);
 
 test.use({ video: "off", trace: "off", screenshot: "off" });
