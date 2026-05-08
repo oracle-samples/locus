@@ -49,7 +49,7 @@ dependencies = [
 openai = ["openai>=1.50"]
 anthropic = ["anthropic>=0.40"]
 ollama = ["ollama>=0.3"]
-oci = ["oci>=2.167"]
+oci = ["oci>=2.173.0"]
 
 # Convenience bundle for everything LLM-provider related.
 models = [
@@ -79,7 +79,7 @@ sqlite = ["aiosqlite>=0.20"]
 redis = ["redis>=5.0"]
 postgresql = ["asyncpg>=0.29"]
 opensearch = ["opensearch-py>=2.4"]
-oracledb = ["oracledb>=2.0"]
+oracledb = ["oracledb>=2.2.0"]
 
 # All checkpoint backends.
 checkpoints = [
