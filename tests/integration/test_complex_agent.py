@@ -126,6 +126,8 @@ class TestComplexAgent:
             profile_name=config.get("profile_name", "DEFAULT"),
             auth_type=config.get("auth_type", "api_key"),
             region=config.get("region", "eu-frankfurt-1"),
+            compartment_id=config.get("compartment_id"),
+            service_endpoint=config.get("service_endpoint"),
             max_tokens=512,
         )
 
@@ -259,6 +261,8 @@ Hope this helps!"""
             profile_name=config.get("profile_name", "DEFAULT"),
             auth_type=config.get("auth_type", "api_key"),
             region=config.get("region", "eu-frankfurt-1"),
+            compartment_id=config.get("compartment_id"),
+            service_endpoint=config.get("service_endpoint"),
         )
 
         schema_prompt = create_schema_prompt(SimpleAnswer)
