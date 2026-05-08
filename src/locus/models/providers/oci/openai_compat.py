@@ -47,6 +47,7 @@ Example::
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -58,6 +59,10 @@ from locus.models.native.openai import OpenAIConfig, OpenAIModel
 if TYPE_CHECKING:
     import openai
     from oci.signer import AbstractBaseSigner
+
+    from locus.core.events import ModelChunkEvent
+    from locus.core.messages import Message
+    from locus.models.base import ModelResponse
 
 
 DEFAULT_OCI_GENAI_REGION = "us-chicago-1"
@@ -276,6 +281,51 @@ class OCIOpenAIModel(OpenAIModel):
         # Skip OpenAIModel.__init__ — it would rebuild the config without
         # OCI fields. Go straight to the Pydantic BaseModel init.
         super(OpenAIModel, self).__init__(config=config)
+
+    @property
+    def _requires_inlined_schema_refs(self) -> bool:
+        """Gemini rejects ``$ref`` in JSON schemas — inline before sending."""
+        model = (self.config.model or "").lower()
+        return model.startswith("google.")
+
+    async def complete(
+        self,
+        messages: list[Message],
+        tools: list[dict[str, Any]] | None = None,
+        **kwargs: Any,
+    ) -> ModelResponse:
+        if self._requires_inlined_schema_refs and "response_format" in kwargs:
+            from locus.core.structured import inline_schema_refs
+
+            rf = kwargs["response_format"]
+            if isinstance(rf, dict) and rf.get("type") == "json_schema":
+                schema = rf["json_schema"].get("schema", {})
+                rf = {
+                    **rf,
+                    "json_schema": {**rf["json_schema"], "schema": inline_schema_refs(schema)},
+                }
+                kwargs = {**kwargs, "response_format": rf}
+        return await super().complete(messages, tools=tools, **kwargs)
+
+    async def stream(
+        self,
+        messages: list[Message],
+        tools: list[dict[str, Any]] | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[ModelChunkEvent]:
+        if self._requires_inlined_schema_refs and "response_format" in kwargs:
+            from locus.core.structured import inline_schema_refs
+
+            rf = kwargs["response_format"]
+            if isinstance(rf, dict) and rf.get("type") == "json_schema":
+                schema = rf["json_schema"].get("schema", {})
+                rf = {
+                    **rf,
+                    "json_schema": {**rf["json_schema"], "schema": inline_schema_refs(schema)},
+                }
+                kwargs = {**kwargs, "response_format": rf}
+        async for event in super().stream(messages, tools=tools, **kwargs):
+            yield event
 
     @property
     def client(self) -> openai.AsyncOpenAI:
