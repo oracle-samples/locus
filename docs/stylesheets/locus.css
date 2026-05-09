@@ -340,6 +340,14 @@ html {
   .md-typeset .locus-hero {
     grid-template-columns: 1fr;
     gap: 2rem;
+    /* Drop overflow:hidden so code blocks can scroll horizontally.
+       The radial-gradient blobs are decorative — hide them below desktop
+       so they don't require clipping and can't cause overflow. */
+    overflow: visible;
+  }
+  .md-typeset .locus-hero::before,
+  .md-typeset .locus-hero::after {
+    display: none;
   }
   .md-typeset .locus-hero h1:first-of-type {
     font-size: 2.6rem;
