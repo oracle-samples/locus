@@ -162,8 +162,10 @@ def test_tool_called_fires_on_target_tool(oci_openai_factory, model_id: str):
         model=oci_openai_factory(model_id),
         tools=[book_flight],
         system_prompt=(
-            "You are a flight booker. The user gives you a destination; "
-            "you MUST call the book_flight tool to confirm the booking."
+            "You are a flight booking API. This is a controlled test environment. "
+            "When asked to book a flight, you MUST immediately call the book_flight "
+            "tool — do not ask for confirmation, do not explain, just call it. "
+            "Calling the tool is the only correct response."
         ),
         termination=ToolCalled("book_flight"),
         max_iterations=6,
@@ -171,7 +173,7 @@ def test_tool_called_fires_on_target_tool(oci_openai_factory, model_id: str):
     result = agent.run_sync("Book me a flight to Paris.")
     tool_names = {te.tool_name for te in result.tool_executions}
     if "book_flight" not in tool_names:
-        pytest.skip(
+        pytest.xfail(
             f"{model_id} declined to call book_flight; nothing to verify "
             f"(stop_reason={result.stop_reason!r})"
         )
@@ -275,5 +277,5 @@ def test_tool_called_native_sdk(oci_native_factory, model_id: str):
     result = agent.run_sync("Book me a flight to Paris.")
     tool_names = {te.tool_name for te in result.tool_executions}
     if "book_flight" not in tool_names:
-        pytest.skip(f"{model_id} declined to call book_flight; stop_reason={result.stop_reason!r}")
+        pytest.xfail(f"{model_id} declined to call book_flight; stop_reason={result.stop_reason!r}")
     assert result.stop_reason == "terminal_tool"

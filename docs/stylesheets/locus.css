@@ -257,7 +257,7 @@ html { scroll-behavior: smooth; }
   border-radius: 50%;
   pointer-events: none;
 }
-.md-typeset .locus-hero h1 {
+.md-typeset .locus-hero h1:first-of-type {
   font-size: 2.9rem;
   line-height: 1.05;
   letter-spacing: -0.045em;
@@ -325,12 +325,12 @@ html { scroll-behavior: smooth; }
     grid-template-columns: 1fr;
     gap: 2rem;
   }
-  .md-typeset .locus-hero h1 {
+  .md-typeset .locus-hero h1:first-of-type {
     font-size: 2.6rem;
   }
 }
 @media (max-width: 36em) {
-  .md-typeset .locus-hero h1 {
+  .md-typeset .locus-hero h1:first-of-type {
     font-size: 2rem;
     letter-spacing: -0.035em;
   }
@@ -385,8 +385,10 @@ html { scroll-behavior: smooth; }
   padding: 0.45rem 1rem 0.7rem;
 }
 
-/* Bigger locus mark on the left */
+/* Bigger locus mark on the left — always visible, including mobile where
+   Material hides it by default. */
 .md-header__button.md-logo {
+  display: inline-flex;
   margin: 0 0.4rem 0 0;
   padding: 0;
 }
@@ -395,6 +397,14 @@ html { scroll-behavior: smooth; }
   height: 2.6rem;
   max-height: 56px;
   width: auto;
+}
+/* Scale the mark down on narrow screens to give the title breathing room. */
+@media (max-width: 56em) {
+  .md-header__button.md-logo img,
+  .md-header__button.md-logo svg {
+    height: 1.8rem;
+    max-height: 32px;
+  }
 }
 .md-header__button.md-logo:hover {
   opacity: 0.85;
@@ -493,9 +503,18 @@ html { scroll-behavior: smooth; }
 }
 
 @media (max-width: 60em) {
-  /* On narrow screens, hide the wordmark; keep just the OCI mark. */
+  /* On narrow screens, hide the Oracle wordmark; keep just the OCI mark. */
   .md-header__oracle-wordmark {
     display: none;
+  }
+  /* Shrink the OCI mark a touch to relieve header crowding now that the
+     locus mark also shows on mobile. */
+  .md-header__oci-mark {
+    width: 24px;
+    height: 24px;
+  }
+  .md-header__source.md-header__oci {
+    padding: 0.25rem 0.35rem;
   }
 }
 

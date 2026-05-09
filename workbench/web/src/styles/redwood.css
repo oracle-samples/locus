@@ -545,6 +545,7 @@ code, pre { font-family: var(--mono); }
   font-weight: 600;
   padding: 0.55rem 1.1rem;
   border-radius: var(--radius);
+  white-space: nowrap;
   transition: background 0.12s, border-color 0.12s, color 0.12s, transform 0.06s;
 }
 .btn:hover { border-color: var(--or-red); color: var(--or-red); }
