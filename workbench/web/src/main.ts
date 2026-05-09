@@ -277,6 +277,35 @@ themeBtn.addEventListener("click", () => {
   applyTheme(next);
 });
 
-// Workbench is the only mode now.
+// ---------------------------------------------------------------------------
+// Mobile sidebar toggle
+// ---------------------------------------------------------------------------
+
+const sidebarBtn = document.querySelector<HTMLButtonElement>("#sidebar-btn");
+const appSide = document.querySelector<HTMLElement>("#app-side");
+const sidebarOverlay = document.querySelector<HTMLElement>("#sidebar-overlay");
+
+function closeSidebar() {
+  appSide?.classList.remove("app__side--open");
+  sidebarOverlay?.classList.remove("sidebar-overlay--open");
+}
+
+sidebarBtn?.addEventListener("click", () => {
+  const open = appSide?.classList.toggle("app__side--open");
+  sidebarOverlay?.classList.toggle("sidebar-overlay--open", open ?? false);
+});
+
+sidebarOverlay?.addEventListener("click", closeSidebar);
+
+// Auto-close when the user picks a sidebar item on mobile.
+appSide?.addEventListener("click", (e) => {
+  if (window.innerWidth > 768) return;
+  if ((e.target as HTMLElement).closest(".side__item, .side__tab")) closeSidebar();
+});
+
+// ---------------------------------------------------------------------------
+// Boot
+// ---------------------------------------------------------------------------
+
 if (!provider) providerWarning.style.display = "block";
 initWorkbench();

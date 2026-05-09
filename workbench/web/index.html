@@ -16,6 +16,13 @@
   <body>
     <div class="app" id="app">
       <header class="app__header">
+        <button class="icon-btn" id="sidebar-btn" aria-label="Toggle sidebar" title="Toggle sidebar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
         <div class="app__brand">
           <img class="app__brand-icon" id="app-brand-icon" src="/locus-mark.svg" alt="locus" />
           <span class="app__brand-mark">locus</span>
@@ -35,7 +42,10 @@
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
           </svg>
         </button>
-        <button class="btn" id="settings-btn" data-testid="settings-btn">Provider settings</button>
+        <button class="btn" id="settings-btn" data-testid="settings-btn">
+          <span class="settings-btn__full">Provider settings</span>
+          <span class="settings-btn__short">Settings</span>
+        </button>
       </header>
 
       <aside class="app__side" id="app-side" data-testid="app-side">
@@ -197,6 +207,7 @@
 
       <footer class="app__footer">locus · open-source multi-agent SDK</footer>
     </div>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
     <!-- Provider settings modal (vanilla TS, hidden by default) -->
     <div class="modal" id="settings-modal" aria-hidden="true">
