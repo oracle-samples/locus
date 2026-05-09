@@ -13,9 +13,9 @@ locus picks the right coordination strategy for any task — and runs it product
 
 <div class="locus-stat-strip"><a href="concepts/multi-agent.md">multi-agent</a> &nbsp;·&nbsp; <a href="concepts/router.md">cognitive protocol</a> &nbsp;·&nbsp; <a href="concepts/agent-loop.md">human-in-the-loop</a> &nbsp;·&nbsp; <a href="concepts/reasoning.md">self-evaluating</a></div>
 
-- **Safe by default** — `@tool(idempotent=True)` fires exactly once per `(name, args)`, even after retries or restarts
-- **Composable stops** — typed conditions composed with `&` and `|`; inspectable, unit-testable, serialisable
-- **Full observability** — opt-in `EventBus` streams 40+ event types; one hook exports OpenTelemetry traces
+- **No duplicate side effects** — book, bill, or page with confidence. Actions happen exactly once, even across retries and restarts
+- **You decide when agents stop** — set rules like "stop when the task is done and confidence is above 90%", not just token limits
+- **See inside every run** — real-time stream of every agent decision, tool call, and token spent. One line to export to your monitoring stack
 
 [Get started](#six-things-you-can-ship){ .md-button .md-button--primary }
 [GitHub](https://github.com/oracle-samples/locus){ .md-button }
