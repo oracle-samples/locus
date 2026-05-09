@@ -77,41 +77,38 @@ async with run_context() as rid:
 - :material-routes:{ .lg .middle } **Cognitive router**
 
     ---
-    NL → typed `GoalFrame` → protocol → deterministic primitive. The LLM fills a schema; the rest is deterministic code.
+    Describe the goal in plain language. locus automatically selects the right coordination pattern — parallel research, sequential pipeline, adversarial debate, approval gate — and assembles the agents.
 
 - :material-shield-check:{ .lg .middle } **Safe by design**
 
     ---
-    Idempotent tools, composable stop conditions, checkpoint/resume. Production behaviours baked in.
+    Tools never fire twice for the same call, even if the model retries or the workflow restarts mid-run. Stop conditions are typed rules you can unit-test. Workflows checkpoint themselves and resume after failures.
 
 - :material-chart-timeline-variant:{ .lg .middle } **Grounded reasoning**
 
     ---
-    Reflexion scores every turn. Grounding verifies claims against tool results and drops hallucinations.
+    Agents score their own reasoning every turn and verify each claim against the tool result that produced it. Unverified claims get flagged or dropped before they reach the user.
 
 - :material-eye:{ .lg .middle } **Full observability**
 
     ---
-    `EventBus` emits 40+ typed events, zero overhead when unused. One hook exports full OpenTelemetry traces over OTLP.
+    Every meaningful step — agent thinking, tool calls, token usage, routing decisions — emits a typed event. Subscribe to any live run or export everything to OpenTelemetry with one hook.
 
 - :material-graph:{ .lg .middle } **Multi-agent coordination**
 
     ---
-    Fan-out, debate, handoff, orchestrator, A2A cross-process mesh — eight patterns, one `Agent` class.
+    Run agents in parallel, sequentially, or adversarially. Hand off between specialists. Connect across services. Eight named patterns, all using the same `Agent` class.
 
 - :material-rocket-launch:{ .lg .middle } **Production server**
 
     ---
-    `AgentServer` wraps any agent as a FastAPI app in two lines — `POST /invoke`, SSE streaming, per-principal thread isolation.
+    Two lines of code turn any agent into a deployed API — streaming responses, per-user thread isolation, and persistent conversation history out of the box.
 
 </div>
 
-### Route any task to a named orchestration shape
+### Let locus pick the right coordination strategy
 
-The **cognitive router** is a five-layer pipeline.
-The LLM fills exactly one typed `GoalFrame`. Everything after that —
-protocol selection, policy gating, mapping to a locus primitive —
-is deterministic.
+Describe your goal in plain language. locus classifies the task, selects the best coordination pattern, and assembles the right agents — automatically. You don't choose between parallel vs sequential; locus does.
 
 ```python
 from locus.router import (
@@ -158,12 +155,9 @@ Eight built-in protocols, each mapping to a different runtime shape:
 → [Cognitive router — full reference](concepts/router.md) ·
 [Tutorial 51: route five distinct tasks](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_51_cognitive_router.py)
 
-### Claims grounded. Citations real. Hallucinations dropped
+### Agents that verify their own answers
 
-**Reflexion** evaluates every turn and feeds the next Think a sharper
-plan. **Grounding** scores each claim against the tool result it came
-from; below-threshold claims get dropped or sent back for re-research.
-**Causal** traces root cause from symptom in incident-triage runs.
+Agents can hallucinate. locus catches it. After every response, it scores the reasoning and checks each claim against the actual tool output. Claims that don't hold up get dropped or sent back for re-research before the user ever sees them.
 
 ```python
 from locus import Agent
@@ -195,12 +189,9 @@ print(f"grounding score: {result.grounding_score:.2f}")
 → [Reasoning inside the loop](concepts/reasoning.md) ·
 [Turn on Reflexion + Grounding in one line](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_14_reasoning_patterns.py)
 
-### Side effects fire once. Even when the model retries
+### No double-booking. No duplicate emails
 
-The model can re-emit the same call after seeing an ambiguous result,
-after a network glitch, after a checkpointed restart. With
-**`@tool(idempotent=True)`** the body fires exactly once per
-`(name, arguments)` hash. Booking, billing, paging — safe by design.
+AI models sometimes retry the same action — after a glitch, an ambiguous result, or a restart. Add one decorator and locus guarantees the action only happens once, no matter how many times the model tries. Book a flight, submit an invoice, page an engineer — safely.
 
 ```python
 from locus import Agent
@@ -232,9 +223,7 @@ result = agent.run_sync("Approve Acme for the $42k laptop refresh.")
 
 ### One conversation, many specialists
 
-**Handoff** transfers context, tool history, and confidence from
-specialist to specialist. The customer sees one continuous reply;
-each team ships their specialist on its own schedule, in its own repo.
+Pass a task from one specialist agent to another — triage to billing, billing to shipping — while the user sees a single, seamless reply. Each specialist is a separate agent, deployed independently by its own team.
 
 ```python
 from locus import create_handoff_agent, create_handoff_manager, HandoffReason
@@ -266,16 +255,9 @@ desk = create_handoff_manager(
 → [Handoff with chain-of-custody](concepts/multi-agent/handoff.md) ·
 [Wire a Triage / Billing / Shipping handoff desk](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_16_agent_handoff.py)
 
-### Full visibility. Zero overhead when unused
+### See everything your agents are doing
 
-The **`EventBus`** streams every meaningful step from every
-layer — agent thinking, tool calls, model completions, token usage,
-multi-agent routing, RAG retrieval, checkpoint saves, router decisions.
-All under one stable `event_type` string per component.
-
-Opt-in with a single context manager. When no `run_context()` is
-active, every emission site short-circuits in one `ContextVar.get()`.
-No bus, no allocations, no overhead.
+Watch every step of every agent run in real time — what it thought, which tools it called, how many tokens it used. Wrap your code in one context manager to turn it on; remove it and there's zero performance cost. Connect to any monitoring system with a single OpenTelemetry hook.
 
 ```python
 from locus import Agent, tool
@@ -314,12 +296,9 @@ Slow consumers get dropped events, never stall the publisher.
 [SSE event catalogue](concepts/sse-events.md) ·
 [Tutorial 52: observability basics](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_52_observability_basics.py)
 
-### Stop conditions you can compose
+### Tell agents exactly when to stop
 
-Compose stop conditions with Python's `&` and `|` operators on typed
-classes — `__and__` / `__or__` overloads. Inspectable, unit-testable,
-serialisable. You can grep your codebase for *exactly when* an agent
-decides to stop. The loop ends when the work is done.
+Define precisely when your agent should finish — when a specific tool ran, when it's confident enough, or after a safety cap. Combine rules with `&` and `|`. The conditions are typed objects you can unit-test, inspect, and version-control like any other code.
 
 ```python
 from locus import Agent
@@ -347,12 +326,9 @@ print(result.stop_reason)
 → [Termination algebra](concepts/termination.md) ·
 [Compose stop conditions like algebra](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_37_termination.py)
 
-### Day-one production deployment
+### Deploy in two lines of code
 
-**`AgentServer`** wraps any agent as a FastAPI app: `POST /invoke`,
-`POST /stream` for SSE, `GET`/`DELETE /threads/{id}` with per-principal
-persistence — two API keys can't read each other's threads. Ship to
-OKE, Container Instances, OCI Functions, or anywhere FastAPI runs.
+Turn any locus agent into a production API in two lines. You get streaming responses, per-user conversation history that no other user can access, and persistent threads across sessions — ready to run on any platform that supports Python.
 
 ```python
 import os
@@ -384,11 +360,9 @@ server.run(host="0.0.0.0", port=8080)
 → [Agent Server — drop-in FastAPI app](concepts/server.md) ·
 [Deploy a locus agent as a FastAPI service](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_28_agent_server.py)
 
-## The locus agent loop
+## How every agent runs
 
-Every locus agent — whether called directly or dispatched by the cognitive router —
-runs the same four-node loop: **Think → Execute → Reflect → Terminate**,
-with one immutable state value flowing through.
+Every locus agent runs the same four steps in a loop: decide what to do, do it, check the result, then decide whether to stop. This loop is identical whether you're running a single agent or a fleet of specialists working together.
 
 ![locus agent loop — Think → Execute → Reflect → Terminate, with idempotent dedupe at Execute, Reflexion and Causal at Reflect, and composable termination algebra at Terminate](img/agent-loop.svg)
 
@@ -414,11 +388,9 @@ consumer.
 
 [Read the full architecture reference →](concepts/agent-loop.md)
 
-## Workflows you can build
+## Eight ways to coordinate agents
 
-Seven coordination patterns — plus **A2A** for cross-process meshes.
-The same `Agent` class powers all of them. Mix them freely; every one
-streams events into the same `match` block.
+From simple parallel research to multi-team handoffs across services. Pick one pattern or combine them — they all use the same `Agent` class and stream into the same event feed.
 
 <div class="grid cards" markdown>
 
