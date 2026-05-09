@@ -339,10 +339,7 @@ html {
 @media (max-width: 76em) {
   .md-typeset .locus-hero {
     grid-template-columns: 1fr;
-    gap: 2rem;
-    /* Drop overflow:hidden so code blocks can scroll horizontally.
-       The radial-gradient blobs are decorative — hide them below desktop
-       so they don't require clipping and can't cause overflow. */
+    gap: 1.4rem;
     overflow: visible;
   }
   .md-typeset .locus-hero::before,
@@ -350,16 +347,32 @@ html {
     display: none;
   }
   .md-typeset .locus-hero h1:first-of-type {
-    font-size: 2.6rem;
+    font-size: 2.2rem;
+  }
+  .md-typeset .locus-hero p {
+    font-size: 1rem;
+  }
+  .md-typeset .locus-hero__copy > p:first-of-type strong {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+}
+@media (max-width: 48em) {
+  .md-typeset .locus-hero h1:first-of-type {
+    font-size: 1.9rem;
+    letter-spacing: -0.04em;
+  }
+  .md-typeset .locus-hero p {
+    font-size: 0.95rem;
   }
 }
 @media (max-width: 36em) {
   .md-typeset .locus-hero h1:first-of-type {
-    font-size: 2rem;
+    font-size: 1.65rem;
     letter-spacing: -0.035em;
   }
   .md-typeset .locus-hero p {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
   }
 }
 
@@ -527,18 +540,21 @@ html {
 }
 
 @media (max-width: 60em) {
-  /* On narrow screens, hide the Oracle wordmark; keep just the OCI mark. */
-  .md-header__oracle-wordmark {
+  /* Hide the entire OCI/Oracle link on mobile — it's brand decoration,
+     not navigation. Removes clutter and gives the title room to breathe. */
+  .md-header__source.md-header__oci {
     display: none;
   }
-  /* Shrink the OCI mark a touch to relieve header crowding now that the
-     locus mark also shows on mobile. */
-  .md-header__oci-mark {
-    width: 24px;
-    height: 24px;
+  /* Tighten header inner padding so logo + hamburger + title + icons fit. */
+  .md-header__inner {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
-  .md-header__source.md-header__oci {
-    padding: 0.25rem 0.35rem;
+  /* Scale the locus mark down on narrow screens. */
+  .md-header__button.md-logo img,
+  .md-header__button.md-logo svg {
+    height: 1.6rem;
+    max-height: 28px;
   }
 }
 
