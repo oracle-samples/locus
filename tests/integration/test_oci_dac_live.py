@@ -65,11 +65,19 @@ def dac_model() -> object:
     # The DAC endpoint OCID *is* the model_id for routing; OCIClient's
     # get_serving_mode() recognises the prefix and returns
     # DedicatedServingMode(endpoint_id=...).
+    # Detect auth type from environment — default to API_KEY but honour
+    # security_token profiles (e.g. BOAT-OC1) so the fixture works without
+    # requiring a separate API-key profile just for DAC tests.
+    auth_type_str = os.environ.get("OCI_AUTH_TYPE", "api_key").lower()
+    auth_type = (
+        OCIAuthType.SECURITY_TOKEN if auth_type_str == "security_token" else OCIAuthType.API_KEY
+    )
+
     return OCIModel(
         model_id=_DAC_OCID,  # type: ignore[arg-type]  # filtered above
         compartment_id=_DAC_COMPARTMENT,
         profile_name=_OCI_PROFILE,
-        auth_type=OCIAuthType.API_KEY,
+        auth_type=auth_type,
         # The SDK derives the service endpoint from the region.
         service_endpoint=(f"https://inference.generativeai.{_DAC_REGION}.oci.oraclecloud.com"),
         max_tokens=128,
