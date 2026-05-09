@@ -337,21 +337,18 @@ html {
   font-size: 0.78rem;
 }
 
-/* Stat strip — compact single-line metric bar. */
+/* Stat strip — compact metric bar. */
 .md-typeset .locus-stat-strip {
   display: block;
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--locus-mute);
   border-top: 1px solid var(--or-rule);
   border-bottom: 1px solid var(--or-rule);
   padding: 0.35rem 0;
   margin: 0.7rem 0 1rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .md-typeset .locus-stat-strip a {
   color: inherit;

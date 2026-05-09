@@ -11,7 +11,7 @@ hide:
 
 locus picks the right coordination strategy for any task — and runs it production-safe.
 
-<div class="locus-stat-strip" markdown>[multi-agent](concepts/multi-agent.md) &nbsp;·&nbsp; [cognitive protocol](concepts/router.md) &nbsp;·&nbsp; [human-in-the-loop](concepts/agent-loop.md) &nbsp;·&nbsp; [self-evaluating](concepts/reasoning.md)</div>
+<div class="locus-stat-strip" markdown>[multi-agent](concepts/multi-agent.md) · [cognitive protocol](concepts/router.md) · [human-in-the-loop](concepts/agent-loop.md) · [self-evaluating](concepts/reasoning.md)</div>
 
 - **No duplicate side effects** — book, bill, or page with confidence. Actions happen exactly once, even across retries and restarts
 - **You decide when agents stop** — set rules like "stop when the task is done and confidence is above 90%", not just token limits
