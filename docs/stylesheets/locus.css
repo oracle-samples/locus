@@ -1,4 +1,11 @@
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  /* Prevent horizontal scroll caused by fixed-position nav children
+     that extend beyond the viewport on narrow screens (Firefox).
+     overflow-x: hidden on html clips position:fixed elements at the
+     viewport edge per spec, unlike overflow-x on body. */
+  overflow-x: hidden;
+}
 
 /* ============================================================================
    locus docs — Oracle FY26 palette + locus brand rules.
@@ -266,6 +273,13 @@ html { scroll-behavior: smooth; }
   color: var(--locus-ink);
   margin: 0 0 0.6rem;
 }
+/* Grid items must have min-width:0 so the 1fr track isn't forced to
+   max-content width (the Python code block is ~492px and would otherwise
+   blow past the hero's 358px container on mobile). */
+.md-typeset .locus-hero__copy,
+.md-typeset .locus-hero__code {
+  min-width: 0;
+}
 .md-typeset .locus-hero h1 .accent {
   color: var(--or-red);
 }
@@ -296,6 +310,8 @@ html { scroll-behavior: smooth; }
 .md-typeset .locus-hero pre {
   font-size: 0.68rem;
   line-height: 1.45;
+  overflow-x: auto;
+  max-width: 100%;
 }
 .md-typeset .locus-hero .locus-hero__code .highlight {
   border-radius: 8px;
