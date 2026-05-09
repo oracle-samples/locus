@@ -89,12 +89,31 @@ def test_supports_structured_output_capability_on_oci_native_model():
 def test_oci_openai_compat_inherits_capability():
     """OCIOpenAIModel inherits from OpenAIModel; reports True."""
     pytest.importorskip("oci")
+    from unittest.mock import MagicMock, patch
+
     from locus.models.providers.oci.openai_compat import OCIOpenAIModel
 
-    try:
-        model = OCIOpenAIModel(model="openai.gpt-5", profile_name="DEFAULT")
-    except Exception:
-        pytest.skip("OCIOpenAIModel construction requires OCI config")
+    fake_cfg = {
+        "tenancy": "ocid1.tenancy.oc1..aaa",
+        "user": "ocid1.user.oc1..aaa",
+        "fingerprint": "aa:bb:cc",
+        "key_file": "/dev/null",
+        "region": "us-chicago-1",
+    }
+    fake_signer = MagicMock()
+    fake_signer.region = "us-chicago-1"
+
+    with (
+        patch(
+            "locus.models.providers.oci.openai_compat._load_profile_config",
+            return_value=fake_cfg,
+        ),
+        patch(
+            "locus.models.providers.oci.openai_compat._build_signer_from_profile",
+            return_value=fake_signer,
+        ),
+    ):
+        model = OCIOpenAIModel(model="openai.gpt-5", profile="DEFAULT")
     assert model.supports_structured_output is True
 
 

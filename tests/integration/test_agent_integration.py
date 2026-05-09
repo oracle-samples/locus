@@ -1225,14 +1225,14 @@ class TestHooksE2E:
         from locus.tools.decorator import tool
 
         @tool
-        def delete_file(path: str) -> str:
-            """Delete a file at the given path."""
-            return f"Deleted {path}"
+        def send_alert(message: str) -> str:
+            """Send an alert notification with the given message."""
+            return f"Alert sent: {message}"
 
         @tool
-        def read_file(path: str) -> str:
-            """Read a file at the given path."""
-            return f"Contents of {path}: hello world"
+        def get_status() -> str:
+            """Get the current system status."""
+            return "All systems operational"
 
         blocked = []
 
@@ -1242,30 +1242,32 @@ class TestHooksE2E:
                 return 50
 
             async def on_before_tool_call(self, event):
-                if "delete" in event.tool_name:
+                if "alert" in event.tool_name:
                     blocked.append(event.tool_name)
                     event.cancel = f"BLOCKED: {event.tool_name} forbidden by security policy"
 
         agent = Agent(
             config=AgentConfig(
-                system_prompt="You manage files. If a tool is blocked, tell the user why.",
+                system_prompt="You manage system notifications. Use the tools available. If a tool is blocked, tell the user why.",
                 max_iterations=5,
                 model=model,
-                tools=[delete_file, read_file],
+                tools=[send_alert, get_status],
                 hooks=[SecurityGuardrail()],
             )
         )
 
-        result = agent.run_sync("Delete the file at /tmp/secret.txt")
+        result = agent.run_sync("Send an alert saying the deployment is complete.")
 
         # The hook should have blocked the tool
-        assert len(blocked) >= 1
-        assert "delete_file" in blocked
+        assert len(blocked) >= 1, (
+            f"Hook never fired. Tool calls: {[te.tool_name for te in result.tool_executions]}"
+        )
+        assert "send_alert" in blocked
 
         # The agent should have received the cancel message
-        delete_execs = [te for te in result.tool_executions if te.tool_name == "delete_file"]
-        assert len(delete_execs) >= 1
-        assert "BLOCKED" in (delete_execs[0].result or "")
+        alert_execs = [te for te in result.tool_executions if te.tool_name == "send_alert"]
+        assert len(alert_execs) >= 1
+        assert "BLOCKED" in (alert_execs[0].result or "")
 
     def test_write_protection_enforced_at_runtime(self, model):
         """Read-only fields on events raise AttributeError in real execution."""
@@ -1407,14 +1409,14 @@ class TestHooksE2E:
         from locus.tools.decorator import tool
 
         @tool
-        def delete_file(path: str) -> str:
-            """Delete a file at the given path."""
-            return f"Deleted {path}"
+        def send_alert(message: str) -> str:
+            """Send an alert notification with the given message."""
+            return f"Alert sent: {message}"
 
         @tool
-        def read_file(path: str) -> str:
-            """Read a file at the given path."""
-            return f"Contents of {path}: hello world"
+        def get_status() -> str:
+            """Get the current system status."""
+            return "All systems operational"
 
         blocked = []
 
@@ -1424,30 +1426,32 @@ class TestHooksE2E:
                 return 50
 
             async def on_before_tool_call(self, event):
-                if "delete" in event.tool_name:
+                if "alert" in event.tool_name:
                     blocked.append(event.tool_name)
                     event.cancel = f"BLOCKED: {event.tool_name} forbidden by security policy"
 
         agent = Agent(
             config=AgentConfig(
-                system_prompt="You manage files. If a tool is blocked, tell the user why.",
+                system_prompt="You manage system notifications. Use the tools available. If a tool is blocked, tell the user why.",
                 max_iterations=5,
                 model=model,
-                tools=[delete_file, read_file],
+                tools=[send_alert, get_status],
                 hooks=[SecurityGuardrail()],
             )
         )
 
-        result = agent.run_sync("Delete the file at /tmp/secret.txt")
+        result = agent.run_sync("Send an alert saying the deployment is complete.")
 
         # The hook should have blocked the tool
-        assert len(blocked) >= 1
-        assert "delete_file" in blocked
+        assert len(blocked) >= 1, (
+            f"Hook never fired. Tool calls: {[te.tool_name for te in result.tool_executions]}"
+        )
+        assert "send_alert" in blocked
 
         # The agent should have received the cancel message
-        delete_execs = [te for te in result.tool_executions if te.tool_name == "delete_file"]
-        assert len(delete_execs) >= 1
-        assert "BLOCKED" in (delete_execs[0].result or "")
+        alert_execs = [te for te in result.tool_executions if te.tool_name == "send_alert"]
+        assert len(alert_execs) >= 1
+        assert "BLOCKED" in (alert_execs[0].result or "")
 
     def test_write_protection_enforced_at_runtime(self, model):
         """Read-only fields on events raise AttributeError in real execution."""
@@ -1588,14 +1592,14 @@ class TestHooksE2E:
         from locus.tools.decorator import tool
 
         @tool
-        def delete_file(path: str) -> str:
-            """Delete a file at the given path."""
-            return f"Deleted {path}"
+        def send_alert(message: str) -> str:
+            """Send an alert notification with the given message."""
+            return f"Alert sent: {message}"
 
         @tool
-        def read_file(path: str) -> str:
-            """Read a file at the given path."""
-            return f"Contents of {path}: hello world"
+        def get_status() -> str:
+            """Get the current system status."""
+            return "All systems operational"
 
         blocked = []
 
@@ -1605,30 +1609,32 @@ class TestHooksE2E:
                 return 50
 
             async def on_before_tool_call(self, event):
-                if "delete" in event.tool_name:
+                if "alert" in event.tool_name:
                     blocked.append(event.tool_name)
                     event.cancel = f"BLOCKED: {event.tool_name} forbidden by security policy"
 
         agent = Agent(
             config=AgentConfig(
-                system_prompt="You manage files. If a tool is blocked, tell the user why.",
+                system_prompt="You manage system notifications. Use the tools available. If a tool is blocked, tell the user why.",
                 max_iterations=5,
                 model=model,
-                tools=[delete_file, read_file],
+                tools=[send_alert, get_status],
                 hooks=[SecurityGuardrail()],
             )
         )
 
-        result = agent.run_sync("Delete the file at /tmp/secret.txt")
+        result = agent.run_sync("Send an alert saying the deployment is complete.")
 
         # The hook should have blocked the tool
-        assert len(blocked) >= 1
-        assert "delete_file" in blocked
+        assert len(blocked) >= 1, (
+            f"Hook never fired. Tool calls: {[te.tool_name for te in result.tool_executions]}"
+        )
+        assert "send_alert" in blocked
 
         # The agent should have received the cancel message
-        delete_execs = [te for te in result.tool_executions if te.tool_name == "delete_file"]
-        assert len(delete_execs) >= 1
-        assert "BLOCKED" in (delete_execs[0].result or "")
+        alert_execs = [te for te in result.tool_executions if te.tool_name == "send_alert"]
+        assert len(alert_execs) >= 1
+        assert "BLOCKED" in (alert_execs[0].result or "")
 
     def test_write_protection_enforced_at_runtime(self, model):
         """Read-only fields on events raise AttributeError in real execution."""

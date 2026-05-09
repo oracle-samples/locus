@@ -59,19 +59,7 @@ _LIVE_MODELS = [
     pytest.param("openai.gpt-5-mini", True, id="openai-gpt-5-mini"),
     pytest.param("meta.llama-3.3-70b-instruct", False, id="meta-llama-3.3-70b"),
     pytest.param("xai.grok-4-fast-non-reasoning", False, id="xai-grok-4-fast"),
-    pytest.param(
-        "google.gemini-2.5-flash",
-        False,
-        id="google-gemini-2.5-flash",
-        # Gemini's structured-output validator rejects ``$ref`` in JSON
-        # schemas (which Pydantic emits for any nested BaseModel), so
-        # ``VendorList(vendors: list[Vendor])`` fails with HTTP 400 before
-        # the model is even invoked. Tracked as a Gemini SDK limitation.
-        marks=pytest.mark.xfail(
-            reason="Gemini rejects $ref in JSON schemas (Pydantic emits $ref for nested models)",
-            strict=False,
-        ),
-    ),
+    pytest.param("google.gemini-2.5-flash", False, id="google-gemini-2.5-flash"),
 ]
 
 

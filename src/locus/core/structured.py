@@ -254,6 +254,46 @@ def _enforce_additional_properties_false(node: Any) -> None:
             _enforce_additional_properties_false(item)
 
 
+def inline_schema_refs(schema: dict[str, Any]) -> dict[str, Any]:
+    """Resolve all ``$ref`` pointers in a JSON schema by inlining the definitions.
+
+    Gemini (and some other providers) reject schemas that contain ``$ref``
+    — they require every type to be spelled out inline rather than referenced
+    from ``$defs``.  This function performs a deep substitution: every
+    ``{"$ref": "#/$defs/Foo"}`` is replaced with the corresponding definition
+    from ``schema["$defs"]``, recursively, until no ``$ref`` remains.
+
+    Args:
+        schema: A JSON schema dict that may contain ``$defs`` and ``$ref``.
+
+    Returns:
+        A new schema dict with all ``$ref`` inlined and ``$defs`` removed.
+    """
+    import copy
+
+    defs = schema.get("$defs", {})
+    if not defs:
+        return schema
+
+    def _resolve(node: Any, seen: frozenset[str] = frozenset()) -> Any:  # noqa: B008
+        if isinstance(node, dict):
+            if "$ref" in node:
+                ref = node["$ref"]
+                name = ref.split("/")[-1]
+                if name in seen:
+                    return node
+                definition = copy.deepcopy(defs.get(name, node))
+                return _resolve(definition, seen | {name})
+            return {k: _resolve(v, seen) for k, v in node.items() if k != "$defs"}
+        if isinstance(node, list):
+            return [_resolve(item, seen) for item in node]
+        return node
+
+    resolved: dict[str, Any] = _resolve(copy.deepcopy(schema))
+    resolved.pop("$defs", None)
+    return resolved
+
+
 def build_response_format(schema: type[BaseModel], *, strict: bool = True) -> dict[str, Any]:
     """Build an OpenAI ``response_format`` for a Pydantic schema.
 
