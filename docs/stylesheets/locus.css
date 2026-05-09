@@ -536,6 +536,16 @@ html {
   .md-header__ellipsis > .md-header__topic:first-of-type::after {
     display: none;
   }
+  /* Always show "locus" (site title) in the mobile header — suppress
+     Material's page-title swap so users always see the brand name. */
+  .md-header__ellipsis > .md-header__topic:not(:first-of-type) {
+    display: none;
+  }
+  .md-header__ellipsis > .md-header__topic:first-of-type {
+    transform: translateY(0) !important;
+    opacity: 1 !important;
+    pointer-events: auto;
+  }
 }
 
 /* Header right slot — keep OCI/Oracle button and GitHub icon on one row.
