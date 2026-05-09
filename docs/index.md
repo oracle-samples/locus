@@ -7,9 +7,9 @@ hide:
 <div class="locus-hero" markdown>
 <div class="locus-hero__copy" markdown>
 
-# The right orchestration shape for every <span class="accent">task.</span>
+# Agentic workflows that <span class="accent">actually work.</span>
 
-Describe the goal. The cognitive router picks the protocol — pipeline, fan-out, debate, approval gate, and four more. The LLM fills a typed schema; topology is always deterministic.
+Describe the goal. locus picks the right coordination strategy — pipeline, fan-out, debate, approval gate, and four more — and runs it safely in production.
 
 <div class="locus-stat-strip">8 protocols &nbsp;·&nbsp; 90+ models &nbsp;·&nbsp; 55 tutorials &nbsp;·&nbsp; zero brokers</div>
 
