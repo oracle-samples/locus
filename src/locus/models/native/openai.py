@@ -335,6 +335,25 @@ class OpenAIModel(BaseModel):
         response = await self.client.chat.completions.create(**request_kwargs)
         return self._parse_response(response)
 
+    async def ainvoke(
+        self,
+        messages: list[Any],
+        tools: list[dict[str, Any]] | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        """LangChain-compatible alias for complete()."""
+        return await self.complete(messages, tools=tools, **kwargs)
+
+    def bind_tools(self, tools: list[Any], **kwargs: Any) -> OpenAIModel:
+        """LangChain-compatible bind_tools."""
+        bound = self.model_copy()
+        object.__setattr__(
+            bound,
+            "_bound_tools",
+            [t.to_openai_schema() if hasattr(t, "to_openai_schema") else t for t in (tools or [])],
+        )
+        return bound
+
     async def stream(
         self,
         messages: list[Message],

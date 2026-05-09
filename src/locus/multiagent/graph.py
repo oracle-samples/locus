@@ -447,6 +447,15 @@ class Edge(BaseModel):
     source_id: str
     target_id: str
 
+    # LangGraph-compatible aliases
+    @property
+    def source(self) -> str:
+        return self.source_id
+
+    @property
+    def target(self) -> str:
+        return self.target_id
+
     # Optional key mapping: source_output_key -> target_input_key
     key_mapping: dict[str, str] | None = None
 
@@ -1420,6 +1429,30 @@ class StateGraph(BaseModel):
         result = task.result()
         if stream_mode == StreamMode.VALUES:
             yield StreamEvent(mode=stream_mode, data=result.final_state)
+
+    async def ainvoke(
+        self,
+        inputs: dict[str, Any] | None = None,
+        config: GraphConfig | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """LangChain/LangGraph-compatible alias for execute() returning final_state."""
+        result = await self.execute(inputs or {}, config=config)
+        return result.final_state
+
+    async def astream(
+        self,
+        inputs: dict[str, Any] | None = None,
+        config: GraphConfig | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[StreamEvent]:
+        """LangChain/LangGraph-compatible alias for stream()."""
+        async for event in self.stream(inputs, config=config):
+            yield event
+
+    def get_graph(self) -> StateGraph:
+        """LangGraph-compatible alias — returns self (graph exposes .nodes dict)."""
+        return self
 
     def compile(
         self,
