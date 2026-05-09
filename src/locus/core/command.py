@@ -190,6 +190,15 @@ def normalize_node_output(output: Any) -> tuple[dict[str, Any], Command | None]:
     if isinstance(output, dict):
         return output, None
 
+    # Pydantic BaseModel → treat as state update dict (like LangGraph does)
+    try:
+        from pydantic import BaseModel as _BaseModel
+
+        if isinstance(output, _BaseModel):
+            return output.model_dump(mode="python", exclude_none=False), None
+    except Exception:  # noqa: BLE001
+        pass
+
     # Wrap other values
     return {"result": output}, None
 

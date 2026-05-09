@@ -334,8 +334,16 @@ class Node(BaseModel):
                         # Use final_state which has all merged outputs from the subgraph
                         output = subgraph_result.final_state
                     else:
-                        # Execute with optional timeout
-                        if asyncio.iscoroutinefunction(self.executor):
+                        # Execute with optional timeout.
+                        # Check the executor itself AND its __call__ method so that
+                        # callable class instances with async __call__ are awaited
+                        # correctly (asyncio.iscoroutinefunction returns False for
+                        # instances but True for bound methods and async functions).
+                        _exec_call = getattr(type(self.executor), "__call__", None)  # noqa: B004
+                        _is_async = asyncio.iscoroutinefunction(self.executor) or (
+                            _exec_call is not None and asyncio.iscoroutinefunction(_exec_call)
+                        )
+                        if _is_async:
                             coro = self.executor(inputs)
                         else:
                             # Wrap sync function
