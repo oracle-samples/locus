@@ -189,7 +189,7 @@ class OCIModel(BaseModel):
 
         Args:
             messages: Conversation history
-            tools: Tool schemas in OpenAI format
+            tools: Tool schemas in OpenAI format (overrides bound tools if set)
             **kwargs: Additional OCI-specific options
 
         Returns:
@@ -197,10 +197,13 @@ class OCIModel(BaseModel):
         """
         from oci.generative_ai_inference import models
 
+        # Use explicitly-passed tools; fall back to tools bound via bind_tools()
+        effective_tools = tools if tools is not None else getattr(self, "_bound_tools", None)
+
         # Convert messages and tools using the provider
         # Pass model_id for model-specific handling (e.g., Gemini parallel tool calls)
         converted_messages = self.provider.convert_messages(messages, self.config.model_id)
-        converted_tools = self.provider.convert_tools(tools)
+        converted_tools = self.provider.convert_tools(effective_tools)
 
         # Build request kwargs - remove duplicates
         request_kwargs = {
@@ -260,6 +263,25 @@ class OCIModel(BaseModel):
             usage=usage,
             stop_reason=stop_reason,
         )
+
+    async def ainvoke(
+        self,
+        messages: list[Any],
+        tools: list[dict[str, Any]] | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        """LangChain-compatible alias for complete()."""
+        return await self.complete(messages, tools=tools, **kwargs)
+
+    def bind_tools(self, tools: list[Any], **kwargs: Any) -> OCIModel:
+        """LangChain-compatible bind_tools — stores tool schemas and passes them on complete()."""
+        bound = self.model_copy()
+        object.__setattr__(
+            bound,
+            "_bound_tools",
+            [t.to_openai_schema() if hasattr(t, "to_openai_schema") else t for t in (tools or [])],
+        )
+        return bound
 
     async def stream(
         self,

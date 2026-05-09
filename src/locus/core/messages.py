@@ -11,7 +11,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class Role(StrEnum):
@@ -32,6 +32,15 @@ class ToolCall(BaseModel):
         default_factory=dict,
         description="Arguments to pass to the tool",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _accept_args_alias(cls, data: Any) -> Any:
+        """Accept ``args`` as a legacy alias for ``arguments``."""
+        if isinstance(data, dict) and "args" in data and "arguments" not in data:
+            data = dict(data)
+            data["arguments"] = data.pop("args")
+        return data
 
     def to_openai_format(self) -> dict[str, Any]:
         """Convert to OpenAI API format."""

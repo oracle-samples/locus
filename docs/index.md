@@ -9,24 +9,22 @@ hide:
 
 # The right orchestration shape for every <span class="accent">task.</span>
 
-**Describe your task. The multi-agent reasoning orchestrator selects
-from eight named protocols and instantiates the right primitive — the
-LLM fills a typed schema, topology is deterministic.**
+Describe the goal. The cognitive router picks the protocol — pipeline, fan-out, debate, approval gate, and four more. The LLM fills a typed schema; topology is always deterministic.
 
-- **8 coordination patterns** — direct answer · pipeline · fan-out · debate · code + test loop · approval gate · cross-process · handoff
-- **Production-safe** — tools that fire exactly once on retry · composable stop conditions · self-correcting reasoning · checkpoint/resume
-- **Full visibility** — opt-in `EventBus` (zero overhead, no external broker) · `TelemetryHook` for OpenTelemetry traces + metrics over OTLP
+<div class="locus-stat-strip">8 protocols &nbsp;·&nbsp; 90+ models &nbsp;·&nbsp; 55 tutorials &nbsp;·&nbsp; zero brokers</div>
 
-Open source. OCI GenAI native (90+ models); OpenAI, Anthropic, Ollama.
+- **Safe by default** — `@tool(idempotent=True)` fires exactly once per `(name, args)`, even after retries or checkpoint restarts
+- **Composable stops** — `ToolCalled("x") & ConfidenceMet(0.9) | MaxIterations(15)` — typed, unit-testable, grep-able
+- **Zero-overhead visibility** — opt-in `EventBus` streams 40+ event types; one hook exports full OpenTelemetry traces
 
-[See what you can build](#six-things-you-can-ship){ .md-button .md-button--primary }
+[Get started](#six-things-you-can-ship){ .md-button .md-button--primary }
 [GitHub](https://github.com/oracle-samples/locus){ .md-button }
 
 ```bash
-pip install "locus[oci]"
+pip install "locus[oci]"   # OCI GenAI · OpenAI · Anthropic · Ollama
 ```
 
-*Built inside Oracle. Used in production. Open to everyone.*
+Built inside Oracle · Used in production · MIT license
 
 </div>
 
@@ -73,6 +71,40 @@ async with run_context() as rid:
 </div>
 
 ## Six things you can ship
+
+<div class="grid cards locus-feature-cards" markdown>
+
+- :material-routes:{ .lg .middle } **Cognitive router**
+
+    ---
+    NL → typed `GoalFrame` → protocol → deterministic primitive. The LLM fills a schema; everything after is code.
+
+- :material-shield-check:{ .lg .middle } **Safe by design**
+
+    ---
+    Idempotent tools, composable stop conditions, checkpoint/resume. Production behaviours built in, not bolted on.
+
+- :material-chart-timeline-variant:{ .lg .middle } **Grounded reasoning**
+
+    ---
+    Reflexion scores every turn. Grounding verifies claims against tool results and drops hallucinations before they reach the user.
+
+- :material-eye:{ .lg .middle } **Full-stack visibility**
+
+    ---
+    EventBus emits 40+ typed events with zero overhead when unused. One hook exports complete OpenTelemetry traces over OTLP.
+
+- :material-graph:{ .lg .middle } **Multi-agent coordination**
+
+    ---
+    Fan-out, debate, handoff, orchestrator, A2A cross-process mesh. All use the same `Agent` class and stream into the same event bus.
+
+- :material-rocket-launch:{ .lg .middle } **Production server**
+
+    ---
+    `AgentServer` wraps any agent as a FastAPI app in two lines — `POST /invoke`, SSE streaming, per-principal thread persistence.
+
+</div>
 
 ### Route any task to a named orchestration shape
 
