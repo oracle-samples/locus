@@ -336,6 +336,43 @@ html {
   margin: 0.6rem 0;
   font-size: 0.78rem;
 }
+
+/* Stat strip — key numbers displayed as a compact metric bar. */
+.md-typeset .locus-stat-strip {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--locus-mute);
+  border-top: 1px solid var(--or-rule);
+  border-bottom: 1px solid var(--or-rule);
+  padding: 0.4rem 0;
+  margin: 0.8rem 0 1.1rem;
+}
+
+/* Feature card grid — tighter, icon-first cards for the six-things section. */
+.md-typeset .locus-feature-cards {
+  margin-bottom: 2.4rem;
+}
+.md-typeset .grid.cards.locus-feature-cards > ul > li,
+.md-typeset .grid.cards.locus-feature-cards > ol > li {
+  border-left: 3px solid var(--or-red);
+  border-radius: 0 6px 6px 0;
+  padding: 0.9rem 1rem;
+}
+.md-typeset .grid.cards.locus-feature-cards p {
+  font-size: 0.82rem;
+  color: var(--or-text);
+  margin: 0;
+  line-height: 1.5;
+}
+.md-typeset .grid.cards.locus-feature-cards strong {
+  font-size: 0.88rem;
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--or-text);
+}
 @media (max-width: 76em) {
   .md-typeset .locus-hero {
     grid-template-columns: 1fr;
