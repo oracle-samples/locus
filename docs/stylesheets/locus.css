@@ -638,6 +638,31 @@ html {
   font-weight: 700;
 }
 
+/* Mobile drawer header — override Material's red primary background with
+   the same surface + red hairline the desktop header uses. */
+.md-nav--primary .md-nav__title[for="__drawer"] {
+  background-color: var(--locus-surface);
+  color: var(--locus-ink);
+  border-bottom: 2px solid var(--or-red);
+  box-shadow: none;
+}
+.md-nav--primary .md-nav__title[for="__drawer"] .md-nav__button {
+  color: var(--locus-ink);
+}
+/* Source slot inside the drawer (GitHub icon row). */
+.md-drawer .md-header__source {
+  background-color: var(--or-bg-soft);
+  border-bottom: 1px solid var(--or-rule);
+}
+[data-md-color-scheme="slate"] .md-nav--primary .md-nav__title[for="__drawer"] {
+  background-color: var(--or-surface);
+  color: var(--or-text);
+}
+[data-md-color-scheme="slate"] .md-drawer .md-header__source {
+  background-color: var(--or-bg-soft);
+  border-bottom-color: var(--or-rule);
+}
+
 /* Section headers (Multi-agent, Agents, Tools …) — teal accent, uppercase,
    small caps so they read as category labels not nav items. */
 .md-nav--primary .md-nav__item--section > .md-nav__link,
