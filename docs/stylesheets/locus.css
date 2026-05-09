@@ -637,6 +637,32 @@ html {
   color: var(--or-text);
   font-weight: 700;
 }
+
+/* Section headers (Multi-agent, Agents, Tools …) — teal accent, uppercase,
+   small caps so they read as category labels not nav items. */
+.md-nav--primary .md-nav__item--section > .md-nav__link,
+.md-nav--primary .md-nav__item--section > .md-nav__link:not(.md-nav__link--active) {
+  color: var(--or-teal) !important;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--or-rule);
+  opacity: 1;
+}
+.md-nav--primary .md-nav__item--section:first-child > .md-nav__link {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0.2rem;
+}
+[data-md-color-scheme="slate"] .md-nav--primary .md-nav__item--section > .md-nav__link,
+[data-md-color-scheme="slate"] .md-nav--primary .md-nav__item--section > .md-nav__link:not(.md-nav__link--active) {
+  color: var(--or-sage-teal) !important;
+  border-top-color: var(--or-rule);
+}
+
 .md-nav__link--active,
 .md-nav__link[aria-current="true"] {
   color: var(--or-red-deep) !important;
