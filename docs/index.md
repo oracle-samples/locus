@@ -74,32 +74,32 @@ async with run_context() as rid:
 
 <div class="grid cards locus-feature-cards" markdown>
 
-- :material-graph:{ .lg .middle } **Multi-agent coordination**
+- :material-graph:{ .lg .middle } **[Multi-agent coordination](concepts/multi-agent.md)**
 
     ---
     Run agents in parallel, sequentially, or adversarially. Hand off between specialists. Connect across services. Eight named patterns, all using the same `Agent` class.
 
-- :material-routes:{ .lg .middle } **Cognitive router**
+- :material-routes:{ .lg .middle } **[Cognitive router](concepts/router.md)**
 
     ---
     Describe the goal in plain language. locus automatically selects the right coordination pattern — parallel research, sequential pipeline, adversarial debate, approval gate — and assembles the agents.
 
-- :material-shield-check:{ .lg .middle } **Safe by design**
+- :material-shield-check:{ .lg .middle } **[Safe by design](concepts/idempotency.md)**
 
     ---
     Tools never fire twice for the same call, even if the model retries or the workflow restarts mid-run. Stop conditions are typed rules you can unit-test. Workflows checkpoint themselves and resume after failures.
 
-- :material-chart-timeline-variant:{ .lg .middle } **Grounded reasoning**
+- :material-chart-timeline-variant:{ .lg .middle } **[Grounded reasoning](concepts/reasoning.md)**
 
     ---
     Agents score their own reasoning every turn and verify each claim against the tool result that produced it. Unverified claims get flagged or dropped before they reach the user.
 
-- :material-eye:{ .lg .middle } **Full observability**
+- :material-eye:{ .lg .middle } **[Full observability](concepts/observability.md)**
 
     ---
     Every meaningful step — agent thinking, tool calls, token usage, routing decisions — emits a typed event. Subscribe to any live run or export everything to OpenTelemetry with one hook.
 
-- :material-rocket-launch:{ .lg .middle } **Production server**
+- :material-rocket-launch:{ .lg .middle } **[Production server](concepts/server.md)**
 
     ---
     Two lines of code turn any agent into a deployed API — streaming responses, per-user thread isolation, and persistent conversation history out of the box.
