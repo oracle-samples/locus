@@ -340,10 +340,9 @@ html {
 /* Stat strip — compact metric bar. */
 .md-typeset .locus-stat-strip {
   display: block;
-  font-size: 0.58rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
   color: var(--locus-mute);
   border-top: 1px solid var(--or-rule);
   border-bottom: 1px solid var(--or-rule);
