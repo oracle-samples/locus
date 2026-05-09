@@ -9,13 +9,13 @@ hide:
 
 # Multi-agent workflows built for <span class="accent">production.</span>
 
-Describe the goal. locus picks the right coordination strategy — pipeline, fan-out, debate, approval gate, and four more — and runs it safely in production.
+locus picks the right coordination strategy for any task — and runs it production-safe.
 
-<div class="locus-stat-strip">8 protocols &nbsp;·&nbsp; 90+ models &nbsp;·&nbsp; 55 tutorials &nbsp;·&nbsp; zero brokers</div>
+<div class="locus-stat-strip">8 protocols &nbsp;·&nbsp; 90+ models &nbsp;·&nbsp; 55 tutorials &nbsp;·&nbsp; MIT license</div>
 
-- **Safe by default** — `@tool(idempotent=True)` fires exactly once per `(name, args)`, even after retries or checkpoint restarts
-- **Composable stops** — `ToolCalled("x") & ConfidenceMet(0.9) | MaxIterations(15)` — typed, unit-testable, grep-able
-- **Zero-overhead visibility** — opt-in `EventBus` streams 40+ event types; one hook exports full OpenTelemetry traces
+- **Safe by default** — `@tool(idempotent=True)` fires exactly once per `(name, args)`, even after retries or restarts
+- **Composable stops** — typed conditions composed with `&` and `|`; inspectable, unit-testable, serialisable
+- **Full observability** — opt-in `EventBus` streams 40+ event types; one hook exports OpenTelemetry traces
 
 [Get started](#six-things-you-can-ship){ .md-button .md-button--primary }
 [GitHub](https://github.com/oracle-samples/locus){ .md-button }
@@ -77,32 +77,32 @@ async with run_context() as rid:
 - :material-routes:{ .lg .middle } **Cognitive router**
 
     ---
-    NL → typed `GoalFrame` → protocol → deterministic primitive. The LLM fills a schema; everything after is code.
+    NL → typed `GoalFrame` → protocol → deterministic primitive. The LLM fills a schema; the rest is deterministic code.
 
 - :material-shield-check:{ .lg .middle } **Safe by design**
 
     ---
-    Idempotent tools, composable stop conditions, checkpoint/resume. Production behaviours built in, not bolted on.
+    Idempotent tools, composable stop conditions, checkpoint/resume. Production behaviours baked in.
 
 - :material-chart-timeline-variant:{ .lg .middle } **Grounded reasoning**
 
     ---
-    Reflexion scores every turn. Grounding verifies claims against tool results and drops hallucinations before they reach the user.
+    Reflexion scores every turn. Grounding verifies claims against tool results and drops hallucinations.
 
-- :material-eye:{ .lg .middle } **Full-stack visibility**
+- :material-eye:{ .lg .middle } **Full observability**
 
     ---
-    EventBus emits 40+ typed events with zero overhead when unused. One hook exports complete OpenTelemetry traces over OTLP.
+    `EventBus` emits 40+ typed events, zero overhead when unused. One hook exports full OpenTelemetry traces over OTLP.
 
 - :material-graph:{ .lg .middle } **Multi-agent coordination**
 
     ---
-    Fan-out, debate, handoff, orchestrator, A2A cross-process mesh. All use the same `Agent` class and stream into the same event bus.
+    Fan-out, debate, handoff, orchestrator, A2A cross-process mesh — eight patterns, one `Agent` class.
 
 - :material-rocket-launch:{ .lg .middle } **Production server**
 
     ---
-    `AgentServer` wraps any agent as a FastAPI app in two lines — `POST /invoke`, SSE streaming, per-principal thread persistence.
+    `AgentServer` wraps any agent as a FastAPI app in two lines — `POST /invoke`, SSE streaming, per-principal thread isolation.
 
 </div>
 
