@@ -74,6 +74,11 @@ async with run_context() as rid:
 
 <div class="grid cards locus-feature-cards" markdown>
 
+- :material-graph:{ .lg .middle } **Multi-agent coordination**
+
+    ---
+    Run agents in parallel, sequentially, or adversarially. Hand off between specialists. Connect across services. Eight named patterns, all using the same `Agent` class.
+
 - :material-routes:{ .lg .middle } **Cognitive router**
 
     ---
@@ -93,11 +98,6 @@ async with run_context() as rid:
 
     ---
     Every meaningful step — agent thinking, tool calls, token usage, routing decisions — emits a typed event. Subscribe to any live run or export everything to OpenTelemetry with one hook.
-
-- :material-graph:{ .lg .middle } **Multi-agent coordination**
-
-    ---
-    Run agents in parallel, sequentially, or adversarially. Hand off between specialists. Connect across services. Eight named patterns, all using the same `Agent` class.
 
 - :material-rocket-launch:{ .lg .middle } **Production server**
 
