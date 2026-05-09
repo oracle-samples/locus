@@ -30,6 +30,9 @@ const OCI_ONLY = new Set<string>([
   "tutorial_41_deepagent",        // >10 min with subagents; covered by CLI tests
   "tutorial_49_audio_response",
   "tutorial_50_audio_chat",
+  // RAG tutorials call OCIEmbeddings internally — no OCI credentials in Anthropic sweep.
+  "tutorial_22_rag_basics",
+  "tutorial_24_rag_agents",
 ]);
 // Stagger gap between tutorials inside a worker. Anthropic tier 1 caps
 // at 50 RPM for sonnet — with N workers each firing back-to-back we can

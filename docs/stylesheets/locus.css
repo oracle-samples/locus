@@ -337,18 +337,27 @@ html {
   font-size: 0.78rem;
 }
 
-/* Stat strip — key numbers displayed as a compact metric bar. */
+/* Stat strip — compact metric bar. */
 .md-typeset .locus-stat-strip {
-  display: inline-block;
+  display: block;
   font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0.01em;
   color: var(--locus-mute);
   border-top: 1px solid var(--or-rule);
   border-bottom: 1px solid var(--or-rule);
-  padding: 0.4rem 0;
-  margin: 0.8rem 0 1.1rem;
+  padding: 0.35rem 0;
+  margin: 0.7rem 0 1rem;
+}
+.md-typeset .locus-stat-strip a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+.md-typeset .locus-stat-strip a:hover {
+  color: var(--or-red);
+  border-bottom-color: var(--or-red);
 }
 
 /* Feature card grid — tighter, icon-first cards for the six-things section. */
@@ -368,7 +377,7 @@ html {
   line-height: 1.5;
 }
 .md-typeset .grid.cards.locus-feature-cards strong {
-  font-size: 0.88rem;
+  font-size: 1rem;
   display: block;
   margin-bottom: 0.25rem;
   color: var(--or-text);
@@ -527,6 +536,16 @@ html {
   .md-header__ellipsis > .md-header__topic:first-of-type::after {
     display: none;
   }
+  /* Always show "locus" (site title) in the mobile header — suppress
+     Material's page-title swap so users always see the brand name. */
+  .md-header__ellipsis > .md-header__topic:not(:first-of-type) {
+    display: none;
+  }
+  .md-header__ellipsis > .md-header__topic:first-of-type {
+    transform: translateY(0) !important;
+    opacity: 1 !important;
+    pointer-events: auto;
+  }
 }
 
 /* Header right slot — keep OCI/Oracle button and GitHub icon on one row.
@@ -628,6 +647,57 @@ html {
   color: var(--or-text);
   font-weight: 700;
 }
+
+/* Mobile drawer header — override Material's red primary background with
+   the same surface + red hairline the desktop header uses. */
+.md-nav--primary .md-nav__title[for="__drawer"] {
+  background-color: var(--locus-surface);
+  color: var(--locus-ink);
+  border-bottom: 2px solid var(--or-red);
+  box-shadow: none;
+}
+.md-nav--primary .md-nav__title[for="__drawer"] .md-nav__button {
+  color: var(--locus-ink);
+}
+/* Source slot inside the drawer (GitHub icon row). */
+.md-drawer .md-header__source {
+  background-color: var(--or-bg-soft);
+  border-bottom: 1px solid var(--or-rule);
+}
+[data-md-color-scheme="slate"] .md-nav--primary .md-nav__title[for="__drawer"] {
+  background-color: var(--or-surface);
+  color: var(--or-text);
+}
+[data-md-color-scheme="slate"] .md-drawer .md-header__source {
+  background-color: var(--or-bg-soft);
+  border-bottom-color: var(--or-rule);
+}
+
+/* Section headers (Multi-agent, Agents, Tools …) — teal accent, uppercase,
+   small caps so they read as category labels not nav items. */
+.md-nav--primary .md-nav__item--section > .md-nav__link,
+.md-nav--primary .md-nav__item--section > .md-nav__link:not(.md-nav__link--active) {
+  color: var(--or-teal) !important;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--or-rule);
+  opacity: 1;
+}
+.md-nav--primary .md-nav__item--section:first-child > .md-nav__link {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0.2rem;
+}
+[data-md-color-scheme="slate"] .md-nav--primary .md-nav__item--section > .md-nav__link,
+[data-md-color-scheme="slate"] .md-nav--primary .md-nav__item--section > .md-nav__link:not(.md-nav__link--active) {
+  color: var(--or-sage-teal) !important;
+  border-top-color: var(--or-rule);
+}
+
 .md-nav__link--active,
 .md-nav__link[aria-current="true"] {
   color: var(--or-red-deep) !important;

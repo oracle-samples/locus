@@ -45,6 +45,11 @@ const SKIP = new Set<string>([
   // json_schema response_format. The guard exits 0 with a helpful message
   // only when LOCUS_MODEL_PROVIDER=oci+cohere — skip in the OCI sweep too.
   "tutorial_14_reasoning_patterns",
+  // RAG tutorials call OCIEmbeddings which defaults to api_key auth —
+  // incompatible with session-token profiles (e.g. BOAT-OC1). The embed
+  // client needs a separate API-key profile or LOCUS_OCI_AUTH_TYPE=security_token.
+  "tutorial_22_rag_basics",
+  "tutorial_24_rag_agents",
 ]);
 
 test.use({ video: "off", trace: "off", screenshot: "off" });
