@@ -11,7 +11,7 @@ hide:
 
 locus picks the right coordination strategy for any task — and runs it production-safe.
 
-<div class="locus-stat-strip"><a href="concepts/multi-agent.md">multi-agent</a> &nbsp;·&nbsp; <a href="concepts/router.md">cognitive protocol</a> &nbsp;·&nbsp; <a href="concepts/agent-loop.md">human-in-the-loop</a> &nbsp;·&nbsp; <a href="concepts/reasoning.md">self-evaluating</a></div>
+<div class="locus-stat-strip" markdown>[multi-agent](concepts/multi-agent.md) &nbsp;·&nbsp; [cognitive protocol](concepts/router.md) &nbsp;·&nbsp; [human-in-the-loop](concepts/agent-loop.md) &nbsp;·&nbsp; [self-evaluating](concepts/reasoning.md)</div>
 
 - **No duplicate side effects** — book, bill, or page with confidence. Actions happen exactly once, even across retries and restarts
 - **You decide when agents stop** — set rules like "stop when the task is done and confidence is above 90%", not just token limits
@@ -152,8 +152,8 @@ Eight built-in protocols, each mapping to a different runtime shape:
 | `a2a_delegate` | `A2AClient.invoke` (opt-in only) | — |
 | `handoff_chain` | `SequentialPipeline` of one-tool Agents | `COORDINATE` |
 
-→ [Cognitive router — full reference](concepts/router.md) ·
-[Tutorial 51: route five distinct tasks](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_51_cognitive_router.py)
+[Full reference](concepts/router.md){ .md-button }
+[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_51_cognitive_router.py){ .md-button }
 
 ### Agents that verify their own answers
 
@@ -186,8 +186,8 @@ print(f"grounding score: {result.grounding_score:.2f}")
 # → grounding score: 0.94 — three claims grounded, one dropped (revenue mix)
 ```
 
-→ [Reasoning inside the loop](concepts/reasoning.md) ·
-[Turn on Reflexion + Grounding in one line](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_14_reasoning_patterns.py)
+[Full reference](concepts/reasoning.md){ .md-button }
+[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_14_reasoning_patterns.py){ .md-button }
 
 ### No double-booking. No duplicate emails
 
@@ -218,8 +218,8 @@ result = agent.run_sync("Approve Acme for the $42k laptop refresh.")
 #   the (name, kwargs) hash inside the ReAct loop's Execute node.
 ```
 
-→ [Idempotent tools in the ReAct loop](concepts/idempotency.md) ·
-[Walk through a vendor PO with human approval](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_09_human_in_the_loop.py)
+[Full reference](concepts/idempotency.md){ .md-button }
+[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_09_human_in_the_loop.py){ .md-button }
 
 ### One conversation, many specialists
 
@@ -252,8 +252,8 @@ desk = create_handoff_manager(
 # → [Triage → Billing] "Refunded $129. Confirmation RF-19340."
 ```
 
-→ [Handoff with chain-of-custody](concepts/multi-agent/handoff.md) ·
-[Wire a Triage / Billing / Shipping handoff desk](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_16_agent_handoff.py)
+[Full reference](concepts/multi-agent/handoff.md){ .md-button }
+[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_16_agent_handoff.py){ .md-button }
 
 ### See everything your agents are doing
 
@@ -292,9 +292,9 @@ Nine event prefixes, 40+ canonical types.
 `subscribe_global()` watches all concurrent runs.
 Slow consumers get dropped events, never stall the publisher.
 
-→ [Observability — EventBus + agent yield bridge](concepts/observability.md) ·
-[SSE event catalogue](concepts/sse-events.md) ·
-[Tutorial 52: observability basics](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_52_observability_basics.py)
+[Full reference](concepts/observability.md){ .md-button }
+[Event catalogue](concepts/sse-events.md){ .md-button }
+[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_52_observability_basics.py){ .md-button }
 
 ### Tell agents exactly when to stop
 
@@ -323,8 +323,8 @@ print(result.stop_reason)
 # → ToolCalled('submit_po') and ConfidenceMet(0.92)
 ```
 
-→ [Termination algebra](concepts/termination.md) ·
-[Compose stop conditions like algebra](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_37_termination.py)
+[Full reference](concepts/termination.md){ .md-button }
+[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_37_termination.py){ .md-button }
 
 ### Deploy in two lines of code
 
@@ -357,8 +357,8 @@ server.run(host="0.0.0.0", port=8080)
 # → {"message": "Refunded $129. Confirmation RF-19340.", "thread_id": "user-c42"}
 ```
 
-→ [Agent Server — drop-in FastAPI app](concepts/server.md) ·
-[Deploy a locus agent as a FastAPI service](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_28_agent_server.py)
+[Full reference](concepts/server.md){ .md-button }
+[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_28_agent_server.py){ .md-button }
 
 ## How every agent runs
 
