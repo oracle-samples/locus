@@ -129,7 +129,7 @@ def test_idempotent_tool_fires_once_when_model_retries(oci_openai_factory, model
 
     invoice_calls = [te for te in result.tool_executions if te.tool_name == "submit_invoice"]
     if len(invoice_calls) < 2:
-        pytest.skip(
+        pytest.xfail(
             f"{model_id} only invoked submit_invoice {len(invoice_calls)}x; no duplicate to dedup"
         )
 
@@ -186,7 +186,7 @@ def test_idempotent_dedup_native_sdk(oci_native_factory, model_id: str):
 
     invoice_calls = [te for te in result.tool_executions if te.tool_name == "submit_invoice"]
     if len(invoice_calls) < 2:
-        pytest.skip(
+        pytest.xfail(
             f"{model_id} only invoked submit_invoice {len(invoice_calls)}x; no duplicate to dedup"
         )
 
