@@ -7,7 +7,7 @@ hide:
 <div class="locus-hero" markdown>
 <div class="locus-hero__copy" markdown>
 
-# Agentic workflows that <span class="accent">actually work.</span>
+# Multi-agent workflows built for <span class="accent">production.</span>
 
 Describe the goal. locus picks the right coordination strategy — pipeline, fan-out, debate, approval gate, and four more — and runs it safely in production.
 
