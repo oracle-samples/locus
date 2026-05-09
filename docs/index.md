@@ -77,32 +77,32 @@ async with run_context() as rid:
 - :material-graph:{ .lg .middle } **[Multi-agent coordination](concepts/multi-agent.md)**
 
     ---
-    Run agents in parallel, sequentially, or adversarially. Hand off between specialists. Connect across services. Eight named patterns, all using the same `Agent` class.
+    Seven native patterns plus A2A: Sequential, Parallel, Loop, Orchestrator, Swarm, Handoff, StateGraph, Functional API, DeepAgent, cross-process A2A. Every pattern shares the same `Agent` class and event stream.
 
 - :material-routes:{ .lg .middle } **[Cognitive router](concepts/router.md)**
 
     ---
-    Describe the goal in plain language. locus automatically selects the right coordination pattern — parallel research, sequential pipeline, adversarial debate, approval gate — and assembles the agents.
-
-- :material-shield-check:{ .lg .middle } **[Safe by design](concepts/idempotency.md)**
-
-    ---
-    Tools never fire twice for the same call, even if the model retries or the workflow restarts mid-run. Stop conditions are typed rules you can unit-test. Workflows checkpoint themselves and resume after failures.
+    Describe a task. A deterministic registry picks one of eight protocols and instantiates the matching primitive. The LLM fills a typed `GoalFrame`; routing is rule-based, not probabilistic.
 
 - :material-chart-timeline-variant:{ .lg .middle } **[Grounded reasoning](concepts/reasoning.md)**
 
     ---
-    Agents score their own reasoning every turn and verify each claim against the tool result that produced it. Unverified claims get flagged or dropped before they reach the user.
+    Reflexion, Grounding, and Causal are first-class `Think → Execute → Reflect` nodes. GSAR adds a four-way claim partition — cited, supported, unsupported, mismatched — with tiered replanning.
 
-- :material-eye:{ .lg .middle } **[Full observability](concepts/observability.md)**
-
-    ---
-    Every meaningful step — agent thinking, tool calls, token usage, routing decisions — emits a typed event. Subscribe to any live run or export everything to OpenTelemetry with one hook.
-
-- :material-rocket-launch:{ .lg .middle } **[Production server](concepts/server.md)**
+- :material-eye:{ .lg .middle } **[In-process observability](concepts/observability.md)**
 
     ---
-    Two lines of code turn any agent into a deployed API — streaming responses, per-user thread isolation, and persistent conversation history out of the box.
+    Opt-in `EventBus` with agent yield bridge. One `run_context()` streams 40+ canonical events from every layer — agent, multi-agent, router, RAG, memory, A2A. Zero allocations when unused.
+
+- :material-shield-check:{ .lg .middle } **[Idempotent tools](concepts/idempotency.md)**
+
+    ---
+    `@tool(idempotent=True)` deduplicates on `(name, args)` inside the Execute node. No double-charge, double-book, or double-page — even on model retry or checkpoint resume.
+
+- :material-code-braces:{ .lg .middle } **[Termination algebra](concepts/termination.md)**
+
+    ---
+    `MaxIterations(10) | TextMention("DONE") & ConfidenceMet(0.9)` is real Python — `__or__` / `__and__` overloads on typed classes. Greppable, unit-testable, serialisable.
 
 </div>
 
