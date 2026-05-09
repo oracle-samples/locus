@@ -11,7 +11,7 @@ hide:
 
 locus picks the right coordination strategy for any task — and runs it production-safe.
 
-<div class="locus-stat-strip">multi-agent &nbsp;·&nbsp; cognitive protocol &nbsp;·&nbsp; human-in-the-loop &nbsp;·&nbsp; self-evaluating</div>
+<div class="locus-stat-strip"><a href="concepts/multi-agent.md">multi-agent</a> &nbsp;·&nbsp; <a href="concepts/router.md">cognitive protocol</a> &nbsp;·&nbsp; <a href="concepts/agent-loop.md">human-in-the-loop</a> &nbsp;·&nbsp; <a href="concepts/reasoning.md">self-evaluating</a></div>
 
 - **Safe by default** — `@tool(idempotent=True)` fires exactly once per `(name, args)`, even after retries or restarts
 - **Composable stops** — typed conditions composed with `&` and `|`; inspectable, unit-testable, serialisable
@@ -24,7 +24,7 @@ locus picks the right coordination strategy for any task — and runs it product
 pip install "locus[oci]"   # OCI GenAI · OpenAI · Anthropic · Ollama
 ```
 
-Built inside Oracle · Used in production · MIT license
+Built inside Oracle · Used in production · Open source
 
 </div>
 
