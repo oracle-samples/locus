@@ -785,24 +785,33 @@ html {
    --------------------------------------------------------------------------- */
 .md-typeset .md-button {
   background-color: transparent;
-  border: 1px solid var(--or-red);
+  border: 1.5px solid var(--or-red);
   color: var(--or-red);
-  border-radius: 3px;
+  border-radius: 8px;
   font-weight: 600;
   letter-spacing: 0.01em;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
 }
 .md-typeset .md-button:hover,
 .md-typeset .md-button:focus {
   background-color: var(--or-red);
   color: #FFFFFF;
   border-color: var(--or-red);
+  box-shadow: 0 4px 14px -4px rgba(199, 70, 52, 0.45);
 }
 .md-typeset .md-button--primary {
   background-color: var(--or-red);
   color: #FFFFFF;
+  box-shadow: 0 2px 8px -2px rgba(199, 70, 52, 0.35);
 }
 .md-typeset .md-button--primary:hover {
   background-color: var(--or-red-deep);
+  box-shadow: 0 4px 14px -4px rgba(199, 70, 52, 0.55);
+}
+
+/* Hide the ¶ permalink on the hero h1 — noise on a marketing page. */
+.md-typeset .locus-hero h1 .headerlink {
+  display: none;
 }
 
 /* ---------------------------------------------------------------------------
