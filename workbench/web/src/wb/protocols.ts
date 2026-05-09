@@ -142,44 +142,52 @@ function renderDetail(p: ProtocolDetail): void {
     : "";
 }
 
-/** Wire all three sidebar tabs: Tutorials / Skills / Protocols. */
+/** Wire all four sidebar tabs: Tutorials / Skills / Protocols / Patterns. */
 export function installSidebarTabs(): void {
   const tutsTab = $("#side-tab-tutorials");
   const skillsTab = $("#side-tab-skills");
   const protocolsTab = $("#side-tab-protocols");
+  const patternsTab = $("#side-tab-patterns");
   const tutsPane = $("#side-pane-tutorials");
   const skillsPane = $("#side-pane-skills");
   const protocolsPane = $("#side-pane-protocols");
+  const patternsPane = $("#side-pane-patterns");
   const wbView = $("#workbench");
   const skillsView = $("#skills-view");
   const protocolsView = $("#protocols-view");
+  const patternsView = $("#patterns-view");
 
   let skillsInit = false;
   let protocolsInit = false;
+  let patternsInit = false;
 
-  function activate(mode: "tutorials" | "skills" | "protocols"): void {
+  function activate(mode: "tutorials" | "skills" | "protocols" | "patterns"): void {
     const isSkills = mode === "skills";
     const isProtocols = mode === "protocols";
     const isTutorials = mode === "tutorials";
+    const isPatterns = mode === "patterns";
 
     tutsTab.classList.toggle("side__tab--active", isTutorials);
     skillsTab.classList.toggle("side__tab--active", isSkills);
     protocolsTab.classList.toggle("side__tab--active", isProtocols);
+    patternsTab.classList.toggle("side__tab--active", isPatterns);
     tutsTab.setAttribute("aria-selected", String(isTutorials));
     skillsTab.setAttribute("aria-selected", String(isSkills));
     protocolsTab.setAttribute("aria-selected", String(isProtocols));
+    patternsTab.setAttribute("aria-selected", String(isPatterns));
 
     tutsPane.style.display = isTutorials ? "" : "none";
     skillsPane.style.display = isSkills ? "" : "none";
     protocolsPane.style.display = isProtocols ? "" : "none";
+    patternsPane.style.display = isPatterns ? "" : "none";
 
     wbView.style.display = isTutorials ? "" : "none";
     skillsView.style.display = isSkills ? "" : "none";
     protocolsView.style.display = isProtocols ? "" : "none";
+    patternsView.style.display = isPatterns ? "" : "none";
 
     if (isSkills && !skillsInit) {
       skillsInit = true;
-      // Lazy import — skills.ts owns its bootstrap.
       void import("./skills").then(({ bootstrapSkills }) => {
         void bootstrapSkills();
       });
@@ -188,9 +196,16 @@ export function installSidebarTabs(): void {
       protocolsInit = true;
       void bootstrapProtocols();
     }
+    if (isPatterns && !patternsInit) {
+      patternsInit = true;
+      void import("./patterns").then(({ bootstrapPatterns }) => {
+        void bootstrapPatterns();
+      });
+    }
   }
 
   tutsTab.addEventListener("click", () => activate("tutorials"));
   skillsTab.addEventListener("click", () => activate("skills"));
   protocolsTab.addEventListener("click", () => activate("protocols"));
+  patternsTab.addEventListener("click", () => activate("patterns"));
 }

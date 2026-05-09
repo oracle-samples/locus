@@ -189,6 +189,85 @@ export function runTutorialSource(
   return () => ctrl.abort();
 }
 
+// ---------------------------------------------------------------------------
+// Pattern runner (the 8 pre-wired locus patterns).
+// ---------------------------------------------------------------------------
+
+export type Pattern = {
+  id: string;
+  name: string;
+  description: string;
+  streamable: boolean;
+};
+
+export type PatternRunResponse = {
+  output: string;
+  model?: string;
+  provider?: string;
+};
+
+export async function listPatterns(): Promise<Pattern[]> {
+  const r = await fetch("/api/patterns");
+  if (!r.ok) throw new Error(`patterns ${r.status}`);
+  return (await r.json()) as Pattern[];
+}
+
+export async function runPattern(
+  patternId: string,
+  prompt: string,
+  provider: ProviderConfig,
+): Promise<PatternRunResponse> {
+  const r = await fetch(`/api/run/${encodeURIComponent(patternId)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, provider }),
+  });
+  if (!r.ok) throw new Error(`run ${r.status}: ${await r.text()}`);
+  return (await r.json()) as PatternRunResponse;
+}
+
+export function streamPattern(
+  patternId: string,
+  prompt: string,
+  provider: ProviderConfig,
+  onChunk: (text: string) => void,
+  onClose: () => void,
+): () => void {
+  const ctrl = new AbortController();
+  void (async () => {
+    try {
+      const r = await fetch(`/api/run/${encodeURIComponent(patternId)}/stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, provider }),
+        signal: ctrl.signal,
+      });
+      if (!r.ok || !r.body) { onClose(); return; }
+      const reader = r.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buf.indexOf("\n\n")) !== -1) {
+          const block = buf.slice(0, nl);
+          buf = buf.slice(nl + 2);
+          for (const line of block.split("\n")) {
+            if (line.startsWith("data:")) onChunk(line.slice(5).trim());
+          }
+        }
+      }
+      onClose();
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") onChunk(`error: ${(err as Error).message}`);
+      onClose();
+    }
+  })();
+  return () => ctrl.abort();
+}
+
 export async function listModels(provider: ProviderConfig): Promise<{ models: string[]; error?: string }> {
   const r = await fetch("/api/models", {
     method: "POST",
