@@ -79,6 +79,66 @@ Home: https://github.com/modelcontextprotocol/python-sdk
 Copyright (c) Anthropic, PBC
 
 ================================================================================
+OPTIONAL DEPENDENCIES (RAG / Vector Stores)
+================================================================================
+
+oracledb (python-oracledb)
+--------------------------
+License: Apache-2.0
+Home: https://github.com/oracle/python-oracledb
+Copyright (c) Oracle and/or its affiliates
+
+qdrant-client
+-------------
+License: Apache-2.0
+Home: https://github.com/qdrant/qdrant-client
+Copyright (c) Qdrant Team
+
+chromadb
+--------
+License: Apache-2.0
+Home: https://github.com/chroma-core/chroma
+Copyright (c) 2023 Chroma
+
+pinecone
+--------
+License: Apache-2.0
+Home: https://github.com/pinecone-io/pinecone-python-client
+Copyright (c) Pinecone Systems, Inc.
+
+================================================================================
+OPTIONAL DEPENDENCIES (Server)
+================================================================================
+
+fastapi
+-------
+License: MIT
+Home: https://github.com/tiangolo/fastapi
+Copyright (c) 2018 Sebastián Ramírez
+
+uvicorn
+-------
+License: BSD-3-Clause
+Home: https://github.com/encode/uvicorn
+Copyright (c) 2017-present, Tom Christie
+
+================================================================================
+OPTIONAL DEPENDENCIES (Model Providers — Additional)
+================================================================================
+
+anthropic
+---------
+License: MIT
+Home: https://github.com/anthropics/anthropic-sdk-python
+Copyright (c) Anthropic, PBC
+
+ollama
+------
+License: MIT
+Home: https://github.com/ollama/ollama-python
+Copyright (c) Ollama
+
+================================================================================
 OPTIONAL DEPENDENCIES (Checkpoint/Memory Backends)
 ================================================================================
 
