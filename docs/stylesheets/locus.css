@@ -543,8 +543,14 @@ html {
   white-space: nowrap;
 }
 @media (max-width: 56em) {
+  /* Show "multi-agent" as a compact tagline below "locus" on mobile. */
   .md-header__ellipsis > .md-header__topic:first-of-type::after {
-    display: none;
+    content: "multi-agent";
+    font-size: 0.52rem;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    color: var(--or-red);
+    display: block;
   }
   /* Always show "locus" (site title) in the mobile header — suppress
      Material's page-title swap so users always see the brand name. */
@@ -606,11 +612,6 @@ html {
 }
 
 @media (max-width: 60em) {
-  /* Hide the entire OCI/Oracle link on mobile — it's brand decoration,
-     not navigation. Removes clutter and gives the title room to breathe. */
-  .md-header__source.md-header__oci {
-    display: none;
-  }
   /* Tighten header inner padding so logo + hamburger + title + icons fit. */
   .md-header__inner {
     padding-left: 0.5rem;
@@ -622,6 +623,20 @@ html {
     height: 1.6rem;
     max-height: 28px;
   }
+  /* Show Oracle mark at reduced size; hide wordmark. */
+  .md-header__oracle-wordmark { display: none; }
+  .md-header__oci-mark { width: 20px; height: 20px; }
+  .md-header__source.md-header__oci { padding: 0.2rem 0.3rem; }
+}
+
+/* GitHub icon white when inside the mobile drawer (red primary background). */
+.md-nav--primary .md-header__source.md-header__github,
+.md-drawer .md-header__source.md-header__github {
+  color: #FFFFFF;
+}
+.md-nav--primary .md-header__source.md-header__github:hover {
+  color: #FFFFFF;
+  opacity: 0.8;
 }
 
 .md-tabs {
