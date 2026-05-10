@@ -341,8 +341,9 @@ class OpenAIModel(BaseModel):
         tools: list[dict[str, Any]] | None = None,
         **kwargs: Any,
     ) -> Any:
-        """LangChain-compatible alias for complete()."""
-        return await self.complete(messages, tools=tools, **kwargs)
+        """LangChain-compatible alias — returns Message (AIMessage equivalent)."""
+        response = await self.complete(messages, tools=tools, **kwargs)
+        return response.message if hasattr(response, "message") else response
 
     def bind_tools(self, tools: list[Any], **kwargs: Any) -> OpenAIModel:
         """LangChain-compatible bind_tools."""
