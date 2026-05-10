@@ -230,6 +230,23 @@ function saveSettings() {
 }
 
 // ---------------------------------------------------------------------------
+// Provider options — context-aware
+// localhost → OCI session only (profile on disk)
+// remote    → API key providers only (no profile access)
+// ---------------------------------------------------------------------------
+
+const isLocalhost = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+
+(function filterProviderOptions() {
+  // OCI session token needs a local ~/.oci/config profile — only available on localhost.
+  if (!isLocalhost) {
+    Array.from(cfgProvider.options)
+      .filter(opt => opt.value === "oci-session")
+      .forEach(opt => opt.remove());
+  }
+})();
+
+// ---------------------------------------------------------------------------
 // Boot
 // ---------------------------------------------------------------------------
 

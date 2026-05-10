@@ -51,8 +51,7 @@ def _llm_call(
 
 def example_create_agents():
     """Create specialized swarm agents."""
-    print("=== Part 1: Creating Swarm Agents ===
-")
+    print("=== Part 1: Creating Swarm Agents ===\n")
     print(
         f"AI rationale: {_llm_call('In one sentence, when is a swarm of small specialised agents a better fit than one generalist agent?')}"
     )
@@ -91,8 +90,7 @@ def example_create_agents():
 
 async def example_shared_context():
     """Demonstrate shared context for inter-agent communication."""
-    print("=== Part 2: Shared Context ===
-")
+    print("=== Part 2: Shared Context ===\n")
     print(
         f"AI rationale: {_llm_call('In one sentence, why does a swarm need SharedContext for messages and discoveries?')}"
     )
@@ -131,8 +129,7 @@ async def example_shared_context():
 
 def example_task_queue():
     """Demonstrate the task queue system."""
-    print("=== Part 3: Task Queue ===
-")
+    print("=== Part 3: Task Queue ===\n")
     print(
         f"AI rationale: {_llm_call('In one sentence, why is task-queue routing useful for a heterogeneous swarm?')}"
     )
@@ -160,8 +157,7 @@ def example_task_queue():
 
 def example_capability_matching():
     """Show how agents are matched to tasks based on capabilities."""
-    print("=== Part 4: Capability-Based Assignment ===
-")
+    print("=== Part 4: Capability-Based Assignment ===\n")
     print(
         f"AI rationale: {_llm_call('In one sentence, why is capability-based agent selection better than random round-robin?')}"
     )
@@ -198,8 +194,7 @@ def example_capability_matching():
 
     print("Task-Agent matching:")
     for task in tasks:
-        print(f"
-  Task: {task.description}")
+        print(f"\n  Task: {task.description}")
         print(f"    required_tags={task.required_tags} preferred_tags={task.preferred_tags}")
         print(f"    Researcher can handle: {researcher.can_handle(task)}")
         print(f"    Writer can handle: {writer.can_handle(task)}")
@@ -215,8 +210,7 @@ def example_capability_matching():
 
 async def example_simple_swarm():
     """Execute a simple swarm — and verify the provider is reachable."""
-    print("=== Part 5: Simple Swarm Execution ===
-")
+    print("=== Part 5: Simple Swarm Execution ===\n")
     rationale_prompt = (
         "In one sentence, what does 'simple swarm execution' mean and when is it enough?"
     )
@@ -264,8 +258,7 @@ async def example_simple_swarm():
 
 async def example_full_swarm():
     """Execute a swarm with a real model."""
-    print("=== Part 6: Full Swarm with Model ===
-")
+    print("=== Part 6: Full Swarm with Model ===\n")
 
     # The swarm asks each agent for a structured
     # `### Findings / ### Analysis / ### Blackboard` response, so we need
@@ -297,8 +290,7 @@ async def example_full_swarm():
 
     # Execute on a task
     print("Executing swarm on: 'Analyze the benefits of async programming'")
-    print("This may take a moment...
-")
+    print("This may take a moment...\n")
 
     result = await swarm.execute(
         initial_task=(
@@ -315,8 +307,7 @@ async def example_full_swarm():
     print(f"  Duration: {result.duration_ms:.0f}ms")
 
     if result.completed_tasks:
-        print("
-Completed subtasks:")
+        print("\nCompleted subtasks:")
         for t in result.completed_tasks[:5]:
             assigned = t.claimed_by or "unassigned"
             print(f"  - [{assigned}] {t.description[:80]}")
@@ -326,14 +317,11 @@ Completed subtasks:")
             if not t.result:
                 print("      (no .result text — model returned empty)")
     if result.failed_tasks:
-        print("
-Failed subtasks:")
+        print("\nFailed subtasks:")
         for t in result.failed_tasks[:5]:
             print(f"  - {t.description[:80]} (reason: {t.error or 'no agent matched'})")
     if result.summary:
-        print(f"
-Summary:
-{result.summary[:500]}...")
+        print(f"\nSummary:\n{result.summary[:500]}...")
     print()
 
 
@@ -344,8 +332,7 @@ Summary:
 
 def example_swarm_patterns():
     """Common swarm patterns and configurations."""
-    print("=== Part 7: Swarm Patterns ===
-")
+    print("=== Part 7: Swarm Patterns ===\n")
     print(
         f"AI rationale: {_llm_call('In one sentence, when is a Specialist Team swarm preferable to a Pipeline swarm?')}"
     )

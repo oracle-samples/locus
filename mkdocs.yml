@@ -49,6 +49,9 @@ theme:
 extra_css:
 - stylesheets/locus.css
 
+extra_javascript:
+- javascripts/header-home.js
+
 copyright: <span class="footer-brand"><span class="footer-brand__o" aria-hidden="true"></span><span class="footer-brand__text">Oracle Generative AI</span></span><br><span class="footer-copy">Copyright &copy; 2025–2026 <span class="oracle-mark" aria-label="Oracle"></span> and/or its affiliates</span>
 
 extra:
@@ -105,7 +108,7 @@ plugins:
           members_order: source
 
 nav:
-- Home: index.md
+- locus: index.md
 - Concepts:
   - Capabilities: capabilities.md
   - Multi-agent:

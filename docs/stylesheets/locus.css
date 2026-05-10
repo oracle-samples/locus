@@ -192,6 +192,16 @@ html {
   margin: 0 0 1.2rem;
   text-transform: lowercase;     /* mirror the wordmark — never CamelCase */
 }
+@media (max-width: 76em) {
+  .md-typeset h1 { font-size: 1.7rem !important; }
+}
+@media (max-width: 48em) {
+  .md-typeset h1 { font-size: 1.35rem !important; }
+  .md-typeset h1 a.headerlink { display: none; }
+}
+@media (max-width: 36em) {
+  .md-typeset h1 { font-size: 1.2rem !important; }
+}
 .md-typeset h2 {
   color: var(--locus-ink);
   font-weight: 700;
@@ -1041,4 +1051,9 @@ html {
 /* Hide the ¶ permalink anchor on the hero h1 — noise on a marketing page. */
 .md-typeset .locus-hero h1 a.headerlink {
   display: none;
+}
+
+/* Header title area — pointer cursor so users know it goes home. */
+.md-header__ellipsis {
+  cursor: pointer;
 }

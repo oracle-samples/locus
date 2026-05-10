@@ -28,8 +28,7 @@ from locus.evaluation import EvalCase, EvalRunner
 
 def example_evaluation():
     """Run a systematic evaluation of an agent."""
-    print("=== Agent Evaluation ===
-")
+    print("=== Agent Evaluation ===\n")
 
     model = get_model()
 
@@ -67,8 +66,7 @@ def example_evaluation():
 
     # Print results
     print(report.summary())
-    print(f"
-Total: {report.total_cases}, Passed: {report.passed}, Failed: {report.failed}")
+    print(f"\nTotal: {report.total_cases}, Passed: {report.passed}, Failed: {report.failed}")
     print(f"Average score: {report.avg_score:.2f}")
 
 

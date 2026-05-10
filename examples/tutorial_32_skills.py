@@ -31,8 +31,7 @@ from locus.skills import Skill
 
 def example_programmatic():
     """Create skills in code without SKILL.md files."""
-    print("=== Part 1: Programmatic Skills ===
-")
+    print("=== Part 1: Programmatic Skills ===\n")
 
     model = get_model()
 
@@ -40,14 +39,10 @@ def example_programmatic():
         name="code-review",
         description="Use when reviewing code for bugs and security issues.",
         instructions=(
-            "# Code Review Checklist
-"
-            "1. Check for SQL injection
-"
-            "2. Check for hardcoded credentials
-"
-            "3. Check error handling
-"
+            "# Code Review Checklist\n"
+            "1. Check for SQL injection\n"
+            "2. Check for hardcoded credentials\n"
+            "3. Check error handling\n"
             "4. Report findings as: FINDING: <description>"
         ),
     )
@@ -78,9 +73,7 @@ def example_programmatic():
 
 def example_filesystem():
     """Load skills from SKILL.md files."""
-    print("
-=== Part 2: Filesystem Skills ===
-")
+    print("\n=== Part 2: Filesystem Skills ===\n")
 
     skills_dir = Path(__file__).parent / "skills"
     if skills_dir.exists():
@@ -113,9 +106,7 @@ def example_filesystem():
 
 def example_format():
     """Show the SKILL.md file format."""
-    print("
-=== Part 3: SKILL.md Format ===
-")
+    print("\n=== Part 3: SKILL.md Format ===\n")
 
     print("""
 ---
@@ -152,8 +143,7 @@ Place additional files in:
     print(
         f"  [model call: {dt:.2f}s · {res.metrics.prompt_tokens}→{res.metrics.completion_tokens} tokens]"
     )
-    print(f"  AI-authored sample description:
-  {res.message.strip()}")
+    print(f"  AI-authored sample description:\n  {res.message.strip()}")
 
 
 if __name__ == "__main__":

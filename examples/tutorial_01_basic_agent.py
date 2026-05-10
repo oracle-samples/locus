@@ -31,8 +31,7 @@ from locus.agent import Agent
 
 def example_create_agent():
     """Create a basic agent — and immediately prove it talks to the provider."""
-    print("=== Part 1: Creating an Agent ===
-")
+    print("=== Part 1: Creating an Agent ===\n")
 
     model = get_model(max_tokens=40)
 
@@ -66,8 +65,7 @@ def example_create_agent():
 
 def example_sync_run():
     """Run agent synchronously."""
-    print("=== Part 2: Synchronous Execution ===
-")
+    print("=== Part 2: Synchronous Execution ===\n")
 
     model = get_model(max_tokens=100)
 
@@ -93,8 +91,7 @@ def example_sync_run():
 
 async def example_async_run():
     """Run agent asynchronously with streaming events."""
-    print("=== Part 3: Async Execution with Events ===
-")
+    print("=== Part 3: Async Execution with Events ===\n")
 
     model = get_model(max_tokens=100)
 
@@ -126,8 +123,7 @@ async def example_async_run():
 
 def example_agent_result():
     """Explore the AgentResult structure."""
-    print("=== Part 4: Understanding Results ===
-")
+    print("=== Part 4: Understanding Results ===\n")
 
     model = get_model(max_tokens=50)
 
@@ -144,8 +140,7 @@ def example_agent_result():
     print(f"  .stop_reason = {result.stop_reason}")
     print(f"  .confidence  = {result.confidence}")
 
-    print("
-Metrics:")
+    print("\nMetrics:")
     print(f"  .metrics.iterations  = {result.metrics.iterations}")
     print(f"  .metrics.tool_calls  = {result.metrics.tool_calls}")
     print(f"  .metrics.duration_ms = {result.metrics.duration_ms:.0f}")
@@ -159,8 +154,7 @@ Metrics:")
 
 def example_multiple_prompts():
     """Run multiple prompts with the same agent."""
-    print("=== Part 5: Multiple Prompts ===
-")
+    print("=== Part 5: Multiple Prompts ===\n")
 
     model = get_model(max_tokens=50)
 

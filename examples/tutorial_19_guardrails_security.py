@@ -78,9 +78,7 @@ async def main():
     # =========================================================================
     # Part 1: Basic Guardrail Configuration — model summarises the policy
     # =========================================================================
-    print("
-=== Part 1: Basic Guardrail Configuration ===
-")
+    print("\n=== Part 1: Basic Guardrail Configuration ===\n")
     config = GuardrailConfig(
         block_dangerous_tools=frozenset(
             {"eval", "exec", "system", "shell", "rm", "delete", "drop", "truncate"}
@@ -103,9 +101,7 @@ async def main():
     # =========================================================================
     # Part 2: Creating a GuardrailsHook + running a real agent through it
     # =========================================================================
-    print("
-=== Part 2: GuardrailsHook on a live agent ===
-")
+    print("\n=== Part 2: GuardrailsHook on a live agent ===\n")
     violations_log: list[GuardrailViolation] = []
 
     def on_violation(v: GuardrailViolation):
@@ -124,9 +120,7 @@ async def main():
     # =========================================================================
     # Part 3: PII detection — exercised on the SDK + AI for explanation
     # =========================================================================
-    print("
-=== Part 3: PII Detection ===
-")
+    print("\n=== Part 3: PII Detection ===\n")
     print("Built-in PII patterns:")
     for name in list(config.pii_patterns)[:5]:
         print(f"  - {name}")
@@ -138,8 +132,7 @@ async def main():
         "No sensitive data here",
     ]
     state = AgentState(agent_id="test")
-    print("
-SDK-side PII detection:")
+    print("\nSDK-side PII detection:")
     for text in test_inputs:
         guardrails.clear_violations()
         try:
@@ -160,9 +153,7 @@ SDK-side PII detection:")
     # =========================================================================
     # Part 4: Content blocking — model explains the categories
     # =========================================================================
-    print("
-=== Part 4: Content Pattern Blocking ===
-")
+    print("\n=== Part 4: Content Pattern Blocking ===\n")
     dangerous_inputs = [
         "DROP TABLE users;",
         "../../etc/passwd",
@@ -181,15 +172,12 @@ SDK-side PII detection:")
         "filter at the gateway. Three short bullets.",
         max_tokens=120,
     )
-    print(f"AI risk summary:
-{risk_summary}")
+    print(f"AI risk summary:\n{risk_summary}")
 
     # =========================================================================
     # Part 5: Tool restriction — tested on the SDK + AI rationale
     # =========================================================================
-    print("
-=== Part 5: Tool Restrictions ===
-")
+    print("\n=== Part 5: Tool Restrictions ===\n")
     tool_tests = [
         ("read_file", {"path": "/app/data.txt"}),
         ("exec", {"code": "print('hello')"}),
@@ -214,9 +202,7 @@ SDK-side PII detection:")
     # =========================================================================
     # Part 6: Tool allowlist mode + AI explanation of denylist vs allowlist
     # =========================================================================
-    print("
-=== Part 6: Tool Allowlist Mode ===
-")
+    print("\n=== Part 6: Tool Allowlist Mode ===\n")
     allowlist_config = GuardrailConfig(
         allow_only_tools=frozenset({"read_file", "search", "analyze"})
     )
@@ -239,9 +225,7 @@ SDK-side PII detection:")
     # =========================================================================
     # Part 7: Action types — model explains REDACT vs BLOCK vs WARN
     # =========================================================================
-    print("
-=== Part 7: Action Types ===
-")
+    print("\n=== Part 7: Action Types ===\n")
     for action in GuardrailAction:
         print(f"  {action.value}")
     custom_config = GuardrailConfig(
@@ -252,8 +236,7 @@ SDK-side PII detection:")
             "blocked_sql_injection": GuardrailAction.BLOCK,
         },
     )
-    print("
-action_overrides:")
+    print("\naction_overrides:")
     for rule, act in custom_config.action_overrides.items():
         print(f"  {rule} -> {act.value}")
     explainer = _llm_call(
@@ -261,15 +244,12 @@ action_overrides:")
         "on policy violations. One sentence per action.",
         max_tokens=140,
     )
-    print(f"AI explainer:
-{explainer}")
+    print(f"AI explainer:\n{explainer}")
 
     # =========================================================================
     # Part 8: ContentFilterHook — wired into a real Agent
     # =========================================================================
-    print("
-=== Part 8: ContentFilterHook on a live agent ===
-")
+    print("\n=== Part 8: ContentFilterHook on a live agent ===\n")
     content_filter = ContentFilterHook(
         blocked_words=["password", "secret", "api_key"],
         blocked_patterns=[r"sk-[a-zA-Z0-9]+", r"ghp_[a-zA-Z0-9]+"],
@@ -289,9 +269,7 @@ action_overrides:")
     # =========================================================================
     # Part 9: Stack hooks via HookRegistry on a live Agent
     # =========================================================================
-    print("
-=== Part 9: Stacking guardrail hooks ===
-")
+    print("\n=== Part 9: Stacking guardrail hooks ===\n")
     registry = HookRegistry()
     registry.add_provider(
         GuardrailsHook(config=GuardrailConfig(block_dangerous_tools=frozenset({"exec", "eval"})))
@@ -315,9 +293,7 @@ action_overrides:")
     # =========================================================================
     # Part 10: Custom security policies — AI proposes prod vs dev defaults
     # =========================================================================
-    print("
-=== Part 10: Custom Security Policies ===
-")
+    print("\n=== Part 10: Custom Security Policies ===\n")
 
     def production_config() -> GuardrailConfig:
         return GuardrailConfig(
@@ -359,9 +335,7 @@ action_overrides:")
     # =========================================================================
     # Part 11: Best practices — model writes the cheat-sheet
     # =========================================================================
-    print("
-=== Part 11: Best Practices ===
-")
+    print("\n=== Part 11: Best Practices ===\n")
     best = _llm_call(
         "Write a six-line cheat sheet of best practices for guarding LLM "
         "agents in production. Six bullets, terse.",
@@ -372,9 +346,7 @@ action_overrides:")
     # =========================================================================
     # Part 12: Live Agent guarded by GuardrailsHook (already AI-driven)
     # =========================================================================
-    print("
-=== Part 12: Live Agent + Guardrails ===
-")
+    print("\n=== Part 12: Live Agent + Guardrails ===\n")
     safe_guardrails = GuardrailsHook(
         config=GuardrailConfig(
             block_dangerous_tools=frozenset({"exec", "eval", "shell"}),
@@ -398,10 +370,8 @@ action_overrides:")
     )
     print(f"Guarded answer: {safe_result.message[:300]}")
 
-    print(f"
-Total violations logged in this tutorial: {len(violations_log)}")
-    print("
-" + "=" * 60)
+    print(f"\nTotal violations logged in this tutorial: {len(violations_log)}")
+    print("\n" + "=" * 60)
     print("Next: Tutorial 20 - Checkpoint Backends")
     print("=" * 60)
 

@@ -30,8 +30,7 @@ from locus.tools.decorator import tool
 
 def example_cancel_tool():
     """Hook that blocks dangerous tools using write-protected events."""
-    print("=== Part 1: Cancel Tool via Hook ===
-")
+    print("=== Part 1: Cancel Tool via Hook ===\n")
 
     model = get_model()
 
@@ -80,9 +79,7 @@ def example_cancel_tool():
 
 def example_write_protection():
     """Demonstrate read-only fields on events."""
-    print("
-=== Part 2: Write Protection ===
-")
+    print("\n=== Part 2: Write Protection ===\n")
 
     from locus.hooks.provider import BeforeToolCallEvent
 
