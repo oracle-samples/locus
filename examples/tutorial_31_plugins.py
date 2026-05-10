@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 31: Plugins — Composable Agent Extensions
 
@@ -30,7 +33,8 @@ from locus.tools.decorator import tool
 
 def example_plugin():
     """Bundle hooks into a reusable plugin."""
-    print("=== Part 1: Plugin System ===\n")
+    print("=== Part 1: Plugin System ===
+")
 
     model = get_model()
 
@@ -78,7 +82,9 @@ def example_plugin():
 
 def example_callback():
     """Receive events with a plain function."""
-    print("\n=== Part 2: Callback Handler ===\n")
+    print("
+=== Part 2: Callback Handler ===
+")
 
     model = get_model()
     events = []
@@ -103,7 +109,9 @@ def example_callback():
 
 def example_cancel():
     """Stop an agent from another thread, after running one normal call first."""
-    print("\n=== Part 3: Cancel Signal ===\n")
+    print("
+=== Part 3: Cancel Signal ===
+")
 
     model = get_model(max_tokens=80)
 

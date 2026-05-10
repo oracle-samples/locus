@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 13: Structured Output — every part runs against a real LLM
 
@@ -130,7 +133,9 @@ def main() -> None:
     # =========================================================================
     # Part 1: Basic JSON extraction — model writes the JSON we then parse
     # =========================================================================
-    print("\n=== Part 1: Basic JSON Extraction ===\n")
+    print("
+=== Part 1: Basic JSON Extraction ===
+")
     raw = _llm_call(
         "Output a single JSON object with name=Alice and age=30 inside a "
         "```json fenced block. Nothing outside the fence.",
@@ -143,7 +148,9 @@ def main() -> None:
     # =========================================================================
     # Part 2: Parsing into Pydantic models — agent provides the JSON
     # =========================================================================
-    print("\n=== Part 2: Parsing into Pydantic Models ===\n")
+    print("
+=== Part 2: Parsing into Pydantic Models ===
+")
     raw = _llm_call(
         "Output a single JSON object {name, age, email} for the person "
         "Diana, 28, diana@example.com. Inside a ```json block.",
@@ -157,7 +164,9 @@ def main() -> None:
     # Part 3: Error handling — ask the model to deliberately produce broken
     #          input, then watch parse_structured handle it
     # =========================================================================
-    print("\n=== Part 3: Error Handling ===\n")
+    print("
+=== Part 3: Error Handling ===
+")
     bad = _llm_call(
         "Reply with the literal string: This is not JSON.",
         system="Reply only with the requested string.",
@@ -181,13 +190,16 @@ def main() -> None:
     # =========================================================================
     # Part 4: Schema prompts — give the model the schema, ask it to comply
     # =========================================================================
-    print("\n=== Part 4: Creating Schema Prompts ===\n")
+    print("
+=== Part 4: Creating Schema Prompts ===
+")
     schema_prompt = create_schema_prompt(TaskResult)
     print(f"  schema_prompt (head): {schema_prompt[:160]}...")
     instructions = create_output_instructions(TaskResult)
     raw = _llm_call(
         "Following these instructions, return a JSON for a successful "
-        "deploy of service `orders-api`:\n" + instructions,
+        "deploy of service `orders-api`:
+" + instructions,
         system="Output only a fenced JSON block matching the schema.",
         max_tokens=200,
     )
@@ -203,7 +215,9 @@ def main() -> None:
     # =========================================================================
     # Part 5: Complex nested structures — model produces a Company
     # =========================================================================
-    print("\n=== Part 5: Complex Nested Structures ===\n")
+    print("
+=== Part 5: Complex Nested Structures ===
+")
     nested = _llm_call(
         "Output a JSON for a company TechCorp, founded 2020, address "
         "(street '123 Main St', city 'San Francisco', country 'USA'), "
@@ -222,7 +236,9 @@ def main() -> None:
     # =========================================================================
     # Part 6: Real-world pattern — agent diagnoses an incident in JSON
     # =========================================================================
-    print("\n=== Part 6: Real-world AnalysisResult ===\n")
+    print("
+=== Part 6: Real-world AnalysisResult ===
+")
     raw = _llm_call(
         "Diagnose an incident: 'connection pool saturated, P99=2500ms'. "
         "Return an AnalysisResult JSON inside ```json with fields summary, "
@@ -245,11 +261,16 @@ def main() -> None:
     # =========================================================================
     # Part 7: Agent system-prompt pattern with ToolSelection
     # =========================================================================
-    print("\n=== Part 7: Agent ToolSelection prompt ===\n")
+    print("
+=== Part 7: Agent ToolSelection prompt ===
+")
     sys_prompt = (
-        "You are an AI assistant with access to tools.\n\n"
+        "You are an AI assistant with access to tools.
+
+"
         + create_output_instructions(ToolSelection)
-        + "\nThink before selecting."
+        + "
+Think before selecting."
     )
     pick = _llm_call(
         "We need to look up a customer email. Pick the right tool and reply with the JSON.",
@@ -267,7 +288,9 @@ def main() -> None:
     # =========================================================================
     # Part 8: Agent(output_schema=…) — typed result via the SDK directly
     # =========================================================================
-    print("\n=== Part 8: Agent(output_schema=VendorList) ===\n")
+    print("
+=== Part 8: Agent(output_schema=VendorList) ===
+")
     live_agent = Agent(
         model=get_model(max_tokens=300),
         output_schema=VendorList,
@@ -294,7 +317,8 @@ def main() -> None:
     for v in picks.vendors:
         print(f"  {v.name:<14}  score={v.score:.2f}  region={v.region}")
 
-    print("\n" + "=" * 60)
+    print("
+" + "=" * 60)
     print("Next: Tutorial 14 - Reasoning Patterns")
     print("=" * 60)
 

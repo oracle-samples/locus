@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 28: Agent Server — Deploy Agents as HTTP APIs
 
@@ -42,7 +45,8 @@ from locus.server import AgentServer
 
 def example_server():
     """Create an agent server with health, invoke, and stream endpoints."""
-    print("=== Agent Server ===\n")
+    print("=== Agent Server ===
+")
 
     model = get_model()
 
@@ -102,14 +106,16 @@ def example_server():
     r = client.delete("/threads/demo-thread")
     print(f"DELETE /threads/demo-thread: {r.json()}")
 
-    print("\nTo run as a real server, set LOCUS_TUTORIAL_BOOT=1 and run this")
+    print("
+To run as a real server, set LOCUS_TUTORIAL_BOOT=1 and run this")
     print("file directly. Example session:")
-    print("  LOCUS_TUTORIAL_BOOT=1 LOCUS_MODEL_PROVIDER=oci \\")
+    print("  LOCUS_TUTORIAL_BOOT=1 LOCUS_MODEL_PROVIDER=oci \")
     print("      python examples/tutorial_28_agent_server.py")
-    print("  curl -s -X POST http://127.0.0.1:8000/invoke \\")
-    print("       -H 'Content-Type: application/json' \\")
+    print("  curl -s -X POST http://127.0.0.1:8000/invoke \")
+    print("       -H 'Content-Type: application/json' \")
     print('       -d \'{"prompt":"What is 2+2?"}\'')
-    print("\nWith api_key= set, every /threads call is principal-scoped:")
+    print("
+With api_key= set, every /threads call is principal-scoped:")
     print("  AgentServer(agent=agent, api_key='secret')")
     print("  # Two clients with different bearer tokens see different threads")
     print("  # for the same client-supplied thread_id.")
@@ -137,8 +143,8 @@ def boot_live_server() -> None:
         description="A helpful AI assistant exposed as HTTP API",
     )
     print("Booting AgentServer on http://127.0.0.1:8000 — Ctrl-C to stop.")
-    print("Try: curl -X POST http://127.0.0.1:8000/invoke \\")
-    print("          -H 'Content-Type: application/json' \\")
+    print("Try: curl -X POST http://127.0.0.1:8000/invoke \")
+    print("          -H 'Content-Type: application/json' \")
     print('          -d \'{"prompt":"What is 2+2?"}\'')
     server.run(host="127.0.0.1", port=8000)
 

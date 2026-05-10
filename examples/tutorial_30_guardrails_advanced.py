@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 30: Advanced Guardrails — Topic Policy, Content Safety, Output Filtering
 
@@ -29,7 +32,8 @@ from locus.hooks.builtin.guardrails import (
 
 def example_pii_redaction():
     """Automatically redact PII from agent responses."""
-    print("=== Part 1: PII Redaction ===\n")
+    print("=== Part 1: PII Redaction ===
+")
 
     model = get_model()
 
@@ -56,7 +60,9 @@ def example_pii_redaction():
 
 def example_topic_policy():
     """Block specific conversation topics."""
-    print("\n=== Part 2: Topic Policy ===\n")
+    print("
+=== Part 2: Topic Policy ===
+")
 
     policy = TopicPolicy(
         blocked_topics={"weapons", "drugs"},
@@ -92,7 +98,9 @@ def example_topic_policy():
 
 def example_content_safety():
     """Detect harmful content categories."""
-    print("\n=== Part 3: Content Safety ===\n")
+    print("
+=== Part 3: Content Safety ===
+")
 
     policy = ContentPolicy(enabled_categories={"violence", "illegal_activity"})
 

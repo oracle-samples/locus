@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 01: Basic Agent - Your First Locus Agent
 
@@ -28,7 +31,8 @@ from locus.agent import Agent
 
 def example_create_agent():
     """Create a basic agent — and immediately prove it talks to the provider."""
-    print("=== Part 1: Creating an Agent ===\n")
+    print("=== Part 1: Creating an Agent ===
+")
 
     model = get_model(max_tokens=40)
 
@@ -62,7 +66,8 @@ def example_create_agent():
 
 def example_sync_run():
     """Run agent synchronously."""
-    print("=== Part 2: Synchronous Execution ===\n")
+    print("=== Part 2: Synchronous Execution ===
+")
 
     model = get_model(max_tokens=100)
 
@@ -88,7 +93,8 @@ def example_sync_run():
 
 async def example_async_run():
     """Run agent asynchronously with streaming events."""
-    print("=== Part 3: Async Execution with Events ===\n")
+    print("=== Part 3: Async Execution with Events ===
+")
 
     model = get_model(max_tokens=100)
 
@@ -120,7 +126,8 @@ async def example_async_run():
 
 def example_agent_result():
     """Explore the AgentResult structure."""
-    print("=== Part 4: Understanding Results ===\n")
+    print("=== Part 4: Understanding Results ===
+")
 
     model = get_model(max_tokens=50)
 
@@ -137,7 +144,8 @@ def example_agent_result():
     print(f"  .stop_reason = {result.stop_reason}")
     print(f"  .confidence  = {result.confidence}")
 
-    print("\nMetrics:")
+    print("
+Metrics:")
     print(f"  .metrics.iterations  = {result.metrics.iterations}")
     print(f"  .metrics.tool_calls  = {result.metrics.tool_calls}")
     print(f"  .metrics.duration_ms = {result.metrics.duration_ms:.0f}")
@@ -151,7 +159,8 @@ def example_agent_result():
 
 def example_multiple_prompts():
     """Run multiple prompts with the same agent."""
-    print("=== Part 5: Multiple Prompts ===\n")
+    print("=== Part 5: Multiple Prompts ===
+")
 
     model = get_model(max_tokens=50)
 

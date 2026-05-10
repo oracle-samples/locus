@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 23: RAG Providers - Embeddings and Vector Stores
 
@@ -81,7 +84,8 @@ async def openai_embeddings_example():
 
     # Embed text
     result = await embedder.embed("OpenAI provides powerful AI models.")
-    print("\nEmbedded text successfully")
+    print("
+Embedded text successfully")
     print(f"  Vector length: {len(result.embedding)}")
     print(f"  Model used: {result.model}")
 
@@ -92,7 +96,8 @@ async def openai_embeddings_example():
         "Computer vision allows machines to see.",
     ]
 
-    print(f"\nBatch embedding {len(texts)} texts...")
+    print(f"
+Batch embedding {len(texts)} texts...")
     results = await embedder.embed_batch(texts)
     print(f"  Embedded {len(results)} texts successfully")
 
@@ -119,7 +124,8 @@ async def oci_cohere_embeddings_example():
     - SEARCH_QUERY type for queries
     - Automatic input type selection
     """
-    print("\n" + "=" * 60)
+    print("
+" + "=" * 60)
     print("Tutorial 23: OCI GenAI (Cohere) Embeddings")
     print("=" * 60)
 
@@ -145,12 +151,14 @@ async def oci_cohere_embeddings_example():
         print(f"Batch size: {embedder.config.batch_size}")
 
         # Embed for document indexing
-        print("\nEmbedding document...")
+        print("
+Embedding document...")
         doc_result = await embedder.embed("Oracle Cloud provides enterprise services.")
         print(f"  Vector length: {len(doc_result.embedding)}")
 
         # Embed for search query
-        print("\nEmbedding query...")
+        print("
+Embedding query...")
         query_result = await embedder.embed_query("What cloud services are available?")
         print(f"  Vector length: {len(query_result.embedding)}")
 
@@ -161,7 +169,8 @@ async def oci_cohere_embeddings_example():
             "Object Storage provides scalable storage.",
         ]
 
-        print(f"\nBatch embedding {len(docs)} documents...")
+        print(f"
+Batch embedding {len(docs)} documents...")
         results = await embedder.embed_documents(docs)
         print(f"  Embedded {len(results)} documents successfully")
 
@@ -187,7 +196,8 @@ async def qdrant_store_example():
     Start Qdrant locally:
         docker run -p 6333:6333 qdrant/qdrant
     """
-    print("\n" + "=" * 60)
+    print("
+" + "=" * 60)
     print("Tutorial 23: Qdrant Vector Store")
     print("=" * 60)
 
@@ -239,18 +249,21 @@ async def qdrant_store_example():
         "Qdrant Cloud provides managed hosting.",
     ]
 
-    print("\nAdding documents...")
+    print("
+Adding documents...")
     await retriever.add_documents(documents)
     print(f"  Added {len(documents)} documents")
 
     # Search
-    print("\n" + "-" * 40)
+    print("
+" + "-" * 40)
     query = "How does Qdrant achieve fast search?"
     print(f"Query: '{query}'")
 
     result = await retriever.retrieve(query, limit=2)
 
-    print("\nResults:")
+    print("
+Results:")
     for i, doc_result in enumerate(result.documents, 1):
         print(f"  {i}. Score: {doc_result.score:.4f}")
         print(f"     {doc_result.document.content}")
@@ -258,7 +271,8 @@ async def qdrant_store_example():
     # Clean up
     await store.clear()
     await store.close()
-    print("\nCleanup complete")
+    print("
+Cleanup complete")
 
 
 # =============================================================================
@@ -278,11 +292,12 @@ async def opensearch_store_example():
         OPENSEARCH_SSL   — "true" to enable TLS (default: false for localhost)
 
     Local docker:
-        docker run -p 9200:9200 -e "discovery.type=single-node" \\
-            -e "OPENSEARCH_INITIAL_ADMIN_PASSWORD=Admin123!" \\
+        docker run -p 9200:9200 -e "discovery.type=single-node" \
+            -e "OPENSEARCH_INITIAL_ADMIN_PASSWORD=Admin123!" \
             opensearchproject/opensearch:2.11.0
     """
-    print("\n" + "=" * 60)
+    print("
+" + "=" * 60)
     print("Tutorial 23: OpenSearch Vector Store")
     print("=" * 60)
 
@@ -349,18 +364,21 @@ async def opensearch_store_example():
         "OpenSearch scales horizontally across clusters.",
     ]
 
-    print("\nAdding documents...")
+    print("
+Adding documents...")
     await retriever.add_documents(documents)
     print(f"  Added {len(documents)} documents")
 
     # Search
-    print("\n" + "-" * 40)
+    print("
+" + "-" * 40)
     query = "How does OpenSearch handle vector search?"
     print(f"Query: '{query}'")
 
     result = await retriever.retrieve(query, limit=2)
 
-    print("\nResults:")
+    print("
+Results:")
     for i, doc_result in enumerate(result.documents, 1):
         print(f"  {i}. Score: {doc_result.score:.4f}")
         print(f"     {doc_result.document.content}")
@@ -368,7 +386,8 @@ async def opensearch_store_example():
     # Clean up
     await store.clear()
     await store.close()
-    print("\nCleanup complete")
+    print("
+Cleanup complete")
 
 
 # =============================================================================
@@ -380,7 +399,8 @@ async def compare_providers():
     """
     Compare embedding providers on the same text.
     """
-    print("\n" + "=" * 60)
+    print("
+" + "=" * 60)
     print("Tutorial 23: Comparing Providers")
     print("=" * 60)
 
@@ -438,13 +458,15 @@ async def compare_providers():
         print("No embedding providers available for comparison")
         return
 
-    print(f"Comparing {len(providers)} provider(s) on similarity detection\n")
+    print(f"Comparing {len(providers)} provider(s) on similarity detection
+")
     print("Test texts:")
     for i, text in enumerate(test_texts):
         print(f"  [{i}] {text}")
 
     for name, embedder in providers:
-        print(f"\n{'-' * 40}")
+        print(f"
+{'-' * 40}")
         print(f"Provider: {name} (dim={embedder.config.dimension})")
 
         results = await embedder.embed_batch(test_texts)
@@ -503,15 +525,18 @@ async def main():
     await opensearch_store_example()
     await compare_providers()
 
-    print("\n" + "=" * 60)
+    print("
+" + "=" * 60)
     print("Tutorial 23 Complete!")
     print("=" * 60)
-    print("\nProvider Summary:")
+    print("
+Provider Summary:")
     print("  OpenAI: Great quality, simple API, pay-per-use")
     print("  OCI Cohere: Enterprise-ready, Oracle ecosystem")
     print("  Qdrant: Fast, simple, great for startups")
     print("  OpenSearch: Enterprise, combines text + vector search")
-    print("\nNext: Try tutorial_24_rag_agents.py to build RAG-powered agents")
+    print("
+Next: Try tutorial_24_rag_agents.py to build RAG-powered agents")
 
 
 if __name__ == "__main__":

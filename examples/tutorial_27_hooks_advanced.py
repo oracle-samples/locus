@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 27: Advanced Hooks — Write-Protected Events, Cancel, Retry
 
@@ -27,7 +30,8 @@ from locus.tools.decorator import tool
 
 def example_cancel_tool():
     """Hook that blocks dangerous tools using write-protected events."""
-    print("=== Part 1: Cancel Tool via Hook ===\n")
+    print("=== Part 1: Cancel Tool via Hook ===
+")
 
     model = get_model()
 
@@ -76,7 +80,9 @@ def example_cancel_tool():
 
 def example_write_protection():
     """Demonstrate read-only fields on events."""
-    print("\n=== Part 2: Write Protection ===\n")
+    print("
+=== Part 2: Write Protection ===
+")
 
     from locus.hooks.provider import BeforeToolCallEvent
 

@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """In-process integration test for the A2A mesh.
 
 Boots both A2AServers via FastAPI's TestClient (no real network),

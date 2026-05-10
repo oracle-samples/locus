@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 38: Multi-modal providers — web search, web fetch, image, speech
 
@@ -36,7 +39,8 @@ from locus.providers.web_fetch import HTTPXWebFetcher
 
 def example_protocols():
     """Print the four Protocols you can implement to plug a backend."""
-    print("=== Part 1: The four provider Protocols ===\n")
+    print("=== Part 1: The four provider Protocols ===
+")
 
     print("locus.providers exposes four runtime_checkable Protocols:")
     print()
@@ -61,7 +65,9 @@ def example_protocols():
 
 def example_auto_register():
     """Configure providers; locus registers the tools."""
-    print("\n=== Part 2: Auto-registered tools ===\n")
+    print("
+=== Part 2: Auto-registered tools ===
+")
 
     # HTTPXWebFetcher needs no API key — pure stdlib + httpx.
     fetcher = HTTPXWebFetcher(timeout_seconds=10.0)
@@ -94,7 +100,9 @@ def example_auto_register():
 
 async def example_live_fetch():
     """Use the registered tool directly to verify the wiring."""
-    print("\n=== Part 3: Live fetch via the registered tool ===\n")
+    print("
+=== Part 3: Live fetch via the registered tool ===
+")
 
     fetcher = HTTPXWebFetcher(timeout_seconds=10.0)
     agent = Agent(
@@ -123,7 +131,9 @@ async def example_live_fetch():
 
 def example_byo_backend():
     """A toy custom search provider — any duck-typed class works."""
-    print("\n=== Part 4: Bring your own backend ===\n")
+    print("
+=== Part 4: Bring your own backend ===
+")
 
     from locus.providers.types import SearchResult
 
@@ -161,7 +171,9 @@ def example_byo_backend():
 
 def example_openai_providers():
     """Show the wiring for the built-in OpenAI implementations."""
-    print("\n=== Part 5: OpenAI-backed providers (optional) ===\n")
+    print("
+=== Part 5: OpenAI-backed providers (optional) ===
+")
 
     if not os.environ.get("OPENAI_API_KEY"):
         print("OPENAI_API_KEY not set — printing the wiring without instantiating.")

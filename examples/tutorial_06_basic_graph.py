@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 06: Introduction to StateGraph
 
@@ -46,7 +49,8 @@ def _llm_call(
 
 async def example_first_graph():
     """Create the simplest possible graph — node calls a real Agent."""
-    print("=== Part 1: Your First Graph ===\n")
+    print("=== Part 1: Your First Graph ===
+")
 
     graph = StateGraph()
 
@@ -81,7 +85,8 @@ async def example_first_graph():
 
 async def example_sequence():
     """Chain multiple nodes together."""
-    print("=== Part 2: Sequential Nodes ===\n")
+    print("=== Part 2: Sequential Nodes ===
+")
 
     graph = StateGraph()
 
@@ -138,7 +143,8 @@ async def example_sequence():
 
 async def example_state_flow():
     """See how state accumulates through nodes."""
-    print("=== Part 3: State Flow ===\n")
+    print("=== Part 3: State Flow ===
+")
 
     graph = StateGraph()
 
@@ -172,7 +178,8 @@ async def example_state_flow():
     print("Executing graph...")
     result = await graph.execute({"initial_data": True})
 
-    print("\nFinal state:")
+    print("
+Final state:")
     for key, value in result.final_state.items():
         if not key.startswith("_"):  # Skip internal keys
             print(f"  {key}: {value}")
@@ -186,7 +193,8 @@ async def example_state_flow():
 
 async def example_parallel():
     """Execute independent nodes in parallel."""
-    print("=== Part 4: Parallel Nodes ===\n")
+    print("=== Part 4: Parallel Nodes ===
+")
 
     graph = StateGraph()
     graph.config.parallel = True  # Enable parallel execution
@@ -256,7 +264,8 @@ async def example_parallel():
 
 async def example_results():
     """Explore the GraphResult structure."""
-    print("=== Part 5: Graph Results ===\n")
+    print("=== Part 5: Graph Results ===
+")
 
     graph = StateGraph()
 
@@ -279,12 +288,14 @@ async def example_results():
     print(f"  .iterations      = {result.iterations}")
     print(f"  .execution_order = {result.execution_order}")
 
-    print("\n  .final_state:")
+    print("
+  .final_state:")
     for k, v in result.final_state.items():
         if not k.startswith("_"):
             print(f"    {k}: {v}")
 
-    print("\n  .node_results:")
+    print("
+  .node_results:")
     for node_id, node_result in result.node_results.items():
         print(f"    {node_id}: status={node_result.status.value}")
     print()
@@ -292,7 +303,8 @@ async def example_results():
 
 async def example_streaming():
     """Stream node-completion events in real time + emit custom progress."""
-    print("=== Part 6: Real-time streaming + emit_custom ===\n")
+    print("=== Part 6: Real-time streaming + emit_custom ===
+")
     from locus.multiagent import StreamMode, emit_custom
 
     graph = StateGraph()
@@ -334,7 +346,8 @@ async def example_streaming():
 
 async def example_graph_with_llm():
     """A graph node that delegates work to a real Agent."""
-    print("=== Part 7: Graph + real LLM ===\n")
+    print("=== Part 7: Graph + real LLM ===
+")
 
     graph = StateGraph()
 

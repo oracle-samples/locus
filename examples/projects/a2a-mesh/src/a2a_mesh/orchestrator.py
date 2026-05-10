@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """CLI orchestrator — discovers A2A peers, picks one by skill, delegates.
 
 Usage::
@@ -31,7 +34,7 @@ DEFAULT_PEERS = (
     "http://127.0.0.1:8002",  # finance
 )
 
-TICKER_RE = re.compile(r"\b[A-Z]{2,5}\b")
+TICKER_RE = re.compile(r"[A-Z]{2,5}")
 
 
 async def discover(urls: tuple[str, ...]) -> list[tuple[str, list[str]]]:
@@ -111,12 +114,15 @@ async def main_async(args: argparse.Namespace) -> int:
     target = pick(args.query, peers, args.skill)
 
     if args.stream:
-        print(f"\nStreaming from {target}…")
+        print(f"
+Streaming from {target}…")
         await run_stream(target, args.query)
     else:
-        print(f"\nInvoking {target}…")
+        print(f"
+Invoking {target}…")
         reply = await run_invoke(target, args.query)
-        print(f"\n  ← {reply}")
+        print(f"
+  ← {reply}")
     return 0
 
 

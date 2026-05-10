@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 26: Evaluation Framework — Systematic Agent Quality Testing
 
@@ -25,7 +28,8 @@ from locus.evaluation import EvalCase, EvalRunner
 
 def example_evaluation():
     """Run a systematic evaluation of an agent."""
-    print("=== Agent Evaluation ===\n")
+    print("=== Agent Evaluation ===
+")
 
     model = get_model()
 
@@ -63,7 +67,8 @@ def example_evaluation():
 
     # Print results
     print(report.summary())
-    print(f"\nTotal: {report.total_cases}, Passed: {report.passed}, Failed: {report.failed}")
+    print(f"
+Total: {report.total_cases}, Passed: {report.passed}, Failed: {report.failed}")
     print(f"Average score: {report.avg_score:.2f}")
 
 

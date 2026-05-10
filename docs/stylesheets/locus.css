@@ -684,18 +684,24 @@ html {
 .md-nav--primary .md-nav__title[for="__drawer"] .md-nav__button {
   color: var(--locus-ink);
 }
-/* Source slot inside the drawer (GitHub icon row). */
-.md-drawer .md-header__source {
-  background-color: #2A2826;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+/* Source slot inside the drawer — target the actual container. */
+.md-nav__source {
+  background-color: #2A2826 !important;
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
 }
 [data-md-color-scheme="slate"] .md-nav--primary .md-nav__title[for="__drawer"] {
   background-color: var(--or-surface);
   color: var(--or-text);
 }
-[data-md-color-scheme="slate"] .md-drawer .md-header__source {
-  background-color: #2A2826;
-  border-bottom-color: rgba(255,255,255,0.06);
+[data-md-color-scheme="slate"] .md-nav__source {
+  background-color: #2A2826 !important;
+}
+
+/* Push theme toggle away from the "multi-agent SDK" tagline on mobile. */
+@media (max-width: 56em) {
+  form.md-header__option {
+    margin-left: 0.5rem;
+  }
 }
 /* Icons in the dark drawer source strip — white for contrast. */
 .md-drawer .md-header__source .md-header__oci-mark,

@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 24: RAG Agents - Building Knowledge-Augmented Agents
 
@@ -120,16 +123,19 @@ async def rag_as_tool():
         description="Search the knowledge base for information about Locus.",
     )
 
-    print(f"\nCreated tool: {search_tool.name}")
+    print(f"
+Created tool: {search_tool.name}")
     print(f"Description: {search_tool.description}")
 
     # Test the tool directly
-    print("\n" + "-" * 40)
+    print("
+" + "-" * 40)
     print("Testing tool directly...")
 
     result = await search_tool("What LLM providers does Locus support?")
 
-    print("\nQuery: 'What LLM providers does Locus support?'")
+    print("
+Query: 'What LLM providers does Locus support?'")
     print(f"Results found: {result['total']}")
     for i, doc in enumerate(result["results"], 1):
         print(f"  {i}. Score: {doc['score']:.4f}")
@@ -145,7 +151,8 @@ async def simple_rag_agent():
     """
     Build a simple agent that can search and answer questions.
     """
-    print("\n" + "=" * 60)
+    print("
+" + "=" * 60)
     print("Tutorial 24: Simple RAG Agent")
     print("=" * 60)
 
@@ -217,7 +224,8 @@ Always cite information from the documentation.""",
     ]
 
     for question in questions:
-        print("\n" + "-" * 40)
+        print("
+" + "-" * 40)
         print(f"User: {question}")
 
         # run_sync returns AgentResult directly
@@ -240,7 +248,8 @@ async def multi_tool_rag_agent():
     - Perform calculations
     - Get current date
     """
-    print("\n" + "=" * 60)
+    print("
+" + "=" * 60)
     print("Tutorial 24: Multi-Tool RAG Agent")
     print("=" * 60)
 
@@ -313,7 +322,8 @@ Use tools as needed to answer questions accurately.""",
     ]
 
     for query in queries:
-        print("\n" + "-" * 40)
+        print("
+" + "-" * 40)
         print(f"User: {query}")
 
         # run_sync returns AgentResult directly
@@ -331,7 +341,8 @@ async def rag_with_streaming():
     """
     Stream RAG agent responses for better UX.
     """
-    print("\n" + "=" * 60)
+    print("
+" + "=" * 60)
     print("Tutorial 24: RAG with Streaming")
     print("=" * 60)
 
@@ -365,7 +376,8 @@ async def rag_with_streaming():
         max_iterations=2,
     )
 
-    print("Streaming agent response...\n")
+    print("Streaming agent response...
+")
 
     async for event in agent.run("What do neural networks do?"):
         if isinstance(event, ToolStartEvent):
@@ -385,7 +397,8 @@ async def rag_best_practices():
     """
     Demonstrate RAG best practices.
     """
-    print("\n" + "=" * 60)
+    print("
+" + "=" * 60)
     print("Tutorial 24: RAG Best Practices")
     print("=" * 60)
 
@@ -494,16 +507,19 @@ async def main():
     await rag_with_streaming()
     await rag_best_practices()
 
-    print("\n" + "=" * 60)
+    print("
+" + "=" * 60)
     print("Tutorial 24 Complete!")
     print("=" * 60)
-    print("\nYou've learned how to:")
+    print("
+You've learned how to:")
     print("  - Convert RAG retriever to an agent tool")
     print("  - Build Q&A agents with document search")
     print("  - Combine RAG with other tools")
     print("  - Stream RAG agent responses")
     print("  - Apply RAG best practices")
-    print("\nCongratulations! You've completed the RAG tutorials.")
+    print("
+Congratulations! You've completed the RAG tutorials.")
 
 
 if __name__ == "__main__":
