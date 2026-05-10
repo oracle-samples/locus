@@ -79,6 +79,65 @@ Home: https://github.com/modelcontextprotocol/python-sdk
 Copyright (c) Anthropic, PBC
 
 ================================================================================
+TRANSITIVE DEPENDENCIES (auto-installed with optional extras)
+================================================================================
+
+aiofile
+-------
+License: MIT
+Home: https://github.com/mosquito/aiofile
+Copyright (c) Dmitry Orlov
+
+caio
+----
+License: Apache-2.0
+Home: https://github.com/mosquito/caio
+Copyright (c) Dmitry Orlov
+Note: License not declared in PyPI metadata; confirmed Apache-2.0 on GitHub.
+
+httpx-sse
+---------
+License: MIT
+Home: https://github.com/florimondmanca/httpx-sse
+Copyright (c) Florimond Manca
+
+opensearch-protobufs
+--------------------
+License: Apache-2.0
+Home: https://github.com/opensearch-project/opensearch-protobufs
+Copyright OpenSearch Contributors
+
+opentelemetry-exporter-otlp-proto-common
+-----------------------------------------
+License: Apache-2.0
+Home: https://github.com/open-telemetry/opentelemetry-python
+Copyright The OpenTelemetry Authors
+
+opentelemetry-exporter-otlp-proto-grpc
+---------------------------------------
+License: Apache-2.0
+Home: https://github.com/open-telemetry/opentelemetry-python
+Copyright The OpenTelemetry Authors
+
+opentelemetry-proto
+-------------------
+License: Apache-2.0
+Home: https://github.com/open-telemetry/opentelemetry-python
+Copyright The OpenTelemetry Authors
+
+opentelemetry-semantic-conventions
+-----------------------------------
+License: Apache-2.0
+Home: https://github.com/open-telemetry/opentelemetry-python
+Copyright The OpenTelemetry Authors
+
+pydantic-core
+-------------
+License: MIT
+Home: https://github.com/pydantic/pydantic-core
+Copyright (c) 2023 Samuel Colvin
+
+================================================================================
 OPTIONAL DEPENDENCIES (RAG / Vector Stores)
 ================================================================================
 
