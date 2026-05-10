@@ -230,6 +230,25 @@ function saveSettings() {
 }
 
 // ---------------------------------------------------------------------------
+// Provider options — context-aware
+// localhost → OCI session only (profile on disk)
+// remote    → API key providers only (no profile access)
+// ---------------------------------------------------------------------------
+
+const isLocalhost = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+
+(function filterProviderOptions() {
+  const keep = isLocalhost
+    ? ["oci-session"]
+    : ["openai", "anthropic", "oci-apikey"];
+  Array.from(cfgProvider.options).forEach(opt => {
+    if (!keep.includes(opt.value)) opt.remove();
+  });
+  // Pre-select the first available option
+  if (cfgProvider.options.length > 0) cfgProvider.value = cfgProvider.options[0].value;
+})();
+
+// ---------------------------------------------------------------------------
 // Boot
 // ---------------------------------------------------------------------------
 
