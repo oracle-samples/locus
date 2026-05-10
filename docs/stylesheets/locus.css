@@ -552,15 +552,17 @@ html {
     color: var(--or-red);
     display: block;
   }
-  /* Always show "locus" (site title) in the mobile header — suppress
-     Material's page-title swap so users always see the brand name. */
+  /* Always show "locus" + tagline — suppress Material's page-title swap
+     and prevent its JS from animating the first topic away. */
   .md-header__ellipsis > .md-header__topic:not(:first-of-type) {
-    display: none;
+    display: none !important;
   }
   .md-header__ellipsis > .md-header__topic:first-of-type {
     transform: translateY(0) !important;
     opacity: 1 !important;
+    transition: none !important;
     pointer-events: auto;
+    visibility: visible !important;
   }
 }
 
