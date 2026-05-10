@@ -1052,3 +1052,8 @@ html {
 .md-typeset .locus-hero h1 a.headerlink {
   display: none;
 }
+
+/* Header title area — pointer cursor so users know it goes home. */
+.md-header__ellipsis {
+  cursor: pointer;
+}
