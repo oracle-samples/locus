@@ -5,7 +5,12 @@ on the left, paste your model key once, hit **Run**, and watch a real
 agent stream events back. No CLI, no `pip install`, no editor setup.
 
 [Launch in Codespaces](https://codespaces.new/oracle-samples/locus){ .md-button .md-button--primary }
-[View on GitHub](https://github.com/oracle-samples/locus){ .md-button }
+[Pull from GHCR](https://github.com/oracle-samples/locus/pkgs/container/locus%2Fworkbench){ .md-button }
+
+```bash
+docker run --rm -p 5173:5173 ghcr.io/oracle-samples/locus/workbench:latest
+# → open http://localhost:5173
+```
 
 ![locus workbench](img/workbench.gif)
 
