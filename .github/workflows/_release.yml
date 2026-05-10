@@ -120,12 +120,7 @@ jobs:
         run: |
           set -eu
           # Install the wheel directly from the build artifacts.
-          pip install dist/${PKG_NAME//-/_}-${VERSION}-py3-none-any.whl
-          python -c "import locus; print(dir(locus))"
-          # Step 2: resolve dependencies from PyPI only.
-          pip install \
-            --index-url https://pypi.org/simple/ \
-            "$PKG_NAME==$VERSION"
+          pip install "dist/${PKG_NAME//-/_}-${VERSION}-py3-none-any.whl"
           python -c "import locus; print(dir(locus))"
 
   publish:
