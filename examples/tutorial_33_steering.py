@@ -30,8 +30,7 @@ from locus.tools.decorator import tool
 
 def example_steering():
     """Use an LLM to evaluate tool calls against a natural language policy."""
-    print("=== Steering: LLM-Powered Tool Approval ===
-")
+    print("=== Steering: LLM-Powered Tool Approval ===\n")
 
     model = get_model()
 
@@ -65,14 +64,12 @@ def example_steering():
     print("Attempt: Delete the users table")
     result = agent.run_sync("Delete the users table")
     print(f"Response: {result.message[:150]}")
-    print(f"
-Steering decisions:")
+    print(f"\nSteering decisions:")
     for d in steering.decisions:
         print(f"  {d.action}: {d.reason[:60]}")
 
     # This should be allowed
-    print("
-Attempt: Read all users")
+    print("\nAttempt: Read all users")
     steering2 = SteeringHook(
         model=model,
         policy="Only allow read operations. Never allow delete or write operations.",

@@ -44,8 +44,7 @@ def _llm_call(
 
 async def example_binary_routing():
     """Route to one of two paths based on a condition."""
-    print("=== Part 1: Binary Routing ===
-")
+    print("=== Part 1: Binary Routing ===\n")
 
     graph = StateGraph()
 
@@ -99,8 +98,7 @@ async def example_binary_routing():
 
 async def example_multiway_routing():
     """Route to multiple possible paths."""
-    print("=== Part 2: Multi-Way Routing ===
-")
+    print("=== Part 2: Multi-Way Routing ===\n")
 
     graph = StateGraph()
 
@@ -165,8 +163,7 @@ async def example_multiway_routing():
 
 async def example_chained_conditions():
     """Multiple conditional routing steps."""
-    print("=== Part 3: Chained Conditions ===
-")
+    print("=== Part 3: Chained Conditions ===\n")
 
     graph = StateGraph()
 
@@ -232,8 +229,7 @@ async def example_chained_conditions():
 
 async def example_default_route():
     """Handle unexpected values with a default route."""
-    print("=== Part 4: Default Route ===
-")
+    print("=== Part 4: Default Route ===\n")
 
     graph = StateGraph()
 
@@ -296,8 +292,7 @@ async def example_default_route():
 
 async def example_complex_routing():
     """Combine multiple factors in routing decision."""
-    print("=== Part 5: Complex Routing ===
-")
+    print("=== Part 5: Complex Routing ===\n")
 
     graph = StateGraph()
 
@@ -378,8 +373,7 @@ async def example_complex_routing():
 
 async def example_llm_router():
     """Let the model classify the input and pick the branch."""
-    print("=== Part 6: LLM-driven router ===
-")
+    print("=== Part 6: LLM-driven router ===\n")
 
     graph = StateGraph()
 

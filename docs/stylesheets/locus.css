@@ -192,6 +192,17 @@ html {
   margin: 0 0 1.2rem;
   text-transform: lowercase;     /* mirror the wordmark — never CamelCase */
 }
+@media (max-width: 76em) {
+  .md-typeset h1 { font-size: 1.9rem; }
+}
+@media (max-width: 48em) {
+  .md-typeset h1 { font-size: 1.6rem; }
+  /* Hide ¶ permalink on all h1s on mobile — never useful on a phone. */
+  .md-typeset h1 a.headerlink { display: none; }
+}
+@media (max-width: 36em) {
+  .md-typeset h1 { font-size: 1.4rem; }
+}
 .md-typeset h2 {
   color: var(--locus-ink);
   font-weight: 700;

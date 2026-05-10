@@ -78,8 +78,7 @@ def calculate(expression: str) -> str:
 
 async def example_all_events():
     """See all event types during execution."""
-    print("=== Part 1: Understanding Events ===
-")
+    print("=== Part 1: Understanding Events ===\n")
 
     model = get_model(max_tokens=200)
 
@@ -89,13 +88,11 @@ async def example_all_events():
         system_prompt="You are a calculator. Always use the calculate tool for math.",
     )
 
-    print("Running: 'What is 25 * 4?'
-")
+    print("Running: 'What is 25 * 4?'\n")
     print("Events received:")
 
     async for event in agent.run("What is 25 * 4?"):
-        print(f"
-  Event Type: {event.event_type}")
+        print(f"\n  Event Type: {event.event_type}")
         print(f"  Timestamp:  {event.timestamp}")
 
         if isinstance(event, ThinkEvent):
@@ -132,8 +129,7 @@ async def example_all_events():
 
 async def example_console_ui():
     """Build a real-time console interface."""
-    print("=== Part 2: Console UI ===
-")
+    print("=== Part 2: Console UI ===\n")
 
     model = get_model(max_tokens=200)
 
@@ -157,8 +153,7 @@ async def example_console_ui():
         system_prompt="You are a research assistant. Search and analyze data.",
     )
 
-    print("Query: Find information about Python and analyze it
-")
+    print("Query: Find information about Python and analyze it\n")
 
     async for event in agent.run("Find information about Python and analyze it"):
         if isinstance(event, ThinkEvent):
@@ -177,11 +172,9 @@ async def example_console_ui():
                 print(f"Done ({event.duration_ms:.0f}ms)")
 
         elif isinstance(event, TerminateEvent):
-            print(f"
-[Complete] {event.reason}")
+            print(f"\n[Complete] {event.reason}")
             if event.final_message:
-                print(f"
-Answer: {event.final_message}")
+                print(f"\nAnswer: {event.final_message}")
 
     print()
 
@@ -193,8 +186,7 @@ Answer: {event.final_message}")
 
 async def example_event_filtering():
     """Filter for specific event types."""
-    print("=== Part 3: Event Filtering ===
-")
+    print("=== Part 3: Event Filtering ===\n")
 
     model = get_model(max_tokens=200)
 
@@ -241,8 +233,7 @@ async def example_event_filtering():
 
 async def example_collect_metrics():
     """Collect performance metrics during execution."""
-    print("=== Part 4: Collecting Metrics ===
-")
+    print("=== Part 4: Collecting Metrics ===\n")
 
     model = get_model(max_tokens=200)
 
@@ -303,8 +294,7 @@ async def example_collect_metrics():
 
 async def example_progress_tracking():
     """Show progress during long operations."""
-    print("=== Part 5: Progress Tracking ===
-")
+    print("=== Part 5: Progress Tracking ===\n")
 
     model = get_model(max_tokens=300)
 
@@ -373,8 +363,7 @@ async def example_progress_tracking():
             print(f"  [{bar}] {progress:.0f}% - {event.tool_name} complete")
 
         elif isinstance(event, TerminateEvent):
-            print(f"
-Done! Final message: {event.final_message}")
+            print(f"\nDone! Final message: {event.final_message}")
 
     print()
 
@@ -403,13 +392,10 @@ def main():
     # =========================================================================
     # See also: structured streaming
     # =========================================================================
-    print("=== See also: StructuredStream ===
-")
+    print("=== See also: StructuredStream ===\n")
     print(
-        "When you want incremental Pydantic instances during streaming
-"
-        "(not raw chunks), wrap any event iterator with StructuredStream:
-"
+        "When you want incremental Pydantic instances during streaming\n"
+        "(not raw chunks), wrap any event iterator with StructuredStream:\n"
     )
     print(
         """    from locus.streaming import StructuredStream
@@ -421,14 +407,10 @@ def main():
 """
     )
     print(
-        "Each ModelChunkEvent is appended to a buffer; locus auto-closes
-"
-        "any unbalanced braces / brackets / strings, runs the result
-"
-        "through schema.model_validate, and yields the parsed instance
-"
-        "if it succeeds.
-"
+        "Each ModelChunkEvent is appended to a buffer; locus auto-closes\n"
+        "any unbalanced braces / brackets / strings, runs the result\n"
+        "through schema.model_validate, and yields the parsed instance\n"
+        "if it succeeds.\n"
     )
 
     print("=" * 60)

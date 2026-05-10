@@ -74,15 +74,13 @@ async def understand_embeddings():
         "Cats are fluffy animals",
     ]
 
-    print("
-Embedding texts...")
+    print("\nEmbedding texts...")
     results = await embedder.embed_batch(texts)
 
     # Show first few dimensions of each embedding
     for i, result in enumerate(results):
         preview = result.embedding[:5]
-        print(f"
-'{texts[i]}'")
+        print(f"\n'{texts[i]}'")
         print(f"  First 5 dims: {[round(x, 4) for x in preview]}")
         print(f"  Total dims: {len(result.embedding)}")
 
@@ -98,13 +96,11 @@ Embedding texts...")
     sim_01 = cosine_similarity(results[0].embedding, results[1].embedding)
     sim_02 = cosine_similarity(results[0].embedding, results[2].embedding)
 
-    print("
-" + "-" * 40)
+    print("\n" + "-" * 40)
     print("Similarity Analysis:")
     print(f"  'Python programming' vs 'Python ML': {sim_01:.4f}")
     print(f"  'Python programming' vs 'Cats': {sim_02:.4f}")
-    print("
-Note: Higher similarity = more semantically related")
+    print("\nNote: Higher similarity = more semantically related")
 
 
 # =============================================================================
@@ -121,8 +117,7 @@ async def using_vector_stores():
     - QdrantVectorStore: Production-ready, cloud or local
     - OpenSearchVectorStore: Enterprise search with vectors
     """
-    print("
-" + "=" * 60)
+    print("\n" + "=" * 60)
     print("Tutorial 22: Using Vector Stores")
     print("=" * 60)
 
@@ -145,8 +140,7 @@ async def using_vector_stores():
     ]
 
     # Embed and add documents
-    print("
-Adding documents...")
+    print("\nAdding documents...")
     for i, text in enumerate(docs_text):
         result = await embedder.embed(text)
         doc = Document(
@@ -159,8 +153,7 @@ Adding documents...")
         print(f"  Added: {text[:40]}...")
 
     # Search
-    print("
-" + "-" * 40)
+    print("\n" + "-" * 40)
     print("Searching for 'database systems'...")
 
     query_result = await embedder.embed("database systems")
@@ -169,16 +162,14 @@ Adding documents...")
         limit=3,
     )
 
-    print("
-Top 3 results:")
+    print("\nTop 3 results:")
     for i, result in enumerate(search_results, 1):
         print(f"  {i}. Score: {result.score:.4f}")
         print(f"     {result.document.content}")
 
     # Count and clear
     count = await store.count()
-    print(f"
-Total documents in store: {count}")
+    print(f"\nTotal documents in store: {count}")
 
 
 # =============================================================================
@@ -196,8 +187,7 @@ async def using_rag_retriever():
     - Metadata preservation
     - Convenient retrieval methods
     """
-    print("
-" + "=" * 60)
+    print("\n" + "=" * 60)
     print("Tutorial 22: Using RAG Retriever")
     print("=" * 60)
 
@@ -245,15 +235,13 @@ async def using_rag_retriever():
         """,
     ]
 
-    print("
-Adding knowledge base documents...")
+    print("\nAdding knowledge base documents...")
     for doc in knowledge_base:
         ids = await retriever.add_document(doc.strip())
         print(f"  Added document with {len(ids)} chunks")
 
     # Retrieve with natural language query
-    print("
-" + "-" * 40)
+    print("\n" + "-" * 40)
     print("Querying: 'When was Python created?'")
 
     result = await retriever.retrieve(
@@ -261,25 +249,21 @@ Adding knowledge base documents...")
         limit=2,
     )
 
-    print(f"
-Found {len(result.documents)} relevant chunks:")
+    print(f"\nFound {len(result.documents)} relevant chunks:")
     for i, doc_result in enumerate(result.documents, 1):
-        print(f"
-  Result {i} (score: {doc_result.score:.4f}):")
+        print(f"\n  Result {i} (score: {doc_result.score:.4f}):")
         content = doc_result.document.content[:200]
         print(f"  {content}...")
 
     # Use retrieve_text for formatted output
-    print("
-" + "-" * 40)
+    print("\n" + "-" * 40)
     print("Using retrieve_text() for clean output:")
 
     text = await retriever.retrieve_text(
         query="What is Oracle Cloud?",
         limit=2,
     )
-    print(f"
-{text[:300]}...")
+    print(f"\n{text[:300]}...")
 
 
 # =============================================================================
@@ -297,8 +281,7 @@ async def rag_with_metadata():
     - Filter by author or department
     - Filter by category or tags
     """
-    print("
-" + "=" * 60)
+    print("\n" + "=" * 60)
     print("Tutorial 22: RAG with Metadata")
     print("=" * 60)
 
@@ -330,14 +313,12 @@ async def rag_with_metadata():
         print(f"  Added: {content[:40]}... [{metadata}]")
 
     # Search with metadata filter (if supported by store)
-    print("
-" + "-" * 40)
+    print("\n" + "-" * 40)
     print("Searching for 'async programming'...")
 
     result = await retriever.retrieve("async programming", limit=3)
 
-    print("
-All results:")
+    print("\nAll results:")
     for doc_result in result.documents:
         print(f"  Score: {doc_result.score:.4f} | {doc_result.document.content[:50]}...")
         print(f"    Metadata: {doc_result.document.metadata}")
@@ -388,18 +369,15 @@ async def main():
     await using_rag_retriever()
     await rag_with_metadata()
 
-    print("
-" + "=" * 60)
+    print("\n" + "=" * 60)
     print("Tutorial 22 Complete!")
     print("=" * 60)
-    print("
-Key concepts covered:")
+    print("\nKey concepts covered:")
     print("  - Embeddings convert text to vectors")
     print("  - Similar texts have similar vectors")
     print("  - Vector stores enable fast similarity search")
     print("  - RAGRetriever simplifies the entire pipeline")
-    print("
-Next: Try tutorial_23_rag_providers.py for different embedding providers")
+    print("\nNext: Try tutorial_23_rag_providers.py for different embedding providers")
 
 
 if __name__ == "__main__":

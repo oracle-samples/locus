@@ -47,8 +47,7 @@ def _llm_call(
 
 async def example_command_routing():
     """Use Command for dynamic routing decisions."""
-    print("=== Part 1: Command Routing ===
-")
+    print("=== Part 1: Command Routing ===\n")
     print(
         f"AI rationale: {_llm_call('In one sentence, why is Locus Command better than separate edges + state writes?')}"
     )
@@ -105,8 +104,7 @@ async def example_command_routing():
 
 async def example_goto_helpers():
     """Use goto() and end() helper functions."""
-    print("=== Part 1b: goto/end Helpers ===
-")
+    print("=== Part 1b: goto/end Helpers ===\n")
     print(
         f"AI rationale: {_llm_call('In one sentence, when is goto() preferable to a Command literal?')}"
     )
@@ -148,8 +146,7 @@ async def example_goto_helpers():
 
 async def example_scatter():
     """Fan-out processing with scatter()."""
-    print("=== Part 2: scatter() Pattern ===
-")
+    print("=== Part 2: scatter() Pattern ===\n")
     print(
         f"AI rationale: {_llm_call('In one sentence, give an SDK use-case for the scatter() fan-out helper.')}"
     )
@@ -190,8 +187,7 @@ async def example_scatter():
 
 async def example_broadcast():
     """Send same data to multiple processors."""
-    print("=== Part 2b: broadcast() Pattern ===
-")
+    print("=== Part 2b: broadcast() Pattern ===\n")
     print(
         f"AI rationale: {_llm_call('In one sentence, when is broadcast() better than scatter() in a graph?')}"
     )
@@ -244,8 +240,7 @@ async def example_broadcast():
 
 async def example_subgraph():
     """Compose graphs from reusable subgraphs."""
-    print("=== Part 3: Subgraph Composition ===
-")
+    print("=== Part 3: Subgraph Composition ===\n")
     print(
         f"AI rationale: {_llm_call('In one sentence, when should you factor a piece of graph logic out as a subgraph?')}"
     )
@@ -307,8 +302,7 @@ async def example_subgraph():
 
 async def example_store():
     """Use Store for cross-conversation memory."""
-    print("=== Part 4: Cross-Thread Store ===
-")
+    print("=== Part 4: Cross-Thread Store ===\n")
     print(
         f"AI rationale: {_llm_call('In one sentence, what kind of state belongs in InMemoryStore vs in graph state?')}"
     )
@@ -349,8 +343,7 @@ async def example_store():
     print(f"  {result.final_state.get('greeting')}")
 
     # Second visit - remember user
-    print("
-Session 2:")
+    print("\nSession 2:")
     result = await graph.execute({"user_id": "user123"})
     print(f"  {result.final_state.get('greeting')}")
     print()
@@ -363,8 +356,7 @@ Session 2:")
 
 async def example_combined():
     """Combine multiple patterns in one workflow."""
-    print("=== Part 5: Combined Patterns ===
-")
+    print("=== Part 5: Combined Patterns ===\n")
     print(
         f"AI rationale: {_llm_call('In one sentence, why is combining Command + scatter + Store typical for multi-tenant order pipelines?')}"
     )
@@ -447,8 +439,7 @@ async def example_command_with_llm():
     """An LLM classifies a customer request and the node returns a Command
     with the chosen branch — combining real reasoning with structured
     routing primitives."""
-    print("=== Part 6: Command + real LLM ===
-")
+    print("=== Part 6: Command + real LLM ===\n")
 
     graph = StateGraph()
 

@@ -54,8 +54,7 @@ def _llm_call(
 
 async def example_retry():
     """Node with retry policy retries on failure."""
-    print("=== Part 1: RetryPolicy ===
-")
+    print("=== Part 1: RetryPolicy ===\n")
     print(
         f"AI rationale: {_llm_call('In one sentence, why is exponential backoff with jitter the right retry default?')}"
     )
@@ -91,9 +90,7 @@ async def example_retry():
 
 async def example_cache():
     """Cache node results to avoid re-computation."""
-    print("
-=== Part 2: CachePolicy ===
-")
+    print("\n=== Part 2: CachePolicy ===\n")
     print(
         f"AI rationale: {_llm_call('In one sentence, when does CachePolicy on a node beat memoising the function yourself?')}"
     )
@@ -130,9 +127,7 @@ async def example_cache():
 
 async def example_visualization():
     """Generate Mermaid and ASCII diagrams."""
-    print("
-=== Part 3: Visualization ===
-")
+    print("\n=== Part 3: Visualization ===\n")
     print(
         f"AI rationale: {_llm_call('In one sentence, why are Mermaid diagrams useful when reviewing a Locus StateGraph?')}"
     )
@@ -165,16 +160,13 @@ async def example_visualization():
 
     print("Mermaid (paste into https://mermaid.live):")
     print(draw_mermaid(graph))
-    print(f"
-ASCII:")
+    print(f"\nASCII:")
     print(draw_ascii(graph))
 
 
 async def example_realtime_streaming():
     """Stream node events in real time + push custom progress events."""
-    print("
-=== Part 4: Real-time streaming with emit_custom ===
-")
+    print("\n=== Part 4: Real-time streaming with emit_custom ===\n")
     print(
         f"AI rationale: {_llm_call('In one sentence, why is streaming progress events better than polling for graph status?')}"
     )
@@ -201,15 +193,12 @@ async def example_realtime_streaming():
         else:
             seen_updates += 1
             print(f"  [UPDATE]  {event.node_id}: {event.data}")
-    print(f"
-Delivered {seen_custom} custom events + {seen_updates} updates.")
+    print(f"\nDelivered {seen_custom} custom events + {seen_updates} updates.")
 
 
 async def example_retry_with_llm() -> None:
     """Wrap a real model call in a node so RetryPolicy guards LLM blips too."""
-    print("
-=== Part 5: RetryPolicy + real LLM ===
-")
+    print("\n=== Part 5: RetryPolicy + real LLM ===\n")
 
     async def llm_node(inputs):
         import time as _t

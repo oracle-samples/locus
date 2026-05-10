@@ -103,16 +103,14 @@ def calculate(expression: str) -> str:
 
 def example_locus_tools():
     """Create and inspect Locus tools."""
-    print("=== Part 1: Locus Tools ===
-")
+    print("=== Part 1: Locus Tools ===\n")
 
     print("Tool: get_weather")
     print(f"  Name: {get_weather.name}")
     print(f"  Description: {get_weather.description}")
     print(f"  Parameters: {json.dumps(get_weather.parameters, indent=4)}")
 
-    print("
-Direct execution:")
+    print("\nDirect execution:")
     result = get_weather("Tokyo")
     print(f"  get_weather('Tokyo') = {result}")
     print()
@@ -125,8 +123,7 @@ Direct execution:")
 
 def example_tool_conversion():
     """Convert Locus tools to MCP format and back."""
-    print("=== Part 2: Tool Conversion ===
-")
+    print("=== Part 2: Tool Conversion ===\n")
 
     # Convert Locus tool to MCP schema
     mcp_schema = locus_tool_to_mcp(get_weather)
@@ -148,8 +145,7 @@ def example_tool_conversion():
 
 def example_mcp_server():
     """Create an MCP server from a Locus agent."""
-    print("=== Part 3: MCP Server ===
-")
+    print("=== Part 3: MCP Server ===\n")
 
     model = get_model(max_tokens=200)
 
@@ -192,8 +188,7 @@ def example_mcp_server():
 
 async def example_mcp_requests():
     """Handle MCP requests programmatically."""
-    print("=== Part 4: MCP Requests ===
-")
+    print("=== Part 4: MCP Requests ===\n")
 
     try:
         import fastmcp  # noqa: F401
@@ -246,8 +241,7 @@ async def example_mcp_requests():
 
 def example_mcp_client():
     """Connect to external MCP servers."""
-    print("=== Part 5: MCP Client ===
-")
+    print("=== Part 5: MCP Client ===\n")
 
     print("MCPClient allows Locus agents to use tools from external MCP servers.")
     print()
@@ -289,8 +283,7 @@ def example_mcp_client():
 
 async def example_complete_integration():
     """Complete example of MCP integration."""
-    print("=== Part 6: Complete Integration ===
-")
+    print("=== Part 6: Complete Integration ===\n")
 
     try:
         import fastmcp  # noqa: F401
@@ -331,8 +324,7 @@ Use the available tools to answer questions:
         return
 
     # Step 3: Test the server handles requests
-    print("Testing MCP server with simulated requests:
-")
+    print("Testing MCP server with simulated requests:\n")
 
     # Test tools/list
     tools_response = await server.handle_request({"method": "tools/list"})
@@ -349,8 +341,7 @@ Use the available tools to answer questions:
             },
         }
     )
-    print(f"
-Agent response: {run_response}")
+    print(f"\nAgent response: {run_response}")
 
     print()
     print("This server can now be used by any MCP-compatible client!")
@@ -364,8 +355,7 @@ Agent response: {run_response}")
 
 def example_best_practices():
     """Best practices for MCP integration."""
-    print("=== Part 7: Best Practices ===
-")
+    print("=== Part 7: Best Practices ===\n")
 
     print("1. Tool Design")
     print("-" * 40)

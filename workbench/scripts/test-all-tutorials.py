@@ -204,9 +204,7 @@ def main() -> int:
         ids = ", ".join(str(e["number"]) for e in skipped)
         print(f"## Skipped (needs stdin): {ids}")
     if failures:
-        print("
-## Failures
-")
+        print("\n## Failures\n")
         for r in failures:
             print(f"### {r['id']} (exit {r['exit_code']}, {fmt_duration(r['duration'])})")
             if r["err_msg"]:

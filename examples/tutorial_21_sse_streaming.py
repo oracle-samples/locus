@@ -43,9 +43,7 @@ async def main():
     # =========================================================================
     # Part 1: SSE Message Format
     # =========================================================================
-    print("
-=== Part 1: SSE Message Format ===
-")
+    print("\n=== Part 1: SSE Message Format ===\n")
 
     # SSE messages follow a specific wire format
     message = SSEMessage(
@@ -61,8 +59,7 @@ async def main():
 
     # Format for HTTP transmission
     wire_format = message.format()
-    print("
-Wire format:")
+    print("\nWire format:")
     print("-" * 30)
     print(wire_format)
     print("-" * 30)
@@ -70,9 +67,7 @@ Wire format:")
     # =========================================================================
     # Part 2: Creating SSE Messages
     # =========================================================================
-    print("
-=== Part 2: Creating SSE Messages ===
-")
+    print("\n=== Part 2: Creating SSE Messages ===\n")
 
     # Different types of SSE messages
     messages = [
@@ -89,20 +84,15 @@ Wire format:")
     # Multi-line data
     multiline_msg = SSEMessage(
         event="code",
-        data="def hello():
-    print('Hello!')
-    return True",
+        data="def hello():\n    print('Hello!')\n    return True",
     )
-    print("
-Multi-line message format:")
+    print("\nMulti-line message format:")
     print(multiline_msg.format())
 
     # =========================================================================
     # Part 3: SSE Handler (Buffered)
     # =========================================================================
-    print("
-=== Part 3: SSE Handler (Buffered) ===
-")
+    print("\n=== Part 3: SSE Handler (Buffered) ===\n")
 
     # Create handler for collecting events
     handler = SSEHandler(
@@ -129,8 +119,7 @@ Multi-line message format:")
     # Mark complete
     await handler.on_complete()
 
-    print(f"
-Buffered messages: {len(handler.get_messages())}")
+    print(f"\nBuffered messages: {len(handler.get_messages())}")
     print(f"Is complete: {handler.is_complete}")
 
     # Get all messages
@@ -140,9 +129,7 @@ Buffered messages: {len(handler.get_messages())}")
     # =========================================================================
     # Part 4: Formatted Output
     # =========================================================================
-    print("
-=== Part 4: Formatted Output ===
-")
+    print("\n=== Part 4: Formatted Output ===\n")
 
     # Get all formatted output
     full_output = handler.format_all()
@@ -156,15 +143,12 @@ Buffered messages: {len(handler.get_messages())}")
     await handler.on_event(ThinkEvent(iteration=1, reasoning="New thought"))
     popped = handler.pop_messages()
     remaining = handler.get_messages()
-    print(f"
-After pop: got {len(popped)}, remaining {len(remaining)}")
+    print(f"\nAfter pop: got {len(popped)}, remaining {len(remaining)}")
 
     # =========================================================================
     # Part 5: Error Handling
     # =========================================================================
-    print("
-=== Part 5: Error Handling ===
-")
+    print("\n=== Part 5: Error Handling ===\n")
 
     handler.clear()
 
@@ -181,9 +165,7 @@ After pop: got {len(popped)}, remaining {len(remaining)}")
     # =========================================================================
     # Part 6: Async SSE Handler
     # =========================================================================
-    print("
-=== Part 6: Async SSE Handler ===
-")
+    print("\n=== Part 6: Async SSE Handler ===\n")
 
     # AsyncSSEHandler uses a queue for streaming
     async_handler = AsyncSSEHandler(
@@ -221,9 +203,7 @@ After pop: got {len(popped)}, remaining {len(remaining)}")
     # =========================================================================
     # Part 7: HTTP Response Headers
     # =========================================================================
-    print("
-=== Part 7: HTTP Response Headers ===
-")
+    print("\n=== Part 7: HTTP Response Headers ===\n")
 
     headers = create_sse_response_headers()
 
@@ -234,9 +214,7 @@ After pop: got {len(popped)}, remaining {len(remaining)}")
     # =========================================================================
     # Part 8: Custom Event Serialization
     # =========================================================================
-    print("
-=== Part 8: Custom Serialization ===
-")
+    print("\n=== Part 8: Custom Serialization ===\n")
 
     def custom_serializer(event: LocusEvent) -> dict:
         """Custom event serializer with minimal data."""
@@ -258,9 +236,7 @@ After pop: got {len(popped)}, remaining {len(remaining)}")
     # =========================================================================
     # Part 9: Web Framework Integration
     # =========================================================================
-    print("
-=== Part 9: Web Framework Integration ===
-")
+    print("\n=== Part 9: Web Framework Integration ===\n")
 
     print("FastAPI Example:")
     print("-" * 40)
@@ -301,9 +277,7 @@ async def run_agent(handler):
     # =========================================================================
     # Part 10: Supported Event Types
     # =========================================================================
-    print("
-=== Part 10: Supported Event Types ===
-")
+    print("\n=== Part 10: Supported Event Types ===\n")
 
     supported_events = [
         # Loop events
@@ -332,9 +306,7 @@ async def run_agent(handler):
     # =========================================================================
     # Part 11: Best Practices
     # =========================================================================
-    print("
-=== Part 11: Best Practices ===
-")
+    print("\n=== Part 11: Best Practices ===\n")
 
     print("1. Always set proper SSE headers")
     print("2. Include event IDs for client reconnection")
@@ -347,13 +319,10 @@ async def run_agent(handler):
 
     # Heartbeat example
     heartbeat = SSEMessage(event="heartbeat", data='{"status": "alive"}')
-    print(f"
-Heartbeat message:
-{heartbeat.format()}")
+    print(f"\nHeartbeat message:\n{heartbeat.format()}")
 
     # =========================================================================
-    print("
-" + "=" * 60)
+    print("\n" + "=" * 60)
     print("Congratulations! You've completed tutorials 13-21.")
     print("=" * 60)
     print()
