@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 39: GSAR — typed grounding for hallucination detection and recovery
 
@@ -60,7 +63,8 @@ def _llm_call(
 
 def example_partition_and_weights() -> None:
     """Build a Partition by hand and read the reference weights."""
-    print("=== Part 1: Partition + Appendix-B weights ===\n")
+    print("=== Part 1: Partition + Appendix-B weights ===
+")
     print(
         f"AI rationale: {_llm_call('In one sentence, why does GSAR partition claims into grounded/ungrounded/contradicted/complementary?')}"
     )
@@ -103,7 +107,9 @@ def example_partition_and_weights() -> None:
 
 def example_score_and_decision() -> None:
     """Reproduce the worked example from Appendix E."""
-    print("\n=== Part 2: Score and decision ===\n")
+    print("
+=== Part 2: Score and decision ===
+")
     print(
         f"AI rationale: {_llm_call('In one sentence, what does the GSAR S-score (Eq. 2) measure?')}"
     )
@@ -136,7 +142,9 @@ def example_score_and_decision() -> None:
 
 def example_threshold_sensitivity() -> None:
     """Show how decision boundaries shift with custom thresholds."""
-    print("\n=== Part 3: Threshold sensitivity ===\n")
+    print("
+=== Part 3: Threshold sensitivity ===
+")
     print(
         f"AI rationale: {_llm_call('In one sentence, why might production tighten GSAR thresholds vs research defaults?')}"
     )
@@ -146,7 +154,8 @@ def example_threshold_sensitivity() -> None:
         ungrounded=[Claim(text="u", type=EvidenceType.INFERENCE)],
     )
     s = gsar_score(base)
-    print(f"Score: {s:.4f}\n")
+    print(f"Score: {s:.4f}
+")
 
     profiles = {
         "default (0.80 / 0.65)": GSARThresholds(),
@@ -164,7 +173,9 @@ def example_threshold_sensitivity() -> None:
 
 async def example_outer_loop() -> None:
     """Run the bounded replan loop end-to-end against the configured model."""
-    print("\n=== Part 4: Algorithm-1 outer loop ===\n")
+    print("
+=== Part 4: Algorithm-1 outer loop ===
+")
 
     from locus.reasoning.gsar_evaluator import GSAREvaluator
     from locus.reasoning.gsar_judge import JudgeOutput, StructuredOutputGSARJudge
@@ -177,9 +188,12 @@ async def example_outer_loop() -> None:
         "Both observations are consistent with the alert that fired."
     )
     evidence = (
-        "[tool=query_metrics row=14:02:01] host=db-prod-1 cpu_pct=97.2\n"
-        "[tool=query_metrics row=14:02:01] host=db-prod-1 rps=12.4\n"
-        "[signal] alert_id=A-9912 fired_at=14:02:00 metric=cpu_pct severity=high\n"
+        "[tool=query_metrics row=14:02:01] host=db-prod-1 cpu_pct=97.2
+"
+        "[tool=query_metrics row=14:02:01] host=db-prod-1 rps=12.4
+"
+        "[signal] alert_id=A-9912 fired_at=14:02:00 metric=cpu_pct severity=high
+"
     )
 
     async def regen(syn: str, jo: JudgeOutput) -> str:  # pragma: no cover

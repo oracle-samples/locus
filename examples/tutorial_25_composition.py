@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 25: Agent Composition — Sequential, Parallel, and Loop Pipelines
 
@@ -33,7 +36,8 @@ from locus.agent import (
 
 async def example_sequential():
     """Chain agents so each one's output feeds the next."""
-    print("=== Part 1: Sequential Pipeline ===\n")
+    print("=== Part 1: Sequential Pipeline ===
+")
 
     model = get_model()
 
@@ -67,7 +71,9 @@ async def example_sequential():
 
 async def example_parallel():
     """Run agents concurrently and merge their results."""
-    print("\n=== Part 2: Parallel Pipeline ===\n")
+    print("
+=== Part 2: Parallel Pipeline ===
+")
 
     model = get_model()
 
@@ -101,7 +107,9 @@ async def example_parallel():
 
 async def example_loop():
     """Run an agent in a loop until a condition is met."""
-    print("\n=== Part 3: Loop Agent ===\n")
+    print("
+=== Part 3: Loop Agent ===
+")
 
     model = get_model()
 
@@ -120,7 +128,8 @@ async def example_loop():
         agent=improver,
         condition=lambda output: "APPROVED" in output.upper(),
         max_loops=3,
-        loop_prompt="Improve this text. Say APPROVED when done:\n{previous_output}",
+        loop_prompt="Improve this text. Say APPROVED when done:
+{previous_output}",
     )
 
     result = await loop.run("The quick brown fox jumps over the lazy dog.")

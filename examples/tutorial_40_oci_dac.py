@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 40: OCI Dedicated AI Cluster (DAC) endpoints
 
@@ -53,7 +56,8 @@ import os
 
 def example_routing() -> None:
     """How locus decides to use the SDK transport for DAC OCIDs."""
-    print("=== Part 1: Auto-routing ===\n")
+    print("=== Part 1: Auto-routing ===
+")
 
     print("locus.models.registry inspects the model id with three rules:")
     print()
@@ -84,7 +88,9 @@ def _dac_env_ready() -> bool:
 
 def example_configure_agent() -> None:
     """Build an Agent pointed at a DAC. Just like any other model."""
-    print("\n=== Part 2: Configure Agent against a DAC ===\n")
+    print("
+=== Part 2: Configure Agent against a DAC ===
+")
 
     if not _dac_env_ready():
         print("OCI_DAC_ENDPOINT_OCID / OCI_DAC_COMPARTMENT_ID not set.")
@@ -139,7 +145,9 @@ def example_configure_agent() -> None:
 
 async def example_complete() -> None:
     """Fire one chat at the DAC and print what comes back."""
-    print("\n=== Part 3: complete() against the DAC ===\n")
+    print("
+=== Part 3: complete() against the DAC ===
+")
 
     if not _dac_env_ready():
         print("Skipping — env vars not set.")
@@ -177,7 +185,9 @@ async def example_complete() -> None:
 
 async def example_stream() -> None:
     """Stream from the DAC and print each delta as it arrives."""
-    print("\n=== Part 4: stream() against the DAC ===\n")
+    print("
+=== Part 4: stream() against the DAC ===
+")
 
     if not _dac_env_ready():
         print("Skipping — env vars not set.")
@@ -241,7 +251,9 @@ async def example_agent_with_tool() -> None:
     This part of the tutorial just shows the wiring — what the model
     does with it depends on the model.
     """
-    print("\n=== Part 5: Agent + @tool against the DAC ===\n")
+    print("
+=== Part 5: Agent + @tool against the DAC ===
+")
 
     if not _dac_env_ready():
         print("Skipping — env vars not set.")

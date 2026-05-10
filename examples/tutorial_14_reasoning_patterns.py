@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 14: Reasoning Patterns — every part drives a real LLM call
 
@@ -91,8 +94,10 @@ class EventList(BaseModel):
 def read_logs(file: str) -> str:
     """Pull the last few lines of a log file."""
     return (
-        "[14:02:01] ERROR db.pool exhausted (50/50 conns)\n"
-        "[14:02:14] WARN api.handler timeout calling /v1/orders\n"
+        "[14:02:01] ERROR db.pool exhausted (50/50 conns)
+"
+        "[14:02:14] WARN api.handler timeout calling /v1/orders
+"
         "[14:02:18] ERROR retry budget exceeded"
     )
 
@@ -121,7 +126,9 @@ def main():
     # =========================================================================
     # Part 1: Reflexion on a real Agent run
     # =========================================================================
-    print("\n=== Part 1: Reflexion on a real Agent run (Agent + tool) ===\n")
+    print("
+=== Part 1: Reflexion on a real Agent run (Agent + tool) ===
+")
     sre_agent = Agent(
         model=get_model(max_tokens=300),
         tools=[read_logs],
@@ -144,7 +151,9 @@ def main():
     # =========================================================================
     # Part 2: Loop detection — model narrates the why
     # =========================================================================
-    print("\n=== Part 2: Loop detection (model explains, SDK detects) ===\n")
+    print("
+=== Part 2: Loop detection (model explains, SDK detects) ===
+")
     rationale = _llm_call(
         "In one sentence, why does an autonomous agent need to detect when "
         "it's stuck calling the same tool over and over?",
@@ -164,7 +173,9 @@ def main():
     # =========================================================================
     # Part 3: Quick progress evaluation — model suggests next step
     # =========================================================================
-    print("\n=== Part 3: Quick progress evaluation ===\n")
+    print("
+=== Part 3: Quick progress evaluation ===
+")
     quick = evaluate_progress(state=sre_result.state, loop_threshold=3, success_weight=0.2)
     print(f"Quick assessment: {quick.assessment.value}")
     suggestion = _llm_call(
@@ -178,7 +189,9 @@ def main():
     # Part 4: Structured-output claims (Agent + output_schema=) +
     #          real evidence from a tool
     # =========================================================================
-    print("\n=== Part 4: Structured claims (output_schema) + tool-fetched evidence ===\n")
+    print("
+=== Part 4: Structured claims (output_schema) + tool-fetched evidence ===
+")
 
     # 4a — Agent calls a real tool to fetch evidence
     evidence_agent = Agent(
@@ -209,7 +222,8 @@ def main():
         ),
     )
     claim_result = claim_agent.run_sync(
-        f"Metrics from query_metrics: {evidence_line}\n"
+        f"Metrics from query_metrics: {evidence_line}
+"
         "Produce three factual claims about the system state."
     )
     _banner(claim_result, "Part 4b")
@@ -232,7 +246,8 @@ def main():
         replan_threshold=0.65, claim_threshold=0.5, require_evidence=True
     )
     grounding = evaluator.evaluate(claims, evidence_pieces)
-    print(f"\nOverall grounding score: {grounding.score:.2f}")
+    print(f"
+Overall grounding score: {grounding.score:.2f}")
     print(f"Requires replan: {grounding.requires_replan}")
     for ce in grounding.claims:
         status = "grounded" if ce.is_grounded else "UNGROUNDED"
@@ -241,16 +256,22 @@ def main():
     # =========================================================================
     # Part 5: Replan guidance + AI-generated plan
     # =========================================================================
-    print("\n=== Part 5: Replan guidance ===\n")
+    print("
+=== Part 5: Replan guidance ===
+")
     if evaluator.should_replan(grounding):
         guidance = evaluator.get_replan_guidance(grounding)
         print(guidance)
         plan = _llm_call(
-            f"The grounding evaluator gave this guidance:\n{guidance}\n"
+            f"The grounding evaluator gave this guidance:
+{guidance}
+"
             "List two concrete tools the SRE should call next, one per line.",
             max_tokens=120,
         )
-        print(f"\nAI replan plan:\n{plan}")
+        print(f"
+AI replan plan:
+{plan}")
     else:
         observation = _llm_call(
             "All claims are sufficiently grounded. In one sentence, what does the SRE do next?",
@@ -261,7 +282,9 @@ def main():
     # =========================================================================
     # Part 6: Build a causal chain from typed events (output_schema=)
     # =========================================================================
-    print("\n=== Part 6: Causal chain from typed events (output_schema) ===\n")
+    print("
+=== Part 6: Causal chain from typed events (output_schema) ===
+")
     event_agent = Agent(
         model=get_model(max_tokens=300),
         output_schema=EventList,
@@ -297,7 +320,8 @@ def main():
         events_list.append(entry)
         prev = phrase
     chain = build_causal_chain(events_list, auto_classify=True)
-    print("\nAuto-classified chain:")
+    print("
+Auto-classified chain:")
     for node_id, node_type in chain.classify_nodes().items():
         node = chain.get_node(node_id)
         print(f"  [{node_type.value:12}] {node.label}")
@@ -305,7 +329,9 @@ def main():
     # =========================================================================
     # Part 7: Causal path analysis — AI summary
     # =========================================================================
-    print("\n=== Part 7: Causal path analysis ===\n")
+    print("
+=== Part 7: Causal path analysis ===
+")
     roots = chain.identify_root_causes()
     symptoms = chain.identify_symptoms()
     path: list = []
@@ -325,7 +351,9 @@ def main():
     # =========================================================================
     # Part 8: Conflict detection + AI-suggested resolution
     # =========================================================================
-    print("\n=== Part 8: Conflict detection ===\n")
+    print("
+=== Part 8: Conflict detection ===
+")
     conflict_chain = CausalChain()
     a = conflict_chain.create_node(label="Event A")
     b = conflict_chain.create_node(label="Event B")
@@ -342,12 +370,15 @@ def main():
             "one-sentence resolution an SRE could apply.",
             max_tokens=80,
         )
-        print(f"  AI resolution: {ai_fix}\n")
+        print(f"  AI resolution: {ai_fix}
+")
 
     # =========================================================================
     # Part 9: Chain narration
     # =========================================================================
-    print("\n=== Part 9: AI chain narration ===\n")
+    print("
+=== Part 9: AI chain narration ===
+")
     summary_text = _llm_call(
         f"Summarise this causal chain in two short sentences: {' -> '.join(event_phrases)}",
         max_tokens=160,
@@ -357,7 +388,9 @@ def main():
     # =========================================================================
     # Part 10: Full pipeline narrated by the model
     # =========================================================================
-    print("\n=== Part 10: Full reasoning pipeline ===\n")
+    print("
+=== Part 10: Full reasoning pipeline ===
+")
     pipeline_paragraph = _llm_call(
         "Walk through this reasoning pipeline as one short paragraph: "
         "(1) the agent makes claims about a database incident, "
@@ -373,7 +406,9 @@ def main():
     # =========================================================================
     # Part 11: Live Agent with reflexion=True
     # =========================================================================
-    print("\n=== Part 11: Live Agent with Reflexion ===\n")
+    print("
+=== Part 11: Live Agent with Reflexion ===
+")
     reflexive_agent = Agent(
         model=get_model(max_tokens=300),
         system_prompt=(
@@ -389,7 +424,8 @@ def main():
     _banner(live, "Part 11")
     print(f"Conclusion: {live.message[:400]}")
 
-    print("\n" + "=" * 60)
+    print("
+" + "=" * 60)
     print("Next: Tutorial 15 - Playbooks")
     print("=" * 60)
 

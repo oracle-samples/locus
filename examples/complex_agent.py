@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """Complex Agent with FastMCP-style tools - Full demonstration.
 
 This example shows:
@@ -275,7 +278,8 @@ async def analyze_data(
                 "count": len(values),
             }
 
-        return f"Summary Statistics:\n{json.dumps(stats, indent=2)}"
+        return f"Summary Statistics:
+{json.dumps(stats, indent=2)}"
 
     if analysis_type == "trends":
         return "Trend Analysis: Upward trend detected in key metrics. Growth rate: +15% MoM"
@@ -309,13 +313,19 @@ async def generate_report(
         lines = [f"# {title}", "", f"*Generated: {datetime.now().isoformat()}*", ""]
         for i, section in enumerate(sections, 1):
             lines.extend([f"## Section {i}", "", section, ""])
-        return "\n".join(lines)
+        return "
+".join(lines)
 
     if format == "html":
         sections_html = "".join(f"<section><p>{s}</p></section>" for s in sections)
         return f"<html><head><title>{title}</title></head><body><h1>{title}</h1>{sections_html}</body></html>"
 
-    return f"{title}\n{'=' * len(title)}\n\n" + "\n\n".join(sections)
+    return f"{title}
+{'=' * len(title)}
+
+" + "
+
+".join(sections)
 
 
 @tool
@@ -536,7 +546,8 @@ async def run_complex_agent():
 
 async def run_structured_output_demo():
     """Demonstrate structured output parsing."""
-    print("\n" + "=" * 60)
+    print("
+" + "=" * 60)
     print("Structured Output Demo")
     print("=" * 60)
     print()
@@ -557,7 +568,8 @@ async def run_structured_output_demo():
 
     result = agent.run_sync("Analyze the trends in AI adoption for enterprise companies in 2024.")
 
-    print(f"Raw response:\n{result.message[:300]}...")
+    print(f"Raw response:
+{result.message[:300]}...")
     print()
 
     # Parse structured output

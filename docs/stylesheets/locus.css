@@ -340,14 +340,20 @@ html {
 /* Stat strip — compact metric bar. */
 .md-typeset .locus-stat-strip {
   display: block;
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  color: var(--locus-mute);
   border-top: 1px solid var(--or-rule);
   border-bottom: 1px solid var(--or-rule);
   padding: 0.35rem 0;
   margin: 0.7rem 0 1rem;
+}
+/* Target the <p> MkDocs injects so font-size and centering apply correctly. */
+.md-typeset .locus-stat-strip p {
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--locus-mute);
+  margin: 0;
+  line-height: 1.5;
+  text-align: center;
 }
 .md-typeset .locus-stat-strip a {
   color: inherit;
@@ -358,6 +364,10 @@ html {
 .md-typeset .locus-stat-strip a:hover {
   color: var(--or-red);
   border-bottom-color: var(--or-red);
+}
+/* Hide the ¶ permalink on the hero h1. */
+.md-typeset .locus-hero h1 a.headerlink {
+  display: none;
 }
 
 /* Feature card grid — tighter, icon-first cards for the six-things section. */
@@ -533,8 +543,14 @@ html {
   white-space: nowrap;
 }
 @media (max-width: 56em) {
+  /* Show "multi-agent SDK" as a compact tagline below "locus" on mobile. */
   .md-header__ellipsis > .md-header__topic:first-of-type::after {
-    display: none;
+    content: "multi-agent SDK";
+    font-size: 0.52rem;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    color: var(--or-red);
+    display: block;
   }
   /* Always show "locus" (site title) in the mobile header — suppress
      Material's page-title swap so users always see the brand name. */
@@ -596,11 +612,6 @@ html {
 }
 
 @media (max-width: 60em) {
-  /* Hide the entire OCI/Oracle link on mobile — it's brand decoration,
-     not navigation. Removes clutter and gives the title room to breathe. */
-  .md-header__source.md-header__oci {
-    display: none;
-  }
   /* Tighten header inner padding so logo + hamburger + title + icons fit. */
   .md-header__inner {
     padding-left: 0.5rem;
@@ -612,6 +623,20 @@ html {
     height: 1.6rem;
     max-height: 28px;
   }
+  /* Show Oracle mark at reduced size; hide wordmark. */
+  .md-header__oracle-wordmark { display: none; }
+  .md-header__oci-mark { width: 20px; height: 20px; }
+  .md-header__source.md-header__oci { padding: 0.2rem 0.3rem; }
+}
+
+/* GitHub icon white when inside the mobile drawer (red primary background). */
+.md-nav--primary .md-header__source.md-header__github,
+.md-drawer .md-header__source.md-header__github {
+  color: #FFFFFF;
+}
+.md-nav--primary .md-header__source.md-header__github:hover {
+  color: #FFFFFF;
+  opacity: 0.8;
 }
 
 .md-tabs {
@@ -659,18 +684,30 @@ html {
 .md-nav--primary .md-nav__title[for="__drawer"] .md-nav__button {
   color: var(--locus-ink);
 }
-/* Source slot inside the drawer (GitHub icon row). */
-.md-drawer .md-header__source {
-  background-color: var(--or-bg-soft);
-  border-bottom: 1px solid var(--or-rule);
+/* Source slot inside the drawer — target the actual container. */
+.md-nav__source {
+  background-color: #2A2826 !important;
+  border-bottom: 1px solid rgba(255,255,255,0.08) !important;
 }
 [data-md-color-scheme="slate"] .md-nav--primary .md-nav__title[for="__drawer"] {
   background-color: var(--or-surface);
   color: var(--or-text);
 }
-[data-md-color-scheme="slate"] .md-drawer .md-header__source {
-  background-color: var(--or-bg-soft);
-  border-bottom-color: var(--or-rule);
+[data-md-color-scheme="slate"] .md-nav__source {
+  background-color: #2A2826 !important;
+}
+
+/* Push theme toggle away from the "multi-agent SDK" tagline on mobile. */
+@media (max-width: 56em) {
+  form.md-header__option {
+    margin-left: 0.5rem;
+  }
+}
+/* Icons in the dark drawer source strip — white for contrast. */
+.md-drawer .md-header__source .md-header__oci-mark,
+.md-drawer .md-header__source .md-header__oracle-wordmark {
+  opacity: 0.85;
+  filter: brightness(0) invert(1);
 }
 
 /* Section headers (Multi-agent, Agents, Tools …) — teal accent, uppercase,
@@ -999,4 +1036,9 @@ html {
   width: 22px;
   height: 22px;
   display: block;
+}
+
+/* Hide the ¶ permalink anchor on the hero h1 — noise on a marketing page. */
+.md-typeset .locus-hero h1 a.headerlink {
+  display: none;
 }

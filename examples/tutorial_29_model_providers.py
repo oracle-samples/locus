@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 29: Model Providers — OCI, OpenAI, Anthropic, Ollama
 
@@ -49,7 +52,8 @@ def _llm_call(
 
 def example_providers():
     """List available model providers."""
-    print("=== Available Providers ===\n")
+    print("=== Available Providers ===
+")
 
     providers = list_providers()
     print(f"Registered providers: {providers}")
@@ -57,7 +61,8 @@ def example_providers():
         f"AI rationale: {_llm_call('In one sentence, why do AI SDKs ship a model registry instead of hard-coding one provider?')}"
     )
 
-    print("\nUsage:")
+    print("
+Usage:")
     print('  model = get_model("openai:gpt-4o")')
     print('  model = get_model("oci:openai.gpt-5", profile="DEFAULT")  # → OCIOpenAIModel')
     print(
@@ -79,7 +84,9 @@ def example_providers():
 
 def example_direct():
     """Use providers directly without the registry."""
-    print("\n=== Direct Provider Usage ===\n")
+    print("
+=== Direct Provider Usage ===
+")
     print(
         f"AI rationale: {_llm_call('In one sentence, when would you instantiate OCIOpenAIModel directly instead of via the registry?')}"
     )
@@ -97,7 +104,8 @@ def example_direct():
     print("  )")
 
     # OCI GenAI — SDK transport (required for Cohere R-series)
-    print("\nOCI GenAI — SDK (/20231130/actions/v1, Cohere R-series only):")
+    print("
+OCI GenAI — SDK (/20231130/actions/v1, Cohere R-series only):")
     print("  from locus.models import OCIModel")
     print("  model = OCIModel(")
     print('      model_id="cohere.command-r-plus-08-2024",')
@@ -106,24 +114,29 @@ def example_direct():
     print("  )")
 
     # OpenAI (requires OPENAI_API_KEY)
-    print("\nOpenAI (direct API, requires OPENAI_API_KEY):")
+    print("
+OpenAI (direct API, requires OPENAI_API_KEY):")
     print("  from locus.models import OpenAIModel")
     print('  model = OpenAIModel(model="gpt-4o")')
 
     # Anthropic (requires ANTHROPIC_API_KEY)
-    print("\nAnthropic (requires ANTHROPIC_API_KEY):")
+    print("
+Anthropic (requires ANTHROPIC_API_KEY):")
     print("  from locus.models.native.anthropic import AnthropicModel")
     print('  model = AnthropicModel(model="claude-sonnet-4-20250514")')
 
     # Ollama (requires local Ollama server)
-    print("\nOllama (requires local Ollama server):")
+    print("
+Ollama (requires local Ollama server):")
     print("  from locus.models.native.ollama import OllamaModel")
     print('  model = OllamaModel(model="llama3.3")')
 
 
 async def example_live_call() -> None:
     """Actually call whichever provider is configured in the environment."""
-    print("\n=== Live Provider Call ===\n")
+    print("
+=== Live Provider Call ===
+")
     model = get_configured_model(max_tokens=80)
     agent = Agent(
         model=model,

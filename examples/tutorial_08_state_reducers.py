@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 08: State Reducers
 
@@ -52,7 +55,8 @@ def _llm_call(
 
 async def example_without_reducers():
     """The problem: state gets overwritten."""
-    print("=== Part 1: The Problem Without Reducers ===\n")
+    print("=== Part 1: The Problem Without Reducers ===
+")
     note = _llm_call("In one sentence, explain why a graph that overwrites state can lose data.")
     print(f"AI note: {note}")
 
@@ -85,7 +89,8 @@ async def example_without_reducers():
 
 async def example_with_reducers():
     """The solution: reducers compose state updates."""
-    print("=== Part 1b: With Reducers ===\n")
+    print("=== Part 1b: With Reducers ===
+")
     note = _llm_call("In one sentence, explain what a reducer does in a state graph.")
     print(f"AI note: {note}")
 
@@ -126,7 +131,8 @@ async def example_with_reducers():
 
 async def example_builtin_reducers():
     """Demonstrate the built-in reducers."""
-    print("=== Part 2: Built-in Reducers ===\n")
+    print("=== Part 2: Built-in Reducers ===
+")
     note = _llm_call(
         "In one sentence, when would you use add_messages vs add_numbers in a Locus graph?"
     )
@@ -164,14 +170,16 @@ async def example_builtin_reducers():
     for msg in messages:
         print(f"  [{msg.role.value}] {msg.content}")
 
-    print("\nadd_numbers reducer:")
+    print("
+add_numbers reducer:")
     print(f"  total_tokens = {result.final_state.get('total_tokens')}")
     print()
 
 
 async def example_merge_dict():
     """The merge_dict reducer."""
-    print("=== Part 2b: merge_dict Reducer ===\n")
+    print("=== Part 2b: merge_dict Reducer ===
+")
     note = _llm_call("In one sentence, give an example use-case for merge_dict.")
     print(f"AI note: {note}")
 
@@ -211,7 +219,8 @@ async def example_merge_dict():
 
 async def example_custom_reducer():
     """Create your own reducer."""
-    print("=== Part 3: Custom Reducers ===\n")
+    print("=== Part 3: Custom Reducers ===
+")
     note = _llm_call("In one sentence, name two cases where a custom reducer beats add_messages.")
     print(f"AI note: {note}")
 
@@ -268,7 +277,8 @@ async def example_custom_reducer():
 
 async def example_last_value():
     """Use last_value for fields that should be overwritten."""
-    print("=== Part 4: last_value Reducer ===\n")
+    print("=== Part 4: last_value Reducer ===
+")
     note = _llm_call(
         "In one sentence, what kind of field is a good fit for the last_value reducer?"
     )
@@ -313,7 +323,8 @@ async def example_last_value():
 
 async def example_complex_state():
     """Combine multiple reducers in a real scenario."""
-    print("=== Part 5: Complex State ===\n")
+    print("=== Part 5: Complex State ===
+")
     note = _llm_call(
         "In one sentence, explain why combining append_list, add_numbers, and "
         "merge_dict reducers is useful for an order-processing graph."
@@ -394,7 +405,8 @@ async def example_complex_state():
 
 async def example_reducer_with_llm():
     """Multiple LLM-producing nodes append messages via add_messages."""
-    print("=== Part 6: Reducers + real LLM ===\n")
+    print("=== Part 6: Reducers + real LLM ===
+")
 
     class ChatLog(BaseModel):
         messages: Annotated[list, add_messages] = []

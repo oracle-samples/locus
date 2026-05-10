@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 02: Agent with Tools
 
@@ -43,12 +46,14 @@ def multiply_numbers(a: int, b: int) -> int:
 
 def example_simple_tools():
     """Create and use simple tools — and confirm the model can describe them."""
-    print("=== Part 1: Simple Tools ===\n")
+    print("=== Part 1: Simple Tools ===
+")
 
     result = add_numbers(5, 3)
     print(f"Direct call: add_numbers(5, 3) = {result}")
 
-    print(f"\nTool name: {add_numbers.name}")
+    print(f"
+Tool name: {add_numbers.name}")
     print(f"Tool description: {add_numbers.description}")
     print(f"Tool parameters: {add_numbers.parameters}")
 
@@ -79,7 +84,8 @@ def example_simple_tools():
 
 def example_agent_with_tools():
     """Give tools to an agent."""
-    print("=== Part 2: Agent Using Tools ===\n")
+    print("=== Part 2: Agent Using Tools ===
+")
 
     model = get_model(max_tokens=200)
 
@@ -94,7 +100,8 @@ def example_agent_with_tools():
 
     # Ask the agent to use a tool
     result = agent.run_sync("What is 15 + 27?")
-    print("\nQ: What is 15 + 27?")
+    print("
+Q: What is 15 + 27?")
     print(f"A: {result.message}")
     print(f"Tool calls made: {result.metrics.tool_calls}")
     print()
@@ -134,7 +141,8 @@ def format_greeting(name: str, formal: bool = False) -> str:
 
 def example_complex_tools():
     """Use more complex tools with optional parameters."""
-    print("=== Part 3: Complex Tools ===\n")
+    print("=== Part 3: Complex Tools ===
+")
 
     model = get_model(max_tokens=200)
 
@@ -165,7 +173,8 @@ def example_complex_tools():
 
 async def example_tool_events():
     """Watch events as tools are executed."""
-    print("=== Part 4: Tool Execution Events ===\n")
+    print("=== Part 4: Tool Execution Events ===
+")
 
     model = get_model(max_tokens=200)
 
@@ -175,7 +184,8 @@ async def example_tool_events():
         system_prompt="Use tools to calculate. Always use tools for math.",
     )
 
-    print("Q: What is (5 + 3) * 2?\n")
+    print("Q: What is (5 + 3) * 2?
+")
     print("Events:")
 
     async for event in agent.run("What is (5 + 3) * 2?"):
@@ -191,7 +201,8 @@ async def example_tool_events():
         elif event_type == "terminate":
             print(f"  TERMINATE: {event.reason}")
             if event.final_message:
-                print(f"\nFinal Answer: {event.final_message}")
+                print(f"
+Final Answer: {event.final_message}")
 
     print()
 
@@ -291,7 +302,8 @@ def get_product_details(product_id: int) -> dict:
 
 def example_structured_tools():
     """Tools that return complex data structures."""
-    print("=== Part 5: Structured Data Tools ===\n")
+    print("=== Part 5: Structured Data Tools ===
+")
 
     model = get_model(max_tokens=300)
 
@@ -304,7 +316,8 @@ def example_structured_tools():
     result = agent.run_sync("Find me some electronics, then tell me about the laptop")
     print("Q: Find me some electronics, then tell me about the laptop")
     print(f"A: {result.message}")
-    print(f"\nTool calls made: {result.metrics.tool_calls}")
+    print(f"
+Tool calls made: {result.metrics.tool_calls}")
     print()
 
 

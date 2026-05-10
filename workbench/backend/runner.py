@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """Locus workbench backend — pattern runner.
 
 A single FastAPI app that exposes one endpoint per locus pattern. Each
@@ -410,7 +413,9 @@ async def _run_stategraph_loop(req: RunRequest) -> RunResponse:
     async def write_node(state: dict[str, Any]) -> dict[str, Any]:
         prompt = state["prompt"]
         if "feedback" in state:
-            prompt = f"{prompt}\n\nIncorporate this feedback: {state['feedback']}"
+            prompt = f"{prompt}
+
+Incorporate this feedback: {state['feedback']}"
         out = await asyncio.to_thread(writer.run_sync, prompt)
         return {"draft": out.message or ""}
 
@@ -469,7 +474,8 @@ async def _run_map_reduce(req: RunRequest) -> RunResponse:
 
     async def reduce(state: dict[str, Any]) -> dict[str, Any]:
         findings = [v["finding"] for v in state.values() if isinstance(v, dict) and "finding" in v]
-        report = "\n".join(f"[{f['role']}] {f['text']}" for f in findings)
+        report = "
+".join(f"[{f['role']}] {f['text']}" for f in findings)
         return {"report": report}
 
     graph = StateGraph()
@@ -511,7 +517,8 @@ async def _run_memory_manager(req: RunRequest) -> RunResponse:
         """Ask the model what's worth remembering from this conversation."""
         from locus.core.messages import Message as Msg
 
-        rendered = "\n".join(
+        rendered = "
+".join(
             f"[{m.role.value}] {(m.content or '')[:300]}"
             for m in messages
             if m.content and m.role.value in ("user", "assistant")
@@ -531,7 +538,8 @@ async def _run_memory_manager(req: RunRequest) -> RunResponse:
                 '[{"type":"user","key":"role","content":"Senior Python engineer"}]. '
                 "If nothing is worth remembering, return []."
             ),
-            Msg.user(f"Conversation:\n{rendered}"),
+            Msg.user(f"Conversation:
+{rendered}"),
         ]
         try:
             resp = await model.complete(extraction_prompt, max_tokens=512)
@@ -575,7 +583,8 @@ async def _run_memory_manager(req: RunRequest) -> RunResponse:
     # Retrieve what was persisted so we can show it.
     stored = await manager.retrieve()
     memory_summary = (
-        "\n".join(f"  [{m.type.value.upper()}] {m.key}: {m.content}" for m in stored)
+        "
+".join(f"  [{m.type.value.upper()}] {m.key}: {m.content}" for m in stored)
         if stored
         else "  (nothing extracted — try sharing a preference or fact about yourself)"
     )
@@ -603,9 +612,16 @@ async def _run_memory_manager(req: RunRequest) -> RunResponse:
     )
 
     combined = (
-        f"── Session 1 (your prompt) ──\n{reply1}\n\n"
-        f"── Memories extracted & stored ──\n{memory_summary}\n\n"
-        f"── Session 2 (fresh agent, memory injected) ──\n{reply2}"
+        f"── Session 1 (your prompt) ──
+{reply1}
+
+"
+        f"── Memories extracted & stored ──
+{memory_summary}
+
+"
+        f"── Session 2 (fresh agent, memory injected) ──
+{reply2}"
     )
     return RunResponse(reply=combined, events=events1 + events2)
 
@@ -636,8 +652,10 @@ async def _run_structured_output(req: RunRequest) -> RunResponse:
     parsed = getattr(result, "parsed", None)
     if isinstance(parsed, Verdict):
         reply = (
-            f"winner: {parsed.winner}\n"
-            f"confidence: {parsed.confidence}\n"
+            f"winner: {parsed.winner}
+"
+            f"confidence: {parsed.confidence}
+"
             f"reasoning: {parsed.reasoning}"
         )
     else:
@@ -771,7 +789,9 @@ async def _stream_raw_model(prompt: str, provider: ProviderConfig) -> _AI[str]:
 
 
 def _sse(payload: dict[str, Any]) -> str:
-    return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+    return f"data: {json.dumps(payload, ensure_ascii=False)}
+
+"
 
 
 PATTERN_RUNNERS: dict[str, Any] = {
@@ -1415,13 +1435,16 @@ def _sse_format(payload: dict[str, Any]) -> bytes:
     """Encode one ``StreamEvent.to_dict()`` payload as an SSE frame.
 
     Two carriage-return-terminated lines per event:
-    ``event: <type>\\ndata: <json>\\n\\n``. The ``event:`` line lets
+    ``event: <type>\ndata: <json>\n\n``. The ``event:`` line lets
     EventSource consumers register typed listeners; the ``data:`` line
     is the JSON payload.
     """
     event_type = payload.get("event_type", "message")
     body = json.dumps(payload, default=str)
-    return f"event: {event_type}\ndata: {body}\n\n".encode()
+    return f"event: {event_type}
+data: {body}
+
+".encode()
 
 
 async def _sse_stream_run(run_id: str) -> _AI[bytes]:
@@ -1429,17 +1452,24 @@ async def _sse_stream_run(run_id: str) -> _AI[bytes]:
     the bus closes the run, then yields a final ``done`` frame."""
     from locus.observability import get_event_bus  # noqa: PLC0415 — import-light
 
-    yield b": connected\n\n"  # SSE comment, keeps proxies awake
+    yield b": connected
+
+"  # SSE comment, keeps proxies awake
     async for event in get_event_bus().subscribe(run_id):
         yield _sse_format(event.to_dict())
-    yield b"event: done\ndata: {}\n\n"
+    yield b"event: done
+data: {}
+
+"
 
 
 async def _sse_stream_global() -> _AI[bytes]:
     """Global SSE stream — every event from every run."""
     from locus.observability import get_event_bus  # noqa: PLC0415 — import-light
 
-    yield b": connected\n\n"
+    yield b": connected
+
+"
     async for event in get_event_bus().subscribe_global():
         yield _sse_format(event.to_dict())
 
@@ -1693,7 +1723,7 @@ __LE_PREFIX = "__LE__:"
 # directly. Wraps `from config import get_model` so the returned object
 # is asserted real before the tutorial uses it.
 __SB_PROVIDER = "__SB_PROVIDER_VALUE__"
-__le_sys.stdout.write(f"[locus-workbench] running against {__SB_PROVIDER}\\n")
+__le_sys.stdout.write(f"[locus-workbench] running against {__SB_PROVIDER}\n")
 __le_sys.stdout.flush()
 try:
     import config as __sb_config
@@ -1708,11 +1738,11 @@ try:
         return m
     __sb_config.get_model = __guarded_get_model
 except Exception as __sb_err:
-    __le_sys.stderr.write(f"[locus-workbench] guard install failed: {__sb_err}\\n")
+    __le_sys.stderr.write(f"[locus-workbench] guard install failed: {__sb_err}\n")
 
 def __le_emit__(payload):
     try:
-        __le_sys.stdout.write(__LE_PREFIX + __le_json.dumps(payload, ensure_ascii=False) + "\\n")
+        __le_sys.stdout.write(__LE_PREFIX + __le_json.dumps(payload, ensure_ascii=False) + "\n")
         __le_sys.stdout.flush()
     except Exception:
         pass
@@ -1897,7 +1927,8 @@ except Exception:
                 line = await reader.readline()
                 if not line:
                     return
-                queue.put_nowait((kind, line.decode(errors="replace").rstrip("\n")))
+                queue.put_nowait((kind, line.decode(errors="replace").rstrip("
+")))
 
         queue: asyncio.Queue[tuple[str, str] | None] = asyncio.Queue()
 
@@ -1976,7 +2007,8 @@ async def respond_to_interrupt(run_id: str, req: RespondRequest) -> dict[str, An
     if proc.stdin is None or proc.stdin.is_closing():
         raise HTTPException(409, "subprocess stdin is closed")
     try:
-        proc.stdin.write((json.dumps(req.response) + "\n").encode())
+        proc.stdin.write((json.dumps(req.response) + "
+").encode())
         await proc.stdin.drain()
     except Exception as exc:
         raise HTTPException(500, f"write failed: {exc}") from exc

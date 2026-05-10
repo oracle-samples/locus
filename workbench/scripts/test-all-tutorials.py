@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 #!/usr/bin/env python3
 # Workbench helper script — relax lint rules that don't apply here.
 # ruff: noqa: BLE001, PLW2901, T201
@@ -201,7 +204,9 @@ def main() -> int:
         ids = ", ".join(str(e["number"]) for e in skipped)
         print(f"## Skipped (needs stdin): {ids}")
     if failures:
-        print("\n## Failures\n")
+        print("
+## Failures
+")
         for r in failures:
             print(f"### {r['id']} (exit {r['exit_code']}, {fmt_duration(r['duration'])})")
             if r["err_msg"]:

@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 07: Conditional Routing
 
@@ -41,7 +44,8 @@ def _llm_call(
 
 async def example_binary_routing():
     """Route to one of two paths based on a condition."""
-    print("=== Part 1: Binary Routing ===\n")
+    print("=== Part 1: Binary Routing ===
+")
 
     graph = StateGraph()
 
@@ -95,7 +99,8 @@ async def example_binary_routing():
 
 async def example_multiway_routing():
     """Route to multiple possible paths."""
-    print("=== Part 2: Multi-Way Routing ===\n")
+    print("=== Part 2: Multi-Way Routing ===
+")
 
     graph = StateGraph()
 
@@ -160,7 +165,8 @@ async def example_multiway_routing():
 
 async def example_chained_conditions():
     """Multiple conditional routing steps."""
-    print("=== Part 3: Chained Conditions ===\n")
+    print("=== Part 3: Chained Conditions ===
+")
 
     graph = StateGraph()
 
@@ -226,7 +232,8 @@ async def example_chained_conditions():
 
 async def example_default_route():
     """Handle unexpected values with a default route."""
-    print("=== Part 4: Default Route ===\n")
+    print("=== Part 4: Default Route ===
+")
 
     graph = StateGraph()
 
@@ -289,7 +296,8 @@ async def example_default_route():
 
 async def example_complex_routing():
     """Combine multiple factors in routing decision."""
-    print("=== Part 5: Complex Routing ===\n")
+    print("=== Part 5: Complex Routing ===
+")
 
     graph = StateGraph()
 
@@ -370,7 +378,8 @@ async def example_complex_routing():
 
 async def example_llm_router():
     """Let the model classify the input and pick the branch."""
-    print("=== Part 6: LLM-driven router ===\n")
+    print("=== Part 6: LLM-driven router ===
+")
 
     graph = StateGraph()
 
