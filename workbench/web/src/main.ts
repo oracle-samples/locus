@@ -238,14 +238,12 @@ function saveSettings() {
 const isLocalhost = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
 
 (function filterProviderOptions() {
-  const keep = isLocalhost
-    ? ["oci-session"]
-    : ["openai", "anthropic", "oci-apikey"];
-  Array.from(cfgProvider.options).forEach(opt => {
-    if (!keep.includes(opt.value)) opt.remove();
-  });
-  // Pre-select the first available option
-  if (cfgProvider.options.length > 0) cfgProvider.value = cfgProvider.options[0].value;
+  // OCI session token needs a local ~/.oci/config profile — only available on localhost.
+  if (!isLocalhost) {
+    Array.from(cfgProvider.options)
+      .filter(opt => opt.value === "oci-session")
+      .forEach(opt => opt.remove());
+  }
 })();
 
 // ---------------------------------------------------------------------------
