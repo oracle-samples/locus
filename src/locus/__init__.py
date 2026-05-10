@@ -239,6 +239,3 @@ __all__ = [
     "KEY_REGENERATION_COUNT",
     "KEY_STOP_REASON",
 ]
-
-# branch protection test
-x=1++  # syntax error
