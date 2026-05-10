@@ -300,7 +300,7 @@ def process_text(text: str) -> str:
     import hashlib
     import re
 
-    words = re.findall(r"\w+", text)
+    words = re.findall(r"\b\w+\b", text)
     digest = hashlib.sha256(text.encode()).hexdigest()[:12]
     return (
         f"chars={len(text)} words={len(words)} unique_words={len({w.lower() for w in words})} "

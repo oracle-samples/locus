@@ -34,7 +34,7 @@ DEFAULT_PEERS = (
     "http://127.0.0.1:8002",  # finance
 )
 
-TICKER_RE = re.compile(r"[A-Z]{2,5}")
+TICKER_RE = re.compile(r"\b[A-Z]{2,5}\b")
 
 
 async def discover(urls: tuple[str, ...]) -> list[tuple[str, list[str]]]:
