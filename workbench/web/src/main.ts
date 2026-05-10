@@ -254,6 +254,11 @@ settingsBtn.addEventListener("click", openSettings);
 settingsClose.addEventListener("click", closeSettings);
 settingsCancel.addEventListener("click", closeSettings);
 settingsSave.addEventListener("click", saveSettings);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && settingsModal.classList.contains("modal--open")) {
+    closeSettings();
+  }
+});
 cfgProvider.addEventListener("change", () => {
   const p = cfgProvider.value as ProviderType;
   setModelOptions([defaultModelFor(p)], defaultModelFor(p));
