@@ -247,6 +247,12 @@ ojdbc.properties
 # Local development scripts (not tracked)
 scripts/local/
 scripts/test_*.sh
+scripts/coverage_baseline.json
+scripts/coverage_ratchet.py
+scripts/demo_locus_against_local_services.py
+scripts/gen_tutorial_pages.py
+scripts/run_tutorials.py
+scripts/start_local_test_services.sh
 
 # Development test files (not user-facing examples)
 examples/test_*.py
