@@ -543,9 +543,9 @@ html {
   white-space: nowrap;
 }
 @media (max-width: 56em) {
-  /* Show "multi-agent SDK" as a compact tagline below "locus" on mobile. */
+  /* Show tagline below "locus" on mobile. */
   .md-header__ellipsis > .md-header__topic:first-of-type::after {
-    content: "multi-agent SDK";
+    content: "multi-agent orchestrator SDK";
     font-size: 0.52rem;
     letter-spacing: 0.08em;
     font-weight: 600;
