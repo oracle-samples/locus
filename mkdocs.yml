@@ -105,7 +105,7 @@ plugins:
           members_order: source
 
 nav:
-- Home: index.md
+- locus: index.md
 - Concepts:
   - Capabilities: capabilities.md
   - Multi-agent:
