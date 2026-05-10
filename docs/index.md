@@ -9,13 +9,13 @@ hide:
 
 # Multi-agent workflows built for <span class="accent">production.</span>
 
-locus picks the right coordination strategy for any task — and runs it production-safe.
+Describe the task. locus selects the protocol and coordinates the agents — automatically.
 
-<div class="locus-stat-strip" markdown>[multi-agent](concepts/multi-agent.md) · [cognitive protocol](concepts/router.md) · [human-in-the-loop](concepts/agent-loop.md) · [self-evaluating](concepts/reasoning.md)</div>
+<div class="locus-stat-strip" markdown>[direct answer](concepts/router.md) · [pipeline](concepts/multi-agent/composition.md) · [fan-out](concepts/multi-agent/composition.md) · [debate](concepts/multi-agent/composition.md) · [code + test](concepts/multi-agent/composition.md) · [approval gate](concepts/interrupts.md) · [A2A](concepts/multi-agent/a2a.md) · [handoff](concepts/multi-agent/handoff.md)</div>
 
-- **No duplicate side effects** — book, bill, or page with confidence. Actions happen exactly once, even across retries and restarts
-- **You decide when agents stop** — set rules like "stop when the task is done and confidence is above 90%", not just token limits
-- **See inside every run** — real-time stream of every agent decision, tool call, and token spent. One line to export to your monitoring stack
+- **Describe goals, not agent topologies** — the cognitive router picks the right pattern automatically — pipeline, fan-out, debate, handoff, A2A cross-process mesh — and assembles the agents
+- **Agents that verify their own reasoning** — Reflexion scores every turn. Grounding checks every claim against tool results. Better answers, built in
+- **Full-stack observability, zero overhead** — every decision, tool call, and reasoning step streams as a typed event. Causal tracing across the entire agent network
 
 [Get started](#six-things-you-can-ship){ .md-button .md-button--primary }
 [GitHub](https://github.com/oracle-samples/locus){ .md-button }
