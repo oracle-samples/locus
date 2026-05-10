@@ -53,9 +53,7 @@ async def main():
     # =========================================================================
     # Part 1: Memory Checkpointer
     # =========================================================================
-    print("
-=== Part 1: Memory Checkpointer ===
-")
+    print("\n=== Part 1: Memory Checkpointer ===\n")
 
     # Memory checkpointer for development and testing
     memory_cp = MemoryCheckpointer()
@@ -78,15 +76,12 @@ async def main():
     print(f"Available checkpoints: {checkpoints}")
 
     # Memory checkpointer is cleared on restart
-    print("
-Note: Memory checkpointer loses data on restart")
+    print("\nNote: Memory checkpointer loses data on restart")
 
     # =========================================================================
     # Part 2: SQLite Backend (Dict-based)
     # =========================================================================
-    print("
-=== Part 2: SQLite Backend ===
-")
+    print("\n=== Part 2: SQLite Backend ===\n")
 
     sqlite_backend = None  # Will be set if aiosqlite is available
 
@@ -127,8 +122,7 @@ Note: Memory checkpointer loses data on restart")
         threads = await sqlite_backend.list_threads()
         print(f"Remaining threads: {threads}")
 
-        print(f"
-SQLite database: {db_path}")
+        print(f"\nSQLite database: {db_path}")
     else:
         print("SQLite backend requires 'aiosqlite' package.")
         print("Install with: pip install aiosqlite")
@@ -137,9 +131,7 @@ SQLite database: {db_path}")
     # =========================================================================
     # Part 3: File Checkpointer
     # =========================================================================
-    print("
-=== Part 3: File Checkpointer ===
-")
+    print("\n=== Part 3: File Checkpointer ===\n")
 
     file_dir = os.path.join(temp_dir, "checkpoints")
     file_cp = FileCheckpointer(base_dir=file_dir)
@@ -169,15 +161,12 @@ SQLite database: {db_path}")
     else:
         print("Note: FileCheckpointer doesn't support list_threads")
 
-    print(f"
-File storage: {file_dir}")
+    print(f"\nFile storage: {file_dir}")
 
     # =========================================================================
     # Part 4: Checkpointer Interface
     # =========================================================================
-    print("
-=== Part 4: Checkpointer Interface ===
-")
+    print("\n=== Part 4: Checkpointer Interface ===\n")
 
     print("Checkpointers (MemoryCheckpointer, FileCheckpointer) implement:")
     print("  save(state, thread_id)     - Save AgentState")
@@ -186,8 +175,7 @@ File storage: {file_dir}")
     print("  list_checkpoints(thread_id)- List checkpoint IDs")
     print("  list_threads()             - List all thread IDs")
 
-    print("
-Backends (SQLiteBackend, RedisBackend) work with dicts:")
+    print("\nBackends (SQLiteBackend, RedisBackend) work with dicts:")
     print("  save(thread_id, data)      - Save dict data")
     print("  load(thread_id)            - Load dict data")
     print("  delete(thread_id)          - Delete data")
@@ -197,26 +185,21 @@ Backends (SQLiteBackend, RedisBackend) work with dicts:")
     # =========================================================================
     # Part 5: Checkpointer Capabilities
     # =========================================================================
-    print("
-=== Part 5: Checkpointer Capabilities ===
-")
+    print("\n=== Part 5: Checkpointer Capabilities ===\n")
 
     # Each checkpointer reports its capabilities
     print("Memory checkpointer capabilities:")
     print(f"  list_threads: {memory_cp.capabilities.list_threads}")
     print(f"  persistent_checkpoint_ids: {memory_cp.capabilities.persistent_checkpoint_ids}")
 
-    print("
-File checkpointer capabilities:")
+    print("\nFile checkpointer capabilities:")
     print(f"  list_threads: {file_cp.capabilities.list_threads}")
     print(f"  persistent_checkpoint_ids: {file_cp.capabilities.persistent_checkpoint_ids}")
 
     # =========================================================================
     # Part 6: Multiple Checkpoints per Thread
     # =========================================================================
-    print("
-=== Part 6: Multiple Checkpoints ===
-")
+    print("\n=== Part 6: Multiple Checkpoints ===\n")
 
     # Create multiple checkpoints for the same thread
     thread_id = "multi_checkpoint_thread"
@@ -244,8 +227,7 @@ File checkpointer capabilities:")
 
     # Load specific checkpoint
     loaded = await memory_cp.load(thread_id, checkpoint_id=cp1)
-    print(f"
-Loaded checkpoint 1: {len(loaded.messages)} messages")
+    print(f"\nLoaded checkpoint 1: {len(loaded.messages)} messages")
 
     # Load latest (default)
     latest = await memory_cp.load(thread_id)
@@ -254,9 +236,7 @@ Loaded checkpoint 1: {len(loaded.messages)} messages")
     # =========================================================================
     # Part 7: Backend Selection Patterns
     # =========================================================================
-    print("
-=== Part 7: Backend Selection ===
-")
+    print("\n=== Part 7: Backend Selection ===\n")
 
     def get_checkpointer(environment: str):
         """Select checkpointer based on environment."""
@@ -277,9 +257,7 @@ Loaded checkpoint 1: {len(loaded.messages)} messages")
     # =========================================================================
     # Part 8: Available Backends
     # =========================================================================
-    print("
-=== Part 8: Available Backends ===
-")
+    print("\n=== Part 8: Available Backends ===\n")
 
     backends = [
         ("MemoryCheckpointer", "In-memory, no dependencies", "Development, testing"),
@@ -294,17 +272,14 @@ Loaded checkpoint 1: {len(loaded.messages)} messages")
 
     print("Backend options:")
     for name, deps, use_case in backends:
-        print(f"
-  {name}")
+        print(f"\n  {name}")
         print(f"    Dependencies: {deps}")
         print(f"    Use case: {use_case}")
 
     # =========================================================================
     # Part 9: Thread Listing and Filtering
     # =========================================================================
-    print("
-=== Part 9: Thread Management ===
-")
+    print("\n=== Part 9: Thread Management ===\n")
 
     if sqlite_backend is not None:
         # Create multiple threads with pattern
@@ -333,9 +308,7 @@ Loaded checkpoint 1: {len(loaded.messages)} messages")
     # =========================================================================
     # Part 10: Best Practices
     # =========================================================================
-    print("
-=== Part 10: Best Practices ===
-")
+    print("\n=== Part 10: Best Practices ===\n")
 
     print("1. Use MemoryCheckpointer for unit tests")
     print("2. Use FileCheckpointer for development")
@@ -352,8 +325,7 @@ Loaded checkpoint 1: {len(loaded.messages)} messages")
     shutil.rmtree(temp_dir)
 
     # =========================================================================
-    print("
-" + "=" * 60)
+    print("\n" + "=" * 60)
     print("Next: Tutorial 21 - SSE Streaming")
     print("=" * 60)
 

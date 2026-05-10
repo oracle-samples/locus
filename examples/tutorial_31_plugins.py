@@ -33,8 +33,7 @@ from locus.tools.decorator import tool
 
 def example_plugin():
     """Bundle hooks into a reusable plugin."""
-    print("=== Part 1: Plugin System ===
-")
+    print("=== Part 1: Plugin System ===\n")
 
     model = get_model()
 
@@ -82,9 +81,7 @@ def example_plugin():
 
 def example_callback():
     """Receive events with a plain function."""
-    print("
-=== Part 2: Callback Handler ===
-")
+    print("\n=== Part 2: Callback Handler ===\n")
 
     model = get_model()
     events = []
@@ -109,9 +106,7 @@ def example_callback():
 
 def example_cancel():
     """Stop an agent from another thread, after running one normal call first."""
-    print("
-=== Part 3: Cancel Signal ===
-")
+    print("\n=== Part 3: Cancel Signal ===\n")
 
     model = get_model(max_tokens=80)
 

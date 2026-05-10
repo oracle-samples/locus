@@ -34,8 +34,7 @@ from locus.tools import tool
 
 def example_conversation_memory():
     """Agent remembers previous turns in a conversation."""
-    print("=== Part 1: Conversation Memory ===
-")
+    print("=== Part 1: Conversation Memory ===\n")
 
     model = get_model(max_tokens=100)
 
@@ -58,8 +57,7 @@ def example_conversation_memory():
 
     # Second message - agent should remember the name
     result2 = agent.run_sync("What's my name?", thread_id=thread_id)
-    print("
-User: What's my name?")
+    print("\nUser: What's my name?")
     print(f"Agent: {result2.message}")
     print()
 
@@ -84,16 +82,13 @@ def get_notes() -> str:
     """Get all saved notes."""
     if not _NOTES:
         return "No notes saved yet."
-    lines = "
-".join(f"- {n}" for n in _NOTES)
-    return f"You have {len(_NOTES)} note(s):
-{lines}"
+    lines = "\n".join(f"- {n}" for n in _NOTES)
+    return f"You have {len(_NOTES)} note(s):\n{lines}"
 
 
 def example_checkpointing_with_tools():
     """Checkpoint state after tool usage."""
-    print("=== Part 2: Checkpointing with Tools ===
-")
+    print("=== Part 2: Checkpointing with Tools ===\n")
 
     model = get_model(max_tokens=150)
     checkpointer = InMemoryCheckpointer()
@@ -116,8 +111,7 @@ def example_checkpointing_with_tools():
 
     # Ask about notes
     result2 = agent.run_sync("What notes do I have?", thread_id=thread_id)
-    print("
-User: What notes do I have?")
+    print("\nUser: What notes do I have?")
     print(f"Agent: {result2.message}")
     print()
 
@@ -129,8 +123,7 @@ User: What notes do I have?")
 
 def example_file_checkpointer():
     """Persist conversation state to disk."""
-    print("=== Part 3: File-Based Persistence ===
-")
+    print("=== Part 3: File-Based Persistence ===\n")
 
     # Create a temp directory for checkpoints
     checkpoint_dir = tempfile.mkdtemp()
@@ -156,8 +149,7 @@ def example_file_checkpointer():
 
     # Check that checkpoint file was created
     files = os.listdir(checkpoint_dir)
-    print(f"
-Checkpoint files created: {files}")
+    print(f"\nCheckpoint files created: {files}")
 
     # Simulate a new session by creating a new agent
     agent2 = Agent(
@@ -168,8 +160,7 @@ Checkpoint files created: {files}")
 
     # Resume the conversation
     result2 = agent2.run_sync("What was the secret code?", thread_id=thread_id)
-    print("
-[New session]")
+    print("\n[New session]")
     print("User: What was the secret code?")
     print(f"Agent: {result2.message}")
     print()
@@ -182,8 +173,7 @@ Checkpoint files created: {files}")
 
 def example_multiple_threads():
     """Manage multiple independent conversations."""
-    print("=== Part 4: Multiple Threads ===
-")
+    print("=== Part 4: Multiple Threads ===\n")
 
     model = get_model(max_tokens=100)
     checkpointer = InMemoryCheckpointer()
@@ -210,8 +200,7 @@ def example_multiple_threads():
     print(f"Agent: {result_alice.message}")
 
     result_bob = agent.run_sync("What's my favorite food?", thread_id=thread_bob)
-    print("
-Thread 'bob': What's my favorite food?")
+    print("\nThread 'bob': What's my favorite food?")
     print(f"Agent: {result_bob.message}")
     print()
 
@@ -229,8 +218,7 @@ async def example_inspect_checkpoint():
     so we give the inspector a `record_fact` tool here. After two turns
     that each trigger a tool call, ``state.confidence`` should be >0.
     """
-    print("=== Part 5: Inspecting Checkpoints ===
-")
+    print("=== Part 5: Inspecting Checkpoints ===\n")
 
     model = get_model(max_tokens=200)
     checkpointer = InMemoryCheckpointer()
@@ -276,16 +264,14 @@ async def example_inspect_checkpoint():
         print(f"Confidence: {state.confidence:.2f}")
         print(f"Confidence history: {[round(c, 2) for c in state.confidence_history]}")
 
-        print("
-Messages:")
+        print("\nMessages:")
         for i, msg in enumerate(state.messages):
             content = (
                 msg.content[:50] + "..." if msg.content and len(msg.content) > 50 else msg.content
             )
             print(f"  {i}. [{msg.role.value}] {content}")
 
-    print(f"
-Facts recorded by record_fact: {_facts}")
+    print(f"\nFacts recorded by record_fact: {_facts}")
     print()
 
 

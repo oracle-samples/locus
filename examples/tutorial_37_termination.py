@@ -35,8 +35,7 @@ from locus.core.termination import (
 
 def example_termination():
     """Combine termination conditions with | (OR) and & (AND)."""
-    print("=== Part 1: Composable Termination ===
-")
+    print("=== Part 1: Composable Termination ===\n")
 
     from locus.core.messages import Message
     from locus.core.state import AgentState
@@ -55,8 +54,7 @@ def example_termination():
 
     # AND: stop only if BOTH conditions met
     condition2 = MaxIterations(3) & TokenLimit(1000)
-    print(f"
-MaxIterations(3) & TokenLimit(1000)")
+    print(f"\nMaxIterations(3) & TokenLimit(1000)")
 
     state3 = AgentState(agent_id="test").with_iteration(4)
     stop3, _ = condition2.check(state3)
@@ -68,8 +66,7 @@ MaxIterations(3) & TokenLimit(1000)")
 
     # Custom
     custom = CustomCondition(lambda state, **ctx: (state.iteration > 10, "too_many_iterations"))
-    print(f"
-CustomCondition: {custom.check(AgentState(agent_id='t').with_iteration(11))}")
+    print(f"\nCustomCondition: {custom.check(AgentState(agent_id='t').with_iteration(11))}")
 
     import time as _t
 
@@ -93,9 +90,7 @@ CustomCondition: {custom.check(AgentState(agent_id='t').with_iteration(11))}")
 
 def example_output_key():
     """Agent output automatically saved to state metadata."""
-    print("
-=== Part 2: output_key ===
-")
+    print("\n=== Part 2: output_key ===\n")
 
     model = get_model()
 
@@ -121,9 +116,7 @@ def example_output_key():
 
 def example_dynamic_prompt():
     """System prompt changes based on runtime context."""
-    print("
-=== Part 3: Dynamic System Prompt ===
-")
+    print("\n=== Part 3: Dynamic System Prompt ===\n")
 
     model = get_model()
 

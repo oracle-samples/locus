@@ -65,9 +65,7 @@ async def main():
     # =========================================================================
     # Part 1: Pre-built Specialists
     # =========================================================================
-    print("
-=== Part 1: Pre-built Specialists ===
-")
+    print("\n=== Part 1: Pre-built Specialists ===\n")
 
     # Locus provides pre-built specialists for common domains
     log_analyst = create_log_analyst(model=model)
@@ -93,9 +91,7 @@ async def main():
     # =========================================================================
     # Part 2: Custom Specialists
     # =========================================================================
-    print("
-=== Part 2: Custom Specialists ===
-")
+    print("\n=== Part 2: Custom Specialists ===\n")
 
     # Create custom tools for the specialist
     @tool(name="check_database", description="Check database health and connections")
@@ -133,9 +129,7 @@ When analyzing, look for connection leaks, slow queries, and lock contention."""
     # =========================================================================
     # Part 3: Executing a Specialist
     # =========================================================================
-    print("
-=== Part 3: Executing a Specialist ===
-")
+    print("\n=== Part 3: Executing a Specialist ===\n")
 
     result = await database_specialist.execute(
         task="Analyze current database performance and identify issues",
@@ -152,9 +146,7 @@ When analyzing, look for connection leaks, slow queries, and lock contention."""
     # =========================================================================
     # Part 4: Creating an Orchestrator
     # =========================================================================
-    print("
-=== Part 4: Creating an Orchestrator ===
-")
+    print("\n=== Part 4: Creating an Orchestrator ===\n")
 
     # Create orchestrator with specialists
     orchestrator = create_orchestrator(
@@ -167,197 +159,4 @@ When analyzing, look for connection leaks, slow queries, and lock contention."""
     print("Registered specialists:")
     for spec_id, spec in orchestrator.specialists.items():
         print(f"  - {spec.name} ({spec_id})")
-    # AI commentary call dropped — Part 7's full orchestration run
-    # exercises the same Orchestrator code path live.
-
-    # =========================================================================
-    # Part 5: Orchestrator Configuration
-    # =========================================================================
-    print("
-=== Part 5: Orchestrator Configuration ===
-")
-
-    # Configure orchestrator behavior. ``max_parallel_specialists``
-    # caps the asyncio.Semaphore that bounds the parallel fan-out —
-    # the orchestrator runs every routed specialist concurrently
-    # behind this gate (per-specialist exception isolation, retry on
-    # the empty-completion blip). Drop to 1 if you want the old
-    # serialised behaviour (e.g. to debug a flaky specialist).
-    orchestrator.max_parallel_specialists = 3
-    orchestrator.correlation_threshold = 0.7  # Correlation confidence
-
-    print(f"Max parallel specialists: {orchestrator.max_parallel_specialists}")
-    print(f"Correlation threshold: {orchestrator.correlation_threshold}")
-
-    # Custom system prompt for orchestration
-    custom_orchestrator = Orchestrator(
-        name="Custom Orchestrator",
-        description="Orchestrates analysis with custom logic",
-        system_prompt="""You coordinate specialist agents for incident analysis.
-
-When routing:
-1. For performance issues -> metrics + database specialists
-2. For error spikes -> log + trace specialists
-3. For unknown issues -> all specialists
-
-Prioritize based on urgency indicated in the task.""",
-        model=model,
-    )
-    custom_orchestrator.register_specialists([log_analyst, metrics_analyst])
-
-    print(f"
-Custom orchestrator with {len(custom_orchestrator.specialists)} specialists")
-    # The custom_orchestrator object above is the demo itself — no
-    # need for a separate LLM commentary call.
-
-    # =========================================================================
-    # Part 6: Routing Decisions
-    # =========================================================================
-    print("
-=== Part 6: Routing Decisions ===
-")
-
-    # Routing decisions determine which specialists to invoke
-    routing = RoutingDecision(
-        decision_type="invoke",
-        specialists=["log_analyst", "metrics_analyst"],
-        reasoning="Performance issue requires log and metrics analysis",
-        context={
-            "subtasks": {
-                "log_analyst": "Search for timeout errors in the last hour",
-                "metrics_analyst": "Check CPU and memory trends",
-            }
-        },
-    )
-
-    print("Routing Decision:")
-    print(f"  Type: {routing.decision_type}")
-    print(f"  Specialists: {routing.specialists}")
-    print(f"  Reasoning: {routing.reasoning}")
-    print(f"  Subtasks: {routing.context.get('subtasks', {})}")
-    # RoutingDecision is a typed object — the field set above is the demo.
-
-    # =========================================================================
-    # Part 7: Full Orchestration
-    # =========================================================================
-    print("
-=== Part 7: Full Orchestration ===
-")
-
-    # Execute the full orchestration workflow
-    orch_result = await orchestrator.execute(
-        task="API response times have increased from 200ms to 2000ms in the last 30 minutes",
-        context={"severity": "high", "affected_services": ["api-gateway", "user-service"]},
-    )
-
-    print("Orchestration Result:")
-    print(f"  Success: {orch_result.success}")
-    print(f"  Duration: {orch_result.duration_ms:.0f}ms")
-    # max_parallel_specialists=3 means the three routed specialists
-    # ran concurrently behind an asyncio.Semaphore, not back-to-back.
-    # With per-specialist budgets averaging ~5s, parallel finishes in
-    # ~5s; serial would take ~15s.
-    print(f"  Parallel cap: max_parallel_specialists={orchestrator.max_parallel_specialists}")
-    print(f"  Decisions made: {len(orch_result.decisions)}")
-
-    for i, decision in enumerate(orch_result.decisions):
-        print(f"
-  Decision {i + 1}: {decision.decision_type}")
-        if decision.specialists:
-            print(f"    Specialists: {decision.specialists}")
-
-    print("
-Specialist Results:")
-    for spec_id, spec_result in orch_result.specialist_results.items():
-        status = "OK" if spec_result.success else f"ERROR: {spec_result.error}"
-        print(f"  {spec_id}: {status}")
-        if spec_result.output:
-            print(f"    Output preview: {spec_result.output[:100]}...")
-
-    if orch_result.summary:
-        print("
-Final Summary:")
-        print(f"  {orch_result.summary[:500]}...")
-
-    # =========================================================================
-    # Part 8: Adding Specialists Dynamically
-    # =========================================================================
-    print("
-=== Part 8: Dynamic Specialist Registration ===
-")
-
-    # Specialists can be added at runtime
-    network_specialist = Specialist(
-        name="Network Analyst",
-        specialist_type="network_analyst",
-        description="Analyzes network connectivity and latency",
-        system_prompt="You analyze network issues including DNS, latency, and connectivity.",
-        model=model,
-    )
-
-    orchestrator.register_specialist(network_specialist)
-    print(f"Added specialist: {network_specialist.name}")
-    print(f"Total specialists: {len(orchestrator.specialists)}")
-    # Run the just-registered specialist on a one-shot task.
-    t0 = time.perf_counter()
-    p8 = await network_specialist.execute(
-        task="In one short sentence, what would you check first if a service had intermittent timeouts?",
-    )
-    dt = time.perf_counter() - t0
-    print(f"  [model call: {dt:.2f}s · network_specialist.execute()]")
-    if p8.output:
-        print(f"  Output: {p8.output[:160]}")
-
-    # =========================================================================
-    # Part 9: Orchestrator Patterns
-    # =========================================================================
-    print("
-=== Part 9: Common Patterns ===
-")
-
-    print("Pattern 1: Parallel Analysis")
-    print("  - Invoke multiple specialists simultaneously")
-    print("  - Correlate findings")
-    print("  - Produce unified summary")
-    print()
-
-    print("Pattern 2: Sequential Refinement")
-    print("  - Start with broad analysis")
-    print("  - Route to specific specialist based on findings")
-    print("  - Iterate until confident")
-    print()
-
-    print("Pattern 3: Hierarchical Routing")
-    print("  - High-level orchestrator routes to sub-orchestrators")
-    print("  - Each sub-orchestrator manages domain specialists")
-    print()
-
-    print("Pattern 4: Consensus Analysis")
-    print("  - Multiple specialists analyze the same data")
-    print("  - Compare and validate findings")
-    print("  - Flag disagreements for human review")
-
-    # =========================================================================
-    # Part 10: Best Practices
-    # =========================================================================
-    print("
-=== Part 10: Best Practices ===
-")
-
-    print("1. Give specialists focused, non-overlapping domains")
-    print("2. Use clear naming for specialist types")
-    print("3. Provide domain-specific system prompts")
-    print("4. Set appropriate parallel limits")
-    print("5. Include correlation logic in summarization")
-    print("6. Handle specialist failures gracefully")
-    print("7. Track specialist performance metrics")
-
-    # =========================================================================
-    print("
-" + "=" * 60)
-    print("Next: Tutorial 18 - Specialist Agents")
-    print("=" * 60)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+    # AI commentary call dropped — Part 7's full orchestration run\n    # exercises the same Orchestrator code path live.\n\n    # =========================================================================\n    # Part 5: Orchestrator Configuration\n    # =========================================================================\n    print("\n=== Part 5: Orchestrator Configuration ===\n")\n\n    # Configure orchestrator behavior. ``max_parallel_specialists``\n    # caps the asyncio.Semaphore that bounds the parallel fan-out —\n    # the orchestrator runs every routed specialist concurrently\n    # behind this gate (per-specialist exception isolation, retry on\n    # the empty-completion blip). Drop to 1 if you want the old\n    # serialised behaviour (e.g. to debug a flaky specialist).\n    orchestrator.max_parallel_specialists = 3\n    orchestrator.correlation_threshold = 0.7  # Correlation confidence\n\n    print(f"Max parallel specialists: {orchestrator.max_parallel_specialists}")\n    print(f"Correlation threshold: {orchestrator.correlation_threshold}")\n\n    # Custom system prompt for orchestration\n    custom_orchestrator = Orchestrator(\n        name="Custom Orchestrator",\n        description="Orchestrates analysis with custom logic",\n        system_prompt="""You coordinate specialist agents for incident analysis.\n\nWhen routing:\n1. For performance issues -> metrics + database specialists\n2. For error spikes -> log + trace specialists\n3. For unknown issues -> all specialists\n\nPrioritize based on urgency indicated in the task.""",\n        model=model,\n    )\n    custom_orchestrator.register_specialists([log_analyst, metrics_analyst])\n\n    print(f"\nCustom orchestrator with {len(custom_orchestrator.specialists)} specialists")\n    # The custom_orchestrator object above is the demo itself — no\n    # need for a separate LLM commentary call.\n\n    # =========================================================================\n    # Part 6: Routing Decisions\n    # =========================================================================\n    print("\n=== Part 6: Routing Decisions ===\n")\n\n    # Routing decisions determine which specialists to invoke\n    routing = RoutingDecision(\n        decision_type="invoke",\n        specialists=["log_analyst", "metrics_analyst"],\n        reasoning="Performance issue requires log and metrics analysis",\n        context={\n            "subtasks": {\n                "log_analyst": "Search for timeout errors in the last hour",\n                "metrics_analyst": "Check CPU and memory trends",\n            }\n        },\n    )\n\n    print("Routing Decision:")\n    print(f"  Type: {routing.decision_type}")\n    print(f"  Specialists: {routing.specialists}")\n    print(f"  Reasoning: {routing.reasoning}")\n    print(f"  Subtasks: {routing.context.get('subtasks', {})}")\n    # RoutingDecision is a typed object — the field set above is the demo.\n\n    # =========================================================================\n    # Part 7: Full Orchestration\n    # =========================================================================\n    print("\n=== Part 7: Full Orchestration ===\n")\n\n    # Execute the full orchestration workflow\n    orch_result = await orchestrator.execute(\n        task="API response times have increased from 200ms to 2000ms in the last 30 minutes",\n        context={"severity": "high", "affected_services": ["api-gateway", "user-service"]},\n    )\n\n    print("Orchestration Result:")\n    print(f"  Success: {orch_result.success}")\n    print(f"  Duration: {orch_result.duration_ms:.0f}ms")\n    # max_parallel_specialists=3 means the three routed specialists\n    # ran concurrently behind an asyncio.Semaphore, not back-to-back.\n    # With per-specialist budgets averaging ~5s, parallel finishes in\n    # ~5s; serial would take ~15s.\n    print(f"  Parallel cap: max_parallel_specialists={orchestrator.max_parallel_specialists}")\n    print(f"  Decisions made: {len(orch_result.decisions)}")\n\n    for i, decision in enumerate(orch_result.decisions):\n        print(f"\n  Decision {i + 1}: {decision.decision_type}")\n        if decision.specialists:\n            print(f"    Specialists: {decision.specialists}")\n\n    print("\nSpecialist Results:")\n    for spec_id, spec_result in orch_result.specialist_results.items():\n        status = "OK" if spec_result.success else f"ERROR: {spec_result.error}"\n        print(f"  {spec_id}: {status}")\n        if spec_result.output:\n            print(f"    Output preview: {spec_result.output[:100]}...")\n\n    if orch_result.summary:\n        print("\nFinal Summary:")\n        print(f"  {orch_result.summary[:500]}...")\n\n    # =========================================================================\n    # Part 8: Adding Specialists Dynamically\n    # =========================================================================\n    print("\n=== Part 8: Dynamic Specialist Registration ===\n")\n\n    # Specialists can be added at runtime\n    network_specialist = Specialist(\n        name="Network Analyst",\n        specialist_type="network_analyst",\n        description="Analyzes network connectivity and latency",\n        system_prompt="You analyze network issues including DNS, latency, and connectivity.",\n        model=model,\n    )\n\n    orchestrator.register_specialist(network_specialist)\n    print(f"Added specialist: {network_specialist.name}")\n    print(f"Total specialists: {len(orchestrator.specialists)}")\n    # Run the just-registered specialist on a one-shot task.\n    t0 = time.perf_counter()\n    p8 = await network_specialist.execute(\n        task="In one short sentence, what would you check first if a service had intermittent timeouts?",\n    )\n    dt = time.perf_counter() - t0\n    print(f"  [model call: {dt:.2f}s · network_specialist.execute()]")\n    if p8.output:\n        print(f"  Output: {p8.output[:160]}")\n\n    # =========================================================================\n    # Part 9: Orchestrator Patterns\n    # =========================================================================\n    print("\n=== Part 9: Common Patterns ===\n")\n\n    print("Pattern 1: Parallel Analysis")\n    print("  - Invoke multiple specialists simultaneously")\n    print("  - Correlate findings")\n    print("  - Produce unified summary")\n    print()\n\n    print("Pattern 2: Sequential Refinement")\n    print("  - Start with broad analysis")\n    print("  - Route to specific specialist based on findings")\n    print("  - Iterate until confident")\n    print()\n\n    print("Pattern 3: Hierarchical Routing")\n    print("  - High-level orchestrator routes to sub-orchestrators")\n    print("  - Each sub-orchestrator manages domain specialists")\n    print()\n\n    print("Pattern 4: Consensus Analysis")\n    print("  - Multiple specialists analyze the same data")\n    print("  - Compare and validate findings")\n    print("  - Flag disagreements for human review")\n\n    # =========================================================================\n    # Part 10: Best Practices\n    # =========================================================================\n    print("\n=== Part 10: Best Practices ===\n")\n\n    print("1. Give specialists focused, non-overlapping domains")\n    print("2. Use clear naming for specialist types")\n    print("3. Provide domain-specific system prompts")\n    print("4. Set appropriate parallel limits")\n    print("5. Include correlation logic in summarization")\n    print("6. Handle specialist failures gracefully")\n    print("7. Track specialist performance metrics")\n\n    # =========================================================================\n    print("\n" + "=" * 60)\n    print("Next: Tutorial 18 - Specialist Agents")\n    print("=" * 60)\n\n\nif __name__ == "__main__":\n    asyncio.run(main())\n

@@ -27,8 +27,7 @@ from locus.multiagent import END, START, StateGraph
 
 async def example_basic_interrupt():
     """Pause execution and wait for human input."""
-    print("=== Part 1: Basic Interrupt ===
-")
+    print("=== Part 1: Basic Interrupt ===\n")
 
     graph = StateGraph()
 
@@ -84,8 +83,7 @@ async def example_basic_interrupt():
 
 async def example_multi_step():
     """Multiple interrupt points in a workflow."""
-    print("=== Part 2: Multi-Step Approval ===
-")
+    print("=== Part 2: Multi-Step Approval ===\n")
 
     graph = StateGraph()
 
@@ -136,8 +134,7 @@ async def example_multi_step():
         else:
             break
 
-    print(f"
-Final: {result.final_state.get('status')}")
+    print(f"\nFinal: {result.final_state.get('status')}")
     print()
 
 
@@ -148,8 +145,7 @@ Final: {result.final_state.get('status')}")
 
 async def example_conditional_interrupt():
     """Only interrupt when certain conditions are met."""
-    print("=== Part 3: Conditional Interrupts ===
-")
+    print("=== Part 3: Conditional Interrupts ===\n")
 
     graph = StateGraph()
 
@@ -220,8 +216,7 @@ async def example_conditional_interrupt():
 
 async def example_interrupt_before():
     """Use config to interrupt before specific nodes."""
-    print("=== Part 4: interrupt_before ===
-")
+    print("=== Part 4: interrupt_before ===\n")
 
     graph = StateGraph()
 
@@ -253,8 +248,7 @@ async def example_interrupt_before():
     if result.is_interrupted:
         print(f"PAUSED before: {result.interrupt.node_id}")
         print(f"Current state: prepared={result.final_state.get('prepared')}")
-        print("
-This allows review before sensitive operations!")
+        print("\nThis allows review before sensitive operations!")
     print()
 
 
@@ -265,8 +259,7 @@ This allows review before sensitive operations!")
 
 async def example_complete_workflow():
     """A realistic approval workflow."""
-    print("=== Part 5: Complete Approval Workflow ===
-")
+    print("=== Part 5: Complete Approval Workflow ===\n")
 
     graph = StateGraph()
 
@@ -343,8 +336,7 @@ async def example_complete_workflow():
     while result.is_interrupted and approval_idx < len(approvals):
         step = result.interrupt.interrupt.payload.get("step", "Unknown")
         question = result.interrupt.interrupt.payload.get("question", "")
-        print(f"
-{step}: {question}")
+        print(f"\n{step}: {question}")
         print(f"  -> {approvals[approval_idx]}")
 
         result = await graph.execute(
@@ -352,8 +344,7 @@ async def example_complete_workflow():
         )
         approval_idx += 1
 
-    print(f"
-Result: {result.final_state.get('message')}")
+    print(f"\nResult: {result.final_state.get('message')}")
     print()
 
 

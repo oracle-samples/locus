@@ -32,8 +32,7 @@ from locus.hooks.builtin.guardrails import (
 
 def example_pii_redaction():
     """Automatically redact PII from agent responses."""
-    print("=== Part 1: PII Redaction ===
-")
+    print("=== Part 1: PII Redaction ===\n")
 
     model = get_model()
 
@@ -60,9 +59,7 @@ def example_pii_redaction():
 
 def example_topic_policy():
     """Block specific conversation topics."""
-    print("
-=== Part 2: Topic Policy ===
-")
+    print("\n=== Part 2: Topic Policy ===\n")
 
     policy = TopicPolicy(
         blocked_topics={"weapons", "drugs"},
@@ -98,9 +95,7 @@ def example_topic_policy():
 
 def example_content_safety():
     """Detect harmful content categories."""
-    print("
-=== Part 3: Content Safety ===
-")
+    print("\n=== Part 3: Content Safety ===\n")
 
     policy = ContentPolicy(enabled_categories={"violence", "illegal_activity"})
 

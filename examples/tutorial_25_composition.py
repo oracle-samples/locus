@@ -36,8 +36,7 @@ from locus.agent import (
 
 async def example_sequential():
     """Chain agents so each one's output feeds the next."""
-    print("=== Part 1: Sequential Pipeline ===
-")
+    print("=== Part 1: Sequential Pipeline ===\n")
 
     model = get_model()
 
@@ -71,9 +70,7 @@ async def example_sequential():
 
 async def example_parallel():
     """Run agents concurrently and merge their results."""
-    print("
-=== Part 2: Parallel Pipeline ===
-")
+    print("\n=== Part 2: Parallel Pipeline ===\n")
 
     model = get_model()
 
@@ -107,9 +104,7 @@ async def example_parallel():
 
 async def example_loop():
     """Run an agent in a loop until a condition is met."""
-    print("
-=== Part 3: Loop Agent ===
-")
+    print("\n=== Part 3: Loop Agent ===\n")
 
     model = get_model()
 
@@ -128,8 +123,7 @@ async def example_loop():
         agent=improver,
         condition=lambda output: "APPROVED" in output.upper(),
         max_loops=3,
-        loop_prompt="Improve this text. Say APPROVED when done:
-{previous_output}",
+        loop_prompt="Improve this text. Say APPROVED when done:\n{previous_output}",
     )
 
     result = await loop.run("The quick brown fox jumps over the lazy dog.")

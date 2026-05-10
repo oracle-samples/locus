@@ -48,9 +48,7 @@ async def main():
     # =========================================================================
     # Part 1: Creating Handoff Agents
     # =========================================================================
-    print("
-=== Part 1: Creating Handoff Agents ===
-")
+    print("\n=== Part 1: Creating Handoff Agents ===\n")
 
     # Create specialized agents using the convenience function
     triage_agent = create_handoff_agent(
@@ -81,8 +79,7 @@ async def main():
     triage_agent.can_escalate_to = [escalation_agent.id]
     technical_agent.can_escalate_to = [escalation_agent.id]
 
-    print("
-Handoff paths:")
+    print("\nHandoff paths:")
     print("  Triage -> Technical (delegation)")
     print("  Triage -> Escalation (escalation)")
     print("  Technical -> Escalation (escalation)")
@@ -112,9 +109,7 @@ Handoff paths:")
     # =========================================================================
     # Part 2: Handoff Context
     # =========================================================================
-    print("
-=== Part 2: Handoff Context ===
-")
+    print("\n=== Part 2: Handoff Context ===\n")
 
     # Create a handoff context manually
     context = HandoffContext(
@@ -141,8 +136,7 @@ Handoff paths:")
 
     # Convert context to prompt for the target agent
     prompt = context.to_prompt()
-    print("
-Generated prompt for target agent:")
+    print("\nGenerated prompt for target agent:")
     print("-" * 40)
     print(prompt[:500] + "...")
     # Note: the receive_handoff() is exercised live in Part 4 + Part 7.
@@ -151,9 +145,7 @@ Generated prompt for target agent:")
     # =========================================================================
     # Part 3: Handoff Reasons
     # =========================================================================
-    print("
-=== Part 3: Handoff Reasons ===
-")
+    print("\n=== Part 3: Handoff Reasons ===\n")
 
     for reason in HandoffReason:
         descriptions = {
@@ -169,9 +161,7 @@ Generated prompt for target agent:")
     # =========================================================================
     # Part 4: Handoff Manager
     # =========================================================================
-    print("
-=== Part 4: Handoff Manager ===
-")
+    print("\n=== Part 4: Handoff Manager ===\n")
 
     # Create a handoff manager
     manager = create_handoff_manager(
@@ -204,9 +194,7 @@ Generated prompt for target agent:")
     # =========================================================================
     # Part 5: Creating Handoff Contexts Through Manager
     # =========================================================================
-    print("
-=== Part 5: Creating Handoffs ===
-")
+    print("\n=== Part 5: Creating Handoffs ===\n")
 
     # Simulate agent state with some conversation
     state = AgentState(
@@ -236,9 +224,7 @@ Generated prompt for target agent:")
     # =========================================================================
     # Part 6: Executing Handoffs with Model
     # =========================================================================
-    print("
-=== Part 6: Executing Handoffs ===
-")
+    print("\n=== Part 6: Executing Handoffs ===\n")
     print("`manager.execute_handoff(...)` was exercised in Part 4. The same")
     print("call shape works for any (source -> target, reason) pair — see")
     print("the chain demo in Part 7 for back-to-back execution.")
@@ -246,9 +232,7 @@ Generated prompt for target agent:")
     # =========================================================================
     # Part 7: Chain Handoffs
     # =========================================================================
-    print("
-=== Part 7: Chain Handoffs ===
-")
+    print("\n=== Part 7: Chain Handoffs ===\n")
 
     # Configure all agents with model
     manager.agents[triage_agent.id] = triage_agent.with_model(triage_model)
@@ -269,9 +253,7 @@ Generated prompt for target agent:")
     # =========================================================================
     # Part 8: Handoff History
     # =========================================================================
-    print("
-=== Part 8: Handoff History ===
-")
+    print("\n=== Part 8: Handoff History ===\n")
 
     print(f"Total handoffs in history: {len(manager.history)}")
     for ctx in manager.history[-3:]:  # Last 3 handoffs
@@ -286,9 +268,7 @@ Generated prompt for target agent:")
     # =========================================================================
     # Part 9: Handoff Patterns
     # =========================================================================
-    print("
-=== Part 9: Common Handoff Patterns ===
-")
+    print("\n=== Part 9: Common Handoff Patterns ===\n")
 
     print("Pattern 1: Triage -> Specialist")
     print("  A generalist agent assesses and routes to domain experts")
@@ -312,9 +292,7 @@ Generated prompt for target agent:")
     # =========================================================================
     # Part 10: Best Practices
     # =========================================================================
-    print("
-=== Part 10: Best Practices ===
-")
+    print("\n=== Part 10: Best Practices ===\n")
 
     print("1. Keep handoff contexts focused - transfer only relevant info")
     print("2. Set reasonable max_chain limits to prevent infinite loops")
@@ -325,8 +303,7 @@ Generated prompt for target agent:")
     print("7. Monitor handoff history for debugging")
 
     # =========================================================================
-    print("
-" + "=" * 60)
+    print("\n" + "=" * 60)
     print("Next: Tutorial 17 - Orchestrator Pattern")
     print("=" * 60)
 

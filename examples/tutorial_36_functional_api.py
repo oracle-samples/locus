@@ -46,8 +46,7 @@ def _llm_call(
 
 async def example_basic():
     """Simple task chain with automatic tracking."""
-    print("=== Part 1: Basic Pipeline ===
-")
+    print("=== Part 1: Basic Pipeline ===\n")
     print(
         f"AI rationale: {_llm_call('In one sentence, when is the Locus functional API a better choice than StateGraph?')}"
     )
@@ -84,9 +83,7 @@ async def example_basic():
 
 async def example_retry():
     """Tasks can retry on failure."""
-    print("
-=== Part 2: Task with Retry ===
-")
+    print("\n=== Part 2: Task with Retry ===\n")
     print(
         f"AI rationale: {_llm_call('In one sentence, why does @task(retry_attempts=3) belong on the task and not in caller code?')}"
     )
@@ -117,9 +114,7 @@ async def example_retry():
 
 async def example_cache():
     """Cache task results for identical arguments."""
-    print("
-=== Part 3: Task with Caching ===
-")
+    print("\n=== Part 3: Task with Caching ===\n")
     print(
         f"AI rationale: {_llm_call('In one sentence, when should you turn @task(cache=True) ON for an LLM-heavy pipeline?')}"
     )
@@ -146,9 +141,7 @@ async def example_cache():
 
 async def example_with_llm():
     """A functional pipeline whose inner task delegates to a real Agent."""
-    print("
-=== Part 4: @task with real LLM ===
-")
+    print("\n=== Part 4: @task with real LLM ===\n")
 
     @task
     async def fetch_topic(seed: str) -> str:

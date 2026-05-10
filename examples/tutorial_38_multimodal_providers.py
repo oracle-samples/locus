@@ -39,8 +39,7 @@ from locus.providers.web_fetch import HTTPXWebFetcher
 
 def example_protocols():
     """Print the four Protocols you can implement to plug a backend."""
-    print("=== Part 1: The four provider Protocols ===
-")
+    print("=== Part 1: The four provider Protocols ===\n")
 
     print("locus.providers exposes four runtime_checkable Protocols:")
     print()
@@ -65,9 +64,7 @@ def example_protocols():
 
 def example_auto_register():
     """Configure providers; locus registers the tools."""
-    print("
-=== Part 2: Auto-registered tools ===
-")
+    print("\n=== Part 2: Auto-registered tools ===\n")
 
     # HTTPXWebFetcher needs no API key — pure stdlib + httpx.
     fetcher = HTTPXWebFetcher(timeout_seconds=10.0)
@@ -100,9 +97,7 @@ def example_auto_register():
 
 async def example_live_fetch():
     """Use the registered tool directly to verify the wiring."""
-    print("
-=== Part 3: Live fetch via the registered tool ===
-")
+    print("\n=== Part 3: Live fetch via the registered tool ===\n")
 
     fetcher = HTTPXWebFetcher(timeout_seconds=10.0)
     agent = Agent(
@@ -131,9 +126,7 @@ async def example_live_fetch():
 
 def example_byo_backend():
     """A toy custom search provider — any duck-typed class works."""
-    print("
-=== Part 4: Bring your own backend ===
-")
+    print("\n=== Part 4: Bring your own backend ===\n")
 
     from locus.providers.types import SearchResult
 
@@ -171,9 +164,7 @@ def example_byo_backend():
 
 def example_openai_providers():
     """Show the wiring for the built-in OpenAI implementations."""
-    print("
-=== Part 5: OpenAI-backed providers (optional) ===
-")
+    print("\n=== Part 5: OpenAI-backed providers (optional) ===\n")
 
     if not os.environ.get("OPENAI_API_KEY"):
         print("OPENAI_API_KEY not set — printing the wiring without instantiating.")

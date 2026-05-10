@@ -49,8 +49,7 @@ def _llm_call(
 
 async def example_first_graph():
     """Create the simplest possible graph — node calls a real Agent."""
-    print("=== Part 1: Your First Graph ===
-")
+    print("=== Part 1: Your First Graph ===\n")
 
     graph = StateGraph()
 
@@ -85,8 +84,7 @@ async def example_first_graph():
 
 async def example_sequence():
     """Chain multiple nodes together."""
-    print("=== Part 2: Sequential Nodes ===
-")
+    print("=== Part 2: Sequential Nodes ===\n")
 
     graph = StateGraph()
 
@@ -143,8 +141,7 @@ async def example_sequence():
 
 async def example_state_flow():
     """See how state accumulates through nodes."""
-    print("=== Part 3: State Flow ===
-")
+    print("=== Part 3: State Flow ===\n")
 
     graph = StateGraph()
 
@@ -178,8 +175,7 @@ async def example_state_flow():
     print("Executing graph...")
     result = await graph.execute({"initial_data": True})
 
-    print("
-Final state:")
+    print("\nFinal state:")
     for key, value in result.final_state.items():
         if not key.startswith("_"):  # Skip internal keys
             print(f"  {key}: {value}")
@@ -193,8 +189,7 @@ Final state:")
 
 async def example_parallel():
     """Execute independent nodes in parallel."""
-    print("=== Part 4: Parallel Nodes ===
-")
+    print("=== Part 4: Parallel Nodes ===\n")
 
     graph = StateGraph()
     graph.config.parallel = True  # Enable parallel execution
@@ -264,8 +259,7 @@ async def example_parallel():
 
 async def example_results():
     """Explore the GraphResult structure."""
-    print("=== Part 5: Graph Results ===
-")
+    print("=== Part 5: Graph Results ===\n")
 
     graph = StateGraph()
 
@@ -288,14 +282,12 @@ async def example_results():
     print(f"  .iterations      = {result.iterations}")
     print(f"  .execution_order = {result.execution_order}")
 
-    print("
-  .final_state:")
+    print("\n  .final_state:")
     for k, v in result.final_state.items():
         if not k.startswith("_"):
             print(f"    {k}: {v}")
 
-    print("
-  .node_results:")
+    print("\n  .node_results:")
     for node_id, node_result in result.node_results.items():
         print(f"    {node_id}: status={node_result.status.value}")
     print()
@@ -303,8 +295,7 @@ async def example_results():
 
 async def example_streaming():
     """Stream node-completion events in real time + emit custom progress."""
-    print("=== Part 6: Real-time streaming + emit_custom ===
-")
+    print("=== Part 6: Real-time streaming + emit_custom ===\n")
     from locus.multiagent import StreamMode, emit_custom
 
     graph = StateGraph()
@@ -346,8 +337,7 @@ async def example_streaming():
 
 async def example_graph_with_llm():
     """A graph node that delegates work to a real Agent."""
-    print("=== Part 7: Graph + real LLM ===
-")
+    print("=== Part 7: Graph + real LLM ===\n")
 
     graph = StateGraph()
 
