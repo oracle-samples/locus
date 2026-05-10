@@ -4,6 +4,9 @@ A browser-based playground for every locus pattern. Pick a tutorial
 on the left, paste your model key once, hit **Run**, and watch a real
 agent stream events back. No CLI, no `pip install`, no editor setup.
 
+[Launch in Codespaces](https://codespaces.new/oracle-samples/locus){ .md-button .md-button--primary }
+[View on GitHub](https://github.com/oracle-samples/locus){ .md-button }
+
 ![locus workbench](img/workbench.gif)
 
 ## What it is
