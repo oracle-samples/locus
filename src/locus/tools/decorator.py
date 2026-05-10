@@ -109,12 +109,6 @@ class Tool(BaseModel):
             },
         }
 
-    async def ainvoke(self, tool_input: dict[str, Any] | None = None, **kwargs: Any) -> Any:
-        """LangChain-compatible alias — delegates to execute()."""
-        merged = dict(tool_input or {})
-        merged.update(kwargs)
-        return await self.execute(**merged)
-
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         """Direct invocation of the tool."""
         return self.fn(*args, **kwargs)
