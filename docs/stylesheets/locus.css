@@ -193,15 +193,14 @@ html {
   text-transform: lowercase;     /* mirror the wordmark — never CamelCase */
 }
 @media (max-width: 76em) {
-  .md-typeset h1 { font-size: 1.7rem; }
+  .md-typeset h1 { font-size: 1.7rem !important; }
 }
 @media (max-width: 48em) {
-  .md-typeset h1 { font-size: 1.35rem; }
-  /* Hide ¶ permalink on all h1s on mobile — never useful on a phone. */
+  .md-typeset h1 { font-size: 1.35rem !important; }
   .md-typeset h1 a.headerlink { display: none; }
 }
 @media (max-width: 36em) {
-  .md-typeset h1 { font-size: 1.2rem; }
+  .md-typeset h1 { font-size: 1.2rem !important; }
 }
 .md-typeset h2 {
   color: var(--locus-ink);
