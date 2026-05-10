@@ -68,10 +68,11 @@ def _json_schema_type_to_python(prop: dict[str, Any]) -> type[Any]:
         "boolean": bool,
     }
 
-    # ``Any`` is a typing-special-form, not a runtime type, so mypy can't
-    # accept it as the dict default. Pydantic accepts it as a field type
-    # at runtime, so we tag the line.
-    return mapping.get(schema_type, Any)  # type: ignore[arg-type]
+    # ``Any`` is a typing-special-form, not a runtime type. Pydantic
+    # accepts it as a field type at runtime; mypy 1.13 (pre-commit) is
+    # stricter than the local dev mypy here, so the ignore is keyed
+    # only on the strict path.
+    return mapping.get(schema_type, Any)  # type: ignore[arg-type, unused-ignore]
 
 
 def build_args_model(tool_name: str, schema: dict[str, Any] | None) -> type[BaseModel] | None:
@@ -127,6 +128,16 @@ def mcp_tool_to_locus(
     """
     Convert an MCP-style tool to a Locus Tool.
 
+    When ``parameters`` is provided, the JSON Schema is used **as-is** to
+    construct the Tool. This preserves the source tool's flat-field
+    schema end-to-end so the LLM sees the original argument shape
+    (e.g. ``{tenant_id, regex, limit}``) instead of the generic
+    ``{kwargs: …}`` shape that the ``@tool`` decorator would otherwise
+    derive from the wrapper's ``**kwargs`` signature.
+
+    When ``parameters`` is omitted, falls back to the decorator-derived
+    schema (parameter-less tool) for backward compatibility.
+
     Args:
         name: Tool name
         description: Tool description
@@ -137,13 +148,32 @@ def mcp_tool_to_locus(
         Locus Tool instance
     """
 
-    # Create wrapper that matches Locus's tool signature
-    @tool(name=name, description=description)
-    async def wrapper(**kwargs: Any) -> str:
+    async def _invoke(**kwargs: Any) -> str:
         result = await func(**kwargs)
         if isinstance(result, str):
             return result
         return json.dumps(result)
+
+    if parameters is not None:
+        # Direct construction: keep the source MCP server's
+        # inputSchema as the Tool's parameters dict. The Tool's
+        # execute path forwards ``**kwargs`` to ``_invoke`` which
+        # forwards them to the original ``func``, so the LLM's tool
+        # call args land flat at the server.
+        return Tool(
+            name=name,
+            description=description,
+            parameters=parameters,
+            fn=_invoke,
+            idempotent=False,
+        )
+
+    # Fallback: derive the schema from the wrapper signature.
+    # No-args tools work; tools that need typed args should pass
+    # ``parameters=`` explicitly.
+    @tool(name=name, description=description)
+    async def wrapper(**kwargs: Any) -> str:
+        return await _invoke(**kwargs)
 
     return wrapper
 
