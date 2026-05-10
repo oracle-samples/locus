@@ -201,7 +201,13 @@ all = [
 ]
 
 [tool.hatch.envs.test]
-features = ["dev", "all"]
+features = [
+    "dev",
+    "openai", "anthropic", "ollama", "oci",
+    "telemetry", "mcp", "server",
+    "sqlite", "redis", "postgresql", "opensearch", "oracledb",
+    "qdrant", "chroma", "pinecone", "pgvector",
+]
 
 [[tool.hatch.envs.test.matrix]]
 python = ["3.11", "3.12", "3.13", "3.14"]
