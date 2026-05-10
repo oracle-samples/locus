@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 03: Agent Memory & Checkpointing
 
@@ -31,7 +34,8 @@ from locus.tools import tool
 
 def example_conversation_memory():
     """Agent remembers previous turns in a conversation."""
-    print("=== Part 1: Conversation Memory ===\n")
+    print("=== Part 1: Conversation Memory ===
+")
 
     model = get_model(max_tokens=100)
 
@@ -54,7 +58,8 @@ def example_conversation_memory():
 
     # Second message - agent should remember the name
     result2 = agent.run_sync("What's my name?", thread_id=thread_id)
-    print("\nUser: What's my name?")
+    print("
+User: What's my name?")
     print(f"Agent: {result2.message}")
     print()
 
@@ -79,13 +84,16 @@ def get_notes() -> str:
     """Get all saved notes."""
     if not _NOTES:
         return "No notes saved yet."
-    lines = "\n".join(f"- {n}" for n in _NOTES)
-    return f"You have {len(_NOTES)} note(s):\n{lines}"
+    lines = "
+".join(f"- {n}" for n in _NOTES)
+    return f"You have {len(_NOTES)} note(s):
+{lines}"
 
 
 def example_checkpointing_with_tools():
     """Checkpoint state after tool usage."""
-    print("=== Part 2: Checkpointing with Tools ===\n")
+    print("=== Part 2: Checkpointing with Tools ===
+")
 
     model = get_model(max_tokens=150)
     checkpointer = InMemoryCheckpointer()
@@ -108,7 +116,8 @@ def example_checkpointing_with_tools():
 
     # Ask about notes
     result2 = agent.run_sync("What notes do I have?", thread_id=thread_id)
-    print("\nUser: What notes do I have?")
+    print("
+User: What notes do I have?")
     print(f"Agent: {result2.message}")
     print()
 
@@ -120,7 +129,8 @@ def example_checkpointing_with_tools():
 
 def example_file_checkpointer():
     """Persist conversation state to disk."""
-    print("=== Part 3: File-Based Persistence ===\n")
+    print("=== Part 3: File-Based Persistence ===
+")
 
     # Create a temp directory for checkpoints
     checkpoint_dir = tempfile.mkdtemp()
@@ -146,7 +156,8 @@ def example_file_checkpointer():
 
     # Check that checkpoint file was created
     files = os.listdir(checkpoint_dir)
-    print(f"\nCheckpoint files created: {files}")
+    print(f"
+Checkpoint files created: {files}")
 
     # Simulate a new session by creating a new agent
     agent2 = Agent(
@@ -157,7 +168,8 @@ def example_file_checkpointer():
 
     # Resume the conversation
     result2 = agent2.run_sync("What was the secret code?", thread_id=thread_id)
-    print("\n[New session]")
+    print("
+[New session]")
     print("User: What was the secret code?")
     print(f"Agent: {result2.message}")
     print()
@@ -170,7 +182,8 @@ def example_file_checkpointer():
 
 def example_multiple_threads():
     """Manage multiple independent conversations."""
-    print("=== Part 4: Multiple Threads ===\n")
+    print("=== Part 4: Multiple Threads ===
+")
 
     model = get_model(max_tokens=100)
     checkpointer = InMemoryCheckpointer()
@@ -197,7 +210,8 @@ def example_multiple_threads():
     print(f"Agent: {result_alice.message}")
 
     result_bob = agent.run_sync("What's my favorite food?", thread_id=thread_bob)
-    print("\nThread 'bob': What's my favorite food?")
+    print("
+Thread 'bob': What's my favorite food?")
     print(f"Agent: {result_bob.message}")
     print()
 
@@ -215,7 +229,8 @@ async def example_inspect_checkpoint():
     so we give the inspector a `record_fact` tool here. After two turns
     that each trigger a tool call, ``state.confidence`` should be >0.
     """
-    print("=== Part 5: Inspecting Checkpoints ===\n")
+    print("=== Part 5: Inspecting Checkpoints ===
+")
 
     model = get_model(max_tokens=200)
     checkpointer = InMemoryCheckpointer()
@@ -261,14 +276,16 @@ async def example_inspect_checkpoint():
         print(f"Confidence: {state.confidence:.2f}")
         print(f"Confidence history: {[round(c, 2) for c in state.confidence_history]}")
 
-        print("\nMessages:")
+        print("
+Messages:")
         for i, msg in enumerate(state.messages):
             content = (
                 msg.content[:50] + "..." if msg.content and len(msg.content) > 50 else msg.content
             )
             print(f"  {i}. [{msg.role.value}] {content}")
 
-    print(f"\nFacts recorded by record_fact: {_facts}")
+    print(f"
+Facts recorded by record_fact: {_facts}")
     print()
 
 

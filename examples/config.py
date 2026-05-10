@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Shared configuration for Locus tutorials.
 
@@ -164,16 +167,29 @@ def check_structured_output_capable() -> None:
         else f"Cohere R-series ({model_id}) does not support constrained JSON decoding."
     )
     print(
-        f"\n⚠  This tutorial requires structured-output (JSON schema) support.\n"
-        f"   {reason}\n\n"
-        "   Run with a model that supports constrained decoding:\n\n"
-        "     export LOCUS_MODEL_PROVIDER=oci\n"
-        "     export LOCUS_OCI_PROFILE=<your-profile>\n"
-        "     export LOCUS_OCI_AUTH_TYPE=security_token   # or api_key\n"
-        "     export LOCUS_OCI_REGION=us-chicago-1\n"
-        "     export LOCUS_OCI_COMPARTMENT=<your-compartment-ocid>\n"
-        "     export LOCUS_MODEL_ID=openai.gpt-5.5-2026-04-23\n"
-        f"     python {Path(sys.argv[0]).name}\n"
+        f"
+⚠  This tutorial requires structured-output (JSON schema) support.
+"
+        f"   {reason}
+
+"
+        "   Run with a model that supports constrained decoding:
+
+"
+        "     export LOCUS_MODEL_PROVIDER=oci
+"
+        "     export LOCUS_OCI_PROFILE=<your-profile>
+"
+        "     export LOCUS_OCI_AUTH_TYPE=security_token   # or api_key
+"
+        "     export LOCUS_OCI_REGION=us-chicago-1
+"
+        "     export LOCUS_OCI_COMPARTMENT=<your-compartment-ocid>
+"
+        "     export LOCUS_MODEL_ID=openai.gpt-5.5-2026-04-23
+"
+        f"     python {Path(sys.argv[0]).name}
+"
     )
     sys.exit(0)
 

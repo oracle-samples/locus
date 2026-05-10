@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 36: Functional API — @entrypoint and @task Decorators
 
@@ -43,7 +46,8 @@ def _llm_call(
 
 async def example_basic():
     """Simple task chain with automatic tracking."""
-    print("=== Part 1: Basic Pipeline ===\n")
+    print("=== Part 1: Basic Pipeline ===
+")
     print(
         f"AI rationale: {_llm_call('In one sentence, when is the Locus functional API a better choice than StateGraph?')}"
     )
@@ -80,7 +84,9 @@ async def example_basic():
 
 async def example_retry():
     """Tasks can retry on failure."""
-    print("\n=== Part 2: Task with Retry ===\n")
+    print("
+=== Part 2: Task with Retry ===
+")
     print(
         f"AI rationale: {_llm_call('In one sentence, why does @task(retry_attempts=3) belong on the task and not in caller code?')}"
     )
@@ -111,7 +117,9 @@ async def example_retry():
 
 async def example_cache():
     """Cache task results for identical arguments."""
-    print("\n=== Part 3: Task with Caching ===\n")
+    print("
+=== Part 3: Task with Caching ===
+")
     print(
         f"AI rationale: {_llm_call('In one sentence, when should you turn @task(cache=True) ON for an LLM-heavy pipeline?')}"
     )
@@ -138,7 +146,9 @@ async def example_cache():
 
 async def example_with_llm():
     """A functional pipeline whose inner task delegates to a real Agent."""
-    print("\n=== Part 4: @task with real LLM ===\n")
+    print("
+=== Part 4: @task with real LLM ===
+")
 
     @task
     async def fetch_topic(seed: str) -> str:

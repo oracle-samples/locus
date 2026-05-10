@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 34: A2A Protocol — Spec-Compliant Agent-to-Agent Transport
 
@@ -89,7 +92,9 @@ async def main() -> None:
     # ---------------------------------------------------------------
     # Part 1: Stand up a real agent behind A2A.
     # ---------------------------------------------------------------
-    print("\n=== Part 1: A2AServer with typed skills ===\n")
+    print("
+=== Part 1: A2AServer with typed skills ===
+")
 
     model = get_model()
     research = Agent(
@@ -128,7 +133,9 @@ async def main() -> None:
     # ---------------------------------------------------------------
     # Part 2: Discover via the well-known Agent Card.
     # ---------------------------------------------------------------
-    print("\n=== Part 2: Agent Card discovery ===\n")
+    print("
+=== Part 2: Agent Card discovery ===
+")
     card = await client.get_agent_card()
     print(f"  name:         {card.name}")
     print(f"  description:  {card.description}")
@@ -143,7 +150,9 @@ async def main() -> None:
     # ---------------------------------------------------------------
     # Part 3: message/send — synchronous round-trip, typed Task back.
     # ---------------------------------------------------------------
-    print("\n=== Part 3: message/send → Task ===\n")
+    print("
+=== Part 3: message/send → Task ===
+")
     task = await client.send_message(
         Message(
             role="user",
@@ -162,7 +171,9 @@ async def main() -> None:
     # ---------------------------------------------------------------
     # Part 4: tasks/get — poll the task by id.
     # ---------------------------------------------------------------
-    print("\n=== Part 4: tasks/get ===\n")
+    print("
+=== Part 4: tasks/get ===
+")
     refetched = await client.get_task(task.id)
     print(
         f"  re-fetched task is in {refetched.status.state.value} state "
@@ -172,7 +183,9 @@ async def main() -> None:
     # ---------------------------------------------------------------
     # Part 5: tasks/cancel — terminal task → TaskNotCancelable (-32002).
     # ---------------------------------------------------------------
-    print("\n=== Part 5: tasks/cancel on a terminal task ===\n")
+    print("
+=== Part 5: tasks/cancel on a terminal task ===
+")
     try:
         await client.cancel_task(task.id)
     except RuntimeError as e:
@@ -181,7 +194,9 @@ async def main() -> None:
     # ---------------------------------------------------------------
     # Part 6: message/stream — SSE lifecycle events.
     # ---------------------------------------------------------------
-    print("\n=== Part 6: message/stream ===\n")
+    print("
+=== Part 6: message/stream ===
+")
     seen: list[str] = []
     async for event in client.send_message_streaming(
         Message(
@@ -207,7 +222,9 @@ async def main() -> None:
     # ---------------------------------------------------------------
     # Part 7: backwards-compat — flat invoke for legacy peers.
     # ---------------------------------------------------------------
-    print("\n=== Part 7: legacy /a2a/invoke (backwards-compat) ===\n")
+    print("
+=== Part 7: legacy /a2a/invoke (backwards-compat) ===
+")
     text = await client.invoke("Give me a one-line summary of A2A.")
     print(f"  flat reply: {text[:120]}")
 
@@ -216,14 +233,17 @@ async def main() -> None:
     # local agent can delegate to it. (Simulated here with a sync call
     # since asyncio.run wraps it for free.)
     # ---------------------------------------------------------------
-    print("\n=== Part 8: A2AClient.as_tool ===\n")
+    print("
+=== Part 8: A2AClient.as_tool ===
+")
     tool = client.as_tool(name="ask_research", description="ask the research agent")
     print(f"  tool.name = {tool.name}, tool.description = {tool.description}")
     # NB: tool.fn invokes asyncio.run() internally, so it's only safe
     # to call from sync code. Don't call it from inside this async
     # ``main`` — that's why this part just inspects the tool object.
 
-    print("\n" + "=" * 60)
+    print("
+" + "=" * 60)
     print("Next: Tutorial 35 — advanced graph features")
     print("=" * 60)
 

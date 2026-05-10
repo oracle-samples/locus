@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 33: Steering — LLM-Powered Real-Time Tool Approval
 
@@ -27,7 +30,8 @@ from locus.tools.decorator import tool
 
 def example_steering():
     """Use an LLM to evaluate tool calls against a natural language policy."""
-    print("=== Steering: LLM-Powered Tool Approval ===\n")
+    print("=== Steering: LLM-Powered Tool Approval ===
+")
 
     model = get_model()
 
@@ -61,12 +65,14 @@ def example_steering():
     print("Attempt: Delete the users table")
     result = agent.run_sync("Delete the users table")
     print(f"Response: {result.message[:150]}")
-    print(f"\nSteering decisions:")
+    print(f"
+Steering decisions:")
     for d in steering.decisions:
         print(f"  {d.action}: {d.reason[:60]}")
 
     # This should be allowed
-    print("\nAttempt: Read all users")
+    print("
+Attempt: Read all users")
     steering2 = SteeringHook(
         model=model,
         policy="Only allow read operations. Never allow delete or write operations.",

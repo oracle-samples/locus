@@ -1,3 +1,6 @@
+# Copyright (c) 2025, 2026 Oracle and/or its affiliates.
+# Licensed under the Universal Permissive License v1.0 as shown at
+# https://oss.oracle.com/licenses/upl/
 """
 Tutorial 15: Playbooks — every part runs against a real LLM
 
@@ -49,7 +52,9 @@ def main():
     # =========================================================================
     # Part 1: PlaybookStep + AI rationale
     # =========================================================================
-    print("\n=== Part 1: Creating Playbook Steps ===\n")
+    print("
+=== Part 1: Creating Playbook Steps ===
+")
     step1 = PlaybookStep(
         id="gather_logs",
         description="Collect relevant log files from the affected services",
@@ -89,7 +94,9 @@ def main():
     # =========================================================================
     # Part 2: Full Playbook + AI describes the procedure
     # =========================================================================
-    print("\n=== Part 2: Creating a Playbook ===\n")
+    print("
+=== Part 2: Creating a Playbook ===
+")
     playbook = Playbook(
         id="incident_investigation",
         name="Incident Investigation Playbook",
@@ -112,7 +119,9 @@ def main():
     # =========================================================================
     # Part 3: Execution plan + AI suggests next action
     # =========================================================================
-    print("\n=== Part 3: Execution Plans ===\n")
+    print("
+=== Part 3: Execution Plans ===
+")
     plan = PlaybookPlan(playbook=playbook)
     plan.step_executions["gather_logs"] = StepExecution(
         step_id="gather_logs",
@@ -136,7 +145,9 @@ def main():
     # =========================================================================
     # Part 4: Step-status tracking + AI summarises status meaning
     # =========================================================================
-    print("\n=== Part 4: Step Status Tracking ===\n")
+    print("
+=== Part 4: Step Status Tracking ===
+")
     for status in StepStatus:
         print(f"  - {status.value}")
     print(f"  is_step_complete('gather_logs') = {plan.is_step_complete('gather_logs')}")
@@ -149,7 +160,9 @@ def main():
     # =========================================================================
     # Part 5: Validation rules + AI checks
     # =========================================================================
-    print("\n=== Part 5: Playbook Validation ===\n")
+    print("
+=== Part 5: Playbook Validation ===
+")
     validated_step = PlaybookStep(
         id="validate_fix",
         description="Verify the fix is working",
@@ -168,7 +181,9 @@ def main():
     # =========================================================================
     # Part 6: Metadata + AI proposes a useful metadata field
     # =========================================================================
-    print("\n=== Part 6: Playbook Metadata ===\n")
+    print("
+=== Part 6: Playbook Metadata ===
+")
     step_with_meta = PlaybookStep(
         id="escalate",
         description="Escalate if issue persists",
@@ -190,7 +205,9 @@ def main():
     # =========================================================================
     # Part 7: Programmatic Playbook factory + AI verifies the result
     # =========================================================================
-    print("\n=== Part 7: Building Playbooks Programmatically ===\n")
+    print("
+=== Part 7: Building Playbooks Programmatically ===
+")
 
     def deployment_playbook(env: str, services: list[str]) -> Playbook:
         steps = [
@@ -238,7 +255,9 @@ def main():
     # =========================================================================
     # Part 8: Progress visualisation + AI ETA estimate
     # =========================================================================
-    print("\n=== Part 8: Progress Visualization ===\n")
+    print("
+=== Part 8: Progress Visualization ===
+")
     demo_plan = PlaybookPlan(playbook=playbook)
     demo_plan.step_executions["gather_logs"] = StepExecution(
         step_id="gather_logs", status=StepStatus.COMPLETED
@@ -260,7 +279,9 @@ def main():
     # =========================================================================
     # Part 9: Best practices — AI authors the cheatsheet
     # =========================================================================
-    print("\n=== Part 9: Best Practices ===\n")
+    print("
+=== Part 9: Best Practices ===
+")
     practices = _llm_call(
         "Write five terse best-practice bullets for designing reliable Locus "
         "playbooks. Five bullets only.",
@@ -271,13 +292,16 @@ def main():
     # =========================================================================
     # Part 10: Live Agent driving a Playbook with real tools
     # =========================================================================
-    print("\n=== Part 10: Live Agent driving a Playbook ===\n")
+    print("
+=== Part 10: Live Agent driving a Playbook ===
+")
 
     @tool
     def fetch_logs(incident_id: str) -> str:
         return (
             f"[{incident_id}] 2026-05-03T19:01:14Z ERROR db.pool exhausted "
-            "(50/50 conns)\n[INC-42] 2026-05-03T19:01:18Z ERROR api.handler "
+            "(50/50 conns)
+[INC-42] 2026-05-03T19:01:18Z ERROR api.handler "
             "timeout calling /v1/orders"
         )
 
@@ -322,7 +346,8 @@ def main():
     )
     print(f"Triage outcome: {triage_result.message[:300]}")
 
-    print("\n" + "=" * 60)
+    print("
+" + "=" * 60)
     print("Next: Tutorial 16 - Agent Handoff")
     print("=" * 60)
 
