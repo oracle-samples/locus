@@ -65,8 +65,7 @@ def add(a: int, b: int) -> int:
 
 def example_simple_hook():
     """Demonstrate basic hook usage."""
-    print("=== Part 1: Understanding Hooks ===
-")
+    print("=== Part 1: Understanding Hooks ===\n")
 
     model = get_model(max_tokens=100)
 
@@ -78,11 +77,9 @@ def example_simple_hook():
         hooks=[SimpleLoggingHook()],
     )
 
-    print("Running agent with logging hook:
-")
+    print("Running agent with logging hook:\n")
     result = agent.run_sync("What is 5 + 3?")
-    print(f"
-Result: {result.message}")
+    print(f"\nResult: {result.message}")
     print()
 
 
@@ -109,8 +106,7 @@ class TimingHook(HookProvider):
 
     async def on_after_invocation(self, state, success):
         elapsed = (datetime.now() - self.start_time).total_seconds() * 1000
-        print("
-  Timing Report:")
+        print("\n  Timing Report:")
         print(f"    Total: {elapsed:.1f}ms")
         for name, ms in self.tool_times.items():
             print(f"    {name}: {ms:.1f}ms")
@@ -125,8 +121,7 @@ class TimingHook(HookProvider):
 
 def example_timing_hook():
     """Measure execution time with a hook."""
-    print("=== Part 2: Timing Hook ===
-")
+    print("=== Part 2: Timing Hook ===\n")
 
     model = get_model(max_tokens=100)
 
@@ -175,8 +170,7 @@ class ValidationHook(HookProvider):
 
 def example_validation_hook():
     """Validate and modify tool arguments."""
-    print("=== Part 3: Validation Hook ===
-")
+    print("=== Part 3: Validation Hook ===\n")
 
     model = get_model(max_tokens=150)
 
@@ -234,8 +228,7 @@ class AuditHook(HookProvider):
 
 def example_multiple_hooks():
     """Use multiple hooks together."""
-    print("=== Part 4: Multiple Hooks ===
-")
+    print("=== Part 4: Multiple Hooks ===\n")
 
     model = get_model(max_tokens=100)
 
@@ -255,8 +248,7 @@ def example_multiple_hooks():
     print(f"Result: {result.message}")
 
     # Show audit log
-    print("
-Audit Log:")
+    print("\nAudit Log:")
     for entry in audit.get_log():
         print(f"  {entry}")
     print()
@@ -308,7 +300,7 @@ def process_text(text: str) -> str:
     import hashlib
     import re
 
-    words = re.findall(r"\w+", text)
+    words = re.findall(r"\b\w+\b", text)
     digest = hashlib.sha256(text.encode()).hexdigest()[:12]
     return (
         f"chars={len(text)} words={len(words)} unique_words={len({w.lower() for w in words})} "
@@ -318,8 +310,7 @@ def process_text(text: str) -> str:
 
 def example_guardrails_hook():
     """Enforce safety guardrails."""
-    print("=== Part 5: Guardrails Hook ===
-")
+    print("=== Part 5: Guardrails Hook ===\n")
 
     model = get_model(max_tokens=100)
 
@@ -337,8 +328,7 @@ def example_guardrails_hook():
     print(f"Result: {result.message}")
 
     if guardrails.blocked_calls:
-        print(f"
-Blocked calls detected: {len(guardrails.blocked_calls)}")
+        print(f"\nBlocked calls detected: {len(guardrails.blocked_calls)}")
     print()
 
 

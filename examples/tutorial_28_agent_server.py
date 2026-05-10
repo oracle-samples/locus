@@ -45,8 +45,7 @@ from locus.server import AgentServer
 
 def example_server():
     """Create an agent server with health, invoke, and stream endpoints."""
-    print("=== Agent Server ===
-")
+    print("=== Agent Server ===\n")
 
     model = get_model()
 
@@ -106,16 +105,14 @@ def example_server():
     r = client.delete("/threads/demo-thread")
     print(f"DELETE /threads/demo-thread: {r.json()}")
 
-    print("
-To run as a real server, set LOCUS_TUTORIAL_BOOT=1 and run this")
+    print("\nTo run as a real server, set LOCUS_TUTORIAL_BOOT=1 and run this")
     print("file directly. Example session:")
-    print("  LOCUS_TUTORIAL_BOOT=1 LOCUS_MODEL_PROVIDER=oci \")
+    print("  LOCUS_TUTORIAL_BOOT=1 LOCUS_MODEL_PROVIDER=oci \\")
     print("      python examples/tutorial_28_agent_server.py")
-    print("  curl -s -X POST http://127.0.0.1:8000/invoke \")
-    print("       -H 'Content-Type: application/json' \")
+    print("  curl -s -X POST http://127.0.0.1:8000/invoke \\")
+    print("       -H 'Content-Type: application/json' \\")
     print('       -d \'{"prompt":"What is 2+2?"}\'')
-    print("
-With api_key= set, every /threads call is principal-scoped:")
+    print("\nWith api_key= set, every /threads call is principal-scoped:")
     print("  AgentServer(agent=agent, api_key='secret')")
     print("  # Two clients with different bearer tokens see different threads")
     print("  # for the same client-supplied thread_id.")
@@ -143,8 +140,8 @@ def boot_live_server() -> None:
         description="A helpful AI assistant exposed as HTTP API",
     )
     print("Booting AgentServer on http://127.0.0.1:8000 — Ctrl-C to stop.")
-    print("Try: curl -X POST http://127.0.0.1:8000/invoke \")
-    print("          -H 'Content-Type: application/json' \")
+    print("Try: curl -X POST http://127.0.0.1:8000/invoke \\")
+    print("          -H 'Content-Type: application/json' \\")
     print('          -d \'{"prompt":"What is 2+2?"}\'')
     server.run(host="127.0.0.1", port=8000)
 

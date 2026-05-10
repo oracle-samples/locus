@@ -65,9 +65,7 @@ async def main():
     # =========================================================================
     # Part 1: Pre-built Specialists
     # =========================================================================
-    print("
-=== Part 1: Pre-built Specialists ===
-")
+    print("\n=== Part 1: Pre-built Specialists ===\n")
 
     # Locus provides pre-built specialists for common domains
     log_analyst = create_log_analyst(model=model)
@@ -93,9 +91,7 @@ async def main():
     # =========================================================================
     # Part 2: Custom Specialists
     # =========================================================================
-    print("
-=== Part 2: Custom Specialists ===
-")
+    print("\n=== Part 2: Custom Specialists ===\n")
 
     # Create custom tools for the specialist
     @tool(name="check_database", description="Check database health and connections")
@@ -133,9 +129,7 @@ When analyzing, look for connection leaks, slow queries, and lock contention."""
     # =========================================================================
     # Part 3: Executing a Specialist
     # =========================================================================
-    print("
-=== Part 3: Executing a Specialist ===
-")
+    print("\n=== Part 3: Executing a Specialist ===\n")
 
     result = await database_specialist.execute(
         task="Analyze current database performance and identify issues",
@@ -152,9 +146,7 @@ When analyzing, look for connection leaks, slow queries, and lock contention."""
     # =========================================================================
     # Part 4: Creating an Orchestrator
     # =========================================================================
-    print("
-=== Part 4: Creating an Orchestrator ===
-")
+    print("\n=== Part 4: Creating an Orchestrator ===\n")
 
     # Create orchestrator with specialists
     orchestrator = create_orchestrator(
@@ -173,9 +165,7 @@ When analyzing, look for connection leaks, slow queries, and lock contention."""
     # =========================================================================
     # Part 5: Orchestrator Configuration
     # =========================================================================
-    print("
-=== Part 5: Orchestrator Configuration ===
-")
+    print("\n=== Part 5: Orchestrator Configuration ===\n")
 
     # Configure orchestrator behavior. ``max_parallel_specialists``
     # caps the asyncio.Semaphore that bounds the parallel fan-out —
@@ -205,17 +195,14 @@ Prioritize based on urgency indicated in the task.""",
     )
     custom_orchestrator.register_specialists([log_analyst, metrics_analyst])
 
-    print(f"
-Custom orchestrator with {len(custom_orchestrator.specialists)} specialists")
+    print(f"\nCustom orchestrator with {len(custom_orchestrator.specialists)} specialists")
     # The custom_orchestrator object above is the demo itself — no
     # need for a separate LLM commentary call.
 
     # =========================================================================
     # Part 6: Routing Decisions
     # =========================================================================
-    print("
-=== Part 6: Routing Decisions ===
-")
+    print("\n=== Part 6: Routing Decisions ===\n")
 
     # Routing decisions determine which specialists to invoke
     routing = RoutingDecision(
@@ -240,9 +227,7 @@ Custom orchestrator with {len(custom_orchestrator.specialists)} specialists")
     # =========================================================================
     # Part 7: Full Orchestration
     # =========================================================================
-    print("
-=== Part 7: Full Orchestration ===
-")
+    print("\n=== Part 7: Full Orchestration ===\n")
 
     # Execute the full orchestration workflow
     orch_result = await orchestrator.execute(
@@ -261,13 +246,11 @@ Custom orchestrator with {len(custom_orchestrator.specialists)} specialists")
     print(f"  Decisions made: {len(orch_result.decisions)}")
 
     for i, decision in enumerate(orch_result.decisions):
-        print(f"
-  Decision {i + 1}: {decision.decision_type}")
+        print(f"\n  Decision {i + 1}: {decision.decision_type}")
         if decision.specialists:
             print(f"    Specialists: {decision.specialists}")
 
-    print("
-Specialist Results:")
+    print("\nSpecialist Results:")
     for spec_id, spec_result in orch_result.specialist_results.items():
         status = "OK" if spec_result.success else f"ERROR: {spec_result.error}"
         print(f"  {spec_id}: {status}")
@@ -275,16 +258,13 @@ Specialist Results:")
             print(f"    Output preview: {spec_result.output[:100]}...")
 
     if orch_result.summary:
-        print("
-Final Summary:")
+        print("\nFinal Summary:")
         print(f"  {orch_result.summary[:500]}...")
 
     # =========================================================================
     # Part 8: Adding Specialists Dynamically
     # =========================================================================
-    print("
-=== Part 8: Dynamic Specialist Registration ===
-")
+    print("\n=== Part 8: Dynamic Specialist Registration ===\n")
 
     # Specialists can be added at runtime
     network_specialist = Specialist(
@@ -311,9 +291,7 @@ Final Summary:")
     # =========================================================================
     # Part 9: Orchestrator Patterns
     # =========================================================================
-    print("
-=== Part 9: Common Patterns ===
-")
+    print("\n=== Part 9: Common Patterns ===\n")
 
     print("Pattern 1: Parallel Analysis")
     print("  - Invoke multiple specialists simultaneously")
@@ -340,9 +318,7 @@ Final Summary:")
     # =========================================================================
     # Part 10: Best Practices
     # =========================================================================
-    print("
-=== Part 10: Best Practices ===
-")
+    print("\n=== Part 10: Best Practices ===\n")
 
     print("1. Give specialists focused, non-overlapping domains")
     print("2. Use clear naming for specialist types")
@@ -353,8 +329,7 @@ Final Summary:")
     print("7. Track specialist performance metrics")
 
     # =========================================================================
-    print("
-" + "=" * 60)
+    print("\n" + "=" * 60)
     print("Next: Tutorial 18 - Specialist Agents")
     print("=" * 60)
 

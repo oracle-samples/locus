@@ -34,7 +34,7 @@ DEFAULT_PEERS = (
     "http://127.0.0.1:8002",  # finance
 )
 
-TICKER_RE = re.compile(r"[A-Z]{2,5}")
+TICKER_RE = re.compile(r"\b[A-Z]{2,5}\b")
 
 
 async def discover(urls: tuple[str, ...]) -> list[tuple[str, list[str]]]:
@@ -114,15 +114,12 @@ async def main_async(args: argparse.Namespace) -> int:
     target = pick(args.query, peers, args.skill)
 
     if args.stream:
-        print(f"
-Streaming from {target}…")
+        print(f"\nStreaming from {target}…")
         await run_stream(target, args.query)
     else:
-        print(f"
-Invoking {target}…")
+        print(f"\nInvoking {target}…")
         reply = await run_invoke(target, args.query)
-        print(f"
-  ← {reply}")
+        print(f"\n  ← {reply}")
     return 0
 
 

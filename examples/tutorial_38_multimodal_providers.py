@@ -187,4 +187,27 @@ def example_openai_providers():
 """)
         return
 
-    # Key is set — exercise the constructors so the user sees they're real.\n    from locus.providers.image import OpenAIImageProvider\n    from locus.providers.speech import OpenAISpeechProvider\n\n    image = OpenAIImageProvider(model="dall-e-3")\n    speech = OpenAISpeechProvider()\n    print(f"Image provider: {type(image).__name__}, model=dall-e-3")\n    print(f"Speech provider: {type(speech).__name__}, capabilities={speech.capabilities}")\n    print()\n    print("Set them on AgentConfig and the agent gets `generate_image`, ")\n    print("`speak`, and `transcribe` tools without any extra wiring.")\n\n\n# =============================================================================\n# Main\n# =============================================================================\n\n\nif __name__ == "__main__":\n    example_protocols()\n    example_auto_register()\n    asyncio.run(example_live_fetch())\n    example_byo_backend()\n    example_openai_providers()\n
+    # Key is set — exercise the constructors so the user sees they're real.
+    from locus.providers.image import OpenAIImageProvider
+    from locus.providers.speech import OpenAISpeechProvider
+
+    image = OpenAIImageProvider(model="dall-e-3")
+    speech = OpenAISpeechProvider()
+    print(f"Image provider: {type(image).__name__}, model=dall-e-3")
+    print(f"Speech provider: {type(speech).__name__}, capabilities={speech.capabilities}")
+    print()
+    print("Set them on AgentConfig and the agent gets `generate_image`, ")
+    print("`speak`, and `transcribe` tools without any extra wiring.")
+
+
+# =============================================================================
+# Main
+# =============================================================================
+
+
+if __name__ == "__main__":
+    example_protocols()
+    example_auto_register()
+    asyncio.run(example_live_fetch())
+    example_byo_backend()
+    example_openai_providers()

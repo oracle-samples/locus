@@ -62,9 +62,7 @@ async def main():
     # =========================================================================
     # Part 1: Specialist Anatomy
     # =========================================================================
-    print("
-=== Part 1: Specialist Anatomy ===
-")
+    print("\n=== Part 1: Specialist Anatomy ===\n")
 
     # A specialist has:
     # - Focused domain expertise (system_prompt)
@@ -107,9 +105,7 @@ When analyzing:
     # =========================================================================
     # Part 2: Adding Domain Tools
     # =========================================================================
-    print("
-=== Part 2: Domain Tools ===
-")
+    print("\n=== Part 2: Domain Tools ===\n")
 
     # Define tools specific to API analysis
     @tool(name="get_endpoint_stats", description="Get statistics for an API endpoint")
@@ -142,9 +138,7 @@ When analyzing:
     # =========================================================================
     # Part 3: Specialist Playbooks
     # =========================================================================
-    print("
-=== Part 3: Specialist Playbooks ===
-")
+    print("\n=== Part 3: Specialist Playbooks ===\n")
 
     # Define playbooks for common procedures
     api_debug_playbook = Playbook(
@@ -185,8 +179,7 @@ When analyzing:
 
     # Playbook as prompt
     playbook_prompt = api_debug_playbook.to_prompt()
-    print("
-Playbook prompt:")
+    print("\nPlaybook prompt:")
     print("-" * 40)
     print(playbook_prompt[:500] + "...")
     print(
@@ -196,9 +189,7 @@ Playbook prompt:")
     # =========================================================================
     # Part 4: Playbook Selection
     # =========================================================================
-    print("
-=== Part 4: Playbook Selection ===
-")
+    print("\n=== Part 4: Playbook Selection ===\n")
 
     # Add multiple playbooks
     performance_playbook = Playbook(
@@ -242,9 +233,7 @@ Playbook prompt:")
     # =========================================================================
     # Part 5: Executing Specialists
     # =========================================================================
-    print("
-=== Part 5: Executing Specialists ===
-")
+    print("\n=== Part 5: Executing Specialists ===\n")
 
     result = await specialist.execute(
         task="API error rates have spiked in the last hour. Investigate and identify the cause.",
@@ -267,9 +256,7 @@ Playbook prompt:")
     # =========================================================================
     # Part 6: Pre-built Specialists
     # =========================================================================
-    print("
-=== Part 6: Pre-built Specialists ===
-")
+    print("\n=== Part 6: Pre-built Specialists ===\n")
 
     # Use pre-built specialists for common domains
     log_analyst = create_log_analyst(model=model)
@@ -281,28 +268,23 @@ Playbook prompt:")
 
     print("Pre-built Specialists:")
     for spec in specialists:
-        print(f"
-  {spec.name}")
+        print(f"\n  {spec.name}")
         print(f"    Type: {spec.specialist_type}")
         # Show first part of system prompt
-        prompt_preview = spec.system_prompt.split("
-")[0]
+        prompt_preview = spec.system_prompt.split("\n")[0]
         print(f"    Focus: {prompt_preview[:60]}...")
     # Quick live execution against the metrics analyst.
     t0 = time.perf_counter()
     p6 = await metrics_analyst.execute(task="In one sentence, what does a metrics analyst do?")
     dt = time.perf_counter() - t0
-    print(f"
-  [model call: {dt:.2f}s · metrics_analyst.execute()]")
+    print(f"\n  [model call: {dt:.2f}s · metrics_analyst.execute()]")
     if p6.output:
         print(f"  Output: {p6.output[:160]}")
 
     # =========================================================================
     # Part 7: Specialist with Custom Tools
     # =========================================================================
-    print("
-=== Part 7: Custom Tools Integration ===
-")
+    print("\n=== Part 7: Custom Tools Integration ===\n")
 
     # Create tools for log analysis
     @tool(name="search_logs", description="Search logs for patterns")
@@ -334,9 +316,7 @@ Playbook prompt:")
     # =========================================================================
     # Part 8: Confidence Estimation
     # =========================================================================
-    print("
-=== Part 8: Confidence Estimation ===
-")
+    print("\n=== Part 8: Confidence Estimation ===\n")
 
     # Specialists estimate confidence based on response markers
     responses = [
@@ -357,9 +337,7 @@ Playbook prompt:")
     # =========================================================================
     # Part 9: Specialist Patterns
     # =========================================================================
-    print("
-=== Part 9: Specialist Patterns ===
-")
+    print("\n=== Part 9: Specialist Patterns ===\n")
 
     print("Pattern 1: Domain Expert")
     print("  - Focused system prompt")
@@ -390,9 +368,7 @@ Playbook prompt:")
     # =========================================================================
     # Part 10: Creating Specialist Teams
     # =========================================================================
-    print("
-=== Part 10: Specialist Teams ===
-")
+    print("\n=== Part 10: Specialist Teams ===\n")
 
     def create_incident_response_team(model):
         """Create a team of specialists for incident response."""
@@ -424,8 +400,7 @@ Playbook prompt:")
         print(f"  Triage verdict: {p10.output[:160]}")
 
     # =========================================================================
-    print("
-" + "=" * 60)
+    print("\n" + "=" * 60)
     print("Next: Tutorial 19 - Guardrails & Security")
     print("=" * 60)
 
