@@ -76,7 +76,7 @@ The loop dedupes on `(name, args)` so retries are safe by design.
 pip install "locus-sdk[oci]"           # OCI GenAI (90+ models, day-0)
 pip install "locus-sdk[openai]"        # OpenAI
 pip install "locus-sdk[anthropic]"     # Anthropic
-pip install "locus-sdk[all]"           # everything
+pip install "locus-sdk[sdk]"           # everything
 ```
 
 No mandatory cloud account to start — `MockModel` lets every tutorial run offline.

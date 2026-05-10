@@ -15,7 +15,7 @@ providers add the corresponding extra:
 pip install "locus-sdk[openai]"        # OpenAI directly
 pip install "locus-sdk[anthropic]"     # Anthropic directly
 pip install "locus-sdk[ollama]"        # local models
-pip install "locus-sdk[all]"           # everything
+pip install "locus-sdk[sdk]"           # everything
 ```
 
 ## 2. Configure your provider

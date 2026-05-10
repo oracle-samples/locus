@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "locus"
+name = "locus-sdk"
 version = "0.2.0b1"
 description = "Multi-agent workflows for Python — stream them, branch them, pause for a human, resume next week. Built on Oracle Generative AI."
 readme = "README.md"
@@ -51,8 +51,8 @@ anthropic = ["anthropic>=0.40"]
 ollama = ["ollama>=0.3"]
 oci = ["oci>=2.173.0"]
 
-# Convenience bundle for everything LLM-provider related.
-models = [
+# All LLM / model providers — short alias for pip discoverability.
+llm = [
     "openai>=1.50",
     "anthropic>=0.40",
     "ollama>=0.3",
@@ -115,9 +115,8 @@ rag = [
     "openai>=1.50",
 ]
 
-# All providers and backends — what most consumers installing for prod
-# will want. Every optional subsystem Locus ships is reachable from here.
-all = [
+# Full SDK — all providers and backends.
+sdk = [
     "openai>=1.50",
     "anthropic>=0.40",
     "ollama>=0.3",
