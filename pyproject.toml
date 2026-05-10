@@ -53,7 +53,10 @@ oci = ["oci>=2.173.0"]
 
 # Convenience bundle for everything LLM-provider related.
 models = [
-    "locus-sdk[openai,anthropic,ollama,oci]",
+    "openai>=1.50",
+    "anthropic>=0.40",
+    "ollama>=0.3",
+    "oci>=2.173.0",
 ]
 
 # Observability
@@ -83,7 +86,12 @@ oracledb = ["oracledb>=2.2.0"]
 
 # All checkpoint backends.
 checkpoints = [
-    "locus-sdk[sqlite,redis,postgresql,opensearch,oracledb,oci]",
+    "aiosqlite>=0.20",
+    "redis>=5.0",
+    "asyncpg>=0.29",
+    "opensearch-py>=2.4",
+    "oracledb>=2.2.0",
+    "oci>=2.173.0",
 ]
 
 # RAG vector stores — one extra per store under src/locus/rag/stores/
@@ -96,13 +104,38 @@ pgvector = ["asyncpg>=0.29"]
 # Full RAG stack — every vector store Locus ships. Use this if you
 # want to pick a store at runtime rather than installing one up front.
 rag = [
-    "locus-sdk[qdrant,chroma,pinecone,pgvector,opensearch,oracledb,sqlite,oci,openai]",
+    "qdrant-client>=1.11",
+    "chromadb>=0.5",
+    "pinecone>=5.0",
+    "asyncpg>=0.29",
+    "opensearch-py>=2.4",
+    "oracledb>=2.2.0",
+    "aiosqlite>=0.20",
+    "oci>=2.173.0",
+    "openai>=1.50",
 ]
 
 # All providers and backends — what most consumers installing for prod
 # will want. Every optional subsystem Locus ships is reachable from here.
 all = [
-    "locus-sdk[models,telemetry,mcp,server,checkpoints,rag]",
+    "openai>=1.50",
+    "anthropic>=0.40",
+    "ollama>=0.3",
+    "oci>=2.173.0",
+    "opentelemetry-api>=1.20",
+    "opentelemetry-sdk>=1.20",
+    "opentelemetry-exporter-otlp>=1.20",
+    "mcp>=1.0",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "aiosqlite>=0.20",
+    "redis>=5.0",
+    "asyncpg>=0.29",
+    "opensearch-py>=2.4",
+    "oracledb>=2.2.0",
+    "qdrant-client>=1.11",
+    "chromadb>=0.5",
+    "pinecone>=5.0",
 ]
 
 # Development
