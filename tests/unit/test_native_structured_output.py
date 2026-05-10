@@ -130,3 +130,104 @@ def test_build_response_format_returns_openai_shape():
     schema = rf["json_schema"]["schema"]
     assert "name" in schema.get("required", [])
     assert "score" in schema.get("required", [])
+
+
+# ---------------------------------------------------------------------------
+# inline_schema_refs — unit tests
+# ---------------------------------------------------------------------------
+
+
+def test_inline_schema_refs_no_defs():
+    """Schema without $defs passes through unchanged."""
+    from locus.core.structured import inline_schema_refs
+
+    schema = {"type": "object", "properties": {"x": {"type": "string"}}}
+    result = inline_schema_refs(schema)
+    assert result == schema
+
+
+def test_inline_schema_refs_inlines_single_ref():
+    """$ref inside a property is replaced with the definition inline."""
+    from locus.core.structured import inline_schema_refs
+
+    schema = {
+        "type": "object",
+        "properties": {"item": {"$ref": "#/$defs/Item"}},
+        "$defs": {"Item": {"type": "object", "properties": {"id": {"type": "integer"}}}},
+    }
+    result = inline_schema_refs(schema)
+    assert "$defs" not in result
+    assert "$ref" not in str(result)
+    assert result["properties"]["item"]["type"] == "object"
+    assert result["properties"]["item"]["properties"]["id"]["type"] == "integer"
+
+
+def test_inline_schema_refs_inlines_nested():
+    """Nested $ref (list items) are also inlined."""
+    from locus.core.structured import inline_schema_refs
+
+    schema = {
+        "type": "object",
+        "properties": {"items": {"type": "array", "items": {"$ref": "#/$defs/Row"}}},
+        "$defs": {"Row": {"type": "object", "properties": {"v": {"type": "number"}}}},
+    }
+    result = inline_schema_refs(schema)
+    assert "$defs" not in result
+    assert result["properties"]["items"]["items"]["type"] == "object"
+
+
+def test_inline_schema_refs_gemini_integration():
+    """Nested Pydantic model produces schema that Gemini would accept after inlining."""
+    from pydantic import BaseModel, Field
+
+    from locus.core.structured import inline_schema_refs
+
+    class Inner(BaseModel):
+        score: float = Field(ge=0.0, le=1.0)
+
+    class Outer(BaseModel):
+        items: list[Inner]
+
+    raw = Outer.model_json_schema()
+    assert "$defs" in raw  # Pydantic emits $defs for nested models
+
+    inlined = inline_schema_refs(raw)
+    assert "$defs" not in inlined
+    assert "$ref" not in str(inlined)
+
+
+# ---------------------------------------------------------------------------
+# OCIOpenAIModel Gemini $ref inlining — unit tests
+# ---------------------------------------------------------------------------
+
+
+def test_oci_openai_model_requires_inlined_refs_for_gemini():
+    """google.* models trigger ref inlining; others do not."""
+    pytest.importorskip("oci")
+    from unittest.mock import MagicMock, patch
+
+    from locus.models.providers.oci.openai_compat import OCIOpenAIModel
+
+    fake_cfg = {
+        "tenancy": "t",
+        "user": "u",
+        "fingerprint": "f",
+        "key_file": "/dev/null",
+        "region": "us-chicago-1",
+    }
+    fake_signer = MagicMock()
+
+    with (
+        patch(
+            "locus.models.providers.oci.openai_compat._load_profile_config", return_value=fake_cfg
+        ),
+        patch(
+            "locus.models.providers.oci.openai_compat._build_signer_from_profile",
+            return_value=fake_signer,
+        ),
+    ):
+        gemini = OCIOpenAIModel(model="google.gemini-2.5-flash", profile="DEFAULT")
+        gpt = OCIOpenAIModel(model="openai.gpt-5", profile="DEFAULT")
+
+    assert gemini._requires_inlined_schema_refs is True
+    assert gpt._requires_inlined_schema_refs is False

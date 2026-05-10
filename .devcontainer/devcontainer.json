@@ -31,7 +31,11 @@
         "ms-python.vscode-pylance",
         "esbenp.prettier-vscode",
         "dbaeumer.vscode-eslint"
-      ]
+      ],
+      "settings": {
+        "workbench.startupEditor": "none",
+        "workbench.tips.enabled": false
+      }
     }
   }
 }

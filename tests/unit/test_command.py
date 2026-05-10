@@ -159,6 +159,19 @@ class TestNormalizeNodeOutput:
         update, cmd = normalize_node_output(42)
         assert update == {"result": 42}
 
+    def test_normalize_pydantic_basemodel(self):
+        """Pydantic BaseModel output is converted to a dict state update."""
+        from pydantic import BaseModel
+
+        class MyOutput(BaseModel):
+            answer: str
+            score: float
+
+        output = MyOutput(answer="yes", score=0.9)
+        update, cmd = normalize_node_output(output)
+        assert update == {"answer": "yes", "score": 0.9}
+        assert cmd is None
+
 
 class TestConvenienceConstructors:
     """Tests for convenience constructor functions."""

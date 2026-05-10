@@ -53,7 +53,10 @@ oci = ["oci>=2.173.0"]
 
 # Convenience bundle for everything LLM-provider related.
 models = [
-    "locus[openai,anthropic,ollama,oci]",
+    "openai>=1.50",
+    "anthropic>=0.40",
+    "ollama>=0.3",
+    "oci>=2.173.0",
 ]
 
 # Observability
@@ -67,7 +70,7 @@ telemetry = [
 mcp = ["mcp>=1.0"]
 
 # Drop-in HTTP server (FastAPI app for AgentServer + SSE streaming).
-# Pulled in production deployments via ``pip install "locus[oci,server]"``.
+# Pulled in production deployments via ``pip install "locus-sdk[oci,server]"``.
 server = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.27",
@@ -83,7 +86,12 @@ oracledb = ["oracledb>=2.2.0"]
 
 # All checkpoint backends.
 checkpoints = [
-    "locus[sqlite,redis,postgresql,opensearch,oracledb,oci]",
+    "aiosqlite>=0.20",
+    "redis>=5.0",
+    "asyncpg>=0.29",
+    "opensearch-py>=2.4",
+    "oracledb>=2.2.0",
+    "oci>=2.173.0",
 ]
 
 # RAG vector stores — one extra per store under src/locus/rag/stores/
@@ -96,13 +104,38 @@ pgvector = ["asyncpg>=0.29"]
 # Full RAG stack — every vector store Locus ships. Use this if you
 # want to pick a store at runtime rather than installing one up front.
 rag = [
-    "locus[qdrant,chroma,pinecone,pgvector,opensearch,oracledb,sqlite,oci,openai]",
+    "qdrant-client>=1.11",
+    "chromadb>=0.5",
+    "pinecone>=5.0",
+    "asyncpg>=0.29",
+    "opensearch-py>=2.4",
+    "oracledb>=2.2.0",
+    "aiosqlite>=0.20",
+    "oci>=2.173.0",
+    "openai>=1.50",
 ]
 
 # All providers and backends — what most consumers installing for prod
 # will want. Every optional subsystem Locus ships is reachable from here.
 all = [
-    "locus[models,telemetry,mcp,server,checkpoints,rag]",
+    "openai>=1.50",
+    "anthropic>=0.40",
+    "ollama>=0.3",
+    "oci>=2.173.0",
+    "opentelemetry-api>=1.20",
+    "opentelemetry-sdk>=1.20",
+    "opentelemetry-exporter-otlp>=1.20",
+    "mcp>=1.0",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "aiosqlite>=0.20",
+    "redis>=5.0",
+    "asyncpg>=0.29",
+    "opensearch-py>=2.4",
+    "oracledb>=2.2.0",
+    "qdrant-client>=1.11",
+    "chromadb>=0.5",
+    "pinecone>=5.0",
 ]
 
 # Development
@@ -164,9 +197,7 @@ include = [
 # ``locus.server.*``, ``locus.a2a.*``, and ``locus.integrations.*``.
 # Without these, mypy reports "Untyped decorator makes function ..."
 # on every FastAPI ``@app.get/.post`` and on MCP imports.
-dependencies = [
-    "locus[dev,server,mcp]",
-]
+features = ["dev", "server", "mcp", "openai", "anthropic", "oci"]
 
 [tool.hatch.envs.default.scripts]
 # Default test target = unit tests only (deterministic, no external deps).
@@ -203,17 +234,19 @@ all = [
 ]
 
 [tool.hatch.envs.test]
-dependencies = [
-    "locus[dev,all]",
+features = [
+    "dev",
+    "openai", "anthropic", "ollama", "oci",
+    "telemetry", "mcp", "server",
+    "sqlite", "redis", "postgresql", "opensearch", "oracledb",
+    "qdrant", "chroma", "pinecone", "pgvector",
 ]
 
 [[tool.hatch.envs.test.matrix]]
 python = ["3.11", "3.12", "3.13", "3.14"]
 
 [tool.hatch.envs.docs]
-dependencies = [
-    "locus[docs]",
-]
+features = ["docs"]
 
 [tool.hatch.envs.docs.scripts]
 serve = "mkdocs serve"

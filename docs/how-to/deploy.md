@@ -180,7 +180,7 @@ local services.
 
 ```bash
 # On the compute instance:
-pip install "locus[oci]"
+pip install "locus-sdk[oci]"
 git clone https://github.com/oracle-samples/locus.git ~/concierge
 cd ~/concierge
 

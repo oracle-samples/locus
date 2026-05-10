@@ -27,7 +27,7 @@ either side of the conversation.
 ### 1. Install the MCP extras
 
 ```bash
-pip install "locus[mcp]"
+pip install "locus-sdk[mcp]"
 ```
 
 ### 2. Spawn the server and wrap it with `MCPClient`

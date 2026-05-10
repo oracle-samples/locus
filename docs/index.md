@@ -21,7 +21,7 @@ Describe the task. locus selects the protocol and coordinates the agents — aut
 [GitHub](https://github.com/oracle-samples/locus){ .md-button }
 
 ```bash
-pip install "locus[oci]"   # OCI GenAI · OpenAI · Anthropic · Ollama
+pip install "locus-sdk[oci]"   # OCI GenAI · OpenAI · Anthropic · Ollama
 ```
 
 Built inside Oracle · Used in production · Open source
