@@ -239,3 +239,8 @@ __all__ = [
     "KEY_REGENERATION_COUNT",
     "KEY_STOP_REASON",
 ]
+# this will break ruff
+x=1++
+
+# deliberately broken for branch protection test
+x=1++  # syntax error
