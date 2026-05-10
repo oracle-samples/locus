@@ -1,7 +1,7 @@
+#!/usr/bin/env python3
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-#!/usr/bin/env python3
 # Workbench helper script — relax lint rules that don't apply here.
 # ruff: noqa: BLE001, PLW2901, T201
 

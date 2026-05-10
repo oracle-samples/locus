@@ -176,7 +176,75 @@ def example_capability_matching():
     # description: ``required_tags`` are the tags an agent MUST advertise
     # to claim the task (set-membership), and ``preferred_tags`` boost
     # the priority score without being a hard requirement. Tasks that
-    # don't declare tags fall through to the legacy substring match\n    # against the description, so pre-tag swarms keep working.\n    tasks = [\n        SwarmTask(\n            description="Research the competitor landscape",\n            required_tags=["research"],\n            preferred_tags=["analyze"],\n        ),\n        SwarmTask(\n            description="Write documentation for the API",\n            required_tags=["write", "document"],\n        ),\n        SwarmTask(description="Analyze the performance data", required_tags=["analyze"]),\n        SwarmTask(description="Create a summary document"),  # tagless → substring fallback\n    ]\n\n    print("Task-Agent matching:")\n    for task in tasks:\n        print(f"\n  Task: {task.description}")\n        print(f"    required_tags={task.required_tags} preferred_tags={task.preferred_tags}")\n        print(f"    Researcher can handle: {researcher.can_handle(task)}")\n        print(f"    Writer can handle: {writer.can_handle(task)}")\n        print(f"    Researcher priority: {researcher.priority_for_task(task):.2f}")\n        print(f"    Writer priority: {writer.priority_for_task(task):.2f}")\n    print()\n\n\n# =============================================================================\n# Part 5: Simple Swarm Execution\n# =============================================================================\n\n\nasync def example_simple_swarm():\n    """Execute a simple swarm — and verify the provider is reachable."""\n    print("=== Part 5: Simple Swarm Execution ===\n")\n    rationale_prompt = (\n        "In one sentence, what does 'simple swarm execution' mean and when is it enough?"\n    )\n    print(f"AI rationale: {_llm_call(rationale_prompt)}")\n\n    # Create a swarm with mock execution\n    swarm = Swarm(name="Demo Swarm")\n\n    # Create agents\n    agent1 = create_swarm_agent(\n        name="Analyst",\n        capabilities=["analyze"],\n        system_prompt="You analyze data.",\n    )\n\n    agent2 = create_swarm_agent(\n        name="Reporter",\n        capabilities=["report"],\n        system_prompt="You create reports.",\n    )\n\n    swarm.add_agent(agent1)\n    swarm.add_agent(agent2)\n\n    # Add tasks\n    swarm.add_task("Analyze the sales data", priority=5)\n    swarm.add_task("Report on the findings", priority=3)\n\n    print(f"Swarm '{swarm.name}' configured:")\n    print(f"  Agents: {[a.name for a in swarm.agents]}")\n    print(f"  Tasks: {len(swarm.task_queue)}")\n    print()\n\n    # Note: Without a model, agents can't actually work
+    # don't declare tags fall through to the legacy substring match
+    # against the description, so pre-tag swarms keep working.
+    tasks = [
+        SwarmTask(
+            description="Research the competitor landscape",
+            required_tags=["research"],
+            preferred_tags=["analyze"],
+        ),
+        SwarmTask(
+            description="Write documentation for the API",
+            required_tags=["write", "document"],
+        ),
+        SwarmTask(description="Analyze the performance data", required_tags=["analyze"]),
+        SwarmTask(description="Create a summary document"),  # tagless → substring fallback
+    ]
+
+    print("Task-Agent matching:")
+    for task in tasks:
+        print(f"\n  Task: {task.description}")
+        print(f"    required_tags={task.required_tags} preferred_tags={task.preferred_tags}")
+        print(f"    Researcher can handle: {researcher.can_handle(task)}")
+        print(f"    Writer can handle: {writer.can_handle(task)}")
+        print(f"    Researcher priority: {researcher.priority_for_task(task):.2f}")
+        print(f"    Writer priority: {writer.priority_for_task(task):.2f}")
+    print()
+
+
+# =============================================================================
+# Part 5: Simple Swarm Execution
+# =============================================================================
+
+
+async def example_simple_swarm():
+    """Execute a simple swarm — and verify the provider is reachable."""
+    print("=== Part 5: Simple Swarm Execution ===\n")
+    rationale_prompt = (
+        "In one sentence, what does 'simple swarm execution' mean and when is it enough?"
+    )
+    print(f"AI rationale: {_llm_call(rationale_prompt)}")
+
+    # Create a swarm with mock execution
+    swarm = Swarm(name="Demo Swarm")
+
+    # Create agents
+    agent1 = create_swarm_agent(
+        name="Analyst",
+        capabilities=["analyze"],
+        system_prompt="You analyze data.",
+    )
+
+    agent2 = create_swarm_agent(
+        name="Reporter",
+        capabilities=["report"],
+        system_prompt="You create reports.",
+    )
+
+    swarm.add_agent(agent1)
+    swarm.add_agent(agent2)
+
+    # Add tasks
+    swarm.add_task("Analyze the sales data", priority=5)
+    swarm.add_task("Report on the findings", priority=3)
+
+    print(f"Swarm '{swarm.name}' configured:")
+    print(f"  Agents: {[a.name for a in swarm.agents]}")
+    print(f"  Tasks: {len(swarm.task_queue)}")
+    print()
+
+    # Note: Without a model, agents can't actually work
     # This demonstrates the structure
     print("Note: Full execution requires a configured model.")
     print("See Part 6 for execution with a model.")
