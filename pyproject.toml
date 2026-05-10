@@ -53,7 +53,7 @@ oci = ["oci>=2.173.0"]
 
 # Convenience bundle for everything LLM-provider related.
 models = [
-    "locus[openai,anthropic,ollama,oci]",
+    "locus-sdk[openai,anthropic,ollama,oci]",
 ]
 
 # Observability
@@ -83,7 +83,7 @@ oracledb = ["oracledb>=2.2.0"]
 
 # All checkpoint backends.
 checkpoints = [
-    "locus[sqlite,redis,postgresql,opensearch,oracledb,oci]",
+    "locus-sdk[sqlite,redis,postgresql,opensearch,oracledb,oci]",
 ]
 
 # RAG vector stores — one extra per store under src/locus/rag/stores/
@@ -96,13 +96,13 @@ pgvector = ["asyncpg>=0.29"]
 # Full RAG stack — every vector store Locus ships. Use this if you
 # want to pick a store at runtime rather than installing one up front.
 rag = [
-    "locus[qdrant,chroma,pinecone,pgvector,opensearch,oracledb,sqlite,oci,openai]",
+    "locus-sdk[qdrant,chroma,pinecone,pgvector,opensearch,oracledb,sqlite,oci,openai]",
 ]
 
 # All providers and backends — what most consumers installing for prod
 # will want. Every optional subsystem Locus ships is reachable from here.
 all = [
-    "locus[models,telemetry,mcp,server,checkpoints,rag]",
+    "locus-sdk[models,telemetry,mcp,server,checkpoints,rag]",
 ]
 
 # Development
@@ -165,7 +165,7 @@ include = [
 # Without these, mypy reports "Untyped decorator makes function ..."
 # on every FastAPI ``@app.get/.post`` and on MCP imports.
 dependencies = [
-    "locus[dev,server,mcp]",
+    "locus-sdk[dev,server,mcp]",
 ]
 
 [tool.hatch.envs.default.scripts]
@@ -204,7 +204,7 @@ all = [
 
 [tool.hatch.envs.test]
 dependencies = [
-    "locus[dev,all]",
+    "locus-sdk[dev,all]",
 ]
 
 [[tool.hatch.envs.test.matrix]]
@@ -212,7 +212,7 @@ python = ["3.11", "3.12", "3.13", "3.14"]
 
 [tool.hatch.envs.docs]
 dependencies = [
-    "locus[docs]",
+    "locus-sdk[docs]",
 ]
 
 [tool.hatch.envs.docs.scripts]
