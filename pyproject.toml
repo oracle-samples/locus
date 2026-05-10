@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "locus-sdk"
+name = "locus"
 version = "0.2.0b1"
 description = "Multi-agent workflows for Python — stream them, branch them, pause for a human, resume next week. Built on Oracle Generative AI."
 readme = "README.md"
@@ -164,9 +164,7 @@ include = [
 # ``locus.server.*``, ``locus.a2a.*``, and ``locus.integrations.*``.
 # Without these, mypy reports "Untyped decorator makes function ..."
 # on every FastAPI ``@app.get/.post`` and on MCP imports.
-dependencies = [
-    "locus-sdk[dev,server,mcp]",
-]
+features = ["dev", "server", "mcp", "openai", "anthropic", "oci"]
 
 [tool.hatch.envs.default.scripts]
 # Default test target = unit tests only (deterministic, no external deps).
@@ -203,17 +201,13 @@ all = [
 ]
 
 [tool.hatch.envs.test]
-dependencies = [
-    "locus-sdk[dev,all]",
-]
+features = ["dev", "all"]
 
 [[tool.hatch.envs.test.matrix]]
 python = ["3.11", "3.12", "3.13", "3.14"]
 
 [tool.hatch.envs.docs]
-dependencies = [
-    "locus-sdk[docs]",
-]
+features = ["docs"]
 
 [tool.hatch.envs.docs.scripts]
 serve = "mkdocs serve"
