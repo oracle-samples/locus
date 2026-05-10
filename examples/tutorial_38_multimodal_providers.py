@@ -39,8 +39,7 @@ from locus.providers.web_fetch import HTTPXWebFetcher
 
 def example_protocols():
     """Print the four Protocols you can implement to plug a backend."""
-    print("=== Part 1: The four provider Protocols ===
-")
+    print("=== Part 1: The four provider Protocols ===\n")
 
     print("locus.providers exposes four runtime_checkable Protocols:")
     print()
@@ -65,9 +64,7 @@ def example_protocols():
 
 def example_auto_register():
     """Configure providers; locus registers the tools."""
-    print("
-=== Part 2: Auto-registered tools ===
-")
+    print("\n=== Part 2: Auto-registered tools ===\n")
 
     # HTTPXWebFetcher needs no API key — pure stdlib + httpx.
     fetcher = HTTPXWebFetcher(timeout_seconds=10.0)
@@ -100,9 +97,7 @@ def example_auto_register():
 
 async def example_live_fetch():
     """Use the registered tool directly to verify the wiring."""
-    print("
-=== Part 3: Live fetch via the registered tool ===
-")
+    print("\n=== Part 3: Live fetch via the registered tool ===\n")
 
     fetcher = HTTPXWebFetcher(timeout_seconds=10.0)
     agent = Agent(
@@ -131,9 +126,7 @@ async def example_live_fetch():
 
 def example_byo_backend():
     """A toy custom search provider — any duck-typed class works."""
-    print("
-=== Part 4: Bring your own backend ===
-")
+    print("\n=== Part 4: Bring your own backend ===\n")
 
     from locus.providers.types import SearchResult
 
@@ -171,9 +164,7 @@ def example_byo_backend():
 
 def example_openai_providers():
     """Show the wiring for the built-in OpenAI implementations."""
-    print("
-=== Part 5: OpenAI-backed providers (optional) ===
-")
+    print("\n=== Part 5: OpenAI-backed providers (optional) ===\n")
 
     if not os.environ.get("OPENAI_API_KEY"):
         print("OPENAI_API_KEY not set — printing the wiring without instantiating.")
@@ -196,27 +187,4 @@ def example_openai_providers():
 """)
         return
 
-    # Key is set — exercise the constructors so the user sees they're real.
-    from locus.providers.image import OpenAIImageProvider
-    from locus.providers.speech import OpenAISpeechProvider
-
-    image = OpenAIImageProvider(model="dall-e-3")
-    speech = OpenAISpeechProvider()
-    print(f"Image provider: {type(image).__name__}, model=dall-e-3")
-    print(f"Speech provider: {type(speech).__name__}, capabilities={speech.capabilities}")
-    print()
-    print("Set them on AgentConfig and the agent gets `generate_image`, ")
-    print("`speak`, and `transcribe` tools without any extra wiring.")
-
-
-# =============================================================================
-# Main
-# =============================================================================
-
-
-if __name__ == "__main__":
-    example_protocols()
-    example_auto_register()
-    asyncio.run(example_live_fetch())
-    example_byo_backend()
-    example_openai_providers()
+    # Key is set — exercise the constructors so the user sees they're real.\n    from locus.providers.image import OpenAIImageProvider\n    from locus.providers.speech import OpenAISpeechProvider\n\n    image = OpenAIImageProvider(model="dall-e-3")\n    speech = OpenAISpeechProvider()\n    print(f"Image provider: {type(image).__name__}, model=dall-e-3")\n    print(f"Speech provider: {type(speech).__name__}, capabilities={speech.capabilities}")\n    print()\n    print("Set them on AgentConfig and the agent gets `generate_image`, ")\n    print("`speak`, and `transcribe` tools without any extra wiring.")\n\n\n# =============================================================================\n# Main\n# =============================================================================\n\n\nif __name__ == "__main__":\n    example_protocols()\n    example_auto_register()\n    asyncio.run(example_live_fetch())\n    example_byo_backend()\n    example_openai_providers()\n
