@@ -17,7 +17,7 @@ Describe the task. locus selects the protocol and coordinates the agents — aut
 - **Agents that verify their own reasoning** — Reflexion scores every turn. Grounding checks every claim against tool results. Better answers, built in
 - **Full-stack observability, zero overhead** — every decision, tool call, and reasoning step streams as a typed event. Causal tracing across the entire agent network
 
-[Get started](#six-things-you-can-ship){ .md-button .md-button--primary }
+[Launch workbench](https://codespaces.new/oracle-samples/locus){ .md-button .md-button--primary }
 [GitHub](https://github.com/oracle-samples/locus){ .md-button }
 
 ```bash
