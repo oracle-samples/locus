@@ -342,6 +342,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+"examples/checkpointer_examples.py" = ["E501", "ALL"]
 "tests/**/*.py" = [
     "ARG",     # unused arguments in fixtures
     "FBT",     # boolean trap in tests
