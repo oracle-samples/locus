@@ -5,17 +5,17 @@ A working locus agent in five minutes.
 ## 1. Install
 
 ```bash
-pip install "locus[oci]"
+pip install "locus-sdk[oci]"
 ```
 
 This installs locus plus the OCI Generative AI provider. For other
 providers add the corresponding extra:
 
 ```bash
-pip install "locus[openai]"        # OpenAI directly
-pip install "locus[anthropic]"     # Anthropic directly
-pip install "locus[ollama]"        # local models
-pip install "locus[all]"           # everything
+pip install "locus-sdk[openai]"        # OpenAI directly
+pip install "locus-sdk[anthropic]"     # Anthropic directly
+pip install "locus-sdk[ollama]"        # local models
+pip install "locus-sdk[all]"           # everything
 ```
 
 ## 2. Configure your provider

@@ -73,10 +73,10 @@ The loop dedupes on `(name, args)` so retries are safe by design.
 ## Install
 
 ```bash
-pip install "locus[oci]"           # OCI GenAI (90+ models, day-0)
-pip install "locus[openai]"        # OpenAI
-pip install "locus[anthropic]"     # Anthropic
-pip install "locus[all]"           # everything
+pip install "locus-sdk[oci]"           # OCI GenAI (90+ models, day-0)
+pip install "locus-sdk[openai]"        # OpenAI
+pip install "locus-sdk[anthropic]"     # Anthropic
+pip install "locus-sdk[all]"           # everything
 ```
 
 No mandatory cloud account to start — `MockModel` lets every tutorial run offline.
@@ -233,7 +233,7 @@ Three model slots (A / B / C) so multi-agent tutorials can mix a fast triage mod
 ## Deploy
 
 ```bash
-pip install "locus[oci,server]"
+pip install "locus-sdk[oci,server]"
 ```
 
 `AgentServer` is a drop-in FastAPI app: `POST /invoke`, `POST /stream`, `GET/DELETE /threads/{id}`, `GET /health`.

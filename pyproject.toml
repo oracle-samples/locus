@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "locus"
+name = "locus-sdk"
 version = "0.2.0b1"
 description = "Multi-agent workflows for Python — stream them, branch them, pause for a human, resume next week. Built on Oracle Generative AI."
 readme = "README.md"
@@ -67,7 +67,7 @@ telemetry = [
 mcp = ["mcp>=1.0"]
 
 # Drop-in HTTP server (FastAPI app for AgentServer + SSE streaming).
-# Pulled in production deployments via ``pip install "locus[oci,server]"``.
+# Pulled in production deployments via ``pip install "locus-sdk[oci,server]"``.
 server = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.27",

@@ -91,7 +91,7 @@ Grafana Cloud, OCI APM.
 Install the optional extra:
 
 ```bash
-pip install "locus[telemetry]"
+pip install "locus-sdk[telemetry]"
 ```
 
 ### Token cost — already on every result
@@ -121,7 +121,7 @@ anything leaves, see [Safety](safety.md).
 
 | Symptom | Likely cause |
 |---|---|
-| `TelemetryHook` raises `ImportError` | `pip install "locus[telemetry]"` to get the OpenTelemetry SDK. |
+| `TelemetryHook` raises `ImportError` | `pip install "locus-sdk[telemetry]"` to get the OpenTelemetry SDK. |
 | No spans show up in your backend | Exporter not configured. Set `OTEL_EXPORTER_OTLP_ENDPOINT` (and `OTEL_EXPORTER_OTLP_HEADERS` if your backend needs auth) *before* creating the agent. |
 | Spans land but metrics don't | Some OTLP receivers reject metrics on the trace endpoint. Set `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` separately if needed. |
 | Token totals are zero | The provider isn't returning usage in the response (older Ollama builds, some self-hosted endpoints). The locus loop can't make up the numbers. |
