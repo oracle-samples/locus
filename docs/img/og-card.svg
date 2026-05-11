@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Helvetica, sans-serif">
+  <!-- Background: dark warm Oracle ink -->
+  <rect width="1280" height="640" fill="#1E1B17"/>
+
+  <!-- Bottom accent: Oracle-red rule -->
+  <rect x="0" y="630" width="1280" height="10" fill="#C74634"/>
+
+  <!-- Mark: concentric squares converging on a centre dot (matches the docs logo) -->
+  <g transform="translate(120, 220)">
+    <rect x="20" y="20" width="180" height="180" rx="10" fill="none" stroke="#FAFAF9" stroke-width="9" transform="rotate(45 110 110)"/>
+    <rect x="44" y="44" width="132" height="132" rx="8" fill="none" stroke="#C74634" stroke-width="9" transform="rotate(22.5 110 110)"/>
+    <rect x="74" y="74" width="72" height="72" rx="6" fill="#C74634"/>
+    <circle cx="110" cy="110" r="12" fill="#FAFAF9"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="430" y="320" font-size="180" font-weight="700" fill="#FAFAF9" letter-spacing="-0.04em">locus</text>
+
+  <!-- Tagline -->
+  <text x="438" y="382" font-size="32" font-weight="600" fill="#C74634" letter-spacing="0.16em">MULTI-AGENT REASONING ORCHESTRATOR SDK</text>
+
+  <!-- Install line -->
+  <text x="438" y="468" font-size="28" font-weight="500" fill="#A8A29E" font-family="'JetBrains Mono', 'Menlo', monospace">$ pip install locus-sdk</text>
+
+  <!-- Bottom-right: Oracle attribution -->
+  <text x="1200" y="588" font-size="22" font-weight="500" fill="#78716C" text-anchor="end" letter-spacing="0.05em">Built inside Oracle · github.com/oracle-samples/locus</text>
+</svg>
