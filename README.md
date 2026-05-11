@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/img/logo.svg" alt="Locus" width="380">
+  <img src="docs/img/logo.png" alt="Locus" width="220">
 </p>
 
 <p align="center">
@@ -313,4 +313,15 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Every PR runs format, lint, mypy, unit t
 
 ---
 
-[Universal Permissive License v1.0](LICENSE.txt) · Built inside Oracle · Used in production · Open to everyone.
+## Security
+
+Please consult the [security guide](./SECURITY.md) for our responsible security vulnerability disclosure process.
+
+---
+
+## License
+
+Copyright (c) 2026 Oracle and/or its affiliates.
+
+Released under the Universal Permissive License v1.0 as shown at
+<https://oss.oracle.com/licenses/upl/>.
