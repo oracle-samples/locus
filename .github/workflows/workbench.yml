@@ -22,8 +22,8 @@ jobs:
   build-push:
     runs-on: ubuntu-latest
     steps:
-      # actions/checkout@v4
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      # actions/checkout@v6.0.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
       # docker/setup-buildx-action@v4
       - uses: docker/setup-buildx-action@a0c73a10bb6782f082cd6714666c87911e4fc7d3
