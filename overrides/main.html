@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{#
+  Decouples the browser tab / HTML <title> from `site_name`. `site_name`
+  drives the header banner ("locus — Multi-Agent SDK"); the tab uses a
+  longer, SEO-friendly phrase that survives truncation gracefully and
+  shows the full text on hover (mirrors the Strands docs pattern).
+#}
+{% block htmltitle %}
+  {% set tab_title = "Oracle Generative AI — Multi-Agent Reasoning SDK" %}
+  {% if page and page.title and not page.is_homepage %}
+    <title>{{ page.title | striptags }} - {{ tab_title }}</title>
+  {% else %}
+    <title>{{ tab_title }}</title>
+  {% endif %}
+{% endblock %}
