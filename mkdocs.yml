@@ -1,4 +1,4 @@
-site_name: locus — Multi-Agent SDK
+site_name: locus
 site_description: Multi-agent workflows for Python — stream them, branch them, pause for a human, resume next week. Open source, provider-agnostic.
 site_url: https://locusagents.oracle.com
 repo_url: https://github.com/oracle-samples/locus

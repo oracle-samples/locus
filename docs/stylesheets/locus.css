@@ -531,12 +531,12 @@ html {
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 0.05rem;
+  gap: 0.25rem;
 }
 .md-header__ellipsis > .md-header__topic:first-of-type > .md-ellipsis {
   font-family: var(--locus-sans);
   font-weight: 700;
-  font-size: 1.4rem;
+  font-size: 1.55rem;
   line-height: 1;
   letter-spacing: -0.04em;
   text-transform: lowercase;
@@ -654,11 +654,18 @@ html {
   color: var(--locus-ink);
   border-bottom: 1px solid var(--or-rule);
 }
+/* Tighter tab strip — Material defaults to a 2.4rem item height with a
+   0.8rem top-margin on each link, leaving a tall empty band above the
+   labels. Compact both so the tabs sit closer to the banner. */
+.md-tabs__item {
+  height: 1.8rem;
+}
 .md-tabs__link {
   color: var(--locus-mute);
   font-weight: 600;
   opacity: 1;
   letter-spacing: 0.01em;
+  margin-top: 0.35rem;
 }
 .md-tabs__link:hover {
   color: var(--or-red);
