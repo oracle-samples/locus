@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/img/logo.png" alt="Locus" width="220">
+  <img src="https://raw.githubusercontent.com/oracle-samples/locus/main/docs/img/logo.svg" alt="locus — Multi-Agent Reasoning Orchestrator SDK" width="320">
 </p>
 
 <p align="center">
