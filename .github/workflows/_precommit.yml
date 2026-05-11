@@ -48,5 +48,7 @@ jobs:
             --hook-stage pre-commit
         env:
           # Skip mypy (already covered by _lint.yml across the Python
-          # matrix) and the manual-only poetry-check hook.
-          SKIP: "mypy,poetry-check"
+          # matrix), the manual-only poetry-check hook, and
+          # no-commit-to-branch (a local-only guardrail that always fails
+          # on push events whose ref is main, breaking post-merge CI).
+          SKIP: "mypy,poetry-check,no-commit-to-branch"
