@@ -86,15 +86,22 @@ hit the layer cache.
 
 1. **Cold start** — GitHub builds the container from
    `.devcontainer/devcontainer.json` (Python 3.12 + Node 20). First
-   boot runs `postCreate.sh` to `pip install -e ".[dev]"` and
-   `npm install` both workbench projects. ~2 minutes.
-2. **Auto-boot** — `postStart.sh` backgrounds the three tiers:
-   `uvicorn runner:app` on `:8100`, `npm run dev` (Express) on
+   boot runs `postCreate.sh` to `pip install -e ".[dev,llm]"` plus
+   `fastapi` + `python-multipart`, and `npm install` both workbench
+   projects against the public npm registry. ~2 minutes.
+2. **Two tabs open** — GitHub Codespaces opens a **VS Code Web** tab
+   first (the editor session that owns the container). When Vite
+   binds on `:5173`, a **second tab** pops automatically with the
+   workbench UI itself (`https://<codespace>-5173.app.github.dev`)
+   per `5173.onAutoForward: openBrowserOnce`. **The workbench is the
+   second tab, not VS Code.** If your browser blocks the popup, the
+   VS Code terminal panel shows a clearly-labelled `🚀 locus
+   workbench is ready` banner with a ⌘-clickable URL — same
+   destination.
+3. **Auto-boot** — `postStart.sh` backgrounds the three tiers in
+   detached `setsid` sessions so they survive after the lifecycle hook
+   exits: `uvicorn runner:app` on `:8100`, `npm run dev` (Express) on
    `:3101`, `npm run dev` (Vite) on `:5173`.
-3. **Auto-open** — `devcontainer.json` has
-   `5173.onAutoForward: openBrowserOnce`, so the workbench UI pops in
-   a new tab as soon as Vite binds. No clicking around in the Ports
-   panel.
 4. **Run a pattern** — *Provider settings* → paste an OpenAI or
    Anthropic key → pick a tutorial → **Run**.
 
