@@ -881,19 +881,96 @@ _ANTHROPIC_MODELS = [
 ]
 
 
+async def _list_openai_models(cfg: ProviderConfig) -> dict[str, Any]:
+    """Live OpenAI model list, scoped to the user's api key.
+
+    The OpenAI SDK call is synchronous; bounce it off ``asyncio.to_thread``
+    so it doesn't block the FastAPI event loop. On any failure (bad key,
+    rate limit, network) we degrade to the curated ``_OPENAI_MODELS``
+    fallback so the user can still pick something and hit Run.
+    """
+    if not cfg.api_key:
+        return {"provider": "openai", "models": _OPENAI_MODELS, "error": "api_key required"}
+    try:
+        import asyncio
+
+        from openai import OpenAI  # type: ignore[import-not-found]
+
+        def _list() -> list[str]:
+            client = OpenAI(api_key=cfg.api_key)
+            # Chat-shaped models only — filter out embeddings, tts, image,
+            # whisper, etc. so the dropdown stays focused on things the
+            # workbench actually drives.
+            keep_prefix = ("gpt-", "o1", "o3", "o4", "chatgpt-")
+            drop_substr = (
+                "-embedding",
+                "-tts",
+                "-image",
+                "-whisper",
+                "-audio",
+                "moderation",
+                "-realtime",
+            )
+            page = client.models.list()
+            ids = sorted({m.id for m in page.data})
+            return [
+                m for m in ids if m.startswith(keep_prefix) and not any(s in m for s in drop_substr)
+            ]
+
+        models = await asyncio.to_thread(_list)
+        # If the live list came back empty for some reason (filters too
+        # aggressive against this account's available models), fall back.
+        return {"provider": "openai", "models": models or _OPENAI_MODELS}
+    except Exception as exc:  # noqa: BLE001 — surface every failure to UI
+        return {
+            "provider": "openai",
+            "models": _OPENAI_MODELS,
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+
+
+async def _list_anthropic_models(cfg: ProviderConfig) -> dict[str, Any]:
+    """Live Anthropic model list, scoped to the user's api key."""
+    if not cfg.api_key:
+        return {"provider": "anthropic", "models": _ANTHROPIC_MODELS, "error": "api_key required"}
+    try:
+        import asyncio
+
+        from anthropic import Anthropic  # type: ignore[import-not-found]
+
+        def _list() -> list[str]:
+            client = Anthropic(api_key=cfg.api_key)
+            # Anthropic's models.list() paginates; ask for the max page size
+            # (default 20, max 1000) so we get everything in one round-trip.
+            page = client.models.list(limit=1000)
+            return sorted({m.id for m in page.data})
+
+        models = await asyncio.to_thread(_list)
+        return {"provider": "anthropic", "models": models or _ANTHROPIC_MODELS}
+    except Exception as exc:  # noqa: BLE001 — surface every failure to UI
+        return {
+            "provider": "anthropic",
+            "models": _ANTHROPIC_MODELS,
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+
+
 @app.post("/api/models")
 async def list_models(req: ListModelsRequest) -> dict[str, Any]:
     """Discoverable model ids for a given provider config.
 
-    OpenAI / Anthropic return curated lists. OCI hits the live
-    ``ListModels`` API against the user-supplied compartment + profile,
-    so the dropdown reflects the user's tenancy + access policies.
+    All three provider families hit the live list-models API against
+    the user-supplied credentials, so the dropdown reflects what the
+    key / profile + compartment can actually invoke. On any failure
+    (invalid key, network error, rate limit) the response falls back
+    to the curated constant for the provider so the user can still
+    pick something and run.
     """
     p = req.provider.provider
     if p == "openai":
-        return {"provider": p, "models": _OPENAI_MODELS}
+        return await _list_openai_models(req.provider)
     if p == "anthropic":
-        return {"provider": p, "models": _ANTHROPIC_MODELS}
+        return await _list_anthropic_models(req.provider)
 
     # OCI — hit the GenAI control plane.
     if not req.provider.compartment_id:
