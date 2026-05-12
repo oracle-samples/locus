@@ -55,7 +55,7 @@ State, checkpointer, and `thread_id` survive.
 from locus.multiagent import Handoff
 
 triage = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[lookup_order, lookup_account],
     system_prompt=(
         "You triage incoming customer messages. "
@@ -64,17 +64,17 @@ triage = Agent(
     ),
 )
 billing = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[issue_refund, retry_charge],
     system_prompt="You handle billing escalations.",
 )
 shipping = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[track_shipment, request_redelivery],
     system_prompt="You handle shipping issues.",
 )
 returns = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[create_return_label],
     system_prompt="You handle returns.",
 )

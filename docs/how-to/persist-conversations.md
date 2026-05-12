@@ -6,21 +6,34 @@ resume a conversation — even across process restarts.
 
 ## 1. Pick a backend
 
-For single-machine development, `FileCheckpointer` (no deps) or
-`sqlite_checkpointer()`. For production, pick by infrastructure:
+Checkpointers come in two shapes. Knowing which shape you're holding
+matters: you pass the **native** ones straight to `Agent`, and you
+**wrap** the storage-backed ones through a factory.
 
-- OCI Object Storage (serverless, lifecycle) → `OCIBucketBackend` (native)
-- Redis cluster → `redis_checkpointer(...)`
-- Managed Postgres → `postgresql_checkpointer(...)`
-- OpenSearch cluster → `opensearch_checkpointer(...)`
-- Oracle Database → `oracle_checkpointer(...)`
+**Native checkpointers** (subclasses of `BaseCheckpointer` — pass to
+`Agent` directly):
 
-The first four (`MemoryCheckpointer`, `FileCheckpointer`,
-`HTTPCheckpointer`, `OCIBucketBackend`) are native `BaseCheckpointer`
-subclasses — pass the instance straight to `Agent`. The other five
-expose a simpler dict-shaped storage interface and are wrapped via the
-matching `*_checkpointer()` factory (or `StorageBackendAdapter`
-directly).
+- `MemoryCheckpointer` — in-process dict; tests / REPL
+- `FileCheckpointer` — JSON files on disk; single-machine dev
+- `HTTPCheckpointer` — talks to a remote checkpoint service you run
+- `OCIBucketBackend` — OCI Object Storage; lifecycle policies, region replication
+
+**Storage-backed checkpointers** (wrap a dict-shaped storage with a
+factory):
+
+- `redis_checkpointer(...)` — Redis cluster
+- `postgresql_checkpointer(...)` — managed Postgres
+- `sqlite_checkpointer(...)` — single-process durability
+- `opensearch_checkpointer(...)` — OpenSearch cluster
+- `oracle_checkpointer(...)` — Oracle Database
+
+The native ones are normal classes — `OCIBucketBackend(...)` and
+hand it to `Agent`. The storage-backed ones are the underlying
+`RedisBackend` / `PostgreSQLBackend` / etc. wrapped by an adapter; if
+you instantiate the backend class directly and pass it to `Agent`,
+save/load will fail at runtime (the agent calls
+`checkpointer.save(state, thread_id)` but backends expose
+`save(thread_id, dict)`). Use the matching `*_checkpointer()` factory.
 
 ## 2. Instantiate and pass to the Agent
 
@@ -36,7 +49,7 @@ checkpointer = OCIBucketBackend(
 )
 
 agent = Agent(
-    model="oci:openai.gpt-5",   # any OCI model — see how-to/oci-models.md
+    model="oci:openai.gpt-5.5",   # any OCI model — see how-to/oci-models.md
     tools=[...],
     checkpointer=checkpointer,
 )
@@ -50,14 +63,8 @@ from locus.memory.backends import postgresql_checkpointer
 checkpointer = postgresql_checkpointer(
     dsn="postgresql://locus:locus@db.example.com:5432/locus",
 )
-agent = Agent(model="oci:openai.gpt-5", tools=[...], checkpointer=checkpointer)
+agent = Agent(model="oci:openai.gpt-5.5", tools=[...], checkpointer=checkpointer)
 ```
-
-If you build a storage backend directly (`RedisBackend(...)`,
-`PostgreSQLBackend(...)`, etc.) and pass the result to `Agent`, save /
-load will fail at runtime — the agent calls
-`checkpointer.save(state, thread_id)` and these classes expose
-`save(thread_id, dict)`. Use the factory.
 
 ## 3. Use a stable thread_id
 

@@ -33,12 +33,12 @@ That's the only setup. locus reads the env var automatically.
 ```python
 from locus import Agent
 
-agent = Agent(model="openai:gpt-5", system_prompt="You are helpful.")
+agent = Agent(model="openai:gpt-5.5", system_prompt="You are helpful.")
 ```
 
-The string `"openai:gpt-5"` does two things: tells locus to use the
+The string `"openai:gpt-5.5"` does two things: tells locus to use the
 OpenAI provider (`openai:` prefix), and which model id to call
-(`gpt-5`). Any model id OpenAI accepts, locus accepts.
+(`gpt-5.5`). Any model id OpenAI accepts, locus accepts.
 
 ### 3. Run it
 
@@ -55,7 +55,7 @@ without further configuration.
 
 ### Chat completions across the GPT family
 
-Every chat-shaped OpenAI model: `gpt-4o`, `gpt-4.1`, `gpt-5`, `gpt-5`,
+Every chat-shaped OpenAI model: `gpt-4o`, `gpt-4.1`, `gpt-5`, `gpt-5.5`,
 `gpt-image-1`. Vision input (image URLs / base64), audio input, and
 function calling work the same way you'd use them on the OpenAI SDK
 directly — locus just normalises the events the model emits.
@@ -107,7 +107,7 @@ class Answer(BaseModel):
     confidence: float
 
 agent = Agent(
-    model="openai:gpt-5",
+    model="openai:gpt-5.5",
     output_schema=Answer,
     system_prompt="Reply as JSON matching the schema.",
 )

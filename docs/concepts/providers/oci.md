@@ -67,7 +67,7 @@ you know about prompting OpenAI carries over: real SSE streaming,
 OpenAI-style function calling, structured output, vision input.
 
 ```python
-agent = Agent(model="oci:openai.gpt-5")           # OpenAI commercial
+agent = Agent(model="oci:openai.gpt-5.5")           # OpenAI commercial
 agent = Agent(model="oci:meta.llama-3.3-70b-instruct")  # Meta Llama
 agent = Agent(model="oci:anthropic.claude-sonnet")  # Claude — no Anthropic key needed
 ```
@@ -155,7 +155,7 @@ export OCI_REGION=us-chicago-1
 from locus import Agent
 
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     system_prompt="You are a helpful assistant.",
 )
 ```

@@ -63,7 +63,7 @@ from locus.memory.store import InMemoryStore
 store = InMemoryStore()   # swap for a persistent backend in production
 
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     memory_manager=LLMMemoryManager(store=store),
 )
 
@@ -182,7 +182,7 @@ Use `NoopMemoryManager` as a test double or placeholder:
 from locus.memory.manager import NoopMemoryManager
 
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     memory_manager=NoopMemoryManager(),  # wires the hook, stores nothing
 )
 ```

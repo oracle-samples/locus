@@ -57,7 +57,7 @@ from locus import Agent
 from locus.a2a import A2AServer, AgentSkill
 
 research_agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[search_corpus, summarise, cite],
     system_prompt="You read the vendor catalogue and quote prices.",
 )

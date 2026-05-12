@@ -40,7 +40,7 @@ mark optional parameters.
 ### 2. Pass to the agent
 
 ```python
-agent = Agent(model="oci:openai.gpt-5", tools=[search])
+agent = Agent(model="oci:openai.gpt-5.5", tools=[search])
 ```
 
 That's the wiring. The model now sees `search` in its tool list and
