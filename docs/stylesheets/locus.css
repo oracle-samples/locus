@@ -1,10 +1,13 @@
 html {
   scroll-behavior: smooth;
-  /* Prevent horizontal scroll caused by fixed-position nav children
-     that extend beyond the viewport on narrow screens (Firefox).
-     overflow-x: hidden on html clips position:fixed elements at the
-     viewport edge per spec, unlike overflow-x on body. */
-  overflow-x: hidden;
+  /* Prevent horizontal scroll from off-viewport nav children on narrow
+     screens. Use `clip` not `hidden`: `overflow-x: hidden` establishes
+     a scroll container on <html> that silently breaks position:sticky
+     on every descendant (including the .md-header tabs strip that we
+     want pinned during scroll). `clip` clips the overflow without
+     establishing a scroll container, so sticky descendants keep working
+     — supported in Chrome 90+ / Safari 16+ / Firefox 81+. */
+  overflow-x: clip;
 }
 
 /* ============================================================================
@@ -572,6 +575,21 @@ html {
     opacity: 1 !important;
     pointer-events: auto;
   }
+}
+
+/* Site-wide: never let Material swap the header topic on scroll. The default
+   behaviour translates topic #1 (site name + our tagline) up and fades in
+   topic #2 (page title), which strips the
+   "MULTI-AGENT REASONING ORCHESTRATOR SDK" line and replaces it with the
+   current page's name. Pin topic #1 and hide #2 on every page so the brand
+   banner (diamond mark + "locus" + tagline) stays put as the user scrolls. */
+.md-header__ellipsis > .md-header__topic:first-of-type {
+  transform: translateY(0) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+.md-header__ellipsis > .md-header__topic:not(:first-of-type) {
+  display: none !important;
 }
 
 /* Header right slot — keep OCI/Oracle button and GitHub icon on one row.

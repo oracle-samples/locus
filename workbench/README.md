@@ -14,7 +14,7 @@ provider.
                  │ /api/*
                  ▼
 ┌──────────────────────────────────────┐
-│  workbench/bff — Node Express        │  :3001
+│  workbench/bff — Node Express        │  :3101
 │  Thin proxy + same-origin surface    │
 └────────────────┬─────────────────────┘
                  │ /api/*

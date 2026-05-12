@@ -13,11 +13,11 @@ Describe the task. locus selects the protocol and coordinates the agents — aut
 
 <div class="locus-stat-strip" markdown>[direct answer](concepts/router.md) · [pipeline](concepts/multi-agent/composition.md) · [fan-out](concepts/multi-agent/composition.md) · [debate](concepts/multi-agent/composition.md) · [code + test](concepts/multi-agent/composition.md) · [approval gate](concepts/interrupts.md) · [A2A](concepts/multi-agent/a2a.md) · [handoff](concepts/multi-agent/handoff.md)</div>
 
-- **Describe goals, not agent topologies** — the cognitive router picks the right pattern automatically — pipeline, fan-out, debate, handoff, A2A cross-process mesh — and assembles the agents
-- **Agents that verify their own reasoning** — Reflexion scores every turn. Grounding checks every claim against tool results. Better answers, built in
-- **Full-stack observability, zero overhead** — every decision, tool call, and reasoning step streams as a typed event. Causal tracing across the entire agent network
+- **Describe goals, not agent topologies.** The LLM fills a typed `GoalFrame`; a deterministic registry picks one of eight protocols — adaptive routing without handing the model the steering wheel.
+- **Agents that verify their own reasoning.** Reflexion scores every turn; Grounding checks every factual claim against the tool result that produced it.
+- **Full-stack observability, zero overhead.** Every decision, tool call, and reasoning step streams as a typed event. Causal tracing across the entire agent network.
 
-[Launch workbench](https://codespaces.new/oracle-samples/locus){ .md-button .md-button--primary }
+[Launch workbench](https://codespaces.new/oracle-samples/locus?devcontainer_path=.devcontainer%2Fdevcontainer.json){ .md-button .md-button--primary }
 [GitHub](https://github.com/oracle-samples/locus){ .md-button }
 
 ```bash
@@ -45,7 +45,7 @@ def page_oncall(reason: str) -> str:
     return pager.send(reason)
 
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[get_metric, page_oncall],
     reflexion=True,   # self-evaluates every turn
 )
@@ -82,17 +82,17 @@ async with run_context() as rid:
 - :material-routes:{ .lg .middle } **[Cognitive router](concepts/router.md)**
 
     ---
-    Describe a task. A deterministic registry picks one of eight protocols and instantiates the matching primitive. The LLM fills a typed `GoalFrame`; routing is rule-based, not probabilistic.
+    `locus.router` is a meta-orchestration layer on top of locus's existing primitives. It decomposes a natural-language request into a typed `GoalFrame`, then deterministically picks a `Protocol` and compiles it onto a real `Agent` / `SequentialPipeline` / `Orchestrator` from the standard locus toolkit.
 
 - :material-chart-timeline-variant:{ .lg .middle } **[Grounded reasoning](concepts/reasoning.md)**
 
     ---
-    Reflexion, Grounding, and Causal are first-class `Think → Execute → Reflect` nodes. GSAR adds a four-way claim partition — cited, supported, unsupported, mismatched — with tiered replanning.
+    Reflexion, Grounding, and Causal are first-class `Think → Execute → Reflect` nodes. [GSAR](https://arxiv.org/abs/2604.23366) adds a four-way claim partition — grounded, ungrounded, contradicted, complementary — with tiered replanning.
 
 - :material-eye:{ .lg .middle } **[In-process observability](concepts/observability.md)**
 
     ---
-    Opt-in `EventBus` with agent yield bridge. One `run_context()` streams 40+ canonical events from every layer — agent, multi-agent, router, RAG, memory, A2A. Zero allocations when unused.
+    Opt-in `EventBus` with agent yield bridge. One `run_context()` streams 60+ canonical events from every layer — agent, multi-agent, router, RAG, memory, A2A. Zero allocations when unused.
 
 - :material-shield-check:{ .lg .middle } **[Idempotent tools](concepts/idempotency.md)**
 
@@ -174,7 +174,7 @@ def read_url(url: str) -> str:
     return http.fetch_text(url)
 
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[search_web, read_url],
     reflexion=True,    # self-evaluate every turn
     grounding=True,    # verify claims against tool results
@@ -208,7 +208,7 @@ def email_cfo(po_id: str, body: str) -> str:
     return mail.send(to="cfo@org.com", subject=f"PO {po_id}", body=body)
 
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[search_vendors, submit_po, email_cfo],
     system_prompt="Approve a vendor; submit the PO; email the CFO.",
 )
@@ -268,7 +268,7 @@ def get_metric(name: str) -> float:
     """Return the current value of a named metric."""
     return monitoring.read(name)
 
-agent = Agent(model="oci:openai.gpt-5", tools=[get_metric])
+agent = Agent(model="oci:openai.gpt-5.5", tools=[get_metric])
 
 async with run_context() as rid:
     result = agent.run_sync("What is the p99 latency right now?")
@@ -287,7 +287,7 @@ async with run_context() as rid:
                 print("✓", ev.data["final_message_preview"])
 ```
 
-Nine event prefixes, 40+ canonical types.
+Ten event prefixes, 60+ canonical types.
 `subscribe(run_id)` replays history then goes live.
 `subscribe_global()` watches all concurrent runs.
 Slow consumers get dropped events, never stall the publisher.
@@ -313,7 +313,7 @@ termination = (
 )
 
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[search_vendors, submit_po],
     termination=termination,
 )
@@ -337,7 +337,7 @@ from locus.memory.backends import oci_bucket_checkpointer
 from locus.server import AgentServer
 
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[lookup_invoice, refund],
     checkpointer=oci_bucket_checkpointer(
         bucket_name="support-threads",
@@ -486,7 +486,7 @@ From simple parallel research to multi-team handoffs across services. Pick one p
 |---|---|
 | **🧭 Multi-agent reasoning orchestrator** | Picks one of eight protocols (`direct_response`, `plan_execute_validate`, `specialist_fanout`, `debate`, `codegen_test_validate`, `approval_gated_execution`, `a2a_delegate`, `handoff_chain`) and instantiates the matching locus primitive. The LLM fills a schema; routing is deterministic. |
 | **🤝 Multi-agent patterns** | Seven native patterns — Composition, Orchestrator, Swarm, Handoff, StateGraph, Functional, DeepAgent — plus cross-process A2A. Use them directly when you know what you need. |
-| **📡 Observability** | Opt-in `EventBus` — one `run_context()` streams 40+ canonical events, no external broker. `TelemetryHook` exports OpenTelemetry traces + metrics to Grafana, Honeycomb, OCI APM. Zero overhead when unused. |
+| **📡 Observability** | Opt-in `EventBus` — one `run_context()` streams 60+ canonical events, no external broker. `TelemetryHook` exports OpenTelemetry traces + metrics to Grafana, Honeycomb, OCI APM. Zero overhead when unused. |
 
 ### Agent primitives
 
@@ -521,7 +521,7 @@ def book_flight(flight_id: str, customer_id: str) -> dict:
     return billing.charge_and_book(flight_id, customer_id)
 
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[book_flight],
     system_prompt="You are a travel concierge. Book the flight the user asks for.",
 )
