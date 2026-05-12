@@ -21,14 +21,14 @@ Everything `locus` ships, what it does, and where to find it.
       dispatch to them. Every pattern shares the same `Agent` class and event
       stream.
     - **In-process observability** — opt-in `EventBus` with agent yield
-      bridge. One `run_context()` streams 40+ canonical events from every
+      bridge. One `run_context()` streams 60+ canonical events from every
       layer (agent, multi-agent, router, RAG, memory, A2A). Zero allocations
       when unused.
     - **Reasoning loop nodes** — Reflexion, Grounding, Causal as first-class
       Think → Execute → **Reflect** → Think nodes, not bolted-on libraries.
     - **GSAR** — typed-grounding safety layer from
       [arXiv:2604.23366](https://arxiv.org/abs/2604.23366): four-way claim
-      partition (cited / supported / unsupported / mismatched) + tiered
+      partition (grounded / ungrounded / contradicted / complementary) + tiered
       replanning decisions.
     - **Termination algebra** — `MaxIterations(10) | TextMention("DONE") & ConfidenceMet(0.9)` is real Python (`__or__` / `__and__` overloads). Greppable, unit-testable, serialisable.
     - **Idempotent tools** — `@tool(idempotent=True)` dedupes on `(name, args)` inside the Execute node. No double-charge, double-book, double-page — even on model retry or checkpoint resume.
@@ -98,7 +98,7 @@ the model invented.
 | **`run_context()`** | ContextVar-based opt-in gate — zero allocations when inactive | `locus.observability.run_context` |
 | **Agent yield bridge** | `@_bus_bridge` on `Agent.run` transparently republishes 9 `LocusEvent` types as `agent.*` SSE events | `locus.agent.runtime_loop` |
 | **`EventBusHook`** | `HookProvider` that bridges all agent lifecycle hooks onto the bus (for non-async / pre-built agents) | `locus.observability.EventBusHook` |
-| **Canonical event catalogue** | 40+ `EV_*` constants across 9 prefixes (`agent.*`, `multiagent.*`, `composition.*`, `router.*`, `rag.*`, `memory.*`, `a2a.*`, `skills.*`, `deepagent.*`) | `locus.observability.emit` · [SSE event catalogue](concepts/sse-events.md) |
+| **Canonical event catalogue** | 60+ `EV_*` constants across 10 prefixes (`agent.*`, `multiagent.*`, `composition.*`, `router.*`, `research.*`, `rag.*`, `memory.*`, `a2a.*`, `skills.*`, `deepagent.*`) | `locus.observability.emit` · [SSE event catalogue](concepts/sse-events.md) |
 
 ## Reasoning
 
@@ -107,7 +107,7 @@ the model invented.
 | **Reflexion** | After each turn, the agent self-evaluates and re-plans on wrong premises | `Agent(reflexion=True)` · [Reasoning](concepts/reasoning.md) |
 | **Grounding** | LLM-as-judge over claims vs the tool results that produced them | `Agent(grounding=True)` · [Reasoning](concepts/reasoning.md) |
 | **Causal** | Build a cause-effect graph from the trace; surface contradictions | `build_causal_chain()` · [Reasoning](concepts/reasoning.md) |
-| **GSAR** | Typed claim partition (cited / supported / unsupported / mismatched) + `proceed`/`regenerate`/`replan`/`abstain` decision | `Agent(gsar=GSARConfig(...))` · [GSAR](concepts/gsar.md) |
+| **GSAR** | Typed claim partition (grounded / ungrounded / contradicted / complementary) + `proceed`/`regenerate`/`replan`/`abstain` decision | `Agent(gsar=GSARConfig(...))` · [GSAR](concepts/gsar.md) |
 
 ## Tools
 
@@ -183,10 +183,10 @@ the model invented.
 |---|---|---|
 | **OCI Generative AI — V1 transport** | `openai.*`, `meta.*`, `xai.*`, `google.*`, `mistral.*` on OCI | `locus.models.providers.oci.openai_compat` · [OCI](concepts/providers/oci.md) |
 | **OCI Generative AI — SDK transport** | Cohere `command-r-*` series — proprietary chat shape | `locus.models.providers.oci.OCIModel` · [OCI](concepts/providers/oci.md) |
-| OpenAI | All commercial models (gpt-5, o-series, etc) | `locus.models.providers.openai` · [OpenAI](concepts/providers/openai.md) |
+| OpenAI | All commercial models (gpt-5.5, o-series, etc) | `locus.models.providers.openai` · [OpenAI](concepts/providers/openai.md) |
 | Anthropic | Claude 4 / 4.5 / 4.7 / 4.8 — direct API | `locus.models.providers.anthropic` · [Anthropic](concepts/providers/anthropic.md) |
 | Ollama | Local models | `locus.models.providers.ollama` · [Ollama](concepts/providers/ollama.md) |
-| Auto-routing | `get_model("oci:openai.gpt-5")` picks transport from id | `locus.models.registry.get_model` |
+| Auto-routing | `get_model("oci:openai.gpt-5.5")` picks transport from id | `locus.models.registry.get_model` |
 | Decorators | Failover · pooled · cached · rate-limited wrappers over any provider | `locus.models.decorators` |
 
 ## Skills + Playbooks

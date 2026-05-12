@@ -56,7 +56,7 @@ def search_books(topic: str) -> list[str]:
     return [f"{topic} for Beginners", f"Advanced {topic}"]
 
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[add, search_books],
     system_prompt="You are a helpful assistant.",
 )
@@ -94,7 +94,7 @@ async def main():
         match event:
             case ThinkEvent(reasoning=r) if r:
                 print(f"💭 {r}")
-            case ToolStartEvent(tool_name=n, args=a):
+            case ToolStartEvent(tool_name=n, arguments=a):
                 print(f"🔧 {n}({a})")
             case ToolCompleteEvent(result=r):
                 print(f"   ↳ {r}")
@@ -115,7 +115,7 @@ checkpointer and a `thread_id`:
 from locus.memory.backends.file import FileCheckpointer
 
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[...],
     system_prompt="...",
     checkpointer=FileCheckpointer(directory="./threads"),
@@ -147,7 +147,7 @@ def submit_order(item_id: str, qty: int) -> dict:
     return shop.submit(item_id, qty)
 
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[search_catalog, submit_order],
     system_prompt="...",
     reflexion=True,

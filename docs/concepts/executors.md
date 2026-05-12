@@ -7,7 +7,7 @@ time**:
 
 ```python
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[search_flights, search_hotels, search_restaurants],
     tool_execution="concurrent",   # default — fan out
     # tool_execution="sequential", # opt-in — one at a time

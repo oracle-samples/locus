@@ -1,15 +1,18 @@
 # Reasoning
 
 A model that loops without thinking just pays you to be wrong faster.
-locus ships three reasoning add-ons that catch wrong premises *before*
-the next tool call, not in the post-mortem:
+locus ships three reasoning add-ons. Each catches a different class of
+mistake *before* the next tool call:
 
-- **Reflexion** — after each turn, the agent self-evaluates and
-  re-plans if the last step was wrong.
-- **Grounding** — every factual claim is checked against tool results
-  by an LLM-as-judge before the answer goes out.
-- **Causal reasoning** — a running cause-effect graph that surfaces
-  contradictions linear chat history hides.
+- **Reflexion** catches *wrong premises* — the agent self-evaluates
+  after each turn and re-plans if the last step was a dead end,
+  instead of stacking another tool call on top.
+- **Grounding** catches *hallucinations* — before the answer ships,
+  every factual claim is checked against the tool results that
+  produced it; unsupported claims are dropped or sent back.
+- **Causal reasoning** catches *contradictions* — a running
+  cause-effect graph surfaces the case where turn 3's "fix"
+  contradicts turn 1's "root cause", which linear chat history hides.
 
 Each is a single argument on `Agent(...)`. You can combine them.
 
@@ -37,7 +40,7 @@ Self-evaluate per turn.
 from locus import Agent
 
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[search, summarise],
     reflexion=True,
 )
@@ -58,7 +61,7 @@ Verify claims before answering.
 
 ```python
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[search_pricing, lookup_inventory],
     grounding=True,
 )
@@ -80,7 +83,7 @@ Track cause-effect chains.
 
 ```python
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[fetch_logs, query_metrics, traceback],
     causal=True,
 )
@@ -100,7 +103,7 @@ cause".
 
 ```python
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[...],
     reflexion=True,
     grounding=True,
@@ -108,10 +111,12 @@ agent = Agent(
 )
 ```
 
-The order is fixed: reflect first (was the last step right?), build
-the causal graph as you go, ground only at the end (don't waste
-judge tokens on intermediate claims). All three are observable as
-their own event types.
+The order is fixed: reflect first, build the causal graph as you go,
+ground last. Reflect first because if the last step was wrong,
+grounding on its claims is wasted judge work; ground last because
+intermediate claims will be rewritten before they ship, so any tokens
+spent verifying them are tokens spent verifying drafts. All three are
+observable as their own event types.
 
 ## Common gotchas
 

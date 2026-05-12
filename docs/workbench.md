@@ -1,11 +1,18 @@
 # Locus workbench
 
-A browser-based playground for every locus pattern. Pick a tutorial
-on the left, paste your model key once, hit **Run**, and watch a real
-agent stream events back. No CLI, no `pip install`, no editor setup.
+A browser-based playground for every locus pattern. Two clicks to a
+running agent — no CLI, no `pip install`, no editor setup.
 
-[Launch in Codespaces](https://codespaces.new/oracle-samples/locus){ .md-button .md-button--primary }
+[Launch in Codespaces](https://codespaces.new/oracle-samples/locus?devcontainer_path=.devcontainer%2Fdevcontainer.json){ .md-button .md-button--primary }
 [View on GitHub](https://github.com/oracle-samples/locus){ .md-button }
+
+**Click 1 — Launch.** GitHub provisions a Codespace, installs Python +
+Node deps, and boots all three tiers (FastAPI runner, Node BFF, Vite
+front-end). After ~2 minutes the workbench UI pops open automatically.
+
+**Click 2 — Run.** Open *Provider settings*, paste an OpenAI or
+Anthropic key, pick a tutorial in the sidebar, hit **Run**. A real
+agent streams events back into the browser.
 
 ![locus workbench](img/workbench.gif)
 
@@ -75,17 +82,21 @@ Image is ~1.3 GB on first build (Oracle Linux 9-slim base + Python
 3.12 + Node 20 + locus + the workbench source). Subsequent builds
 hit the layer cache.
 
-## Codespaces — what to expect step by step
+## Codespaces — what happens after you click
 
-1. Click the badge above (or [this link](https://codespaces.new/oracle-samples/locus?devcontainer_path=.devcontainer%2Fdevcontainer.json)).
-2. Wait ~2 minutes for `.devcontainer/postCreate.sh` to install
-   Python deps + npm deps and `.devcontainer/postStart.sh` to boot
-   the three tiers.
-3. The **Ports** panel pops up in VS Code; click the URL next to
-   *5173 (Workbench UI)*. A new tab opens.
-4. Click **Provider settings** → paste an OpenAI or Anthropic key →
-   Save.
-5. Pick a tutorial in the sidebar → **Run**.
+1. **Cold start** — GitHub builds the container from
+   `.devcontainer/devcontainer.json` (Python 3.12 + Node 20). First
+   boot runs `postCreate.sh` to `pip install -e ".[dev]"` and
+   `npm install` both workbench projects. ~2 minutes.
+2. **Auto-boot** — `postStart.sh` backgrounds the three tiers:
+   `uvicorn runner:app` on `:8100`, `npm run dev` (Express) on
+   `:3101`, `npm run dev` (Vite) on `:5173`.
+3. **Auto-open** — `devcontainer.json` has
+   `5173.onAutoForward: openBrowserOnce`, so the workbench UI pops in
+   a new tab as soon as Vite binds. No clicking around in the Ports
+   panel.
+4. **Run a pattern** — *Provider settings* → paste an OpenAI or
+   Anthropic key → pick a tutorial → **Run**.
 
 The OCI options in the Provider settings modal will not work in
 Codespaces — they need a local `~/.oci/config` that doesn't exist

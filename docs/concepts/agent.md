@@ -1,8 +1,15 @@
 # Agent
 
-The `Agent` class is the primary entry point. You construct one by
-passing a model, tools, a system prompt, and optional features
-(reflexion, grounding, checkpointing).
+`Agent` is the unit you build everything else from. Hand it a model, a
+list of tools, a system prompt, and any optional features (reflexion,
+grounding, checkpointing) — locus drives the
+[Think → Execute → Reflect → Terminate](agent-loop.md) loop, streams
+typed events as it runs, and returns a typed `AgentResult` when it
+stops.
+
+The same class is what multi-agent shapes (orchestrators, swarms,
+handoff desks) and the [cognitive router](router.md) instantiate under
+the hood — there's one agent abstraction, not five.
 
 ```python
 from locus import Agent, tool
@@ -78,7 +85,7 @@ from locus import Agent
 from locus.agent import AgentConfig
 
 cfg = AgentConfig(
-    model="oci:openai.gpt-5",   # see how-to/oci-models.md
+    model="oci:openai.gpt-5.5",   # see how-to/oci-models.md
     tools=[...],
     system_prompt="...",
     max_iterations=50,
@@ -118,7 +125,7 @@ class VendorList(BaseModel):
     vendors: list[str]
 
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[search, book_flight],
     output_schema=VendorList,
     termination=MaxIterations(8) | ToolCalled("book_flight"),

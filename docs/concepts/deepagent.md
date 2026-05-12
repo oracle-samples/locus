@@ -73,7 +73,7 @@ def submit_research(result: ResearchResult) -> str:
 
 
 agent = create_deepagent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[search_kb, submit_research],
     system_prompt="You are a research agent. Submit when confident.",
     output_schema=ResearchResult,

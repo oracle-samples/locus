@@ -18,7 +18,7 @@ class Postmortem(BaseModel):
     action_items: list[str]
 
 writer = Agent(config=AgentConfig(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     output_schema=Postmortem,
 ))
 result = writer.run_sync("Write a postmortem for incident #4421")
@@ -59,7 +59,7 @@ from locus import Agent, AgentConfig
 from locus.memory.backends.oci_bucket import OCIBucketBackend
 
 agent = Agent(config=AgentConfig(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     checkpointer=OCIBucketBackend(bucket="locus-state", namespace="..."),
 ))
 ```
@@ -75,7 +75,7 @@ morning from a different process, region, or runtime.
 ## Reflexion — catch a bad turn before the next one
 
 ```python
-agent = Agent(config=AgentConfig(model="oci:openai.gpt-5", reflexion=True))
+agent = Agent(config=AgentConfig(model="oci:openai.gpt-5.5", reflexion=True))
 ```
 
 `reflexion=True` self-evaluates every turn and feeds the next Think a
@@ -87,7 +87,7 @@ self-correction, flip the flag.
 ## Grounding — verify claims against their source
 
 ```python
-agent = Agent(config=AgentConfig(model="oci:openai.gpt-5", grounding=True))
+agent = Agent(config=AgentConfig(model="oci:openai.gpt-5.5", grounding=True))
 ```
 
 Each claim in the model's output is scored against the tool result it
@@ -127,7 +127,7 @@ from locus import Agent, AgentConfig
 from locus.hooks.builtin import TelemetryHook
 
 agent = Agent(config=AgentConfig(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     hooks=[TelemetryHook(service_name="locus-incident-bot")],
 ))
 ```
@@ -145,7 +145,7 @@ from locus import Agent, AgentConfig
 from locus.hooks.builtin.guardrails import GuardrailsHook, GuardrailConfig
 
 agent = Agent(config=AgentConfig(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     hooks=[GuardrailsHook(config=GuardrailConfig())],
 ))
 ```

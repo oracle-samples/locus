@@ -42,7 +42,7 @@ config = GuardrailConfig(
 )
 
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[search, summarise],
     hooks=[GuardrailsHook(config=config)],
 )
@@ -74,7 +74,7 @@ content_policy = ContentPolicy(
 )
 
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[...],
     hooks=[GuardrailsHook(
         config=GuardrailConfig(),
@@ -95,7 +95,7 @@ behind the same `Policy.check(text) -> str | None` shape.
 from locus.hooks.builtin.steering import SteeringHook
 
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[search_flights, send_email, transfer],
     hooks=[
         SteeringHook(

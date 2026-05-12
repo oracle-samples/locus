@@ -24,7 +24,7 @@ from locus import Agent
 from locus.hooks.builtin import StructuredLoggingHook
 
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[search, summarise],
     hooks=[StructuredLoggingHook(level=logging.INFO)],
 )
@@ -56,7 +56,7 @@ you choose between stdlib `logging`, `structlog`, or
 from locus.hooks.builtin import TelemetryHook
 
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[search, summarise],
     hooks=[
         TelemetryHook(
@@ -188,7 +188,7 @@ from locus import Agent
 
 run_id = "my-run-1"
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[search, summarise],
     hooks=[EventBusHook(run_id=run_id)],
 )

@@ -44,7 +44,7 @@ from locus.multiagent import Orchestrator, Specialist
 procurement = Specialist(
     name="procurement",
     agent=Agent(
-        model="oci:openai.gpt-5",
+        model="oci:openai.gpt-5.5",
         tools=[search_vendors, quote_prices],
         system_prompt="You are the Procurement specialist.",
     ),
@@ -54,7 +54,7 @@ procurement = Specialist(
 compliance = Specialist(
     name="compliance",
     agent=Agent(
-        model="oci:openai.gpt-5",
+        model="oci:openai.gpt-5.5",
         tools=[check_soc2, check_iso, search_legal_terms],
         system_prompt="You are the Compliance specialist.",
     ),
@@ -64,7 +64,7 @@ compliance = Specialist(
 approver = Specialist(
     name="approver",
     agent=Agent(
-        model="oci:openai.gpt-5",
+        model="oci:openai.gpt-5.5",
         tools=[submit_po, email_cfo],          # ← idempotent writes
         system_prompt="You are the Approval Officer.",
     ),
@@ -72,7 +72,7 @@ approver = Specialist(
 )
 
 orchestrator = Orchestrator(
-    coordinator_model="oci:openai.gpt-5",
+    coordinator_model="oci:openai.gpt-5.5",
     specialists=[procurement, compliance, approver],
     system_prompt=(
         "You are the procurement lead. Delegate research to procurement, "

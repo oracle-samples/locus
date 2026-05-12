@@ -18,7 +18,7 @@ You don't usually configure 2 and 3 directly. You configure 1.
 
 ```python
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[search_flights, book_flight],
     system_prompt=(
         "You are a travel concierge. "

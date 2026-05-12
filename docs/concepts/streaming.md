@@ -1,9 +1,20 @@
 # Streaming
 
-Every locus agent emits a **typed event stream** as it runs. The
-events aren't strings or `dict[str, Any]` blobs — they're frozen
-Pydantic classes, designed to drop into a `match` statement and let
-your type checker verify the handler is exhaustive.
+Every locus agent emits a typed event stream as it runs. The events are
+frozen Pydantic classes — not strings, not `dict[str, Any]` blobs —
+designed to drop into a `match` statement that your type checker can
+verify exhaustively:
+
+```python
+async for event in agent.run("Plan a trip to Paris."):
+    match event:
+        case ThinkEvent(reasoning=r) if r:
+            print(f"💭 {r}")
+        case ToolStartEvent(tool_name=n, arguments=a):
+            print(f"🔧 {n}({a})")
+        case TerminateEvent(final_message=m):
+            print(f"\n✅ {m}")
+```
 
 This is the surface a UI consumes (live token rendering, tool-call
 indicators, reasoning bubbles), the surface telemetry hooks observe,

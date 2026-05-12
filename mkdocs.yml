@@ -39,6 +39,7 @@ theme:
   - navigation.sections
   - navigation.tabs
   - navigation.tabs.sticky
+  - navigation.indexes
   - navigation.top
   - content.code.copy
   - content.code.annotate
@@ -110,9 +111,9 @@ plugins:
 nav:
 - locus: index.md
 - Concepts:
+  - concepts/multi-agent.md
   - Capabilities: capabilities.md
   - Multi-agent:
-    - Overview: concepts/multi-agent.md
     - Composition: concepts/multi-agent/composition.md
     - Orchestrator: concepts/multi-agent/orchestrator.md
     - Swarm: concepts/multi-agent/swarm.md

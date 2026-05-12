@@ -43,17 +43,17 @@ exits when the queue empties or `max_iterations` is hit.
 from locus.multiagent import Swarm
 
 researcher = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[search_corpus, summarise],
     system_prompt="You are a researcher. Read, summarise, post follow-ups.",
 )
 fact_checker = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[verify_claim, search_corpus],
     system_prompt="You are a fact-checker. Verify claims, flag conflicts.",
 )
 writer = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[draft, revise],
     system_prompt="You are a writer. Take vetted summaries, draft prose.",
 )
