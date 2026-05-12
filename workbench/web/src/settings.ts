@@ -75,7 +75,13 @@ export function defaultModelFor(p: ProviderType): string {
 
 /** A full prefill for a freshly-selected provider. Per-provider sensible defaults
  *  for the OCI-shaped fields so the user only has to drop a key in for OpenAI /
- *  Anthropic, or just confirm Save for the standard OCI session path. */
+ *  Anthropic, or just confirm Save for the standard OCI session path.
+ *
+ *  Defensive: if `p` is anything outside `ProviderType` (e.g. the empty
+ *  string a <select> reports after a removed option was assigned to it),
+ *  fall through to openai defaults rather than returning undefined.
+ *  Returning undefined here cascades into a TypeError in
+ *  `syncSettingsRows`. */
 export function defaultsFor(p: ProviderType): ProviderConfig {
   switch (p) {
     case "openai":
@@ -100,6 +106,8 @@ export function defaultsFor(p: ProviderType): ProviderConfig {
         compartment_id: "",
         oci_transport: "v1",
       };
+    default:
+      return { provider: "openai", model: "gpt-5.5" };
   }
 }
 
