@@ -44,12 +44,13 @@ boot_tier backend /tmp/wb-backend.log \
 : > /tmp/wb-web.log
 (cd workbench/web && boot_tier web /tmp/wb-web.log npm run dev)
 
-# Wait for Vite to bind, then open workbench in VS Code Simple Browser.
+# Wait for Vite to bind. Opening the workbench in VS Code's Simple
+# Browser is now handled natively by
+# `portsAttributes."5173".onAutoForward: "openPreview"` in
+# devcontainer.json — no manual `code --open-url` here.
 for i in $(seq 1 30); do
   if curl -sf http://127.0.0.1:5173/ > /dev/null 2>&1; then
     echo "[postStart] workbench UI ready"
-    # Open in VS Code Simple Browser panel so the workbench fills the screen.
-    code --open-url "vscode://vscode.simpleBrowser.api.open/http://127.0.0.1:5173/" 2>/dev/null || true
     break
   fi
   sleep 1

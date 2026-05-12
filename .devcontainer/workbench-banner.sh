@@ -1,59 +1,43 @@
 #!/usr/bin/env bash
-# Show a clear "your workbench is here" banner the moment Vite binds.
+# Banner + tier-log tail for the workbench's `postAttachCommand`.
 #
-# Why this exists: when a developer clicks the docs `Launch workbench`
-# button, GitHub Codespaces opens VS Code Web in their browser. The
-# devcontainer's `5173.onAutoForward: openBrowserOnce` triggers a SECOND
-# tab with the workbench UI — but popup blockers (Safari, locked-down
-# browsers) often silently swallow that tab, leaving the developer
-# staring at VS Code with no idea where the playground is. This task
-# fires on workspace open, waits for Vite, then prints a Cmd-clickable
-# URL in a dedicated terminal panel that VS Code reveals automatically.
+# What it does (and what it deliberately doesn't):
+#   - Prints the workbench URL once Vite binds, so it's easy to copy/share.
+#   - Tails the three tier logs so the user can see liveness without
+#     hunting through `/tmp/`.
 #
-# The companion `welcome.md` is also opened as an editor tab below so
-# the URL is visible in two places: the terminal banner and the
-# welcome doc.
+# What handles the actual "open the workbench" UX:
+#   - `customizations.codespaces.openFiles` (in devcontainer.json) opens
+#     welcome.md as an editor tab automatically.
+#   - `portsAttributes."5173".onAutoForward: "openPreview"` opens the
+#     workbench in Simple Browser inside VS Code — single-tab UX, no
+#     popup blocker. Same recipe streamlit-example uses, documented as
+#     GitHub's "Customizable Initial Experience" pattern.
+#
+# This script therefore stays narrowly focused on observability; it no
+# longer calls `code` to open files or URLs — those flows are now
+# native devcontainer features.
 
 set -euo pipefail
 
-# Only meaningful in a Codespace (where CODESPACE_NAME is exported by
-# GitHub). On a local devcontainer / Docker run, fall back to localhost.
+# Codespace → forwarded URL; anything else (local devcontainer / Docker)
+# → localhost.
 if [ -n "${CODESPACE_NAME:-}" ]; then
   URL="https://${CODESPACE_NAME}-5173.app.github.dev"
 else
   URL="http://localhost:5173"
 fi
 
-# Open the welcome doc beside the editor. `code` is in PATH inside VS
-# Code Codespaces and is a no-op (but non-fatal) elsewhere.
-if command -v code >/dev/null 2>&1; then
-  code .devcontainer/welcome.md 2>/dev/null || true
-fi
-
-# Poll until Vite binds (postStart launches it in detached sessions —
-# allow up to ~3 min for first-time codespace boot through pip + npm).
+# Poll until Vite binds. postStart launches it in a detached session, so
+# allow up to ~3 min for first-time codespace boot through pip + npm.
 echo
 echo "Waiting for Vite to bind on :5173..."
-VITE_READY=0
 for _ in $(seq 1 60); do
   if curl -sf http://127.0.0.1:5173/ > /dev/null 2>&1; then
-    VITE_READY=1
     break
   fi
   sleep 3
 done
-
-# Once Vite is up, ask VS Code to open the forwarded URL in a new
-# browser tab. `code --open-external <url>` runs as a user-initiated
-# action inside the VS Code Web session, which most popup blockers
-# permit — whereas the automatic `5173.onAutoForward: openBrowserOnce`
-# in devcontainer.json is a non-user-initiated popup that Safari (and
-# locked-down Chrome profiles) silently swallow. This is the belt to
-# onAutoForward's braces. If both succeed, the user sees the tab twice
-# (harmless); if only one succeeds, the workbench still opens.
-if [ "$VITE_READY" = "1" ] && command -v code >/dev/null 2>&1; then
-  code --open-external "${URL}" >/dev/null 2>&1 || true
-fi
 
 cat <<EOF
 
@@ -63,8 +47,9 @@ cat <<EOF
 
    ▸  ${URL}
 
-   ⌘-click the URL above to open the workbench in a new tab.
-   GitHub may have already auto-opened it; if not, this is it.
+   The workbench is also embedded as a "Simple Browser" tab in
+   VS Code (via portsAttributes.openPreview). Look for it next
+   to welcome.md.
 
    Then: Provider settings → paste an OpenAI or Anthropic key
          → pick a tutorial in the sidebar → Run.
@@ -74,5 +59,5 @@ cat <<EOF
 EOF
 
 # Keep the panel alive so the URL stays on screen. Tail the three tier
-# logs at low frequency so the developer can see liveness without spam.
+# logs so the user can see liveness without hunting through /tmp/.
 exec tail -n 0 -F /tmp/wb-backend.log /tmp/wb-bff.log /tmp/wb-web.log 2>/dev/null
