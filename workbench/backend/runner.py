@@ -1768,6 +1768,48 @@ async def run_tutorial(req: WorkbenchRunRequest) -> StreamingResponse:
 import json as __le_json, sys as __le_sys, os as __le_os
 __LE_PREFIX = "__LE__:"
 
+# Silence the post-asyncio.run() noise from httpx's __del__ trying to
+# aclose() on a closed event loop. `Agent.run_sync` already calls
+# `model.close()` + drains pending tasks before the loop closes, but
+# some third-party SDKs (anyio, anthropic) schedule cleanup callbacks
+# that fire AFTER the drain. Those land on Python's `sys.unraisablehook`
+# / "Task exception was never retrieved" path and clutter the run
+# output with `RuntimeError: Event loop is closed` traces that are
+# purely cosmetic — the agent run completed before any of this fired.
+def __le_silence_loop_closed(unraisable):
+    exc = getattr(unraisable, "exc_value", None)
+    if isinstance(exc, RuntimeError) and "Event loop is closed" in str(exc):
+        return
+    # Fall through to default behaviour for any other unraisable.
+    __le_sys.__excepthook__(type(exc), exc, getattr(unraisable, "exc_traceback", None))
+__le_sys.unraisablehook = __le_silence_loop_closed
+
+# asyncio default exception handler also routes "Task exception was
+# never retrieved" warnings through stderr. Replace its handler with
+# one that suppresses the same Event-loop-closed pattern.
+try:
+    import asyncio as __le_asyncio
+    def __le_quiet_async_exception(loop, context):
+        exc = context.get("exception")
+        if isinstance(exc, RuntimeError) and "Event loop is closed" in str(exc):
+            return
+        # Default formatting for everything else.
+        loop.default_exception_handler(context)
+    __le_asyncio.get_event_loop_policy().new_event_loop().set_exception_handler(__le_quiet_async_exception)
+    # The handler set above attaches to a *new* loop and won't reach the
+    # loop `asyncio.run` creates internally — monkey-patch `asyncio.run`
+    # so every loop it builds gets our handler too.
+    __le_orig_run = __le_asyncio.run
+    def __le_run(coro, *a, **kw):
+        debug = kw.pop("debug", None)
+        async def __le_wrap():
+            __le_asyncio.get_running_loop().set_exception_handler(__le_quiet_async_exception)
+            return await coro
+        return __le_orig_run(__le_wrap(), debug=debug) if debug is not None else __le_orig_run(__le_wrap())
+    __le_asyncio.run = __le_run
+except Exception:
+    pass
+
 # Hard guard: never let a tutorial silently fall back to MockModel. The
 # workbench always sets LOCUS_MODEL_PROVIDER to a real provider, but
 # guard against any tutorial that hardcodes mock or imports MockModel
