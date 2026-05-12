@@ -20,6 +20,27 @@ if TYPE_CHECKING:
     import anthropic
 
 
+# Models that reject `temperature` with `invalid_request_error: temperature is
+# deprecated for this model`. Anthropic started doing this with Claude Opus 4.7
+# (and presumably extends to later reasoning-flavoured 4.x+ models). Match on
+# stable prefixes so we don't need to bump the list every time Anthropic
+# publishes a new minor version.
+_TEMPERATURE_DEPRECATED_PREFIXES: tuple[str, ...] = (
+    "claude-opus-4-7",
+    "claude-opus-4-8",
+    "claude-opus-4-9",
+)
+
+
+def _rejects_temperature(model_id: str) -> bool:
+    """Return True if the named Claude model rejects the `temperature` param.
+
+    Public so callers (or wrappers) can pre-flight the same check without
+    relying on a 400 round-trip to the API.
+    """
+    return any(model_id.startswith(p) for p in _TEMPERATURE_DEPRECATED_PREFIXES)
+
+
 class AnthropicConfig(ModelConfig):
     """Configuration for Anthropic models."""
 
@@ -267,8 +288,17 @@ class AnthropicModel(BaseModel):
             "model": self.config.model,
             "messages": anthropic_messages,
             "max_tokens": kwargs.get("max_tokens", self.config.max_tokens),
-            "temperature": kwargs.get("temperature", self.config.temperature),
         }
+        # Claude Opus 4.7 (and presumably later 4.x reasoning models) reject
+        # `temperature` with `invalid_request_error: temperature is deprecated
+        # for this model`. Silently drop the param for those models — locus's
+        # own agent runtime_loop always passes `temperature=config.temperature`
+        # in `complete_kwargs`, so honouring "caller intent" would still 400
+        # every Agent(model="claude-opus-4-7") on the first turn. The
+        # wrapper's job here is to keep the agent loop running; callers who
+        # need the parameter back can pin to a model that accepts it.
+        if not _rejects_temperature(self.config.model):
+            params["temperature"] = kwargs.get("temperature", self.config.temperature)
         if system_prompt:
             # When prompt-caching is enabled, send the system prompt as a
             # block list with ``cache_control: ephemeral`` so subsequent
