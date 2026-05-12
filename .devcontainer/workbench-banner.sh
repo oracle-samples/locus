@@ -34,12 +34,26 @@ fi
 # allow up to ~3 min for first-time codespace boot through pip + npm).
 echo
 echo "Waiting for Vite to bind on :5173..."
+VITE_READY=0
 for _ in $(seq 1 60); do
   if curl -sf http://127.0.0.1:5173/ > /dev/null 2>&1; then
+    VITE_READY=1
     break
   fi
   sleep 3
 done
+
+# Once Vite is up, ask VS Code to open the forwarded URL in a new
+# browser tab. `code --open-external <url>` runs as a user-initiated
+# action inside the VS Code Web session, which most popup blockers
+# permit — whereas the automatic `5173.onAutoForward: openBrowserOnce`
+# in devcontainer.json is a non-user-initiated popup that Safari (and
+# locked-down Chrome profiles) silently swallow. This is the belt to
+# onAutoForward's braces. If both succeed, the user sees the tab twice
+# (harmless); if only one succeeds, the workbench still opens.
+if [ "$VITE_READY" = "1" ] && command -v code >/dev/null 2>&1; then
+  code --open-external "${URL}" >/dev/null 2>&1 || true
+fi
 
 cat <<EOF
 

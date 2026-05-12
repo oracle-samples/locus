@@ -11,6 +11,7 @@
   },
   "postCreateCommand": "bash .devcontainer/postCreate.sh",
   "postStartCommand": "bash .devcontainer/postStart.sh",
+  "postAttachCommand": "bash .devcontainer/workbench-banner.sh",
   "forwardPorts": [5173, 3101, 8100],
   "portsAttributes": {
     "5173": {
