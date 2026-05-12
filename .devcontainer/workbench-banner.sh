@@ -1,22 +1,27 @@
 #!/usr/bin/env bash
-# Banner + tier-log tail for the workbench's `postAttachCommand`.
+# Banner + active Simple-Browser-open for the workbench's
+# `postAttachCommand`. Runs every time a VS Code client attaches.
 #
-# What it does (and what it deliberately doesn't):
-#   - Prints the workbench URL once Vite binds, so it's easy to copy/share.
-#   - Tails the three tier logs so the user can see liveness without
-#     hunting through `/tmp/`.
+# What it does:
+#   1. Polls until Vite binds on :5173.
+#   2. Programmatically opens the workbench in VS Code's Simple Browser
+#      via `code --open-url "vscode://vscode.simpleBrowser.api.open/<url>"`.
+#      This is the deterministic open path — it fires every time the
+#      script runs (postAttach, manual re-run, after a tier crash + restart),
+#      unlike `portsAttributes.onAutoForward: openPreview` which only
+#      fires once on first port-bind and silently no-ops afterwards.
+#   3. Prints a clear 🚀 banner with the URL as a manual fallback.
+#   4. Tails the three tier logs to keep the terminal panel alive and
+#      give the user a liveness signal.
 #
-# What handles the actual "open the workbench" UX:
-#   - `customizations.codespaces.openFiles` (in devcontainer.json) opens
-#     welcome.md as an editor tab automatically.
-#   - `portsAttributes."5173".onAutoForward: "openPreview"` opens the
-#     workbench in Simple Browser inside VS Code — single-tab UX, no
-#     popup blocker. Same recipe streamlit-example uses, documented as
-#     GitHub's "Customizable Initial Experience" pattern.
-#
-# This script therefore stays narrowly focused on observability; it no
-# longer calls `code` to open files or URLs — those flows are now
-# native devcontainer features.
+# Layered defences for "the user sees the workbench":
+#   - `customizations.codespaces.openFiles` opens welcome.md (always).
+#   - `portsAttributes.5173.onAutoForward: openPreview` opens Simple
+#     Browser on first port-bind (usually, when GitHub's tunnel cooperates).
+#   - This script's `code --open-url` call opens Simple Browser
+#     deterministically (every attach, every re-run).
+#   - The printed URL is a manual ⌘-click fallback for the case
+#     where even the active call fails (rare).
 
 set -euo pipefail
 
@@ -32,12 +37,24 @@ fi
 # allow up to ~3 min for first-time codespace boot through pip + npm.
 echo
 echo "Waiting for Vite to bind on :5173..."
+VITE_READY=0
 for _ in $(seq 1 60); do
   if curl -sf http://127.0.0.1:5173/ > /dev/null 2>&1; then
+    VITE_READY=1
     break
   fi
   sleep 3
 done
+
+# Once Vite is up, actively open the workbench in VS Code's Simple
+# Browser editor pane. This is the streamlit-pattern UX (single tab,
+# inside VS Code) but triggered programmatically so it works every
+# time — not just on the one-shot `openPreview` port-bind moment.
+# `code --open-url` is a no-op (but non-fatal) outside VS Code; local
+# Docker / non-VS-Code envs just see the printed URL.
+if [ "$VITE_READY" = "1" ] && command -v code >/dev/null 2>&1; then
+  code --open-url "vscode://vscode.simpleBrowser.api.open/${URL}" >/dev/null 2>&1 || true
+fi
 
 cat <<EOF
 
@@ -47,9 +64,8 @@ cat <<EOF
 
    ▸  ${URL}
 
-   The workbench is also embedded as a "Simple Browser" tab in
-   VS Code (via portsAttributes.openPreview). Look for it next
-   to welcome.md.
+   The workbench is also opened as a "Simple Browser" editor tab
+   inside VS Code automatically. Look for it next to welcome.md.
 
    Then: Provider settings → paste an OpenAI or Anthropic key
          → pick a tutorial in the sidebar → Run.
