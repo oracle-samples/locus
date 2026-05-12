@@ -1,8 +1,17 @@
 # Skills
 
-Skills are **filesystem-first capability bundles** — drop a folder
-with a `SKILL.md`, point your agent at the parent directory, and the
-agent loads each skill on demand using progressive disclosure:
+A skill is a reusable capability bundle the agent loads only when it
+needs it. You give the agent fifty skills; it sees fifty one-line
+descriptions in its system prompt and pays the cost of one. When the
+model decides a skill is relevant to the current task, the full
+instructions for *that one skill* enter the conversation. This is the
+[AgentSkills.io](https://agentskills.io) spec — **progressive
+disclosure** — and it's how you compose **broad agents** (one model,
+many domain skills) without blowing the context budget on capabilities
+the run won't use.
+
+Each skill is a folder with a `SKILL.md`. Point your agent at the parent
+directory and locus handles the disclosure tiers:
 
 - **L1 — catalog.** Names + one-line descriptions live in the system
   prompt. Cheap, always loaded.
@@ -11,10 +20,6 @@ agent loads each skill on demand using progressive disclosure:
 - **L3 — resources.** Scripts, references, and assets in
   `scripts/`, `references/`, `assets/` subfolders only enter context
   when the agent reaches for them.
-
-This is the [AgentSkills.io](https://agentskills.io) spec. It's how
-you compose **broad agents** (one model, many domain skills) without
-blowing the context budget on capabilities the run won't use.
 
 ```python
 from locus import Agent
@@ -34,7 +39,7 @@ skill = Skill(
 )
 
 agent = Agent(config=AgentConfig(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     system_prompt="You are a security reviewer. Use available skills.",
     skills=[skill],
 ))

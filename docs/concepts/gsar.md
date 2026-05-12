@@ -1,19 +1,29 @@
 # GSAR — typed grounding
 
-Locus's vanilla `Agent(grounding=True)` is a binary verdict: a single
-LLM-as-judge scalar, threshold it, replan if it falls below. That works
-for many tasks. For high-stakes pipelines — operational incident
-investigation, regulated diagnostics, anything where "the synthesis is
-loose but the evidence is fine" is a real failure mode — locus also
-ships **GSAR**.
+Imagine an incident-response agent that pulls three log lines, two
+metric points, and one alert. Every fact it cites is real. But the
+synthesis says *"the outage was caused by a config push,"* and the
+evidence only supports *"a config push happened thirty seconds before
+the outage."* Vanilla `Agent(grounding=True)` — a single LLM-as-judge
+scalar over the answer as a whole — often misses this. Each *claim* is
+grounded; the *conclusion* over-reaches.
 
-GSAR (Grounding-Stratified Adaptive Replanning) is the framework from
-[Kamelhar 2026](https://arxiv.org/abs/2604.23366). It replaces the
-binary judge with a **four-way claim partition**, a **typed-evidence
-weighted score**, and a **three-tier decision** function on a
-**bounded compute budget**. The math is small (one equation), the
-properties are formally provable (six of them), and the integration
-into the loop is one Pydantic type.
+**GSAR** (Grounding-Stratified Adaptive Replanning, from
+[Kamelhar 2026](https://arxiv.org/abs/2604.23366)) is the upgrade. It
+breaks the synthesis into claims, partitions them four ways, scores
+the partition with per-evidence-type weights, and picks one of three
+responses: `proceed` if the synthesis holds up, `regenerate` if the
+evidence is fine but the wording is loose (rewrites without re-running
+tools), or `replan` if the evidence itself is missing or contradicted.
+The math is small (one equation), the integration is one Pydantic
+type, and six monotonicity / adversarial-robustness properties are
+formally provable.
+
+Use GSAR for high-stakes pipelines — operational incidents, regulated
+diagnostics, anything where the "evidence fine, conclusion loose"
+failure mode is a real cost. Use vanilla `grounding=True` for
+everything else; binary verdicts are cheaper and good enough most
+of the time.
 
 ## What it adds
 
@@ -27,9 +37,9 @@ into the loop is one Pydantic type.
 
 ## The score
 
-For a partition `(G, U, X, K)` of a synthesis's claims, an evidence-type
-weight map `w`, and a contradiction penalty `ρ ∈ [0, 1]`, the GSAR
-score is:
+For a claim partition — `G` grounded, `U` ungrounded, `X` contradicted,
+`K` complementary — an evidence-type weight map `w`, and a
+contradiction penalty `ρ ∈ [0, 1]`, the GSAR score is:
 
 $$
 S = \frac{W(\mathcal G) + W(\mathcal K)}{W(\mathcal G) + W(\mathcal U) + \rho \cdot W(\mathcal X) + W(\mathcal K)}

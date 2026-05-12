@@ -1,11 +1,11 @@
 # Hooks
 
-Hooks are how you **observe and modify** agent behaviour at the
-moments that matter — before / after the run starts, before / after
-each model call, before / after each tool call. Every cross-cutting
-concern that *isn't* the agent's primary task lives here: logging,
-telemetry, retry policy, guardrails, PII redaction, LLM-as-judge tool
-approval.
+A hook is a callback the agent calls at six fixed moments in a run:
+before / after the run starts, before / after each model call, before /
+after each tool call. Everything that should happen *around* the
+agent's primary task — logging, OpenTelemetry traces, retry, guardrails,
+PII redaction, an LLM-as-judge approval gate on tool calls — lives in
+a hook.
 
 You can use the ones locus ships (covers most production needs out
 of the box) or write your own — a hook is a small subclass with the
@@ -61,7 +61,7 @@ no-op defaults from the base class.
 
 ```python
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[search, book_flight],
     hooks=[AuditHook()],
 )
@@ -86,7 +86,7 @@ from locus.hooks.builtin import (
 )
 
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[...],
     hooks=[
         StructuredLoggingHook(),       # JSON logs at every phase
@@ -132,7 +132,7 @@ call is higher than the cost of a second model round-trip.
 ```python
 agent = Agent(
     ...,
-    hooks=[SteeringHook(approver="oci:openai.gpt-5")],
+    hooks=[SteeringHook(approver="oci:openai.gpt-5.5")],
 )
 ```
 
@@ -142,16 +142,17 @@ Hooks run in priority order. Lower numbers run first on `before_*`
 phases; the order reverses for `after_*` so teardown pairs with
 setup.
 
+Reach for the named constants in `HookPriority` —
+`HookPriority.SECURITY_MAX`, `HookPriority.OBSERVABILITY_MIN`,
+`HookPriority.BUSINESS_LOGIC_MIN`, etc. — so the intent is obvious in
+code review. The underlying number bands are:
+
 | Range | Intended use |
 |---|---|
 | `0`–`99` | **Security** — guardrails, PII redaction (must run first to short-circuit unsafe calls) |
 | `100`–`199` | **Observability** — logging, telemetry |
 | `200`–`299` | **Business logic** — domain-specific hooks |
 | `300+` | **Cosmetic** — pretty-printing, console UI |
-
-Use the constants in `HookPriority` (e.g. `HookPriority.SECURITY_MAX`,
-`HookPriority.OBSERVABILITY_MIN`) instead of magic numbers — the
-intent is more obvious in code review.
 
 ## Write-protected events — by design
 

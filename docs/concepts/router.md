@@ -1,14 +1,23 @@
-# Router — bounded graph generation
+# Router — pick the orchestration shape from a natural-language task
 
-`locus.router` is a meta-orchestration layer on top of locus's existing
-primitives. It decomposes a natural-language request into a typed
-`GoalFrame`, then deterministically picks a `Protocol` and compiles it
-onto a real `Agent` / `SequentialPipeline` / `Orchestrator` from the
-standard locus toolkit.
+You hand the router a sentence like *"Diagnose the checkout API
+slowdown."* It picks one of eight orchestration shapes — direct answer,
+plan-execute-validate pipeline, parallel specialist fan-out, debate,
+code-gen-with-tests loop, approval-gated execution, handoff chain, or
+remote A2A delegation — and runs that shape against your tools.
 
-The contribution is the *layer*, not the primitives — every router
-execution is just a normal locus orchestration that you can already
-inspect, replay, and extend.
+You describe *what* you want; the router decides *how* to coordinate
+the agents. The LLM only fills a typed schema (a `GoalFrame`) — it
+never authors the topology. Selection, ranking, and policy are pure
+Python over that frame, so two identical requests always produce the
+same shape.
+
+Under the hood: `locus.router` is a meta-orchestration layer on top of
+locus's existing primitives. It compiles the chosen shape onto a real
+`Agent`, `SequentialPipeline`, `ParallelPipeline`, `LoopAgent`, or
+`Orchestrator` from the standard toolkit. The contribution is the
+*layer*, not the primitives — every router execution is just a normal
+locus orchestration you can already inspect, replay, and extend.
 
 ## Why a routing layer
 
@@ -24,6 +33,13 @@ Frameworks tend to pick one extreme:
 routing without giving the model the steering wheel.
 
 ## The five layers
+
+A dispatch flows through five stages, in order: an LLM extractor reads
+the prompt into a typed `GoalFrame`, the protocol registry picks the
+matching shape, the policy gate decides whether the request is allowed
+(and whether it needs approval), the compiler instantiates the real
+locus primitive, and the runnable executes. Every stage except the
+first is pure Python.
 
 ![Cognitive router pipeline — NL input → GoalFrame Extractor (LLM) → ProtocolRegistry → PolicyGate → CognitiveCompiler → eight compiled shapes → RunnableResult](../img/patterns/router.svg)
 
@@ -145,8 +161,14 @@ actually invoke it. The `Agent` loop runs the full tool cycle.
 
 ## Ranking — how the registry picks one protocol
 
-When more than one protocol matches a frame, `_rank_key` layers four
-signals (lower wins each layer):
+Filtering by `handles` and `risk_max` usually leaves several protocols
+on the table. The registry then ranks them on four signals — lower
+wins at each — and picks the first survivor. The intuition: prefer a
+protocol whose cost matches the request's complexity, prefer one
+that's canonical for the goal type, prefer cheaper over more
+expensive, and break ties on specificity.
+
+`_rank_key` layers the four signals (lower wins each layer):
 
 1. **Distance** — how close the protocol's `cost` matches `frame.complexity`. A LOW-complexity request never gets a HIGH-cost protocol just because that protocol claims to be canonical for the goal type.
 2. **Canonical** — `0` if `frame.primary_goal in protocol.primary_for`, else `1`. Breaks distance ties: when two protocols both fit the complexity, the one designed for the specific goal wins.

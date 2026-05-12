@@ -32,6 +32,20 @@ upgrades to live OCI / OpenAI by setting one env var.
 
 ## Pick a shape
 
+Three questions get you to the right shape almost every time:
+
+1. **Do agents need to talk across processes or runtimes?** If yes, you
+   want **A2A**. If no, everything else lives in one Python process.
+2. **Does the flow have cycles or conditional routing?** If yes, you
+   want **StateGraph**. If it's a straight chain or fan-out, you want
+   **Composition**.
+3. **Do you want one coordinator picking the next agent, or peers
+   collaborating without a central router?** Coordinator →
+   **Orchestrator + Specialists**. Peers → **Swarm**. A single agent
+   passes the conversation onward → **Handoff**.
+
+The decision tree below is the same questions in diagram form.
+
 ```text
                 ┌── do agents need to talk across processes / runtimes? ──┐
                 │                                                         │
@@ -128,7 +142,7 @@ class Verdict(BaseModel):
     confidence: float
     reasoning: str
 
-agent = Agent(config=AgentConfig(model="oci:openai.gpt-5", output_schema=Verdict))
+agent = Agent(config=AgentConfig(model="oci:openai.gpt-5.5", output_schema=Verdict))
 result = agent.run_sync("...")
 verdict: Verdict = result.parsed   # validated Pydantic instance, not free text
 ```

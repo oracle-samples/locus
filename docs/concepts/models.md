@@ -1,11 +1,13 @@
 # Model providers
 
-A model is a string. Pick the provider's prefix; locus picks the
-client.
+A model is a string. The prefix before the colon (`oci:`, `openai:`,
+`anthropic:`, `ollama:`) tells locus which provider to use; the rest is
+the model id that provider expects. `get_model()` parses the string and
+returns a ready client.
 
 ```python
 # tools, system_prompt, and other kwargs are the same across all providers
-Agent(model="oci:openai.gpt-5")                 # OCI → V1
+Agent(model="oci:openai.gpt-5.5")                 # OCI → V1
 Agent(model="oci:cohere.command-r-plus")         # OCI → SDK
 Agent(model="oci:meta.llama-3.3-70b-instruct")  # OCI → V1
 Agent(model="openai:gpt-4o")                    # OpenAI direct
@@ -56,7 +58,11 @@ locus.models
     └─ implement BaseModel    — complete · stream · count_tokens
 ```
 
-Pick the prefix that matches your auth surface.
+Pick the prefix that matches your auth surface. If you're working
+inside Oracle or have an OCI tenancy, start with the **OCI** page —
+that's the supported day-zero path. If you have an OpenAI or Anthropic
+API key, jump straight to the matching provider page. For running
+models on your laptop, **Ollama**.
 
 | Provider | Detail page |
 |---|---|
@@ -97,7 +103,7 @@ from locus.models.pooled import PooledModel
 
 agent = Agent(
     model=PooledModel(
-        primary="oci:openai.gpt-5",
+        primary="oci:openai.gpt-5.5",
         fallbacks=["openai:gpt-4o", "anthropic:claude-sonnet"],
     ),
     # tools=..., system_prompt=...,

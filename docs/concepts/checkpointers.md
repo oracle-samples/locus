@@ -16,7 +16,7 @@ from locus import Agent
 from locus.memory.backends import oci_bucket_checkpointer
 
 agent = Agent(
-    model="oci:openai.gpt-5",
+    model="oci:openai.gpt-5.5",
     tools=[search, summarise],
     checkpointer=oci_bucket_checkpointer(
         bucket_name="my-app-checkpoints",
@@ -195,6 +195,29 @@ needed.
 
 See [how-to/custom-checkpointer](../how-to/custom-checkpointer.md)
 for a worked example.
+
+## Cross-thread store
+
+Checkpointers persist *one thread's* state. The companion abstraction —
+`BaseStore` — persists key-value data **across** threads: a per-user
+profile, long-term memory, anything that should outlive a single
+conversation.
+
+```python
+from locus.memory.store import InMemoryStore   # tests / REPL
+# or: SQLiteBackend, RedisBackend, PostgreSQLBackend, OracleBackend —
+# every storage-backed checkpointer backend also implements BaseStore.
+
+store = InMemoryStore()
+store.put(("locus_memory", "user"), "role", {"content": "Senior Python engineer"})
+hit = store.get(("locus_memory", "user"), "role")
+```
+
+The interface is `put / get / list / delete` keyed on a `(namespace,
+key)` pair. The [`LLMMemoryManager`](memory-manager.md) builds on this
+to give an agent a long-term memory layer; you can also use the store
+directly for anything cross-thread that doesn't need LLM extraction
+(API tokens, user preferences, rate-limit counters).
 
 ## Common gotchas
 
