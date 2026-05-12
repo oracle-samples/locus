@@ -291,14 +291,14 @@ class AnthropicModel(BaseModel):
         }
         # Claude Opus 4.7 (and presumably later 4.x reasoning models) reject
         # `temperature` with `invalid_request_error: temperature is deprecated
-        # for this model`. Send the param only when the model accepts it.
-        # If the caller explicitly passes `temperature=`, honour it — the
-        # error from the provider then surfaces as a clean 400 instead of
-        # being silently ignored.
-        if "temperature" in kwargs:
-            params["temperature"] = kwargs["temperature"]
-        elif not _rejects_temperature(self.config.model):
-            params["temperature"] = self.config.temperature
+        # for this model`. Silently drop the param for those models — locus's
+        # own agent runtime_loop always passes `temperature=config.temperature`
+        # in `complete_kwargs`, so honouring "caller intent" would still 400
+        # every Agent(model="claude-opus-4-7") on the first turn. The
+        # wrapper's job here is to keep the agent loop running; callers who
+        # need the parameter back can pin to a model that accepts it.
+        if not _rejects_temperature(self.config.model):
+            params["temperature"] = kwargs.get("temperature", self.config.temperature)
         if system_prompt:
             # When prompt-caching is enabled, send the system prompt as a
             # block list with ``cache_control: ephemeral`` so subsequent
