@@ -43,6 +43,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import sys
 from collections.abc import AsyncIterator as _AI
 from typing import Any, Literal
 
@@ -1873,8 +1874,18 @@ except Exception:
 
     async def gen() -> _AI[str]:
         try:
+            # Use `sys.executable` rather than the bare string `"python"`.
+            # On macOS (Homebrew) and most minimal Linux containers the
+            # `python` symlink doesn't exist — only `python3` does. Bare
+            # `"python"` resolves through PATH, which fails with
+            # `FileNotFoundError: [Errno 2] No such file or directory`
+            # in those environments, surfacing in the workbench UI as
+            # an opaque "spawn failed" error.
+            # `sys.executable` is the absolute path of the interpreter
+            # currently running uvicorn, which is guaranteed to exist
+            # and to share the locus install we're already serving from.
             proc = await asyncio.create_subprocess_exec(
-                "python",
+                sys.executable,
                 str(tmp_file),
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
