@@ -1207,7 +1207,13 @@ class AgentRuntimeMixin:
         # and pass the continuation token via ``provider_state``.
         # ConversationManager strategies (window/summarize on the
         # full history) have nothing to operate on and are skipped.
-        server_stateful = getattr(self._model, "server_stateful", False)
+        #
+        # Check the *class*, not the instance: ``getattr(instance, ...)``
+        # on a MagicMock returns a truthy Mock for any attribute, which
+        # would incorrectly engage the server-stateful path during
+        # tests. ``ClassVar`` lives on the class, so type(...) is the
+        # correct lookup.
+        server_stateful = getattr(type(self._model), "server_stateful", False) is True
 
         if server_stateful:
             messages = self._messages_since_last_assistant(state)
