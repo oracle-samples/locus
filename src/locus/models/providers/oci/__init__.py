@@ -35,6 +35,12 @@ from locus.models.providers.oci.openai_compat import (
     OCIOpenAIModel,
     build_oci_openai_base_url,
 )
+from locus.models.providers.oci.responses import (
+    OCIProjectRequiredError,
+    OCIResponsesConfig,
+    OCIResponsesModel,
+    OCIResponsesStateLostError,
+)
 
 
 class OCIConfig(ModelConfig):
@@ -393,5 +399,9 @@ __all__ = [
     "OCIModelProvider",
     "OCIOpenAIConfig",
     "OCIOpenAIModel",
+    "OCIProjectRequiredError",
+    "OCIResponsesConfig",
+    "OCIResponsesModel",
+    "OCIResponsesStateLostError",
     "build_oci_openai_base_url",
 ]

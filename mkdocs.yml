@@ -157,6 +157,7 @@ nav:
   - Model Providers:
     - Overview: concepts/models.md
     - OCI: concepts/providers/oci.md
+    - OCI Responses API: concepts/oci-responses.md
     - OpenAI: concepts/providers/openai.md
     - Anthropic: concepts/providers/anthropic.md
     - Ollama: concepts/providers/ollama.md
