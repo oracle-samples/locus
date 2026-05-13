@@ -61,6 +61,48 @@ result = agent.run_sync("Summarise the README in /data.")
 schemas, descriptions, and call-through plumbing. The agent doesn't
 know they're MCP — they look like any other `@tool`.
 
+### Side effects in the host process — use hooks, not wrappers
+
+A common shape for MCP integrators: the *real* effect of a tool call
+lives in the host process (an HTTP response queue, a transaction batch,
+a UI command stream), not inside the tool body that returns a string to
+the model. The instinct is to wrap each MCP tool with a per-tool
+`@tool` that calls `_action_queue().append(...)` before returning.
+
+Don't. Use a single `HookProvider` instead:
+
+```python
+from locus.hooks.provider import HookPriority, HookProvider
+
+class MCPActionQueueHook(HookProvider):
+    """Mirror every tool call into a host-side queue, keyed by call id."""
+
+    priority = HookPriority.BUSINESS_DEFAULT
+
+    def __init__(self, queue: list[dict]) -> None:
+        self._queue = queue
+
+    async def on_after_tool_call(self, event):
+        if event.error is None:
+            self._queue.append({
+                "id": event.tool_call_id,
+                "tool": event.tool_name,
+                "args": event.arguments,
+                "result": event.result,
+            })
+
+agent = Agent(
+    model=...,
+    tools=[*mcp_client.tools()],   # all 24 MCP tools, untouched
+    hooks=[MCPActionQueueHook(queue)],
+)
+```
+
+One hook covers every MCP-sourced tool. The `tool_call_id` correlates
+with the model's `tool_calls[].id`, so parallel tool calls don't get
+mixed up. See [hooks](hooks.md#on_after_tool_call--what-the-event-carries)
+for the full event surface.
+
 ## Getting started — expose your tools as MCP
 
 ### 1. Wrap a tool list in `LocusMCPServer`

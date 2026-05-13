@@ -653,6 +653,8 @@ class AgentRuntimeMixin:
                         result.name,
                         result.content if result.success else None,
                         result.error,
+                        tool_call_id=result.tool_call_id,
+                        arguments=modified_args,
                     )
 
                     # Retry tool if hook set event.retry = True
@@ -1662,7 +1664,16 @@ class AgentRuntimeMixin:
         tool_name: str,
         result: Any,
         error: str | None,
+        *,
+        tool_call_id: str = "",
+        arguments: dict[str, Any] | None = None,
     ) -> Any:
-        return await self._orch().run_after_tool(tool_name, result, error)
+        return await self._orch().run_after_tool(
+            tool_name,
+            result,
+            error,
+            tool_call_id=tool_call_id,
+            arguments=arguments,
+        )
 
     # Properties for easy access

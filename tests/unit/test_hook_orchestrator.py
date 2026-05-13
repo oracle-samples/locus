@@ -108,6 +108,53 @@ class TestHookOrchestratorOrdering:
 
         assert log == ["b.after_tool_call", "a.after_tool_call"]
 
+    @pytest.mark.asyncio
+    async def test_after_tool_forwards_call_id_and_arguments(self) -> None:
+        """run_after_tool passes tool_call_id + arguments through to the event."""
+        captured: dict[str, Any] = {}
+
+        class _Capturer:
+            name = "cap"
+
+            async def on_after_tool_call(self, event: Any) -> None:
+                captured["tool_name"] = event.tool_name
+                captured["tool_call_id"] = event.tool_call_id
+                captured["arguments"] = event.arguments
+                captured["result"] = event.result
+
+        orch = HookOrchestrator([_Capturer()])
+        await orch.run_after_tool(
+            tool_name="search",
+            result="ok",
+            error=None,
+            tool_call_id="tc-42",
+            arguments={"query": "weather", "limit": 3},
+        )
+
+        assert captured == {
+            "tool_name": "search",
+            "tool_call_id": "tc-42",
+            "arguments": {"query": "weather", "limit": 3},
+            "result": "ok",
+        }
+
+    @pytest.mark.asyncio
+    async def test_after_tool_back_compat_without_new_kwargs(self) -> None:
+        """Callers that don't pass tool_call_id/arguments still get a valid event."""
+        captured: dict[str, Any] = {}
+
+        class _Capturer:
+            name = "cap"
+
+            async def on_after_tool_call(self, event: Any) -> None:
+                captured["tool_call_id"] = event.tool_call_id
+                captured["arguments"] = event.arguments
+
+        orch = HookOrchestrator([_Capturer()])
+        await orch.run_after_tool(tool_name="t", result="ok", error=None)
+
+        assert captured == {"tool_call_id": "", "arguments": {}}
+
 
 class TestHookOrchestratorDispatch:
     @pytest.mark.asyncio

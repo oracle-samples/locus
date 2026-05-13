@@ -10,6 +10,20 @@ policy.
 
 ### Added
 
+- `AfterToolCallEvent.tool_call_id` and `AfterToolCallEvent.arguments` —
+  read-only fields on the after-tool-call hook event. Lets a single
+  `on_after_tool_call` hook correlate with the matching
+  `BeforeToolCallEvent` and observe the exact arguments the tool ran
+  with (post-hook mutation). Closes the gap between locus and peer
+  frameworks (Claude Code `PostToolUse`, OpenAI Agents `on_tool_end`,
+  Vercel `onStepFinish`, Strands `AfterToolCallEvent`) — see
+  [`docs/concepts/hooks.md`](docs/concepts/hooks.md#on_after_tool_call--what-the-event-carries).
+  Primary use case: mirroring tool calls into a host-side action queue
+  (e.g. MCP integrations whose real side effect runs out of process).
+  Additive — existing constructors / hook implementations keep working
+  without changes; new fields are keyword-only with defaults of `""`
+  and `{}`.
+
 - `OCIOpenAIModel` — second OCI transport against the OpenAI-compatible
   `/openai/v1/chat/completions` endpoint. Wraps the standard `openai` SDK,
   inherits `OpenAIModel` for parsing/streaming/tool conversion, signs

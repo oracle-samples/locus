@@ -140,11 +140,27 @@ class HookOrchestrator:
         tool_name: str,
         result: Any,
         error: str | None,
+        *,
+        tool_call_id: str = "",
+        arguments: dict[str, Any] | None = None,
     ) -> Any:
-        """Dispatch ``on_after_tool_call`` in reverse order; returns the event."""
+        """Dispatch ``on_after_tool_call`` in reverse order; returns the event.
+
+        ``tool_call_id`` and ``arguments`` are passed through to the event
+        so hooks can correlate the after-event with the corresponding
+        ``BeforeToolCallEvent`` and observe the exact arguments the tool
+        ran with (post-hook mutation). Default-empty for backwards
+        compatibility with older callers.
+        """
         from locus.hooks.provider import AfterToolCallEvent
 
-        event = AfterToolCallEvent(tool_name=tool_name, result=result, error=error)
+        event = AfterToolCallEvent(
+            tool_name=tool_name,
+            result=result,
+            error=error,
+            tool_call_id=tool_call_id,
+            arguments=arguments,
+        )
         for hook in reversed(self._hooks):
             if hasattr(hook, "on_after_tool_call"):
                 await hook.on_after_tool_call(event)
