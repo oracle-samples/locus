@@ -169,23 +169,45 @@ class AfterToolCallEvent(ProtectedEvent):
 
     Read-only fields:
         tool_name: Name of the tool that was called.
+        tool_call_id: ID correlating this event with the matching
+            BeforeToolCallEvent. Empty string if not supplied by the
+            caller (e.g. tests constructing the event directly).
+        arguments: The arguments the tool was invoked with (after any
+            BeforeToolCallEvent mutations). Empty dict if not supplied.
         error: Error message (if failed).
 
     Example:
         async def on_after_tool_call(self, event):
-            if event.error and "timeout" in event.error:
-                event.retry = True  # Retry on timeout
+            # Mirror every tool call into an action queue keyed by id.
+            self._queue.append({
+                "id": event.tool_call_id,
+                "tool": event.tool_name,
+                "args": event.arguments,
+                "result": event.result,
+            })
     """
 
     _writable = {"retry", "result"}
 
     tool_name: str
+    tool_call_id: str
+    arguments: dict[str, Any]
     result: Any
     error: str | None
     retry: bool
 
-    def __init__(self, tool_name: str, result: Any, error: str | None) -> None:
+    def __init__(
+        self,
+        tool_name: str,
+        result: Any,
+        error: str | None,
+        *,
+        tool_call_id: str = "",
+        arguments: dict[str, Any] | None = None,
+    ) -> None:
         self._init("tool_name", tool_name)
+        self._init("tool_call_id", tool_call_id)
+        self._init("arguments", arguments if arguments is not None else {})
         self._init("result", result)
         self._init("error", error)
         self._init("retry", False)

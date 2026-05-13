@@ -34,7 +34,7 @@ write-protected event object.
 | `on_before_model_call` | before each request to the model | redact PII, count tokens |
 | `on_after_model_call` | after each response from the model | log usage, retry on empty |
 | `on_before_tool_call` | before each tool body runs | guardrails, audit, approval gates |
-| `on_after_tool_call` | after each tool body completes | log result, update metrics |
+| `on_after_tool_call` | after each tool body completes | log result, update metrics, mirror calls into a host-side queue |
 
 ## Getting started
 
@@ -56,6 +56,40 @@ class AuditHook(HookProvider):
 
 Override only the phases you care about. Unimplemented phases inherit
 no-op defaults from the base class.
+
+### `on_after_tool_call` — what the event carries
+
+| Field | Type | Mutable? | Meaning |
+|---|---|---|---|
+| `tool_name` | `str` | read-only | Name of the tool that ran. |
+| `tool_call_id` | `str` | read-only | The same id as the matching `BeforeToolCallEvent.tool_call_id` — use it to correlate before/after for parallel tool calls. |
+| `arguments` | `dict[str, Any]` | read-only | The arguments the tool was invoked with, *post* any mutation by a `before` hook. |
+| `result` | `Any` | writable via `event.result = ...` | Replace the tool result before downstream hooks / the agent see it. |
+| `error` | `str \| None` | read-only | Set when the tool raised; mutually exclusive with a useful `result`. |
+| `retry` | `bool` | writable via `event.retry = True` | Re-execute the tool with the same arguments. |
+
+**Common pattern — mirror every tool call into a host-side queue** (e.g. an
+HTTP response payload that drives an out-of-process side effect):
+
+```python
+class ActionQueueHook(HookProvider):
+    priority = HookPriority.BUSINESS_DEFAULT
+
+    def __init__(self, queue: list[dict]) -> None:
+        self._queue = queue
+
+    async def on_after_tool_call(self, event):
+        if event.error is None:
+            self._queue.append({
+                "id": event.tool_call_id,        # correlate with the model's tool_calls[]
+                "tool": event.tool_name,
+                "args": event.arguments,         # exact args the tool ran with
+                "result": event.result,
+            })
+```
+
+This is the recommended pattern for [MCP integrations](mcp.md) where
+the *real* side effect lives in the host process, not in the tool body.
 
 ### 2. Pass to the agent
 
@@ -179,6 +213,7 @@ any field; this is intentionally tight.
 | Hook fires in the wrong order | Set `priority` explicitly. The default priority is intentionally mid-range so security hooks always come before yours. |
 | `ValidationError: cannot mutate frozen instance` | You tried to write `event.foo = bar`. Hooks observe, not mutate; use the explicit steering methods. |
 | `on_after_tool_call` doesn't see the result | The tool raised. Check `event.error` instead of `event.result`. |
+| `on_after_tool_call` doesn't see the arguments / call id | Pre-`0.2.0b4` event payload. Upgrade — `event.arguments` and `event.tool_call_id` were added so hooks can build host-side action queues without a separate `before`-hook stash. |
 | Telemetry spans aren't exported | `TelemetryHook` needs an OTel exporter configured upstream — see [Observability](observability.md). |
 
 ## Source and examples

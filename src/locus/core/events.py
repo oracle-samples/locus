@@ -236,6 +236,8 @@ class AfterToolCallEvent(HookEvent):
 
     event_type: Literal["after_tool_call"] = "after_tool_call"
     tool_name: str
+    tool_call_id: str = ""
+    arguments: dict[str, Any] = Field(default_factory=dict)
     result: str | None = None
     error: str | None = None
     duration_ms: float

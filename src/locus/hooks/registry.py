@@ -209,6 +209,9 @@ class HookRegistry:
         tool_name: str,
         result: Any,
         error: str | None,
+        *,
+        tool_call_id: str = "",
+        arguments: dict[str, Any] | None = None,
     ) -> None:
         """Emit after_tool_call event to all providers.
 
@@ -216,11 +219,19 @@ class HookRegistry:
             tool_name: Name of the tool that was called
             result: Tool result (if successful)
             error: Error message (if failed)
+            tool_call_id: ID of the tool call (correlates with BeforeToolCallEvent).
+            arguments: Arguments the tool was invoked with (post-hook mutation).
         """
         from locus.hooks.provider import AfterToolCallEvent
 
         self._ensure_sorted()
-        event = AfterToolCallEvent(tool_name=tool_name, result=result, error=error)
+        event = AfterToolCallEvent(
+            tool_name=tool_name,
+            result=result,
+            error=error,
+            tool_call_id=tool_call_id,
+            arguments=arguments,
+        )
         errors: list[tuple[str, Exception]] = []
         # Reverse order for proper teardown
         for provider in reversed(self._providers):
