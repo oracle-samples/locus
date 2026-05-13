@@ -383,6 +383,93 @@ def test_extra_headers_includes_project_ocid_when_set() -> None:
 
 @respx.mock
 @pytest.mark.asyncio
+async def test_complete_raises_runtime_error_on_httpx_transport_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A transport-level httpx error becomes a Locus RuntimeError."""
+    model = _make_model()
+    respx.post("https://fake-oci.test/openai/v1/responses").mock(
+        side_effect=httpx.ConnectError("network unreachable")
+    )
+
+    with pytest.raises(RuntimeError, match="OCI Responses request failed"):
+        await model.complete([Message.user("hi")])
+    await model.aclose()
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_complete_raises_runtime_error_on_non_json_body() -> None:
+    """A 200 response with a non-JSON body surfaces a clear RuntimeError."""
+    model = _make_model()
+    respx.post("https://fake-oci.test/openai/v1/responses").mock(
+        return_value=httpx.Response(200, content=b"<html>oops</html>")
+    )
+
+    with pytest.raises(RuntimeError, match="non-JSON body"):
+        await model.complete([Message.user("hi")])
+    await model.aclose()
+
+
+def test_build_signer_instance_principal(monkeypatch: pytest.MonkeyPatch) -> None:
+    """_build_signer dispatches to the instance-principal helper."""
+    sentinel = object()
+    monkeypatch.setattr(
+        "locus.models.providers.oci.responses._build_instance_principal_signer",
+        lambda: sentinel,
+    )
+    model = OCIResponsesModel(
+        model="x",
+        auth_type="instance_principal",
+        compartment_id="ocid1.compartment.oc1..fake",
+    )
+    assert model._build_signer() is sentinel
+
+
+def test_build_signer_resource_principal(monkeypatch: pytest.MonkeyPatch) -> None:
+    """_build_signer dispatches to the resource-principal helper."""
+    sentinel = object()
+    monkeypatch.setattr(
+        "locus.models.providers.oci.responses._build_resource_principal_signer",
+        lambda: sentinel,
+    )
+    model = OCIResponsesModel(
+        model="x",
+        auth_type="resource_principal",
+        compartment_id="ocid1.compartment.oc1..fake",
+    )
+    assert model._build_signer() is sentinel
+
+
+def test_build_signer_profile_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    """_build_signer dispatches to the profile helper in profile mode."""
+    sentinel = object()
+    monkeypatch.setattr(
+        "locus.models.providers.oci.responses._build_signer_from_profile",
+        lambda profile, config_file: sentinel,
+    )
+    model = OCIResponsesModel(
+        model="x",
+        profile="DEFAULT",
+        compartment_id="ocid1.compartment.oc1..fake",
+    )
+    assert model._build_signer() is sentinel
+
+
+def test_profile_compartment_resolves_from_tenancy(monkeypatch: pytest.MonkeyPatch) -> None:
+    """When no env var and no explicit kwarg, profile mode picks up tenancy from the profile."""
+    monkeypatch.delenv("OCI_COMPARTMENT", raising=False)
+    monkeypatch.delenv("OCI_COMPARTMENT_ID", raising=False)
+    monkeypatch.setattr(
+        "locus.models.providers.oci.responses._load_profile_config",
+        lambda profile, config_file: {"tenancy": "ocid1.tenancy.oc1..fromprofile"},
+    )
+    model = OCIResponsesModel(model="x", profile="DEFAULT")
+    assert model.config.compartment_id == "ocid1.tenancy.oc1..fromprofile"
+
+
+@respx.mock
+@pytest.mark.asyncio
 async def test_stream_skips_non_data_lines_and_malformed_json() -> None:
     """SSE lines that aren't ``data:`` or that can't be parsed are dropped."""
     model = _make_model()
