@@ -264,12 +264,17 @@ class OCIResponsesModel(BaseModel):
             provider_state.get("previous_response_id") if provider_state else None
         )
 
+        # OpenAI reasoning families (gpt-5, gpt-5.5, o1, o3, o4) reject
+        # ``temperature`` on the Responses endpoint. Only send it when
+        # the caller explicitly overrides — config-default temperature
+        # is dropped silently to maximise model compatibility.
+        temperature = kwargs.pop("temperature", None)
         body = build_request_body(
             messages,
             model=self.config.model,
             tools=tools,
             previous_response_id=previous_response_id,
-            temperature=kwargs.pop("temperature", self.config.temperature),
+            temperature=temperature,
             max_output_tokens=kwargs.pop("max_tokens", None)
             or kwargs.pop("max_output_tokens", self.config.max_output_tokens),
             stream=False,
@@ -322,12 +327,14 @@ class OCIResponsesModel(BaseModel):
         previous_response_id = (
             provider_state.get("previous_response_id") if provider_state else None
         )
+        # See complete() — temperature dropped unless explicit.
+        temperature = kwargs.pop("temperature", None)
         body = build_request_body(
             messages,
             model=self.config.model,
             tools=tools,
             previous_response_id=previous_response_id,
-            temperature=kwargs.pop("temperature", self.config.temperature),
+            temperature=temperature,
             max_output_tokens=kwargs.pop("max_tokens", None)
             or kwargs.pop("max_output_tokens", self.config.max_output_tokens),
             stream=True,

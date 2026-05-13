@@ -254,3 +254,44 @@ def test_init_requires_compartment_for_workload_identity() -> None:
 def test_server_stateful_marker_is_true() -> None:
     """Runtime loop branches on this flag — locked in by test."""
     assert OCIResponsesModel.server_stateful is True
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_complete_does_not_send_temperature_by_default() -> None:
+    """OpenAI reasoning families (gpt-5, o-series) reject temperature
+    on the Responses endpoint. Verified live against OCI gpt-5: the
+    server returns 400 ``Unsupported parameter: 'temperature'`` when
+    we send it. Drop it unless the caller explicitly overrides.
+    """
+    model = _make_model()
+    captured: dict[str, Any] = {}
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(200, json={"id": "r", "output": [], "usage": {}})
+
+    respx.post("https://fake-oci.test/openai/v1/responses").mock(side_effect=_handler)
+
+    await model.complete([Message.user("hi")])
+    assert "temperature" not in captured["body"]
+    await model.aclose()
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_complete_sends_temperature_when_explicit() -> None:
+    """Explicit ``temperature=`` kwarg still flows through, for models
+    that do accept it."""
+    model = _make_model()
+    captured: dict[str, Any] = {}
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(200, json={"id": "r", "output": [], "usage": {}})
+
+    respx.post("https://fake-oci.test/openai/v1/responses").mock(side_effect=_handler)
+
+    await model.complete([Message.user("hi")], temperature=0.3)
+    assert captured["body"]["temperature"] == 0.3
+    await model.aclose()
