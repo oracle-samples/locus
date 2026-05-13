@@ -280,9 +280,10 @@ async def test_complete_does_not_send_temperature_by_default() -> None:
 
 @respx.mock
 @pytest.mark.asyncio
-async def test_complete_sends_temperature_when_explicit() -> None:
-    """Explicit ``temperature=`` kwarg still flows through, for models
-    that do accept it."""
+async def test_complete_drops_temperature_even_when_kwarg_passed() -> None:
+    """Reasoning models (gpt-5, o-series) reject temperature. The Agent
+    loop always passes temperature as a kwarg from its config default,
+    so we drop it unconditionally on the Responses path."""
     model = _make_model()
     captured: dict[str, Any] = {}
 
@@ -293,5 +294,5 @@ async def test_complete_sends_temperature_when_explicit() -> None:
     respx.post("https://fake-oci.test/openai/v1/responses").mock(side_effect=_handler)
 
     await model.complete([Message.user("hi")], temperature=0.3)
-    assert captured["body"]["temperature"] == 0.3
+    assert "temperature" not in captured["body"]
     await model.aclose()

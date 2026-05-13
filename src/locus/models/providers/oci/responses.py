@@ -265,16 +265,19 @@ class OCIResponsesModel(BaseModel):
         )
 
         # OpenAI reasoning families (gpt-5, gpt-5.5, o1, o3, o4) reject
-        # ``temperature`` on the Responses endpoint. Only send it when
-        # the caller explicitly overrides — config-default temperature
-        # is dropped silently to maximise model compatibility.
-        temperature = kwargs.pop("temperature", None)
+        # ``temperature`` on the Responses endpoint. The Agent loop
+        # always passes ``temperature=self.config.temperature`` as a
+        # kwarg, so a "pop unless explicit" guard isn't enough — drop
+        # it unconditionally on the Responses path. Callers who need
+        # explicit sampling control can opt back in via the ``extra``
+        # request-body escape hatch.
+        kwargs.pop("temperature", None)
         body = build_request_body(
             messages,
             model=self.config.model,
             tools=tools,
             previous_response_id=previous_response_id,
-            temperature=temperature,
+            temperature=None,
             max_output_tokens=kwargs.pop("max_tokens", None)
             or kwargs.pop("max_output_tokens", self.config.max_output_tokens),
             stream=False,
@@ -327,14 +330,15 @@ class OCIResponsesModel(BaseModel):
         previous_response_id = (
             provider_state.get("previous_response_id") if provider_state else None
         )
-        # See complete() — temperature dropped unless explicit.
-        temperature = kwargs.pop("temperature", None)
+        # See complete() — temperature is always dropped on the
+        # Responses path (reasoning models reject it).
+        kwargs.pop("temperature", None)
         body = build_request_body(
             messages,
             model=self.config.model,
             tools=tools,
             previous_response_id=previous_response_id,
-            temperature=temperature,
+            temperature=None,
             max_output_tokens=kwargs.pop("max_tokens", None)
             or kwargs.pop("max_output_tokens", self.config.max_output_tokens),
             stream=True,
