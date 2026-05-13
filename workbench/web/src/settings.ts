@@ -10,6 +10,7 @@ type OciPrefs = {
   compartment_id?: string;
   region?: string;
   oci_transport?: string;
+  project_ocid?: string;
   model?: string;
   model_b?: string;
   model_c?: string;
@@ -25,6 +26,7 @@ function saveOciPrefs(cfg: ProviderConfig): void {
       compartment_id: cfg.compartment_id,
       region: cfg.region,
       oci_transport: cfg.oci_transport,
+      project_ocid: cfg.project_ocid,
       model: cfg.model,
       model_b: cfg.model_b ?? "",
       model_c: cfg.model_c ?? "",
@@ -47,6 +49,7 @@ export function loadProvider(): ProviderConfig | null {
       compartment_id: p.compartment_id ?? "",
       region: p.region ?? "us-chicago-1",
       oci_transport: (p.oci_transport ?? "v1") as ProviderConfig["oci_transport"],
+      project_ocid: p.project_ocid ?? undefined,
       model: p.model ?? "openai.gpt-5.5-2026-04-23",
       model_b: p.model_b ?? "",
       model_c: p.model_c ?? "",

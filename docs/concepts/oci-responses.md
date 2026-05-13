@@ -80,7 +80,7 @@ Locus's `ToolExecutor` runs them client-side, results are sent back in
 the next turn as `function_call_output` items (carrying `call_id` for
 correlation). Tool hooks fire normally; idempotency dedup applies; the
 `AfterToolCallEvent.arguments` and `.tool_call_id` fields you'd expect
-from [hooks](hooks.md#on_after_tool_call--what-the-event-carries) are
+from [hooks](hooks.md#on_after_tool_call-what-the-event-carries) are
 all populated.
 
 OCI built-in Responses tools (`file_search`, `web_search`,

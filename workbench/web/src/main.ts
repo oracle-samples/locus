@@ -28,11 +28,13 @@ const cfgProfile = $<HTMLInputElement>("#cfg-profile");
 const cfgRegion = $<HTMLInputElement>("#cfg-region");
 const cfgCompartment = $<HTMLInputElement>("#cfg-compartment");
 const cfgTransport = $<HTMLSelectElement>("#cfg-transport");
+const cfgProjectOcid = $<HTMLInputElement>("#cfg-project-ocid");
 const rowApiKey = $("#row-apikey");
 const rowProfile = $("#row-profile");
 const rowRegion = $("#row-region");
 const rowCompartment = $("#row-compartment");
 const rowTransport = $("#row-transport");
+const rowProjectOcid = $("#row-project-ocid");
 const providerWarning = $("#provider-warning");
 
 // ---------------------------------------------------------------------------
@@ -52,6 +54,7 @@ function fillFromConfig(cfg: ProviderConfig) {
   cfgRegion.value = cfg.region ?? "us-chicago-1";
   cfgCompartment.value = cfg.compartment_id ?? "";
   cfgTransport.value = cfg.oci_transport ?? "v1";
+  cfgProjectOcid.value = cfg.project_ocid ?? "";
   // Stash the desired B/C selections; setModelOptions() reads these
   // when it paints the dropdowns after credentials validate.
   pendingModelB = cfg.model_b ?? "";
@@ -179,11 +182,13 @@ async function refreshModels() {
 function syncSettingsRows() {
   const p = cfgProvider.value as ProviderType;
   const isOci = p.startsWith("oci");
+  const isResponses = isOci && cfgTransport.value === "responses";
   rowApiKey.style.display = isOci ? "none" : "flex";
   rowProfile.style.display = isOci ? "flex" : "none";
   rowRegion.style.display = isOci ? "flex" : "none";
   rowCompartment.style.display = isOci ? "flex" : "none";
   rowTransport.style.display = isOci ? "flex" : "none";
+  rowProjectOcid.style.display = isResponses ? "flex" : "none";
   const def = defaultsFor(p);
   if (!cfgModel.value) setModelOptions([def.model], def.model);
   if (isOci && !cfgProfile.value) cfgProfile.value = def.profile ?? "";
@@ -230,6 +235,9 @@ function saveSettings() {
     cfg.region = cfgRegion.value.trim() || "us-chicago-1";
     cfg.compartment_id = cfgCompartment.value.trim();
     cfg.oci_transport = (cfgTransport.value as ProviderConfig["oci_transport"]) ?? "v1";
+    if (cfg.oci_transport === "responses" && cfgProjectOcid.value.trim()) {
+      cfg.project_ocid = cfgProjectOcid.value.trim();
+    }
   }
   provider = cfg;
   saveProvider(cfg);
@@ -283,7 +291,11 @@ cfgProfile.addEventListener("input", queueRefresh);
 cfgRegion.addEventListener("input", queueRefresh);
 cfgCompartment.addEventListener("input", queueRefresh);
 cfgApiKey.addEventListener("input", queueRefresh);
-cfgTransport.addEventListener("change", queueRefresh);
+cfgTransport.addEventListener("change", () => {
+  // Show/hide the Project OCID input when the user picks Responses.
+  syncSettingsRows();
+  queueRefresh();
+});
 
 // --- Theme toggle (light / dark) ---
 const themeBtn = $<HTMLButtonElement>("#theme-btn");

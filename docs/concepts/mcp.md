@@ -100,7 +100,7 @@ agent = Agent(
 
 One hook covers every MCP-sourced tool. The `tool_call_id` correlates
 with the model's `tool_calls[].id`, so parallel tool calls don't get
-mixed up. See [hooks](hooks.md#on_after_tool_call--what-the-event-carries)
+mixed up. See [hooks](hooks.md#on_after_tool_call-what-the-event-carries)
 for the full event surface.
 
 ## Getting started — expose your tools as MCP

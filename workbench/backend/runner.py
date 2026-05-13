@@ -72,10 +72,15 @@ class ProviderConfig(BaseModel):
     profile: str | None = None
     region: str = "us-chicago-1"
     compartment_id: str | None = None
-    # OCI only: "v1" | "auto" | "sdk". v1 = /openai/v1/chat/completions
-    # (OCIOpenAIModel) — the default. sdk = native OCI GenAI chat shape
-    # (OCIModel). "auto" routes Cohere R-series → sdk, everything else → v1.
-    oci_transport: Literal["auto", "v1", "sdk"] = "v1"
+    # OCI only: "v1" | "auto" | "sdk" | "responses". v1 = /openai/v1/
+    # chat/completions (OCIOpenAIModel) — the default. sdk = native OCI
+    # GenAI chat shape (OCIModel). responses = /openai/v1/responses
+    # server-stateful transport (OCIResponsesModel). "auto" routes
+    # Cohere R-series → sdk, everything else → v1.
+    oci_transport: Literal["auto", "v1", "sdk", "responses"] = "v1"
+    # OCI Responses only: optional GenAI Project OCID. Leave None for
+    # the standard path; required by some preview Responses features.
+    project_ocid: str | None = None
 
 
 def _is_oci_sdk_family(model_id: str) -> bool:
@@ -111,6 +116,21 @@ def build_model(cfg: ProviderConfig) -> Any:
         profile = cfg.profile or "DEFAULT"
         # Honour an explicit transport choice; fall back to the
         # examples/config.py auto rule when "auto" or unset.
+        if cfg.oci_transport == "responses":
+            # Server-stateful Responses transport. Locus skips
+            # ConversationManager on this path; everything else
+            # (memory, reflexion, GSAR, grounding, tool hooks,
+            # idempotency, checkpointing, output schema) still
+            # applies. See docs/concepts/oci-responses.md.
+            from locus.models.providers.oci.responses import OCIResponsesModel
+
+            return OCIResponsesModel(
+                model=model_id,
+                profile=profile,
+                compartment_id=cfg.compartment_id,
+                project_ocid=cfg.project_ocid,
+                region=cfg.region or "us-chicago-1",
+            )
         if cfg.oci_transport == "sdk":
             use_sdk = True
         elif cfg.oci_transport == "v1":
