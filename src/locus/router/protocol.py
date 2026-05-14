@@ -133,6 +133,35 @@ class ProtocolRegistry:
     def all(self) -> list[Protocol]:
         return list(self._protocols.values())
 
+    def filter_candidates(
+        self,
+        frame: GoalFrame,
+        *,
+        available_capabilities: set[str] | None = None,
+    ) -> list[Protocol]:
+        """Return every protocol that passes the three gates.
+
+        The shared filter for both ``select()`` (rule-based ranker) and
+        any opt-in selector that wants to choose among already-qualified
+        candidates. Gates:
+
+        - ``frame.primary_goal in p.handles``
+        - ``p.risk_max >= frame.risk``
+        - ``set(p.requires_capabilities).issubset(available_capabilities)``
+
+        Returns the survivors in registration order. Empty list is a
+        valid result — callers raise :class:`NoMatchingProtocolError`
+        when appropriate (this method is filter-only by design).
+        """
+        caps_available = available_capabilities or set()
+        return [
+            p
+            for p in self._protocols.values()
+            if frame.primary_goal in p.handles
+            and p.risk_max >= frame.risk
+            and set(p.requires_capabilities).issubset(caps_available)
+        ]
+
     def select(
         self,
         frame: GoalFrame,
@@ -149,13 +178,7 @@ class ProtocolRegistry:
             raise NoMatchingProtocolError("No protocols registered.")
 
         caps_available = available_capabilities or set()
-        candidates = [
-            p
-            for p in self._protocols.values()
-            if frame.primary_goal in p.handles
-            and p.risk_max >= frame.risk
-            and set(p.requires_capabilities).issubset(caps_available)
-        ]
+        candidates = self.filter_candidates(frame, available_capabilities=caps_available)
         if not candidates:
             raise NoMatchingProtocolError(
                 f"No protocol handles primary_goal={frame.primary_goal!r} "

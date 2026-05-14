@@ -195,6 +195,8 @@ class TestEventDataShape:
             "cost",
             "latency",
             "risk_max",
+            "method",
+            "rationale",
         ):
             assert required_key in selected.data, (
                 f"protocol.selected event missing field {required_key!r}: {selected.data}"
@@ -202,6 +204,9 @@ class TestEventDataShape:
         assert selected.data["protocol_id"] == "plan_execute_validate"
         assert selected.data["is_canonical"] is True
         assert selected.data["primary_goal"] == "plan"
+        # Default compiler has no picker — selection must be rule-based.
+        assert selected.data["method"] == "rule_based"
+        assert selected.data["rationale"] is None
 
     async def test_to_dict_is_json_safe(self):
         compiler = _build_compiler()

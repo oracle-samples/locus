@@ -175,6 +175,57 @@ expensive, and break ties on specificity.
 3. **Cost** — lower-cost protocols win at the next tier.
 4. **Handles count** — fewer = more specific; final tiebreaker.
 
+## Emergent picker — opt-in second mode
+
+The default ranker is rule-based and deterministic. When the rule
+hierarchy doesn't capture your deployment's actual fit — typically
+when you register custom protocols alongside the built-ins — pass an
+`LLMProtocolPicker` to the compiler and the model picks the
+protocol instead.
+
+```python
+from locus.router import (
+    CognitiveCompiler, LLMProtocolPicker, PolicyGate, ProtocolRegistry,
+    builtin_protocols, CapabilityIndex,
+)
+
+picker = LLMProtocolPicker(model=model)
+compiler = CognitiveCompiler(
+    protocols=registry,
+    capabilities=capabilities,
+    policy=PolicyGate(),
+    model=model,
+    protocol_picker=picker,   # opt-in — default is None (rule-based)
+)
+```
+
+The picker is strictly scoped to the disambiguation step. The
+compiler still:
+
+1. **Filters candidates** by `handles`, `risk_max`, and
+   `requires_capabilities` *before* the picker sees anything — the
+   model never picks an ineligible protocol.
+2. **Short-circuits** when one candidate survives — no LLM call.
+3. **Falls back** to `_rank_key` if the picker raises or returns an
+   unknown id; emits `router.protocol.picker_fallback` so the
+   degradation is observable. Emergent mode never reduces
+   availability.
+4. **Runs PolicyGate** after the pick. Same risk/approval gating
+   regardless of who picked.
+
+Every `router.protocol.selected` event carries a `method` field
+identifying which path produced the pick:
+
+| `method` | When |
+|---|---|
+| `"rule_based"` | Default `_rank_key` path (picker not configured) |
+| `"single_candidate"` | One candidate survived filtering; picker bypassed |
+| `"llm_picked"` | Picker resolved the disambiguation; `rationale` field populated |
+| `"rule_based_fallback"` | Picker raised or hallucinated; `_rank_key` resolved it |
+
+See [tutorial 59](../tutorials/tutorial_59_emergent_routing.md) for a
+runnable side-by-side comparison.
+
 ## Skills integration
 
 Skills (`SKILL.md` packages following the

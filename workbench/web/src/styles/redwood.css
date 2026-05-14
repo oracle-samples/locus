@@ -209,16 +209,23 @@ code, pre { font-family: var(--mono); }
   padding: 0 0.6rem 0.5rem;
 }
 
-/* Sidebar tab switcher (Tutorials / Skills). */
+/* Sidebar tab switcher (Tutorials / Skills / Protocols / Patterns). */
 .side__tabs {
   display: flex;
+  /* Wrap onto a second row when the four tabs don't fit. Without
+     this the rightmost tab (Patterns) clips off at default ~280px
+     sidebar width — invisible to the user. */
+  flex-wrap: wrap;
   gap: 0.25rem;
   padding: 0 0.5rem 0.6rem;
   border-bottom: 1px solid var(--or-border);
   margin-bottom: 0.5rem;
 }
 .side__tab {
-  flex: 1;
+  /* min-width keeps each tab readable when wrapping; flex-basis
+     lets two tabs share a row comfortably at narrow widths. */
+  flex: 1 1 calc(50% - 0.25rem);
+  min-width: 0;
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--radius);
@@ -1245,4 +1252,66 @@ code, pre { font-family: var(--mono); }
     max-height: 45vh;
     flex: 0 0 45vh;
   }
+}
+
+/* ---------- Cognitive-routing segmented control ---------- */
+#pattern-routing-toggle label {
+  transition: background 0.15s ease, color 0.15s ease;
+}
+#pattern-routing-toggle label:has(input:checked) {
+  background: var(--or-red);
+  color: #fff;
+  font-weight: 600;
+}
+#pattern-routing-toggle label:has(input:checked) .mode-label::before {
+  content: "● ";
+  letter-spacing: -0.05em;
+}
+#pattern-routing-toggle label:not(:has(input:checked)):hover {
+  background: var(--or-red-tint);
+}
+
+/* ---------- Routing result chip (protocol_id + mode badge) ---------- */
+.routing-result {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 8px;
+  background: var(--or-red-tint);
+  border: 1px solid var(--or-red);
+  font-size: 0.78rem;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.routing-result__protocol {
+  font-weight: 700;
+  color: var(--or-red-deep);
+}
+.routing-result__mode {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--or-surface);
+  border: 1px solid var(--or-border);
+  color: var(--or-text-mute);
+}
+.routing-result__rationale {
+  margin-top: 0.4rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--or-surface);
+  border: 1px solid var(--or-border);
+  border-left: 3px solid var(--or-red);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--or-text);
+  font-family: inherit;
+}
+.routing-result__rationale::before {
+  content: "rationale: ";
+  color: var(--or-text-mute);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }

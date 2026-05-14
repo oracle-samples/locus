@@ -241,6 +241,7 @@ nav:
     - 53 · Agent yield bridge: tutorials/tutorial_53_agent_yield_bridge.md
     - 54 · EventBus subscriber patterns: tutorials/tutorial_54_eventbus_subscribers.md
     - 55 · Full event catalogue: tutorials/tutorial_55_event_catalogue.md
+    - 59 · Emergent routing (opt-in LLM picker): tutorials/tutorial_59_emergent_routing.md
   - Guides:
     - Deploy: how-to/deploy.md
     - Persist conversations: how-to/persist-conversations.md

@@ -80,6 +80,11 @@ function renderDetail(p: Pattern): void {
   promptEl.placeholder = _suggestedPrompt(p.id);
   const badge = $("#pattern-stream-badge");
   badge.style.display = p.streamable ? "inline-flex" : "none";
+  // The LLM-picker toggle is meaningful only for the cognitive routing
+  // pattern (other patterns ignore the field server-side). Hide it
+  // everywhere else so the UI stays focused.
+  const toggle = $("#pattern-routing-toggle") as HTMLElement;
+  toggle.style.display = p.id === "cognitive_routing" ? "" : "none";
   view.style.display = "";
 }
 
@@ -138,8 +143,15 @@ async function doRun(): Promise<void> {
         (msg) => { showError(msg); setRunning(false); cancelStream = null; },
       );
     } else {
-      const result = await runPattern(current.id, prompt, provider);
-      out.textContent = result.reply || "(no reply)";
+      const useLLMPicker = current.id === "cognitive_routing" && readSelectedMode() === "llm";
+      const result = await runPattern(current.id, prompt, provider, {
+        use_llm_picker: useLLMPicker,
+      });
+      if (current.id === "cognitive_routing") {
+        renderRoutingResult(out, result, useLLMPicker);
+      } else {
+        out.textContent = result.reply || "(no reply)";
+      }
       setRunning(false);
     }
   } catch (err) {
@@ -154,6 +166,67 @@ function showError(msg: string): void {
   err.style.display = "block";
 }
 
+function readSelectedMode(): "rules" | "llm" {
+  const llmRadio = document.querySelector<HTMLInputElement>(
+    'input[name="pattern-mode"][value="llm"]',
+  );
+  return llmRadio?.checked ? "llm" : "rules";
+}
+
+interface RoutingEvent {
+  kind?: string;
+  text?: string;
+  extra?: { protocol_id?: string; mode?: string; rationale?: string };
+}
+
+interface RoutingResult {
+  reply?: string;
+  events?: RoutingEvent[];
+}
+
+function renderRoutingResult(
+  out: HTMLElement,
+  result: RoutingResult,
+  useLLMPicker: boolean,
+): void {
+  const proto = (result.events ?? []).find(
+    (e: RoutingEvent) => e.kind === "ProtocolSelected",
+  );
+  const protocolId = proto?.extra?.protocol_id ?? proto?.text ?? "?";
+  const rationale = proto?.extra?.rationale;
+  const modeLabel = useLLMPicker ? "llm_picked" : "rule_based";
+
+  const chip = document.createElement("div");
+  chip.className = "routing-result";
+  chip.setAttribute("data-testid", "routing-result");
+  const protoEl = document.createElement("span");
+  protoEl.className = "routing-result__protocol";
+  protoEl.textContent = protocolId;
+  const modeEl = document.createElement("span");
+  modeEl.className = "routing-result__mode";
+  modeEl.textContent = modeLabel;
+  chip.append(protoEl, modeEl);
+
+  out.style.whiteSpace = "normal";
+  out.innerHTML = "";
+  out.appendChild(chip);
+
+  if (rationale) {
+    const ratEl = document.createElement("div");
+    ratEl.className = "routing-result__rationale";
+    ratEl.textContent = rationale;
+    ratEl.setAttribute("data-testid", "routing-rationale");
+    out.appendChild(ratEl);
+  }
+
+  const reply = document.createElement("pre");
+  reply.style.whiteSpace = "pre-wrap";
+  reply.style.fontSize = "0.8rem";
+  reply.style.marginTop = "0.6rem";
+  reply.textContent = result.reply || "(no reply)";
+  out.appendChild(reply);
+}
+
 function _suggestedPrompt(id: string): string {
   const PROMPTS: Record<string, string> = {
     memory_manager: "I'm a senior Python engineer. I prefer short answers and real DB connections — no mocks. What's the CAP theorem?",
@@ -164,6 +237,7 @@ function _suggestedPrompt(id: string): string {
     stategraph_loop: "Explain why immutability matters in functional programming.",
     map_reduce: "Review this function: def add(a, b): return a + b",
     structured_output: "Python vs JavaScript: which wins for backend work?",
+    cognitive_routing: "Compare swarm vs orchestrator patterns for open-ended research.",
   };
   return PROMPTS[id] ?? "Enter a prompt…";
 }

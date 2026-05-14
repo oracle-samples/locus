@@ -216,11 +216,16 @@ export async function runPattern(
   patternId: string,
   prompt: string,
   provider: ProviderConfig,
+  options: { use_llm_picker?: boolean } = {},
 ): Promise<PatternRunResponse> {
+  const body: Record<string, unknown> = { prompt, provider };
+  if (options.use_llm_picker !== undefined) {
+    body.use_llm_picker = options.use_llm_picker;
+  }
   const r = await fetch(`/api/run/${encodeURIComponent(patternId)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, provider }),
+    body: JSON.stringify(body),
   });
   if (!r.ok) throw new Error(`run ${r.status}: ${await r.text()}`);
   return (await r.json()) as PatternRunResponse;

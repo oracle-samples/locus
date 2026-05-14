@@ -18,6 +18,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from locus.observability.router_events import (
+    emit_picker_fallback,
     emit_policy_verdict,
     emit_protocol_no_match,
     emit_protocol_selected,
@@ -25,8 +26,15 @@ from locus.observability.router_events import (
 )
 from locus.router.capability import CapabilityIndex
 from locus.router.goal_frame import GoalFrame
+from locus.router.picker import LLMProtocolPicker
 from locus.router.policy import PolicyDeniedError, PolicyGate, PolicyVerdict
-from locus.router.protocol import BuilderContext, NoMatchingProtocolError, ProtocolRegistry
+from locus.router.protocol import (
+    BuilderContext,
+    NoMatchingProtocolError,
+    Protocol,
+    ProtocolRegistry,
+    _rank_key,
+)
 from locus.router.runnable import Runnable, RunnableResult
 from locus.router.skill_index import SkillIndex
 
@@ -98,6 +106,15 @@ class CognitiveCompiler:
         Optional async callback fired when the verdict requires
         approval. Defaults to denying — wire your workbench / CLI
         approval flow here.
+    protocol_picker:
+        Optional :class:`LLMProtocolPicker`. When present, the compiler
+        delegates the *last-mile* protocol pick to the model whenever
+        the filter leaves more than one candidate. When absent (the
+        default), selection is the deterministic
+        :func:`_rank_key`-based ranker. The picker is the **only** part
+        of the routing pipeline that uses the model; everything else
+        — filtering, policy gating, capability binding, builder dispatch
+        — remains rule-based.
     """
 
     def __init__(
@@ -110,6 +127,7 @@ class CognitiveCompiler:
         skills: SkillIndex | None = None,
         a2a_endpoint: str | None = None,
         on_approval: ApprovalCallback | None = None,
+        protocol_picker: LLMProtocolPicker | None = None,
     ) -> None:
         self.protocols = protocols
         self.capabilities = capabilities
@@ -118,6 +136,7 @@ class CognitiveCompiler:
         self.skills = skills
         self.a2a_endpoint = a2a_endpoint
         self._on_approval: ApprovalCallback = on_approval or _default_deny
+        self.protocol_picker = protocol_picker
 
     def _build_context(self) -> BuilderContext:
         return BuilderContext(
@@ -126,6 +145,44 @@ class CognitiveCompiler:
             skills=self.skills,
             a2a_endpoint=self.a2a_endpoint,
         )
+
+    async def _pick_protocol(
+        self,
+        frame: GoalFrame,
+        candidates: list[Protocol],
+        *,
+        run_id: str | None,
+    ) -> tuple[Protocol, str, str | None]:
+        """Resolve the final protocol pick from a filtered candidate set.
+
+        Returns ``(protocol, method, rationale)`` so the caller can
+        emit a consistent ``router.protocol.selected`` event.
+
+        Decision ladder:
+
+        1. No picker configured → rule-based ranker via ``_rank_key``.
+        2. Exactly one candidate → short-circuit (no LLM call,
+           no token cost).
+        3. Multiple candidates + picker → call the picker. On any
+           failure (``PickerError`` or unexpected exception) emit
+           ``router.protocol.picker_fallback`` and fall back to the
+           rule-based ranker. Emergent mode never reduces availability.
+        """
+        if self.protocol_picker is None:
+            picked = min(candidates, key=lambda p: _rank_key(p, frame))
+            return picked, "rule_based", None
+
+        if len(candidates) == 1:
+            return candidates[0], "single_candidate", None
+
+        try:
+            picked, rationale = await self.protocol_picker.pick(frame, candidates)
+            return picked, "llm_picked", rationale
+        except Exception as exc:  # noqa: BLE001 — picker may surface arbitrary errors
+            if run_id:
+                await emit_picker_fallback(run_id, frame, f"{type(exc).__name__}: {exc}")
+            picked = min(candidates, key=lambda p: _rank_key(p, frame))
+            return picked, "rule_based_fallback", None
 
     async def compile(self, frame: GoalFrame, run_id: str | None = None) -> Runnable:
         """Pick a protocol, run the gate, build the runnable.
@@ -136,14 +193,22 @@ class CognitiveCompiler:
         cognitive dispatch.
         """
         available = {c.id for c in self.capabilities.all()}
-        try:
-            protocol = self.protocols.select(frame, available_capabilities=available)
-        except NoMatchingProtocolError as exc:
+        candidates = self.protocols.filter_candidates(frame, available_capabilities=available)
+        if not candidates:
+            err = NoMatchingProtocolError(
+                f"No protocol handles primary_goal={frame.primary_goal!r} "
+                f"at risk={frame.risk!r} with capabilities={sorted(available)}.",
+            )
             if run_id:
-                await emit_protocol_no_match(run_id, frame, str(exc))
-            raise
+                await emit_protocol_no_match(run_id, frame, str(err))
+            raise err
+
+        protocol, method, rationale = await self._pick_protocol(frame, candidates, run_id=run_id)
+
         if run_id:
-            await emit_protocol_selected(run_id, frame, protocol)
+            await emit_protocol_selected(
+                run_id, frame, protocol, method=method, rationale=rationale
+            )
 
         verdict = self.policy.check(frame, protocol)
         if run_id:

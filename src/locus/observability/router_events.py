@@ -72,8 +72,28 @@ async def emit_frame_failed(run_id: str, error: str) -> None:
     )
 
 
-async def emit_protocol_selected(run_id: str, frame: GoalFrame, protocol: Protocol) -> None:
-    """Registry picked a protocol for the frame."""
+async def emit_protocol_selected(
+    run_id: str,
+    frame: GoalFrame,
+    protocol: Protocol,
+    *,
+    method: str = "rule_based",
+    rationale: str | None = None,
+) -> None:
+    """Registry picked a protocol for the frame.
+
+    ``method`` records how the pick was made:
+
+    - ``"rule_based"`` — the default ``_rank_key`` tuple comparison.
+    - ``"single_candidate"`` — only one protocol survived filtering;
+      no ranker call needed.
+    - ``"llm_picked"`` — the opt-in :class:`LLMProtocolPicker` made
+      the call; ``rationale`` carries its one-sentence justification.
+    - ``"rule_based_fallback"`` — the picker raised or returned an
+      unknown id, and ``_rank_key`` resolved it instead. The matching
+      ``router.protocol.picker_fallback`` event carries the underlying
+      error.
+    """
     await get_event_bus().publish(
         StreamEvent(
             run_id=run_id,
@@ -86,6 +106,8 @@ async def emit_protocol_selected(run_id: str, frame: GoalFrame, protocol: Protoc
                 "cost": protocol.cost,
                 "latency": protocol.latency,
                 "risk_max": protocol.risk_max.value,
+                "method": method,
+                "rationale": rationale,
             },
         ),
     )
@@ -97,6 +119,27 @@ async def emit_protocol_no_match(run_id: str, frame: GoalFrame, error: str) -> N
         StreamEvent(
             run_id=run_id,
             event_type="router.protocol.no_match",
+            data={
+                "primary_goal": frame.primary_goal.value,
+                "risk": frame.risk.value,
+                "error": error,
+            },
+        ),
+    )
+
+
+async def emit_picker_fallback(run_id: str, frame: GoalFrame, error: str) -> None:
+    """The LLM protocol picker raised or returned an unknown id, so
+    the compiler fell back to the rule-based ranker for this dispatch.
+
+    Operators see this when the emergent path degrades — it does not
+    indicate a failed dispatch (the fallback still produced a valid
+    protocol via ``_rank_key``).
+    """
+    await get_event_bus().publish(
+        StreamEvent(
+            run_id=run_id,
+            event_type="router.protocol.picker_fallback",
             data={
                 "primary_goal": frame.primary_goal.value,
                 "risk": frame.risk.value,

@@ -84,3 +84,58 @@ test.describe("workbench · Patterns tab", () => {
     await expect(page.locator("#pattern-title")).toHaveText("Long-term memory");
   });
 });
+
+test.describe("workbench · Cognitive routing pattern", () => {
+  test("pattern listed once runner is current", async ({ page, request }) => {
+    const catalog = (await (await request.get(`${BFF}/api/patterns`)).json()) as P[];
+    const has = catalog.some((p) => p.id === "cognitive_routing");
+    test.skip(
+      !has,
+      "Runner needs restart to include cognitive_routing (added with LLM picker feature)",
+    );
+    await openPatternsTab(page);
+    await expect(page.getByTestId("pattern-cognitive_routing")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByTestId("pattern-cognitive_routing")).toContainText(
+      "Cognitive routing",
+    );
+  });
+
+  test("selection mode toggle visible only on this pattern", async ({ page, request }) => {
+    const catalog = (await (await request.get(`${BFF}/api/patterns`)).json()) as P[];
+    const has = catalog.some((p) => p.id === "cognitive_routing");
+    test.skip(!has, "Runner needs restart to include cognitive_routing");
+
+    await openPatternsTab(page);
+    // Pick any other pattern first — toggle must be hidden.
+    await page.getByTestId(`pattern-${catalog[0].id}`).click();
+    await expect(page.getByTestId("pattern-routing-toggle")).toBeHidden();
+
+    // Switch to cognitive_routing — toggle becomes visible with the two
+    // radio segments.
+    await page.getByTestId("pattern-cognitive_routing").click();
+    await expect(page.getByTestId("pattern-routing-toggle")).toBeVisible();
+    await expect(page.getByTestId("pattern-mode-rules")).toBeVisible();
+    await expect(page.getByTestId("pattern-mode-llm")).toBeVisible();
+  });
+
+  test("mode segments are mutually exclusive radios", async ({ page, request }) => {
+    const catalog = (await (await request.get(`${BFF}/api/patterns`)).json()) as P[];
+    const has = catalog.some((p) => p.id === "cognitive_routing");
+    test.skip(!has, "Runner needs restart to include cognitive_routing");
+
+    await openPatternsTab(page);
+    await page.getByTestId("pattern-cognitive_routing").click();
+
+    const rulesRadio = page.locator('input[name="pattern-mode"][value="rules"]');
+    const llmRadio = page.locator('input[name="pattern-mode"][value="llm"]');
+
+    // Default state: rules selected, llm not selected.
+    await expect(rulesRadio).toBeChecked();
+    await expect(llmRadio).not.toBeChecked();
+
+    // Click the LLM segment label → only llm becomes checked.
+    await page.getByTestId("pattern-mode-llm").click();
+    await expect(llmRadio).toBeChecked();
+    await expect(rulesRadio).not.toBeChecked();
+  });
+});

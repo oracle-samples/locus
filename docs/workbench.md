@@ -165,7 +165,7 @@ happen.
 ## What you can run
 
 The catalog populates from the BFF's `/api/tutorials` endpoint, which
-walks `examples/tutorial_*.py`. As of writing the workbench has 8
+walks `examples/tutorial_*.py`. As of writing the workbench has 9
 dedicated FastAPI pattern endpoints:
 
 | Pattern | What it shows |
@@ -178,6 +178,7 @@ dedicated FastAPI pattern endpoints:
 | Map-reduce code review | Fan-out to 3 reviewers, reduce findings |
 | StateGraph critic loop | Writer → Critic cycle with `allow_cycles` |
 | **Long-term memory** | Two-session demo — see below |
+| **Cognitive routing** | Rule-based vs LLM-picker selection — see below |
 
 The rest run as plain Python subprocesses against your provider —
 same behaviour as running the tutorial from a terminal, just inside
@@ -217,6 +218,48 @@ The reply shows three sections: the Session 1 answer, the extracted
 memories (key/content pairs), and the Session 2 recall — so you can
 see exactly what the model chose to remember and how it surfaced in a
 fresh context.
+
+### Cognitive routing pattern
+
+Pick **Cognitive routing** in the sidebar and you'll see a
+**Selection mode** segmented control above the Run button:
+
+- **Rule-based** (default) — `ProtocolRegistry.select()` →
+  deterministic `_rank_key` tuple comparison. Auditable,
+  reproducible, free of model latency.
+- **LLM picker** (opt-in) — `LLMProtocolPicker` lets the model
+  pick the protocol from the filtered candidate set. PolicyGate,
+  capability binding, and the candidate filter all stay rule-based;
+  only the disambiguation step moves to the model.
+
+Hit Run and the workbench shows a chip with the dispatched
+`protocol_id` plus a `method` badge (`rule_based` /
+`single_candidate` / `llm_picked` / `rule_based_fallback`). When
+LLM-picker mode dispatched the run, the model's one-sentence
+rationale renders as a callout above the reply text — the same
+field the `router.protocol.selected` SSE event carries.
+
+Sample prompts that exercise different protocols:
+
+```
+What does the locus router do in the context of this SDK?
+→ direct_response
+```
+
+```
+Compare swarm vs orchestrator patterns for open-ended research.
+→ debate (LLM picker may differ from the rule-based ranker)
+```
+
+```
+Diagnose the checkout API latency spike: pull metrics, list alerts,
+correlate findings.
+→ specialist_fanout
+```
+
+See [tutorial 59](tutorials/tutorial_59_emergent_routing.md) for the
+full code path and [concepts/router.md](concepts/router.md#emergent-picker-opt-in-second-mode)
+for the architectural details.
 
 ## Cost
 
