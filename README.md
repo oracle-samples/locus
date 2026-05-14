@@ -217,16 +217,75 @@ python examples/tutorial_56_research_workflow.py    # full research pipeline
 
 ## Workbench
 
-Try every tutorial in your browser. Bring your own model key — no install required.
+A browser-based playground for every locus pattern. Two clicks to a
+running agent — no CLI install, no editor setup. Three model slots
+(A / B / C) so multi-agent tutorials can mix a fast triage model
+with a deeper specialist. Four sidebar tabs: **Tutorials** (every
+runnable `tutorial_*.py`), **Skills** (SKILL.md packages),
+**Protocols** (the eight cognitive-router shapes with cost / latency
+metadata), and **Patterns** (the nine first-class
+runtimes — including [Cognitive routing](docs/workbench.md#cognitive-routing-pattern)
+with a Rule-based ⬌ LLM-picker toggle).
+
+Pick the launch path that fits.
+
+### Path A — GitHub Codespaces (zero install, free tier)
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/oracle-samples/locus?devcontainer_path=.devcontainer%2Fdevcontainer.json)
+
+Click the badge above (or [this link](https://codespaces.new/oracle-samples/locus?devcontainer_path=.devcontainer%2Fdevcontainer.json)).
+GitHub provisions a Linux container in your account, runs
+`.devcontainer/postCreate.sh` (Python 3.12 + Node 20 + `pip install
+-e ".[dev,llm]"` + `npm install` for the workbench projects), then
+backgrounds the three tiers (FastAPI runner :8100, Express BFF
+:3101, Vite :5173). After ~2 minutes the workbench UI opens in a
+second tab — VS Code Web on tab 1, the live app on tab 2. Click
+**Provider settings** in the header, paste an OpenAI or Anthropic
+key, pick a tutorial, hit **Run**.
+
+You burn your own free Codespaces minutes (60 hrs/month on a personal
+account). Oracle pays nothing. The OCI options in *Provider settings*
+require a local `~/.oci/config` so they don't apply in
+Codespaces — use OpenAI or Anthropic for the cloud demo path.
+
+### Path B — Docker (local, BYO key)
 
 ```bash
-# or open in GitHub Codespaces (badge above)
-cd workbench && docker-compose up
+git clone https://github.com/oracle-samples/locus.git && cd locus
+docker build -t locus-workbench -f workbench/Dockerfile .
+docker run --rm -p 5173:5173 -p 3101:3101 -p 8100:8100 locus-workbench
+# open http://localhost:5173
 ```
 
-Three model slots (A / B / C) so multi-agent tutorials can mix a fast triage model with a deeper specialist. Tutorials tab, Skills tab, Protocols tab (shows all eight cognitive router protocols with cost + latency metadata).
+Image is ~1.3 GB on first build (Oracle Linux 9-slim base + Python
+3.12 + Node 20 + locus + the workbench source). Subsequent builds
+hit the layer cache. If ports 5173 / 3101 / 8100 are in use locally,
+remap them:
 
-→ [Workbench guide](docs/workbench.md)
+```bash
+docker run --rm \
+  -p 5273:5173 -p 3201:3101 -p 8200:8100 \
+  locus-workbench
+# then http://localhost:5273
+```
+
+Stop with `Ctrl-C`; the `--rm` flag removes the container on exit.
+
+### Path C — From source (development)
+
+For iterating on the workbench itself:
+
+```bash
+git clone https://github.com/oracle-samples/locus.git && cd locus
+pip install -e ".[server,oci,openai,anthropic]"
+
+# Three terminals, one per tier:
+cd workbench/bff && npm install && npm run dev       # :3101
+cd workbench/web && npm install && npm run dev       # :5173
+cd workbench/backend && python -m uvicorn --app-dir . runner:app --port 8100
+```
+
+→ Full walkthrough: [Workbench guide](docs/workbench.md) · [Provider settings](docs/workbench.md#provider-settings) · [Cognitive routing pattern](docs/workbench.md#cognitive-routing-pattern) · [Troubleshooting](docs/workbench.md#troubleshooting)
 
 ---
 
