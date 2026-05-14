@@ -87,7 +87,7 @@ await checkpointer.delete("user-c42-experiment")
 For OCI Object Storage, retention is enforced by the bucket's
 lifecycle policy — *not* by locus. Configure
 `days_until_archive` / `days_until_delete` once at the bucket
-level and the cleanup happens automatically.
+level and OCI handles the cleanup.
 
 ## Concurrent updates to the same thread
 

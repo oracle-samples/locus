@@ -70,7 +70,7 @@ Deploy:
 fn deploy --app concierge-app
 ```
 
-Functions inherit OCI workload identity automatically, so the agent
+Functions inherit OCI workload identity, so the agent
 authenticates to OCI Generative AI without explicit credentials. Set
 `OCI_AUTH_TYPE=resource_principal` in the function configuration.
 

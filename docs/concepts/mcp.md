@@ -20,7 +20,7 @@ either side of the conversation.
 | Your `@tool` library to be callable by Claude Desktop / Cline / other agents | ✓ — `LocusMCPServer` |
 | Two locus agents to share tools across processes / machines | ✓ — works, but [A2A](multi-agent/a2a.md) is the better protocol |
 | In-process multi-agent — share tools by importing | use the [tools](tools.md) directly, not MCP |
-| Deterministic tests | use [Ollama](providers/ollama.md) + plain `@tool` — MCP adds I/O |
+| Reproducible tests | use [Ollama](providers/ollama.md) + plain `@tool` — MCP adds I/O |
 
 ## Getting started — consume an MCP server
 

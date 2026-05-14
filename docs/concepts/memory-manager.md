@@ -6,7 +6,7 @@ facts learned in thread A are invisible in thread B — and when a thread
 is deleted, everything in it is gone.
 
 `MemoryManager` fills that gap. It runs two lifecycle hooks
-automatically on every agent invocation:
+on every agent invocation:
 
 | Hook | When | What |
 |---|---|---|
@@ -161,7 +161,7 @@ after the main system prompt:
 [System Prompt]
 You are a helpful engineering assistant.
 
-[Memory Block — injected automatically]
+[Memory Block — injected by MemoryManager]
 [Long-term Memory]
 USER [role]: Senior Python engineer, new to React.
 FEEDBACK [no_db_mocks]: Never mock the database. Why: prior mock/prod divergence.
@@ -210,7 +210,7 @@ class MyMemoryManager(BaseMemoryManager):
 ```
 
 The base class provides `on_session_start` and `on_session_end`
-automatically — you don't need to implement them unless you need custom
+by default — you don't need to implement them unless you need custom
 injection or extraction timing.
 
 ## Observability

@@ -16,7 +16,7 @@ a stream of typed events your UI can render).
 | You want… | This is the right provider |
 |---|---|
 | Claude Opus / Sonnet / Haiku from Anthropic directly | ✓ |
-| Long system prompts amortised across many turns | ✓ — automatic prompt caching |
+| Long system prompts amortised across many turns | ✓ — built-in prompt caching |
 | Extended-thinking models with visible reasoning | ✓ — `ThinkEvent` stream |
 | Claude on Oracle infrastructure (no separate API key) | use [OCI](oci.md) — `oci:anthropic.claude-sonnet` |
 | GPT or Llama | use [OpenAI](openai.md) or [OCI](oci.md) instead |

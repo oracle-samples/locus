@@ -3,7 +3,7 @@
 This tutorial covers:
 
 - @task: define parallelizable units with retry and caching
-- @entrypoint: orchestrate tasks with automatic tracking
+- @entrypoint: orchestrate tasks with built-in tracking
 - TaskResult and EntrypointResult for metadata
 - Alternative to StateGraph for imperative workflows
 

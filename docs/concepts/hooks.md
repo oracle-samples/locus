@@ -103,7 +103,7 @@ agent = Agent(
 
 ### 3. Run
 
-The hook fires automatically — no further wiring.
+The hook fires on every agent run — no further wiring.
 
 ## What you get out of the box
 

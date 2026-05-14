@@ -151,7 +151,7 @@ A future locus release may bundle a typed judge directly into
 
 | Symptom | Likely cause |
 |---|---|
-| Case passes locally, fails in CI | Non-deterministic model. Pin the model id, lower `temperature`, run with `n=5` and look at variance. |
+| Case passes locally, fails in CI | Model output varies between runs. Pin the model id, lower `temperature`, run with `n=5` and look at variance. |
 | `max_duration_ms` flakes | Cold-start network latency. Use a wall-clock budget at the suite level, not per-case, or bump the per-case budget by 2×. |
 | `expected_tools` reports failure even though the tool ran | Case-sensitive name match — `book_flight` != `Book_Flight`. |
 | Score is 0.5 every time | One of two checks is consistently failing. Read `result.checks` — it carries the full pass/fail map. |

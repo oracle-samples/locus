@@ -177,7 +177,7 @@ on long research runs without losing recent reasoning steps.
 ## Observability
 
 `create_deepagent` returns a standard `locus.Agent`, so all `deepagent.*`
-SSE events emit automatically when a `run_context` is active:
+SSE events stream out whenever a `run_context` is active:
 
 ```python
 from locus.observability import run_context, get_event_bus

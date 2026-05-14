@@ -9,11 +9,11 @@ hide:
 
 # Multi-agent workflows built for <span class="accent">production.</span>
 
-Describe the task. locus selects the protocol and coordinates the agents — automatically.
+Describe the task. locus selects the protocol and coordinates the agents.
 
 <div class="locus-stat-strip" markdown>[direct answer](concepts/router.md) · [pipeline](concepts/multi-agent/composition.md) · [fan-out](concepts/multi-agent/composition.md) · [debate](concepts/multi-agent/composition.md) · [code + test](concepts/multi-agent/composition.md) · [approval gate](concepts/interrupts.md) · [A2A](concepts/multi-agent/a2a.md) · [handoff](concepts/multi-agent/handoff.md)</div>
 
-- **Describe goals, not agent topologies.** The LLM fills a typed `GoalFrame`; a deterministic registry picks one of eight protocols — adaptive routing without handing the model the steering wheel.
+- **Describe goals, not agent topologies.** The LLM fills a typed `GoalFrame`; a typed registry picks one of eight protocols — adaptive routing without handing the model the steering wheel.
 - **Agents that verify their own reasoning.** Reflexion scores every turn; Grounding checks every factual claim against the tool result that produced it.
 - **Full-stack observability, zero overhead.** Every decision, tool call, and reasoning step streams as a typed event. Causal tracing across the entire agent network.
 
@@ -82,7 +82,7 @@ async with run_context() as rid:
 - :material-routes:{ .lg .middle } **[Cognitive router](concepts/router.md)**
 
     ---
-    `locus.router` is a meta-orchestration layer on top of locus's existing primitives. It decomposes a natural-language request into a typed `GoalFrame`, then deterministically picks a `Protocol` and compiles it onto a real `Agent` / `SequentialPipeline` / `Orchestrator` from the standard locus toolkit.
+    `locus.router` is a meta-orchestration layer on top of locus's existing primitives. It decomposes a natural-language request into a typed `GoalFrame`, picks a `Protocol` from a typed registry, and compiles it onto a real `Agent` / `SequentialPipeline` / `Orchestrator` from the standard locus toolkit.
 
 - :material-chart-timeline-variant:{ .lg .middle } **[Grounded reasoning](concepts/reasoning.md)**
 
@@ -108,7 +108,7 @@ async with run_context() as rid:
 
 ### Let locus pick the right coordination strategy
 
-Describe your goal in plain language. locus classifies the task, selects the best coordination pattern, and assembles the right agents — automatically. You don't choose between parallel vs sequential; locus does.
+Describe your goal in plain language. locus classifies the task, selects the best coordination pattern, and assembles the right agents for you. You don't choose between parallel vs sequential; locus does.
 
 ```python
 from locus.router import (
@@ -398,7 +398,7 @@ From simple parallel research to multi-team handoffs across services. Pick one p
 
     ---
 
-    NL → typed `GoalFrame` → deterministic protocol selection →
+    NL → typed `GoalFrame` → typed protocol selection →
     compiled `Agent` / `Pipeline` / `Orchestrator`. The LLM fills a
     schema; the registry picks the shape.
 
@@ -484,7 +484,7 @@ From simple parallel research to multi-team handoffs across services. Pick one p
 
 | | |
 |---|---|
-| **🧭 Multi-agent reasoning orchestrator** | Picks one of eight protocols (`direct_response`, `plan_execute_validate`, `specialist_fanout`, `debate`, `codegen_test_validate`, `approval_gated_execution`, `a2a_delegate`, `handoff_chain`) and instantiates the matching locus primitive. The LLM fills a schema; routing is deterministic. |
+| **🧭 Multi-agent reasoning orchestrator** | Picks one of eight protocols (`direct_response`, `plan_execute_validate`, `specialist_fanout`, `debate`, `codegen_test_validate`, `approval_gated_execution`, `a2a_delegate`, `handoff_chain`) and instantiates the matching locus primitive. The LLM fills a schema; routing is rule-based and auditable. |
 | **🤝 Multi-agent patterns** | Seven native patterns — Composition, Orchestrator, Swarm, Handoff, StateGraph, Functional, DeepAgent — plus cross-process A2A. Use them directly when you know what you need. |
 | **📡 Observability** | Opt-in `EventBus` — one `run_context()` streams 60+ canonical events, no external broker. `TelemetryHook` exports OpenTelemetry traces + metrics to Grafana, Honeycomb, OCI APM. Zero overhead when unused. |
 

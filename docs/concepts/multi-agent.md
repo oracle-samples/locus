@@ -11,7 +11,7 @@ compile the right one from a natural-language task description.
 !!! tip "Don't know which shape to use?"
     [PRISM — the cognitive router](router.md) extracts a typed
     `GoalFrame` from your task and selects a matching protocol from a
-    deterministic registry. Eight built-in protocols, zero topology hand-writing.
+    typed registry. Eight built-in protocols, zero topology hand-writing.
 
 ## What you can ship today
 
@@ -100,7 +100,7 @@ async def split(state):
 
 Returning a list of `Send` from a node spawns parallel executions —
 no `asyncio.gather`, no shared mutable state. Each result lands in
-`state[send.id]` automatically. Used by tutorials 42, 46, 48.
+`state[send.id]` keyed by the send id. Used by tutorials 42, 46, 48.
 
 ### `interrupt()` — pause for a human
 

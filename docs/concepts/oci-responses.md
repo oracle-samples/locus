@@ -50,9 +50,9 @@ time if the endpoint signals that requirement.
 **One thing only:** `ConversationManager` strategies (window,
 summarize, truncate) don't apply. They operate on the full message
 list, and on the Responses path that list lives server-side — there's
-nothing for them to trim. The runtime loop detects this automatically
-(via the `server_stateful` class flag) and skips the strategy step;
-you don't have to configure anything.
+nothing for them to trim. The runtime loop reads the `server_stateful`
+class flag and skips the strategy step; you don't have to configure
+anything.
 
 **Everything else works identically:**
 
@@ -111,7 +111,7 @@ if you need different behavior.
 | `OCIResponsesStateLostError` | `previous_response_id` is unknown or expired. Restart the run. |
 | `RuntimeError` | Generic 5xx / non-JSON body / transport error. Status code + first 300 chars of body included in the message. |
 
-No automatic fallback to chat/completions. Picking the Responses
+No fallback to chat/completions. Picking the Responses
 transport is explicit; an error on this path stays on this path.
 
 ## See also

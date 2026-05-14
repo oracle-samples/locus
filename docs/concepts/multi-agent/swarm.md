@@ -34,7 +34,7 @@ exits when the queue empties or `max_iterations` is hit.
 - ❌ The flow is actually **linear** → use [Composition](composition.md).
 - ❌ One agent should **decide** who runs → use [Orchestrator](orchestrator.md).
 - ❌ The **conversation transcript** should follow one role to another → use [Handoff](handoff.md).
-- ❌ You need **deterministic ordering** — swarms are non-deterministic
+- ❌ You need **strict execution order** — swarms run agents concurrently
   by design.
 
 ## Code

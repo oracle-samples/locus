@@ -3,7 +3,7 @@
 Three layers cooperate inside an agent run:
 
 1. **Validation** — typed tool arguments are JSON-schema-checked before
-   the call lands, automatically. No opt-in needed.
+   the call lands. No opt-in needed.
 2. **Guardrails** — content policy, PII redaction, dangerous-tool
    blocking, prompt/result length caps. Runs as a hook on the
    prompt-in / output-out boundaries.
@@ -84,7 +84,7 @@ agent = Agent(
 )
 ```
 
-Both policies are simple keyword classifiers — fast, deterministic,
+Both policies are simple keyword classifiers — fast, predictable,
 auditable. For production-grade content moderation, swap in an
 ML-backed policy (Oracle Content Moderation, OpenAI Moderation, etc.)
 behind the same `Policy.check(text) -> str | None` shape.
