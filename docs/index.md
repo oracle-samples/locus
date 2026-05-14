@@ -11,11 +11,11 @@ hide:
 
 Describe the task. locus selects the protocol and coordinates the agents.
 
-<div class="locus-stat-strip" markdown>[direct answer](concepts/router.md) · [pipeline](concepts/multi-agent/composition.md) · [fan-out](concepts/multi-agent/composition.md) · [debate](concepts/multi-agent/composition.md) · [code + test](concepts/multi-agent/composition.md) · [approval gate](concepts/interrupts.md) · [A2A](concepts/multi-agent/a2a.md) · [handoff](concepts/multi-agent/handoff.md)</div>
+<div class="locus-stat-strip" markdown><span style="white-space:nowrap">[direct&nbsp;answer](concepts/router.md)</span> · <span style="white-space:nowrap">[pipeline](concepts/multi-agent/composition.md)</span> · <span style="white-space:nowrap">[fan&#8209;out](concepts/multi-agent/composition.md)</span> · <span style="white-space:nowrap">[debate](concepts/multi-agent/composition.md)</span> · <span style="white-space:nowrap">[code&nbsp;+&nbsp;test](concepts/multi-agent/composition.md)</span> · <span style="white-space:nowrap">[approval&nbsp;gate](concepts/interrupts.md)</span> · <span style="white-space:nowrap">[A2A](concepts/multi-agent/a2a.md)</span> · <span style="white-space:nowrap">[handoff](concepts/multi-agent/handoff.md)</span></div>
 
-- **Describe goals, not agent topologies.** The LLM fills a typed `GoalFrame`; a typed registry picks one of eight protocols — adaptive routing without handing the model the steering wheel.
-- **Agents that verify their own reasoning.** Reflexion scores every turn; Grounding checks every factual claim against the tool result that produced it.
-- **Full-stack observability, zero overhead.** Every decision, tool call, and reasoning step streams as a typed event. Causal tracing across the entire agent network.
+- **From idea to production agent in minutes, not weeks.** Describe the task; locus selects the coordination pattern and assembles the network from eight production-tested protocols.
+- **Self-critiquing agents with grounded outputs.** Every turn is scored; every factual claim is verified against the source that produced it. Hallucinations caught at the source, not in production.
+- **Full causal traceability.** Every decision, tool call, and reasoning step is a typed event you can replay, audit, and debug — at 2 a.m. or in your compliance report.
 
 [Launch workbench](https://codespaces.new/oracle-samples/locus?devcontainer_path=.devcontainer%2Fdevcontainer.json){ .md-button .md-button--primary }
 [GitHub](https://github.com/oracle-samples/locus){ .md-button }

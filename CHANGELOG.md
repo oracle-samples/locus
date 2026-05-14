@@ -8,6 +8,21 @@ policy.
 
 ## [Unreleased]
 
+### Fix (0.2.0b8) — DALL-E 3 deprecation + home-page enterprise voice
+
+- **`OpenAIImageProvider`** default model changed from `"dall-e-3"`
+  (deprecated by OpenAI) to `"gpt-image-1"`. Existing callers that pin
+  `model=` continue to work; only the default changed.
+- Live integration test (`test_openai_image_provider_round_trip`)
+  switched to `gpt-image-1` to match.
+- **`docs/index.md`** rewritten in enterprise buyer voice. New
+  hero copy ("Multi-agent workflows built for production."), three
+  outcome-focused bullets covering production deployment,
+  self-critiquing/grounded agents, and full causal traceability.
+  Stat strip uses `<span style="white-space:nowrap">` wrappers on each
+  protocol chip so the eight-pattern row never breaks awkwardly across
+  lines.
+
 ### Docs (0.2.0b7) — OCI Responses surfaced across existing pages + voice pass
 
 - **`concepts/providers/oci.md`** now lists three transports
