@@ -106,16 +106,33 @@
                 style="width:100%;resize:vertical;font-family:var(--font-mono,monospace);font-size:0.82rem"></textarea>
             </div>
             <div id="pattern-routing-toggle" data-testid="pattern-routing-toggle"
-              style="display:none;margin-top:0.5rem;font-size:0.82rem">
-              <label style="display:inline-flex;align-items:center;gap:0.4rem;cursor:pointer">
-                <input type="checkbox" id="pattern-use-llm-picker"
-                  data-testid="pattern-use-llm-picker" />
-                <span>Use LLM picker
-                  <span style="color:var(--or-text-muted,#666);font-weight:normal">
-                    (opt-in — model picks the protocol; default is rule-based)
-                  </span>
+              style="display:none;margin-top:0.75rem;font-size:0.82rem">
+              <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap">
+                <span style="font-weight:600">Selection mode</span>
+                <div role="radiogroup" aria-label="Cognitive routing mode"
+                  style="display:inline-flex;border:1px solid var(--or-border);border-radius:999px;padding:2px;background:var(--or-surface)">
+                  <label data-testid="pattern-mode-rules"
+                    style="display:inline-flex;align-items:center;gap:0.35rem;padding:0.25rem 0.7rem;border-radius:999px;cursor:pointer;user-select:none">
+                    <input type="radio" name="pattern-mode" value="rules" checked
+                      style="appearance:none;-webkit-appearance:none;width:0;height:0;margin:0" />
+                    <span class="mode-label">Rule-based</span>
+                  </label>
+                  <label data-testid="pattern-mode-llm"
+                    style="display:inline-flex;align-items:center;gap:0.35rem;padding:0.25rem 0.7rem;border-radius:999px;cursor:pointer;user-select:none">
+                    <input type="radio" name="pattern-mode" value="llm"
+                      style="appearance:none;-webkit-appearance:none;width:0;height:0;margin:0" />
+                    <span class="mode-label">LLM picker</span>
+                  </label>
+                </div>
+                <span id="pattern-mode-hint"
+                  style="color:var(--or-text-mute);font-size:0.75rem;line-height:1.4;flex-basis:100%">
+                  <strong>Rule-based</strong>: deterministic <code>_rank_key</code> ranker — auditable, reproducible.
+                  <strong>LLM picker</strong>: opt-in <code>LLMProtocolPicker</code> — the model picks among
+                  filtered candidates and emits a rationale.
                 </span>
-              </label>
+              </div>
+              <input type="checkbox" id="pattern-use-llm-picker"
+                data-testid="pattern-use-llm-picker" style="display:none" />
             </div>
             <div class="form-row" style="margin-top: 0.5rem">
               <div style="flex:1"></div>

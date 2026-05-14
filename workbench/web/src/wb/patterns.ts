@@ -143,13 +143,15 @@ async function doRun(): Promise<void> {
         (msg) => { showError(msg); setRunning(false); cancelStream = null; },
       );
     } else {
-      const useLLMPicker =
-        current.id === "cognitive_routing" &&
-        ($<HTMLInputElement>("#pattern-use-llm-picker")?.checked ?? false);
+      const useLLMPicker = current.id === "cognitive_routing" && readSelectedMode() === "llm";
       const result = await runPattern(current.id, prompt, provider, {
         use_llm_picker: useLLMPicker,
       });
-      out.textContent = result.reply || "(no reply)";
+      if (current.id === "cognitive_routing") {
+        renderRoutingResult(out, result, useLLMPicker);
+      } else {
+        out.textContent = result.reply || "(no reply)";
+      }
       setRunning(false);
     }
   } catch (err) {
@@ -162,6 +164,67 @@ function showError(msg: string): void {
   const err = $("#pattern-error");
   err.textContent = msg;
   err.style.display = "block";
+}
+
+function readSelectedMode(): "rules" | "llm" {
+  const llmRadio = document.querySelector<HTMLInputElement>(
+    'input[name="pattern-mode"][value="llm"]',
+  );
+  return llmRadio?.checked ? "llm" : "rules";
+}
+
+interface RoutingEvent {
+  kind?: string;
+  text?: string;
+  extra?: { protocol_id?: string; mode?: string; rationale?: string };
+}
+
+interface RoutingResult {
+  reply?: string;
+  events?: RoutingEvent[];
+}
+
+function renderRoutingResult(
+  out: HTMLElement,
+  result: RoutingResult,
+  useLLMPicker: boolean,
+): void {
+  const proto = (result.events ?? []).find(
+    (e: RoutingEvent) => e.kind === "ProtocolSelected",
+  );
+  const protocolId = proto?.extra?.protocol_id ?? proto?.text ?? "?";
+  const rationale = proto?.extra?.rationale;
+  const modeLabel = useLLMPicker ? "llm_picked" : "rule_based";
+
+  const chip = document.createElement("div");
+  chip.className = "routing-result";
+  chip.setAttribute("data-testid", "routing-result");
+  const protoEl = document.createElement("span");
+  protoEl.className = "routing-result__protocol";
+  protoEl.textContent = protocolId;
+  const modeEl = document.createElement("span");
+  modeEl.className = "routing-result__mode";
+  modeEl.textContent = modeLabel;
+  chip.append(protoEl, modeEl);
+
+  out.style.whiteSpace = "normal";
+  out.innerHTML = "";
+  out.appendChild(chip);
+
+  if (rationale) {
+    const ratEl = document.createElement("div");
+    ratEl.className = "routing-result__rationale";
+    ratEl.textContent = rationale;
+    ratEl.setAttribute("data-testid", "routing-rationale");
+    out.appendChild(ratEl);
+  }
+
+  const reply = document.createElement("pre");
+  reply.style.whiteSpace = "pre-wrap";
+  reply.style.fontSize = "0.8rem";
+  reply.style.marginTop = "0.6rem";
+  reply.textContent = result.reply || "(no reply)";
+  out.appendChild(reply);
 }
 
 function _suggestedPrompt(id: string): string {

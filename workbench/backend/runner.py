@@ -900,10 +900,30 @@ async def _run_cognitive_routing(req: RunRequest) -> RunResponse:
     )
     router = Router(extractor=extractor, compiler=compiler)
 
+    # Subscribe to the event bus first so we can pull the `method` +
+    # `rationale` fields off the `router.protocol.selected` event the
+    # compiler emits during dispatch. Pinning a known run_id keeps the
+    # subscription scoped — concurrent dispatches don't bleed events.
+    from locus.observability import get_event_bus  # noqa: PLC0415
+
+    bus = get_event_bus()
+    run_id = f"workbench-cognitive-{_uuid.uuid4().hex[:12]}"
+    captured: dict[str, Any] = {}
+
+    async def _capture() -> None:
+        async for ev in bus.subscribe(run_id):
+            if ev.event_type == "router.protocol.selected":
+                captured["method"] = ev.data.get("method")
+                captured["rationale"] = ev.data.get("rationale")
+                break
+
+    capture_task = asyncio.create_task(_capture())
+
     events: list[RunEvent] = []
     try:
-        result = await router.dispatch(req.prompt)
+        result = await router.dispatch(req.prompt, run_id=run_id)
     except Exception as exc:  # noqa: BLE001
+        capture_task.cancel()
         events.append(
             RunEvent(
                 kind="ErrorEvent",
@@ -911,10 +931,14 @@ async def _run_cognitive_routing(req: RunRequest) -> RunResponse:
                 extra={"mode": "llm_picker" if req.use_llm_picker else "rule_based"},
             ),
         )
-        return RunResponse(
-            reply="",
-            events=events,
-        )
+        return RunResponse(reply="", events=events)
+
+    # Give the capture task a brief window to finish — the event was
+    # published synchronously during dispatch, so this is just a yield.
+    try:
+        await asyncio.wait_for(capture_task, timeout=0.2)
+    except (TimeoutError, asyncio.TimeoutError):
+        capture_task.cancel()
 
     events.append(
         RunEvent(
@@ -923,6 +947,8 @@ async def _run_cognitive_routing(req: RunRequest) -> RunResponse:
             extra={
                 "mode": "llm_picker" if req.use_llm_picker else "rule_based",
                 "protocol_id": result.protocol_id,
+                "method": captured.get("method"),
+                "rationale": captured.get("rationale"),
             },
         ),
     )
