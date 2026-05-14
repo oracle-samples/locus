@@ -39,6 +39,12 @@ Without those env vars Parts 2-5 print the wiring snippet and skip.
 
 Difficulty: Intermediate
 
+## See also
+
+- [Concepts: OCI GenAI](../concepts/providers/oci.md) — V1 vs SDK transports.
+- [How-to: OCI DAC endpoints](../how-to/oci-dac.md) — config recipes.
+- [OCI Generative AI — concepts (Dedicated AI Cluster)](https://docs.oracle.com/iaas/Content/generative-ai/concepts.htm) — Oracle reference.
+
 ## Source
 
 ```python

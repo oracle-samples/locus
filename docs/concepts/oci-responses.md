@@ -119,3 +119,16 @@ transport is explicit; an error on this path stays on this path.
 - [Hooks](hooks.md) — what `on_after_tool_call` sees on either transport
 - [OCI models — provider page](../how-to/oci-models.md) — when to pick which OCI transport
 - [Streaming](streaming.md) — how `ModelChunkEvent` works on streamed runs
+
+### Oracle reference docs
+
+- [OCI Responses API](https://docs.oracle.com/iaas/Content/generative-ai/responses-api.htm)
+  — the `/openai/v1/responses` endpoint this transport targets, plus
+  the full list of supported tool types (file search, code interpreter,
+  function calling, MCP).
+- [OCI OpenAI-compatible endpoints](https://docs.oracle.com/iaas/Content/generative-ai/openai-compatible-api.htm)
+  — base URL shape, auth modes, and how Responses fits alongside
+  Conversations and Chat Completions.
+- [OCI Generative AI — concepts](https://docs.oracle.com/iaas/Content/generative-ai/concepts.htm)
+  — serving modes (on-demand vs Dedicated AI Cluster) that apply to
+  the Responses endpoint too.

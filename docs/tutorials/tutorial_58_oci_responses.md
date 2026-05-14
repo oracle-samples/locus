@@ -43,6 +43,8 @@ python examples/tutorial_58_oci_responses.py
 - [Tutorial 00 — three OCI transports side-by-side](tutorial_00_oci_transports.md)
 - [Tutorial 57 — OCIOpenAIModel deep dive](tutorial_57_oci_openai_chat.md)
 - [Concepts: OCI Responses](../concepts/oci-responses.md)
+- [OCI Responses API — Oracle docs](https://docs.oracle.com/iaas/Content/generative-ai/responses-api.htm)
+- [OCI OpenAI-compatible endpoints — Oracle docs](https://docs.oracle.com/iaas/Content/generative-ai/openai-compatible-api.htm)
 
 ## Source
 

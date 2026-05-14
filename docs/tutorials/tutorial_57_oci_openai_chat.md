@@ -32,6 +32,7 @@ python examples/tutorial_57_oci_openai_chat.py
 
 - [Tutorial 00 — three OCI transports side-by-side](tutorial_00_oci_transports.md)
 - [Tutorial 58 — OCI Responses transport](tutorial_58_oci_responses.md)
+- [OCI OpenAI-compatible endpoints — Oracle docs](https://docs.oracle.com/iaas/Content/generative-ai/openai-compatible-api.htm)
 
 ## Source
 
