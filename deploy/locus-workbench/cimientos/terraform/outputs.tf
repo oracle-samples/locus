@@ -35,6 +35,31 @@ output "vcn_id" {
   value = oci_core_vcn.workbench.id
 }
 
+# Vault — the GitHub Actions workflow looks up secrets by name:
+#   oci secrets secret-bundle get-secret-bundle-by-name \
+#     --vault-id <vault_id> --secret-name locus-workbench-ocir-auth-token
+# So all the workflow needs at runtime is the vault OCID.
+output "vault_id" {
+  description = "OCI Vault holding the workbench runtime secrets."
+  value       = oci_kms_vault.workbench.id
+}
+
+output "vault_secret_names" {
+  description = "Names of the secrets the workflow expects to read from the vault."
+  value       = [for s in oci_vault_secret.workbench : s.secret_name]
+}
+
+# Set each secret post-apply with:
+#   oci vault secret update-base64 --secret-id <ocid> --secret-content-content "$(printf 'real-value' | base64)"
+output "vault_secret_set_commands" {
+  description = "Per-secret one-liners to set the real value after first apply."
+  value = {
+    for k, s in oci_vault_secret.workbench :
+    k => "oci vault secret update-base64 --secret-id ${s.id} --secret-content-content \"$(printf 'YOUR_VALUE' | base64)\""
+  }
+  sensitive = false
+}
+
 # Region-to-OCIR-prefix map for the few regions Free Tier commonly
 # lands in. Extend as needed.
 locals {

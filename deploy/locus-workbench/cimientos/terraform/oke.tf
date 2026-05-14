@@ -1,7 +1,15 @@
-# Always-Free OKE cluster — BASIC_CLUSTER skips the $0.10/hr control
-# plane charge. Public endpoint so kubectl works from anywhere with
-# the cluster's kubeconfig. Single ARM A1.Flex node provides the
-# entire compute envelope for the workbench's 3 tiers.
+# OKE cluster — defaults to BASIC_CLUSTER which is the $0/hour
+# control-plane SKU on Always-Free. Switch ``type`` to
+# ``ENHANCED_CLUSTER`` if your tenancy already has the one BASIC slot
+# consumed by another cluster — the free-tier quota is one BASIC
+# cluster but up to 15 ENHANCED clusters (which cost $0.10/hr each
+# for the control plane). Use ``oci limits resource-availability get
+# --service-name container-engine --limit-name cluster-count`` to
+# check before applying.
+#
+# Public endpoint so kubectl works from anywhere with the cluster's
+# kubeconfig. Single ARM A1.Flex node provides the entire compute
+# envelope for the workbench's 3 tiers.
 
 data "oci_identity_availability_domains" "ads" {
   compartment_id = var.tenancy_ocid
@@ -64,7 +72,11 @@ resource "oci_containerengine_node_pool" "workbench" {
     size = var.node_pool_size
     placement_configs {
       availability_domain = data.oci_identity_availability_domains.ads.availability_domains[0].name
-      subnet_id           = oci_core_subnet.public.id
+      # Dedicated workers subnet — must be different from the LB subnet
+      # listed in `options.service_lb_subnet_ids`. OCI rejects subnets
+      # that appear in both with "service subnets cannot be used by
+      # node pools".
+      subnet_id = oci_core_subnet.workers.id
     }
     nsg_ids = [oci_core_network_security_group.workers.id]
     node_pool_pod_network_option_details {

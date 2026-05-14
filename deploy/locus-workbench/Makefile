@@ -1,7 +1,7 @@
 # locus-workbench — full free-tier deploy on OCI Always-Free OKE.
 #
 # One-shot from a clean tenancy:
-#   1. cp terraform/terraform.tfvars.example terraform/terraform.tfvars
+#   1. cp cimientos/terraform/terraform.tfvars.example cimientos/terraform/terraform.tfvars
 #      then fill in tenancy_ocid + compartment_ocid + node_pool_image_id
 #   2. make tf-apply       (provisions VCN + OKE + OCIR repo)
 #   3. make kubeconfig     (writes ~/.kube/locus-workbench.kubeconfig)
@@ -17,7 +17,7 @@ SHELL := /usr/bin/env bash
 
 # === Where things live =======================================================
 REPO_ROOT       := $(abspath ../..)
-TF_DIR          := terraform
+TF_DIR          := cimientos/terraform
 HELM_DIR        := helm/locus-workbench
 KUBECONFIG_PATH := $(HOME)/.kube/locus-workbench.kubeconfig
 RELEASE_NAME    := locus-workbench

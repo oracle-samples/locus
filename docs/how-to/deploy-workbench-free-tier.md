@@ -39,7 +39,8 @@ One Deployment, one Service, one image — the workbench's existing
 
 | Path | What it provisions |
 |---|---|
-| [`deploy/locus-workbench/terraform/`](https://github.com/oracle-samples/locus/tree/main/deploy/locus-workbench/terraform) | VCN (`10.42.0.0/16`), IGW, public + pod subnets, NSGs for OKE API and workers, BASIC OKE cluster, ARM A1.Flex node pool, OCIR repo |
+| [`deploy/locus-workbench/cimientos/terraform/`](https://github.com/oracle-samples/locus/tree/main/deploy/locus-workbench/cimientos/terraform) | VCN (`10.42.0.0/16`), IGW, public + pod subnets, NSGs for OKE API + workers, OKE cluster (BASIC default), ARM A1.Flex node pool, OCIR repo, KMS Vault + KMS Key + 6 secret containers |
+| [`deploy/locus-workbench/scripts/`](https://github.com/oracle-samples/locus/tree/main/deploy/locus-workbench/scripts) | `bootstrap-bucket.sh` for the one-time TF state bucket setup (S3-compat remote backend) |
 | [`deploy/locus-workbench/helm/locus-workbench/`](https://github.com/oracle-samples/locus/tree/main/deploy/locus-workbench/helm/locus-workbench) | Deployment (one container, all three tiers), LoadBalancer Service annotated for Flex 10 Mbps, ServiceAccount, optional Ingress |
 | [`deploy/locus-workbench/Makefile`](https://github.com/oracle-samples/locus/tree/main/deploy/locus-workbench/Makefile) | `tf-apply`, `kubeconfig`, `ocir-login`, `docker-push`, `ocir-secret`, `helm-install`, `url`, `destroy` |
 
@@ -47,10 +48,10 @@ One Deployment, one Service, one image — the workbench's existing
 
 ```bash
 cd deploy/locus-workbench
-cp terraform/terraform.tfvars.example terraform/terraform.tfvars
+cp cimientos/terraform/terraform.tfvars.example cimientos/terraform/terraform.tfvars
 ```
 
-Edit `terraform/terraform.tfvars` and replace the placeholders:
+Edit `cimientos/terraform/terraform.tfvars` and replace the placeholders:
 
 - `tenancy_ocid` — your Free-Tier tenancy OCID
 - `compartment_ocid` — same as tenancy for the simplest setup (no
@@ -145,7 +146,7 @@ make destroy
 Type `yes` at the confirm prompt. Removes the Helm release first,
 then `terraform destroy` removes the cluster, node pool, OCIR repo,
 VCN, and all subnets. State file stays in
-`terraform/terraform.tfstate` until you delete it.
+`cimientos/terraform/terraform.tfstate` until you delete it.
 
 ## Cost
 

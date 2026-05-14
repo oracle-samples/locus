@@ -10,7 +10,7 @@ envelope.
 
 | Path | What it does |
 |---|---|
-| `terraform/` | VCN + IGW + 2 subnets + NSGs + BASIC OKE cluster + ARM node pool + OCIR repo |
+| `cimientos/terraform/` | VCN + IGW + 2 subnets + NSGs + BASIC OKE cluster + ARM node pool + OCIR repo |
 | `helm/locus-workbench/` | Single-pod Deployment running all three workbench tiers, plus LoadBalancer Service |
 | `Makefile` | One-shot targets — `tf-apply`, `kubeconfig`, `docker-push`, `helm-install`, `url`, `destroy` |
 
@@ -21,8 +21,8 @@ cd deploy/locus-workbench
 
 # 1. Fill in the two required OCIDs (tenancy + compartment) +
 #    the worker image OCID.
-cp terraform/terraform.tfvars.example terraform/terraform.tfvars
-$EDITOR terraform/terraform.tfvars
+cp cimientos/terraform/terraform.tfvars.example cimientos/terraform/terraform.tfvars
+$EDITOR cimientos/terraform/terraform.tfvars
 
 # 2. Provision the network + cluster + registry (~10 min on first apply).
 make tf-apply
@@ -70,7 +70,7 @@ make destroy
 
 Confirms with a `yes` prompt, then removes the Helm release, OKE
 cluster, node pool, OCIR repo, VCN, and all subnets. State file
-stays in `terraform/terraform.tfstate` until you delete it.
+stays in `cimientos/terraform/terraform.tfstate` until you delete it.
 
 ## Further reading
 
