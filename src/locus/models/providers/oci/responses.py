@@ -24,7 +24,7 @@ identity. Reuses the existing httpx signer (``OCIRequestSigner``).
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
@@ -98,6 +98,20 @@ class OCIResponsesConfig(BaseModel):
     max_output_tokens: int = 4096
     temperature: float = 0.7
     request_timeout: float = 600.0
+    store: bool = Field(
+        default=True,
+        description=(
+            "Whether the OCI server should persist responses and accept "
+            "``previous_response_id`` for multi-turn continuation. Set to "
+            "False for tenancies with Zero Data Retention (ZDR) enabled — "
+            "the server will reject `previous_response_id` otherwise. When "
+            "False, ``store=false`` is sent on every request, the model "
+            "advertises ``server_stateful=False`` so the agent sends the "
+            "full message history each turn, and ``provider_state`` stays "
+            "empty. ZDR tenants still benefit from access to Responses-"
+            "only models like ``openai.gpt-5.5-pro``."
+        ),
+    )
 
 
 class OCIResponsesModel(BaseModel):
@@ -120,10 +134,6 @@ class OCIResponsesModel(BaseModel):
     Pass exactly one of ``profile``, ``auth_type``.
     """
 
-    # Marker the runtime loop reads to enable the "send only the latest-turn
-    # slice + provider_state" code path.
-    server_stateful: ClassVar[bool] = True
-
     config: OCIResponsesConfig
     _client: httpx.AsyncClient | None = None
     _signer: Any = None  # AbstractBaseSigner — lazy import-free
@@ -144,6 +154,7 @@ class OCIResponsesModel(BaseModel):
         max_output_tokens: int = 4096,
         temperature: float = 0.7,
         request_timeout: float = 600.0,
+        store: bool = True,
         **kwargs: Any,
     ) -> None:
         """Initialize the OCI Responses model.
@@ -168,6 +179,16 @@ class OCIResponsesModel(BaseModel):
             max_output_tokens: Default output token cap.
             temperature: Default sampling temperature.
             request_timeout: HTTP request timeout in seconds.
+            store: When True (default) the OCI server persists responses
+                and the agent uses ``previous_response_id`` for cheap
+                multi-turn continuation. Set False for tenancies with
+                Zero Data Retention (ZDR) enabled — the server rejects
+                ``previous_response_id`` otherwise. With ``store=False``
+                the model reports ``server_stateful=False`` to the agent
+                runtime, so the agent sends the full message history
+                each turn (like chat/completions) but still uses the
+                Responses endpoint — useful for Responses-only models
+                in ZDR tenants.
 
         Raises:
             ValueError: If zero or both auth modes are set, if
@@ -205,6 +226,7 @@ class OCIResponsesModel(BaseModel):
             config_file=config_file,
             compartment_id=compartment_id,
             project_ocid=project_ocid,
+            store=store,
             base_url=base_url or build_oci_openai_base_url(region),
             max_output_tokens=max_output_tokens,
             temperature=temperature,
@@ -212,6 +234,19 @@ class OCIResponsesModel(BaseModel):
             **kwargs,
         )
         super().__init__(config=config)
+
+    @property
+    def server_stateful(self) -> bool:
+        """Whether this model relies on OCI-side response persistence.
+
+        Reflects :attr:`OCIResponsesConfig.store`. The agent runtime
+        reads this to decide between the latest-turn-slice +
+        ``provider_state`` flow (True) and the stateless full-history
+        flow (False). ZDR tenancies set ``store=False`` at construction
+        so the agent automatically picks the stateless path and avoids
+        ``OCIResponsesStateLostError`` on every turn.
+        """
+        return self.config.store
 
     def _build_signer(self) -> AbstractBaseSigner:
         if self.config.auth_type == "instance_principal":
@@ -282,6 +317,7 @@ class OCIResponsesModel(BaseModel):
             or kwargs.pop("max_output_tokens", self.config.max_output_tokens),
             stream=False,
             response_format=kwargs.pop("response_format", None),
+            store=self.config.store,
         )
 
         client = self._http_client()
@@ -343,6 +379,7 @@ class OCIResponsesModel(BaseModel):
             or kwargs.pop("max_output_tokens", self.config.max_output_tokens),
             stream=True,
             response_format=kwargs.pop("response_format", None),
+            store=self.config.store,
         )
 
         client = self._http_client()

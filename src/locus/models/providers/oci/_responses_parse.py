@@ -41,6 +41,7 @@ def build_request_body(
     max_output_tokens: int | None = None,
     stream: bool = False,
     response_format: dict[str, Any] | None = None,
+    store: bool = True,
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a Responses API POST body from Locus messages.
@@ -91,16 +92,32 @@ def build_request_body(
             continue
 
         if msg.role == Role.ASSISTANT:
-            # Including a prior assistant message only makes sense on
-            # turn 1 if the caller has primed the conversation manually;
-            # the runtime loop strips assistant messages out of the
-            # turn-N slice already. Pass it through as a message item.
+            # An assistant message can carry text content AND/OR tool
+            # calls. Both need to be reconstructed as Responses input
+            # items so the server has context for any function_call_output
+            # items that follow.
+            #
+            # Text → ``{type: message, role: assistant, content: [output_text]}``
+            # Tool calls → one ``{type: function_call, ...}`` item per call,
+            # in the same order. Required in stateless mode (``store=False``):
+            # without the function_call item, a subsequent
+            # function_call_output has no call_id anchor and the server
+            # returns 400.
             if msg.content:
                 input_items.append(
                     {
                         "type": "message",
                         "role": "assistant",
                         "content": [{"type": "output_text", "text": msg.content}],
+                    }
+                )
+            for tc in msg.tool_calls or []:
+                input_items.append(
+                    {
+                        "type": "function_call",
+                        "call_id": tc.id,
+                        "name": tc.name,
+                        "arguments": json.dumps(tc.arguments) if tc.arguments else "{}",
                     }
                 )
             continue
@@ -119,7 +136,11 @@ def build_request_body(
 
     if instructions_parts:
         body["instructions"] = "\n\n".join(instructions_parts)
-    if previous_response_id is not None:
+    # In stateless mode (ZDR tenancies, ``store=False``) we also drop
+    # any inbound previous_response_id — the server can't honour it.
+    if store is False:
+        body["store"] = False
+    elif previous_response_id is not None:
         body["previous_response_id"] = previous_response_id
     if tools:
         body["tools"] = [_translate_tool_schema(t) for t in tools]
