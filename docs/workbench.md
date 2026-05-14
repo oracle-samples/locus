@@ -54,9 +54,11 @@ You paste your provider key once per tab — **the workbench never
 persists API keys to localStorage**, so closing the tab discards
 everything.
 
-## Two paths to spin it up
+## Three paths to spin it up
 
-Pick whichever fits.
+Pick whichever fits — **Codespaces** for zero install, **Docker** for a
+local container with BYO key, or **From source** for iterating on the
+workbench itself.
 
 ### Path A — GitHub Codespaces (zero install, free)
 
@@ -120,7 +122,7 @@ docker run --rm \
 
 Stop with `Ctrl-C`; the `--rm` flag removes the container on exit.
 
-## Path C — From source (development)
+### Path C — From source (development)
 
 For iterating on the workbench itself:
 
@@ -139,10 +141,17 @@ Or use the `Makefile` in `workbench/`:
 
 ```bash
 cd workbench && make install
-make backend   # in pane 1
-make bff       # in pane 2
-make web       # in pane 3
+make backend   # pane 1 — FastAPI runner on :8100
+make bff       # pane 2 — Express BFF on :3101
+make web       # pane 3 — Vite dev server on :5173
 ```
+
+`make install` runs `npm install` for both `bff/` and `web/` plus
+`npx playwright install chromium` for the e2e suite. The `backend`
+target is the workbench's FastAPI runner — distinct from
+`backend-research` and `backend-finance`, which spin up the A2A
+mesh demo peers for [tutorial 34](tutorials/tutorial_34_a2a_protocol.md),
+not the workbench itself.
 
 ## Provider settings
 

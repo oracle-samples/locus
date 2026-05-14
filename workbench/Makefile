@@ -2,9 +2,20 @@
 # Playwright e2e. Each `make` target runs in the foreground so you can chain
 # them across panes / terminals.
 
-.PHONY: install backend-research backend-finance bff web e2e clean
+.PHONY: install backend backend-research backend-finance bff web e2e clean
 
-# === Backend (locus python A2A peers) ========================================
+# === Backend (workbench FastAPI runner — the actual workbench backend) =======
+# This is the runner the workbench UI talks to. Three tiers run side-by-side:
+#   make backend   (uvicorn :8100)   | make bff   (Express :3101)
+#   make web       (Vite :5173)
+# The backend-research / backend-finance targets below are unrelated — they
+# spin up the A2A mesh demo peers for tutorial 34, not the workbench itself.
+WORKBENCH_PORT ?= 8100
+
+backend:
+	cd backend && python -m uvicorn --app-dir . runner:app --port $(WORKBENCH_PORT)
+
+# === A2A mesh demo peers (tutorial 34 — separate from the workbench) =========
 # Reuses the merged a2a-mesh project under examples/projects/a2a-mesh/src.
 # Pass LOCUS_MODEL_PROVIDER=oci + the BOAT-OC1 env block from your shell to
 # run against real OCI GenAI; defaults to MockModel.
