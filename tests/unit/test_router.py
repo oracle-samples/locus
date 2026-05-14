@@ -685,3 +685,266 @@ class TestRouterSkillsWiring:
         # no domain-specific skills.
         assert "safety-checklist" in plugins[0].available_skills
         assert "ops-triage" not in plugins[0].available_skills
+
+
+# ---------------------------------------------------------------------------
+# LLM Protocol Picker — opt-in second mode
+# ---------------------------------------------------------------------------
+
+
+class TestFilterCandidates:
+    """`ProtocolRegistry.filter_candidates` returns the same survivors
+    that `select()`'s inline filter would produce — additive method."""
+
+    def test_filter_isolates_handles(self):
+        reg = ProtocolRegistry()
+        reg.register_many(builtin_protocols())
+        # ANSWER goal — only protocols with ANSWER in handles + risk_max
+        # >= LOW survive. direct_response is the only one.
+        survivors = reg.filter_candidates(_frame(primary_goal=TaskType.ANSWER))
+        assert [p.id for p in survivors] == ["direct_response"]
+
+    def test_filter_returns_multiple_when_goals_overlap(self):
+        reg = ProtocolRegistry()
+        reg.register_many(builtin_protocols())
+        # COMPARE is handled by specialist_fanout (risk_max=MEDIUM) AND
+        # debate (risk_max=LOW). At risk=LOW both survive.
+        survivors = reg.filter_candidates(_frame(primary_goal=TaskType.COMPARE))
+        ids = {p.id for p in survivors}
+        assert {"specialist_fanout", "debate"}.issubset(ids)
+
+    def test_filter_empty_on_no_match(self):
+        reg = ProtocolRegistry()
+        reg.register_many(builtin_protocols())
+        # No protocol handles PLAN at HIGH risk.
+        survivors = reg.filter_candidates(_frame(primary_goal=TaskType.PLAN, risk=Risk.HIGH))
+        assert survivors == []
+
+
+def _picker_compiler(picker, *, protocols=None):
+    """Build a compiler with the picker plugged in. No skills, no a2a."""
+    return CognitiveCompiler(
+        protocols=protocols or _full_registry(),
+        capabilities=CapabilityIndex(create_registry(_echo)),
+        policy=PolicyGate(),
+        model=MagicMock(),
+        protocol_picker=picker,
+    )
+
+
+def _full_registry() -> ProtocolRegistry:
+    reg = ProtocolRegistry()
+    reg.register_many(builtin_protocols())
+    return reg
+
+
+class TestLLMProtocolPicker:
+    """The opt-in picker path. Filters first, then asks the LLM.
+    Falls back to rule-based on any picker failure."""
+
+    def test_picker_disabled_by_default_uses_rule_based(self):
+        """Regression: no `protocol_picker=` → unchanged behaviour."""
+        compiler = CognitiveCompiler(
+            protocols=_full_registry(),
+            capabilities=CapabilityIndex(create_registry(_echo)),
+            policy=PolicyGate(),
+            model=MagicMock(),
+        )
+        assert compiler.protocol_picker is None
+
+    def test_picker_short_circuits_on_single_candidate(self):
+        """One candidate post-filter → picker NOT invoked, method =
+        single_candidate. Verified via mock assertion."""
+        from locus.router import LLMProtocolPicker
+
+        picker = MagicMock(spec=LLMProtocolPicker)
+        compiler = _picker_compiler(picker)
+
+        async def _drive() -> tuple[Any, str, str | None]:
+            # ANSWER → only direct_response survives the filter.
+            candidates = compiler.protocols.filter_candidates(
+                _frame(primary_goal=TaskType.ANSWER),
+                available_capabilities=set(),
+            )
+            return await compiler._pick_protocol(
+                _frame(primary_goal=TaskType.ANSWER),
+                candidates,
+                run_id=None,
+            )
+
+        protocol, method, rationale = asyncio.run(_drive())
+        assert protocol.id == "direct_response"
+        assert method == "single_candidate"
+        assert rationale is None
+        picker.pick.assert_not_called()
+
+    def test_picker_happy_path_returns_pick_with_rationale(self):
+        """Multiple candidates + picker → picker called, method =
+        llm_picked, rationale threaded through."""
+        from locus.router.picker import LLMProtocolPicker
+
+        async def _fake_pick(frame, candidates):
+            # Pick the second candidate, with a one-liner rationale.
+            return candidates[1], "Picked debate for principled comparison."
+
+        picker = MagicMock(spec=LLMProtocolPicker)
+        picker.pick = _fake_pick
+        compiler = _picker_compiler(picker)
+
+        async def _drive():
+            frame = _frame(primary_goal=TaskType.COMPARE)
+            candidates = compiler.protocols.filter_candidates(frame, available_capabilities=set())
+            assert len(candidates) >= 2  # precondition
+            return await compiler._pick_protocol(frame, candidates, run_id=None)
+
+        protocol, method, rationale = asyncio.run(_drive())
+        assert method == "llm_picked"
+        assert rationale == "Picked debate for principled comparison."
+        # The mock chose candidates[1]; verify it's in the registry.
+        assert protocol.id in {p.id for p in builtin_protocols()}
+
+    def test_picker_raises_falls_back_to_rule_based(self):
+        """Picker exception → fall back to _rank_key, method =
+        rule_based_fallback."""
+        from locus.router.picker import LLMProtocolPicker
+
+        async def _boom(frame, candidates):
+            raise RuntimeError("model unreachable")
+
+        picker = MagicMock(spec=LLMProtocolPicker)
+        picker.pick = _boom
+        compiler = _picker_compiler(picker)
+
+        async def _drive():
+            frame = _frame(primary_goal=TaskType.COMPARE)
+            candidates = compiler.protocols.filter_candidates(frame, available_capabilities=set())
+            return await compiler._pick_protocol(frame, candidates, run_id=None)
+
+        protocol, method, rationale = asyncio.run(_drive())
+        assert method == "rule_based_fallback"
+        assert rationale is None
+        # The fallback must produce a valid registered protocol.
+        assert protocol.id in {p.id for p in builtin_protocols()}
+
+    def test_picker_unknown_id_falls_back(self):
+        """Picker returns id not in candidates → PickerError caught,
+        rule-based fallback wins."""
+        from locus.router.picker import LLMProtocolPicker, PickerError
+
+        async def _hallucinate(frame, candidates):
+            raise PickerError("picker hallucinated nonexistent_id")
+
+        picker = MagicMock(spec=LLMProtocolPicker)
+        picker.pick = _hallucinate
+        compiler = _picker_compiler(picker)
+
+        async def _drive():
+            frame = _frame(primary_goal=TaskType.COMPARE)
+            candidates = compiler.protocols.filter_candidates(frame, available_capabilities=set())
+            return await compiler._pick_protocol(frame, candidates, run_id=None)
+
+        protocol, method, _ = asyncio.run(_drive())
+        assert method == "rule_based_fallback"
+        assert protocol.id in {p.id for p in builtin_protocols()}
+
+    def test_compile_zero_candidates_raises_without_calling_picker(self):
+        """No protocol fits the filter → NoMatchingProtocolError, picker
+        never invoked (saves a token on impossible dispatches)."""
+        from locus.router.picker import LLMProtocolPicker
+
+        picker = MagicMock(spec=LLMProtocolPicker)
+        compiler = _picker_compiler(picker)
+
+        async def _drive():
+            # PLAN at HIGH risk — no built-in protocol covers this.
+            return await compiler.compile(_frame(primary_goal=TaskType.PLAN, risk=Risk.HIGH))
+
+        with pytest.raises(NoMatchingProtocolError):
+            asyncio.run(_drive())
+        picker.pick.assert_not_called()
+
+
+class TestLLMProtocolPickerInternals:
+    """Direct tests of `LLMProtocolPicker.pick()` — exercises the
+    prompt rendering, Agent invocation, and validation paths that
+    the higher-level compiler tests mock through."""
+
+    def test_pick_happy_path_returns_tuple(self):
+        from unittest.mock import patch
+
+        from locus.router.picker import LLMProtocolPicker, PickedProtocol
+
+        picker = LLMProtocolPicker(model=MagicMock())
+        protocols = builtin_protocols()
+        # debate + specialist_fanout both handle COMPARE.
+        candidates = [p for p in protocols if p.id in ("debate", "specialist_fanout")]
+
+        with patch("locus.agent.agent.Agent") as mock_agent_cls:
+            mock_agent_cls.return_value.invoke.return_value = _make_agent_result(
+                "picker output",
+                parsed=PickedProtocol(
+                    protocol_id="debate",
+                    rationale="Debate is canonical for COMPARE.",
+                ),
+            )
+            picked, rationale = asyncio.run(
+                picker.pick(_frame(primary_goal=TaskType.COMPARE), candidates)
+            )
+
+        assert picked.id == "debate"
+        assert "canonical" in rationale.lower()
+
+    def test_pick_parse_failure_raises_picker_error(self):
+        from unittest.mock import patch
+
+        from locus.router.picker import LLMProtocolPicker, PickerError
+
+        picker = LLMProtocolPicker(model=MagicMock())
+        protocols = builtin_protocols()
+        candidates = [p for p in protocols if p.id in ("debate", "specialist_fanout")]
+
+        with patch("locus.agent.agent.Agent") as mock_agent_cls:
+            # parsed=None simulates a schema-rejection from the model.
+            mock_agent_cls.return_value.invoke.return_value = _make_agent_result(
+                "garbage",
+                parsed=None,
+            )
+            with pytest.raises(PickerError, match="did not return PickedProtocol"):
+                asyncio.run(picker.pick(_frame(primary_goal=TaskType.COMPARE), candidates))
+
+    def test_pick_unknown_id_raises_picker_error(self):
+        from unittest.mock import patch
+
+        from locus.router.picker import (
+            LLMProtocolPicker,
+            PickedProtocol,
+            PickerError,
+        )
+
+        picker = LLMProtocolPicker(model=MagicMock())
+        protocols = builtin_protocols()
+        candidates = [p for p in protocols if p.id in ("debate", "specialist_fanout")]
+
+        with patch("locus.agent.agent.Agent") as mock_agent_cls:
+            mock_agent_cls.return_value.invoke.return_value = _make_agent_result(
+                "x",
+                parsed=PickedProtocol(
+                    protocol_id="nonexistent_protocol",
+                    rationale="I made this up.",
+                ),
+            )
+            with pytest.raises(PickerError, match="unknown protocol_id"):
+                asyncio.run(picker.pick(_frame(primary_goal=TaskType.COMPARE), candidates))
+
+    def test_default_system_prompt_is_used(self):
+        from locus.router.picker import _DEFAULT_SYSTEM_PROMPT, LLMProtocolPicker
+
+        picker = LLMProtocolPicker(model=MagicMock())
+        assert picker.system_prompt == _DEFAULT_SYSTEM_PROMPT
+
+    def test_custom_system_prompt_override(self):
+        from locus.router.picker import LLMProtocolPicker
+
+        custom = "You are a strict canonical-only picker."
+        picker = LLMProtocolPicker(model=MagicMock(), system_prompt=custom)
+        assert picker.system_prompt == custom

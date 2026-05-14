@@ -60,6 +60,12 @@ Difficulty: Intermediate
 Prerequisites: tutorial_01_basic_agent (Agent), tutorial_11_swarm_multiagent
 (Orchestrator), tutorial_13_structured_output (structured output)
 
+## See also
+
+* [Tutorial 59 — emergent routing](tutorial_59_emergent_routing.md) —
+  opt-in `LLMProtocolPicker` for deployments where the rule-based
+  ranker doesn't resolve protocol ambiguity well.
+
 ## Source
 
 ```python

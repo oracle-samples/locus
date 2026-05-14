@@ -59,6 +59,7 @@ from __future__ import annotations
 from locus.router.capability import HUMAN_SENTINEL, Capability, CapabilityIndex
 from locus.router.compiler import ApprovalCallback, CognitiveCompiler
 from locus.router.goal_frame import Complexity, GoalFrame, Risk, TaskType
+from locus.router.picker import LLMProtocolPicker, PickedProtocol, PickerError
 from locus.router.policy import PolicyDeniedError, PolicyGate, PolicyVerdict
 from locus.router.protocol import (
     BuilderContext,
@@ -93,8 +94,11 @@ __all__ = [
     "FrameExtractionError",
     "GoalFrame",
     "HUMAN_SENTINEL",
+    "LLMProtocolPicker",
     "NoMatchingProtocolError",
     "OrchestratorRunnable",
+    "PickedProtocol",
+    "PickerError",
     "PipelineRunnable",
     "PolicyDeniedError",
     "PolicyGate",

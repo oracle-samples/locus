@@ -511,3 +511,83 @@ def _runnable_protocol_id(runnable: Any) -> str:
     if inner is not None:
         return _runnable_protocol_id(inner)
     raise AssertionError(f"Cannot extract protocol_id from {type(runnable).__name__}")
+
+
+# ---------------------------------------------------------------------------
+# Scenario E — emergent picker (opt-in LLM protocol picker)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def router_with_picker(model) -> Router:
+    """Variant of ``router_under_test`` with the LLM picker enabled."""
+    from locus.router import LLMProtocolPicker
+
+    _RECORDER.reset()
+    tools = create_registry(kb_search, get_metric, list_alerts)
+    capabilities = CapabilityIndex(tools)
+    capabilities.annotate(
+        "kb_search",
+        tool_name="kb_search",
+        description="Look up a topic in the knowledge base.",
+        domain="research",
+    )
+    capabilities.annotate(
+        "metric_probe",
+        tool_name="get_metric",
+        description="Return the latest value of a named metric.",
+        domain="observability",
+    )
+    capabilities.annotate(
+        "alert_list",
+        tool_name="list_alerts",
+        description="List recent alerts in a time window.",
+        domain="observability",
+    )
+
+    protocols = ProtocolRegistry()
+    protocols.register_many(builtin_protocols())
+
+    extractor = Agent(
+        model=model,
+        system_prompt=(
+            "Fill the GoalFrame schema based on the user's verb. "
+            "required_capabilities can include: kb_search, metric_probe, alert_list."
+        ),
+        output_schema=GoalFrame,
+    )
+    compiler = CognitiveCompiler(
+        protocols=protocols,
+        capabilities=capabilities,
+        policy=PolicyGate(),
+        model=model,
+        protocol_picker=LLMProtocolPicker(model=model),
+    )
+    return Router(extractor=extractor, compiler=compiler)
+
+
+class TestEmergentPicker:
+    """The opt-in LLM-driven protocol picker — live wire.
+
+    Asserts the picker dispatches to a registered protocol on an
+    ambiguous prompt, and that the resulting protocol_id is part of
+    the built-in catalogue (no hallucinations escape the membership
+    check + fallback).
+    """
+
+    @pytest.mark.asyncio
+    async def test_picker_routes_compare_prompt_to_valid_protocol(
+        self,
+        router_with_picker: Router,
+        registered_protocol_ids: set[str],
+    ) -> None:
+        # COMPARE leaves both ``debate`` and ``specialist_fanout`` in
+        # the candidate set — this is exactly where the picker earns
+        # its keep.
+        result = await router_with_picker.dispatch(
+            "Compare swarm vs orchestrator patterns for open-ended research.",
+        )
+        assert result.protocol_id in registered_protocol_ids, (
+            f"picker produced unknown protocol_id={result.protocol_id!r}; "
+            f"expected one of {sorted(registered_protocol_ids)}"
+        )
