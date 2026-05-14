@@ -26,7 +26,7 @@ code, you're talking to GPT-5 or the o-series reasoning models.
 export OPENAI_API_KEY=sk-...
 ```
 
-That's the only setup. locus reads the env var automatically.
+That's the only setup. locus reads the env var on import.
 
 ### 2. Pick a model
 
@@ -149,7 +149,7 @@ key, etc.
 | Symptom | Likely cause |
 |---|---|
 | `401 Unauthorized` | `OPENAI_API_KEY` not set, or set to the wrong project's key |
-| `429 Rate limit exceeded` | OpenAI quota; locus retries automatically with `ModelRetryHook` if installed |
+| `429 Rate limit exceeded` | OpenAI quota; `ModelRetryHook` (if installed) retries with backoff |
 | `model_not_found` | Model id doesn't exist for your tier — check `https://platform.openai.com/docs/models` |
 | Empty `tool_calls` | Model decided not to call a tool; check the system prompt |
 | `reasoning_effort` rejected | Only valid for o-series models, not GPT-4o / GPT-5 |

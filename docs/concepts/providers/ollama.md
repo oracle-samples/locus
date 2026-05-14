@@ -5,7 +5,7 @@ Ollama runs open-weight models on your laptop or a shared GPU box;
 locus calls it over HTTP exactly the way it would call OpenAI or
 Anthropic. No API key, no network egress, no per-token billing.
 
-This is the right pick for **offline development**, **deterministic
+This is the right pick for **offline development**, **reproducible
 tests**, and **iterating on agent design before you spend a dollar
 on hosted inference**.
 
@@ -14,7 +14,7 @@ on hosted inference**.
 | You want… | This is the right provider |
 |---|---|
 | To develop offline — laptop, plane, isolated network | ✓ |
-| Deterministic tests — same prompt + seed → same output | ✓ |
+| Reproducible tests — same prompt + seed → same output | ✓ |
 | Cost-free agent iteration before swapping to a paid API | ✓ |
 | Privacy-sensitive prototyping where data can't leave the machine | ✓ |
 | A frontier model (GPT-5, Claude Opus 4) | use [OpenAI](openai.md) or [Anthropic](anthropic.md) |

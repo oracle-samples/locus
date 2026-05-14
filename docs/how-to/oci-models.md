@@ -1,7 +1,8 @@
 # OCI GenAI models
 
-Locus connects to OCI Generative AI through **two transports**. Pick by
-model family — for most cases the choice is automatic.
+Locus connects to OCI Generative AI through **three transports**.
+The `oci:` string factory picks V1 or SDK by model family; the
+Responses transport is opt-in.
 
 | Model family | Transport | Class | Endpoint |
 |---|---|---|---|
@@ -12,6 +13,7 @@ model family — for most cases the choice is automatic.
 | Google Gemini (`google.gemini-*`) | V1 | `OCIOpenAIModel` | `/openai/v1/chat/completions` |
 | Cohere non-R (`cohere.command-a*`, etc.) | V1 | `OCIOpenAIModel` | `/openai/v1/chat/completions` |
 | **Cohere R-series** (`cohere.command-r*`) | SDK | `OCIModel` | `/20231130/actions/v1/chat` |
+| **Responses (opt-in)** — gpt-5.5-pro et al. | Responses | `OCIResponsesModel` | `/openai/v1/responses` |
 
 V1 is the recommended default. It uses the standard `openai` SDK against
 OCI's OpenAI-compatible endpoint, gives you **real SSE streaming**
@@ -19,7 +21,10 @@ OCI's OpenAI-compatible endpoint, gives you **real SSE streaming**
 and uses the same OpenAI request shape for tool calls and system
 prompts. The OCI SDK transport remains the only option for Cohere
 R-series, which OCI does not yet expose on `/openai/v1` (it returns
-`400 Unsupported OpenAI operation`).
+`400 Unsupported OpenAI operation`). The Responses transport is the
+only path that reaches Responses-only OCI models (`openai.gpt-5.5-pro`
+today) and the only one that lets OCI hold conversation state between
+turns via `previous_response_id` — both modes covered below.
 
 ## Recommended path — `OCIOpenAIModel`
 
@@ -40,7 +45,7 @@ print(agent.run_sync("hi").message)
 
 `profile=` covers both API-key (`~/.oci/config` with `key_file`) and
 session-token (`security_token_file`) authentication — V1 picks the
-right signer automatically based on the profile shape. The compartment
+right signer based on the profile shape. The compartment
 header that OCI requires for IAM auth is auto-derived from the
 profile's `tenancy` field, so you don't pass it.
 
@@ -73,6 +78,52 @@ identity.
 - **Standard OpenAI request shape** — tool calls, system messages,
   multimodal content, and seed/penalty/top_p knobs work the same way as
   with native OpenAI.
+
+## Responses transport — `OCIResponsesModel` (opt-in)
+
+Use this when you need a Responses-only OCI model
+(`openai.gpt-5.5-pro` today) or when you want OCI to hold the
+conversation thread across turns. The runtime sends only the
+latest-turn slice each call and threads `previous_response_id` via
+`AgentState.provider_state`.
+
+```python
+from locus.models.providers.oci import OCIResponsesModel
+
+model = OCIResponsesModel(
+    model="openai.gpt-5.5-pro",
+    profile="DEFAULT",
+    region="us-chicago-1",
+    compartment_id="ocid1.compartment.oc1..…",
+)
+```
+
+### Zero Data Retention (ZDR) tenancies
+
+Enterprise OCI tenancies with ZDR reject `previous_response_id`
+(server doesn't persist responses). For those, pass `store=False` —
+the model sends `store: false` on every request, drops the
+continuation token, and reports `server_stateful=False` so the agent
+sends the full message history each turn. Responses-only models
+remain reachable.
+
+```python
+model = OCIResponsesModel(
+    model="openai.gpt-5.5-pro",
+    profile="ENTERPRISE_PROFILE",
+    region="us-chicago-1",
+    compartment_id="ocid1.compartment.oc1..…",
+    store=False,  # ZDR-safe
+)
+```
+
+The only Locus primitive that bypasses on the Responses path is
+`ConversationManager` (window/summarize have nothing to operate on
+when the server owns the history). Memory, Reflexion, GSAR,
+grounding, tool hooks, idempotency, checkpointing, output schema,
+streaming, and termination conditions all work identically. See the
+[OCI Responses concept page](../concepts/oci-responses.md) and
+[tutorial 58](../tutorials/tutorial_58_oci_responses.md).
 
 ## Cohere R-series — `OCIModel`
 
@@ -121,8 +172,8 @@ useful only for debugging), set:
 export LOCUS_OCI_TRANSPORT=v1     # or "sdk"
 ```
 
-Tutorials that use `from examples.config import get_model` inherit this
-routing automatically. Tutorials that instantiate a class directly
+Tutorials that use `from examples.config import get_model` inherit
+this routing. Tutorials that instantiate a class directly
 (e.g. `tutorial_29_model_providers.py`) show both transports
 side-by-side.
 

@@ -8,7 +8,7 @@ running agent — no CLI, no `pip install`, no editor setup.
 
 **Click 1 — Launch.** GitHub provisions a Codespace, installs Python +
 Node deps, and boots all three tiers (FastAPI runner, Node BFF, Vite
-front-end). After ~2 minutes the workbench UI pops open automatically.
+front-end). After ~2 minutes the workbench UI opens in a Simple Browser tab.
 
 **Click 2 — Run.** Open *Provider settings*, paste an OpenAI or
 Anthropic key, pick a tutorial in the sidebar, hit **Run**. A real
@@ -91,7 +91,7 @@ hit the layer cache.
    projects against the public npm registry. ~2 minutes.
 2. **Two tabs open** — GitHub Codespaces opens a **VS Code Web** tab
    first (the editor session that owns the container). When Vite
-   binds on `:5173`, a **second tab** pops automatically with the
+   binds on `:5173`, a **second tab** opens with the
    workbench UI itself (`https://<codespace>-5173.app.github.dev`)
    per `5173.onAutoForward: openBrowserOnce`. **The workbench is the
    second tab, not VS Code.** If your browser blocks the popup, the
@@ -118,7 +118,7 @@ docker run --rm \
 # then http://localhost:5273
 ```
 
-Stop with `Ctrl-C`; `--rm` removes the container automatically.
+Stop with `Ctrl-C`; the `--rm` flag removes the container on exit.
 
 ## Path C — From source (development)
 

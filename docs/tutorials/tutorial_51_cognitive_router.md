@@ -2,7 +2,7 @@
 
 ``locus.router`` is a meta-orchestration layer that compiles natural language
 onto existing locus primitives. The LLM never picks topology — it fills a typed
-``GoalFrame``; the router selects a protocol deterministically and the compiler
+``GoalFrame``; the router picks a protocol from a typed registry and the compiler
 emits a real ``Agent`` / ``SequentialPipeline`` / ``ParallelPipeline`` /
 ``LoopAgent`` from a curated registry.
 
@@ -14,7 +14,7 @@ Pipeline::
     Agent(output_schema=GoalFrame)     ← LLM fills typed schema only
           │ GoalFrame(primary_goal, domain, complexity, risk, …)
           ▼
-    ProtocolRegistry.select(frame)     ← deterministic filter + ranking
+    ProtocolRegistry.select(frame)     ← typed filter + ranking
           │ Protocol (e.g. "specialist_fanout")
           ▼
     PolicyGate.check(frame, protocol)  ← allow | require_approval | deny

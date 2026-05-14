@@ -86,7 +86,7 @@ graph.add_node(
 
 Retries handle transient failures inside the node. Cache
 short-circuits when an identical input has been seen recently
-(useful for expensive deterministic nodes).
+(useful for expensive pure-function nodes).
 
 ## Send / SendBatch — fan-out inside a graph
 

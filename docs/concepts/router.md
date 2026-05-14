@@ -61,7 +61,7 @@ The LLM extractor — a standard locus
 `Agent(model=..., output_schema=GoalFrame)` — fills exactly this
 schema. It does *not* author orchestration topology.
 
-### 2. Protocol Registry — deterministic selection
+### 2. Protocol Registry — typed selection
 
 ```python
 from locus.router import ProtocolRegistry, builtin_protocols

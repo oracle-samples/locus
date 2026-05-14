@@ -8,7 +8,7 @@ metadata dict for application code.
 It's an **immutable Pydantic model**: every mutation returns a new
 instance, every collection is a `tuple` or `frozenset`, and the whole
 thing round-trips through JSON without loss. That immutability is
-load-bearing — it's why checkpoints are deterministic, why two
+load-bearing — it's why checkpoints are reproducible, why two
 parallel branches in a graph can each "modify" the state without
 stepping on each other, and why a hook reading `state.tool_executions`
 can't accidentally corrupt the run.

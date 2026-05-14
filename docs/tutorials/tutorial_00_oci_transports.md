@@ -14,9 +14,9 @@ Read top-to-bottom. The first match wins.
 | A Cohere R-series model (`cohere.command-r*`) | `OCIModel` |
 | Everything else | `OCIOpenAIModel` (default) |
 
-The runtime detects `model.server_stateful` automatically — when it's
-`True`, Locus sends only the latest-turn slice and threads the
-continuation token via `AgentState.provider_state`. The only Locus
+The runtime reads `model.server_stateful` — when it's `True`, Locus
+sends only the latest-turn slice and threads the continuation token
+via `AgentState.provider_state`. The only Locus
 primitive that stands down on the Responses path is
 `ConversationManager` (window/summarize have nothing to operate on when
 the history lives server-side). Everything else — memory, reflexion,

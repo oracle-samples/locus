@@ -72,7 +72,7 @@ provisioned by Luigi's tenancy):
   them as `ToolCall`s. Two ways to fix:
   1. **Deploy-side**: configure the DAC with a Qwen3-family flag like
      `--enable-auto-tool-choice` so the model emits OpenAI-style
-     `tool_calls`. Locus picks them up automatically.
+     `tool_calls`. Locus picks them up natively.
   2. **Caller-side**: post-process `result.message` for
      `<tool_call>{...}</tool_call>` blocks and re-issue them via
      `agent.run_sync(...)` with the parsed call. A small regex
@@ -117,7 +117,7 @@ exists in a specific compartment, and the SDK validates the
 ## Tutorial-style env-var workflow
 
 `examples/config.py`'s `_pick_oci_transport()` recognises DAC OCIDs
-and routes them to the SDK transport automatically:
+and routes them to the SDK transport:
 
 ```bash
 export LOCUS_MODEL_PROVIDER=oci

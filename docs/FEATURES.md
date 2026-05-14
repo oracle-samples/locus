@@ -12,7 +12,7 @@ Everything `locus` ships, what it does, and where to find it.
     - **GSAR** — typed-grounding layer from [arXiv:2604.23366](https://arxiv.org/abs/2604.23366) with four-way claim partition + tiered replanning.
     - **Termination algebra** — `MaxIterations(10) | TextMention("DONE") & ConfidenceMet(0.9)` is real Python (`__or__` / `__and__` operator overloads).
     - **Six multi-agent shapes plus A2A** — Composition, Orchestrator, Swarm, Handoff, StateGraph, Functional + A2A for cross-process meshes.
-    - **Cognitive router (PRISM)** — NL → typed `GoalFrame` → deterministic `ProtocolRegistry` → `PolicyGate` → compiled orchestration. LLM fills a schema; 8 built-in protocols; zero topology hand-writing.
+    - **Cognitive router (PRISM)** — NL → typed `GoalFrame` → typed `ProtocolRegistry` → `PolicyGate` → compiled orchestration. LLM fills a schema; 8 built-in protocols; zero topology hand-writing.
     - **In-process observability** — opt-in `EventBus` with agent yield bridge. Zero cost when unused; one `run_context()` to stream every event from every layer.
     - **OCI Generative AI day-zero** — two transports (V1 and native SDK), auto-routed by model id.
 
@@ -51,7 +51,7 @@ Everything `locus` ships, what it does, and where to find it.
 |---|---|---|
 | **`Router`** | `dispatch(NL)` → extract GoalFrame → select protocol → compile → execute | `locus.router.Router` · [Router](concepts/router.md) |
 | **`GoalFrame`** | Typed schema the LLM extractor fills — 13 `TaskType`s, `Risk`, `Complexity`, domain, capabilities | `locus.router.GoalFrame` |
-| **`ProtocolRegistry`** | Deterministic filter (`handles ∋ goal`, `risk_max ≥ frame.risk`) + four-tier ranking (distance · canonical · cost · specificity) | `locus.router.ProtocolRegistry` |
+| **`ProtocolRegistry`** | Typed filter (`handles ∋ goal`, `risk_max ≥ frame.risk`) + four-tier ranking (distance · canonical · cost · specificity) | `locus.router.ProtocolRegistry` |
 | **`PolicyGate`** | Two thresholds: `max_risk` (hard deny) and `require_approval_above` (human-in-the-loop gate) | `locus.router.PolicyGate` |
 | **`CognitiveCompiler`** | Instantiates real locus primitives from frame + protocol; emits a `Runnable` adapter | `locus.router.CognitiveCompiler` |
 | **`builtin_protocols()`** | 8 v1 protocols: `direct_response` · `plan_execute_validate` · `specialist_fanout` · `debate` · `codegen_test_validate` · `approval_gated_execution` · `a2a_delegate` · `handoff_chain` | `locus.router.builtin_protocols` |

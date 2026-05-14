@@ -32,15 +32,16 @@ The headline value over the direct providers:
 
 ## Two transports under one prefix
 
-OCI Generative AI exposes its inference service in two ways. locus
-speaks both and **picks the right one automatically from the model
-id** — you don't have to know which transport a model uses to call
-it.
+OCI Generative AI exposes its inference service in three ways. locus
+speaks all three and **picks the right one from the model id** — you
+don't have to know which transport a model uses to call it (the
+`oci:` prefix routes by family), and you can also pick a specific
+transport explicitly when you instantiate the model class yourself.
 
 ```text
-oci:                                 (one prefix · two transports)
+oci:                                 (one prefix · three transports)
 │
-├── V1 transport · OCIOpenAIModel    /openai/v1/chat/completions
+├── V1 transport       · OCIOpenAIModel       /openai/v1/chat/completions
 │   ├─ openai.*       — OpenAI commercial chat + reasoning
 │   ├─ meta.*         — Meta Llama family
 │   ├─ xai.*          — xAI Grok family
@@ -48,11 +49,16 @@ oci:                                 (one prefix · two transports)
 │   ├─ google.*       — Google Gemini family
 │   └─ anthropic.*    — Anthropic Claude on OCI (no separate API key)
 │
-├── SDK transport · OCIModel         OCI Generative AI Python SDK
-│   └─ cohere.command-r*  — Cohere R-series only (native API only)
+├── Responses          · OCIResponsesModel     /openai/v1/responses    (opt-in)
+│   ├─ openai.gpt-5.5-pro  — Responses-only on OCI today
+│   └─ any v1 model        — when you want server-side continuation
+│                            or need ZDR-safe stateless mode (store=False)
 │
-└── DAC endpoints     · OCIModel     DedicatedServingMode
-    └─ ocid1.generativeaiendpoint....   — provisioned capacity
+├── SDK transport      · OCIModel              OCI Generative AI Python SDK
+│   └─ cohere.command-r*   — Cohere R-series only (native API only)
+│
+└── DAC endpoints      · OCIModel              DedicatedServingMode
+    └─ ocid1.generativeaiendpoint....          — provisioned capacity
 ```
 
 ### V1 transport — `/openai/v1` (OpenAI-compatible)
@@ -71,6 +77,36 @@ agent = Agent(model="oci:openai.gpt-5.5")           # OpenAI commercial
 agent = Agent(model="oci:meta.llama-3.3-70b-instruct")  # Meta Llama
 agent = Agent(model="oci:anthropic.claude-sonnet")  # Claude — no Anthropic key needed
 ```
+
+### Responses transport — `/openai/v1/responses` (opt-in)
+
+`OCIResponsesModel` calls
+`https://inference.generativeai.<region>.oci.oraclecloud.com/openai/v1/responses`.
+
+This is the **opt-in path** for Responses-only models
+(`openai.gpt-5.5-pro` today) and for runs where you want OCI to hold
+the conversation thread between turns. The runtime sends only the
+latest-turn slice and threads `previous_response_id` via
+`AgentState.provider_state`.
+
+```python
+from locus.models.providers.oci import OCIResponsesModel
+
+agent = Agent(model=OCIResponsesModel(
+    model="openai.gpt-5.5-pro",
+    profile="MY_PROFILE",
+    region="us-chicago-1",
+    compartment_id="ocid1.compartment.oc1..…",
+    # store=False for Zero-Data-Retention tenancies (full-history mode)
+))
+```
+
+The only Locus primitive that bypasses on this path is
+`ConversationManager`. Memory, Reflexion, GSAR, grounding, tool
+hooks, idempotency, checkpointing, output schema, streaming, and
+termination conditions all work identically. See
+[OCI Responses concept page](../oci-responses.md) for the full
+trade-off matrix.
 
 ### SDK transport — OCI native API
 
@@ -103,10 +139,10 @@ agent = Agent(
 [Full DAC how-to →](../../how-to/oci-dac.md) — covers Qwen-on-DAC,
 streaming, tool-call quirks per model.
 
-## Transport selection — automatic
+## Transport selection — by the `oci:` prefix
 
-You don't pick the transport. locus looks at the model id and
-chooses:
+When you use the `oci:<model-id>` string factory, locus looks at the
+model id and chooses for you:
 
 | Model id pattern | Transport |
 |---|---|
@@ -115,6 +151,11 @@ chooses:
 | `openai.*` / `meta.*` / `xai.*` / `mistral.*` / `google.*` / `anthropic.*` | V1 (OpenAI-compatible) |
 
 Need to override? Set `LOCUS_OCI_TRANSPORT=v1` or `LOCUS_OCI_TRANSPORT=sdk`.
+
+For the **Responses transport**, instantiate `OCIResponsesModel`
+explicitly — it's opt-in, not selected by prefix. See the
+[Responses concept page](../oci-responses.md) and
+[tutorial 58](../../tutorials/tutorial_58_oci_responses.md).
 
 ## One auth surface — laptop, CI, OCI workloads
 
@@ -194,6 +235,10 @@ The agent doesn't care. That's the OCI provider's whole pitch.
 ## See also
 
 - [Models overview](../models.md) — the full provider tree.
+- [OCI Responses transport](../oci-responses.md) — when to opt in, ZDR mode, server-stateful continuation.
+- [Tutorial 00 — three OCI transports side-by-side](../../tutorials/tutorial_00_oci_transports.md).
+- [Tutorial 57 — `OCIOpenAIModel` deep dive](../../tutorials/tutorial_57_oci_openai_chat.md).
+- [Tutorial 58 — `OCIResponsesModel` deep dive](../../tutorials/tutorial_58_oci_responses.md).
 - [OCI GenAI models how-to](../../how-to/oci-models.md) — auth setup, region selection, debugging.
 - [OCI Dedicated AI Cluster (DAC)](../../how-to/oci-dac.md) — provisioned-capacity endpoints.
 - [OpenAI](openai.md) — direct OpenAI when OCI lags.

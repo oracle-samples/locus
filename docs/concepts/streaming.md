@@ -88,7 +88,7 @@ branch your IDE underlines it; if you mistype a field name (e.g.
 | `TerminateEvent` | The run finished — terminal condition met | Show the final answer |
 
 Every event carries an `event_type` discriminator and a UTC
-`timestamp`, so persisted streams replay deterministically.
+`timestamp`, so persisted streams replay in their original order.
 
 ## Write-protected — by design
 

@@ -83,7 +83,7 @@ agent loop never sees an exception unless the whole run errors.
 
 Within the tool body, you choose how cooperative to be:
 
-- **Sync function.** Wraps automatically; the executor runs it on a
+- **Sync function.** The executor wraps it and runs it on a
   worker thread so it doesn't block the event loop.
 - **Async function (`async def my_tool`).** Awaited directly by the
   executor.

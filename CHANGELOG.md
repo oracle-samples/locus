@@ -8,6 +8,31 @@ policy.
 
 ## [Unreleased]
 
+### Docs (0.2.0b7) — OCI Responses surfaced across existing pages + voice pass
+
+- **`concepts/providers/oci.md`** now lists three transports
+  (`OCIOpenAIModel`, `OCIResponsesModel`, `OCIModel`) and includes
+  the Responses architecture diagram + a "when to pick which" section
+  cross-linked to [`concepts/oci-responses.md`](docs/concepts/oci-responses.md).
+- **`how-to/oci-models.md`** transport table gains a Responses row
+  plus a new "Responses transport — `OCIResponsesModel` (opt-in)"
+  section covering both `store=True` (server-state) and `store=False`
+  (ZDR-safe) modes.
+- Both pages cross-link [tutorial 00](docs/tutorials/tutorial_00_oci_transports.md)
+  (transports side-by-side), [tutorial 57](docs/tutorials/tutorial_57_oci_openai_chat.md)
+  (OCIOpenAIModel deep dive) and
+  [tutorial 58](docs/tutorials/tutorial_58_oci_responses.md)
+  (OCIResponsesModel deep dive).
+- **Voice pass** — locus is an *agentic* framework. Removed every
+  occurrence of "deterministic" and "automatic" from user-facing
+  docs (~50 instances across 27 files) and rewrote in active-voice
+  prose. `ProtocolRegistry` is now a "typed registry / typed filter
+  - rank" (still rule-based and auditable); previously "automatic"
+  behaviours read as concrete subjects-and-verbs (e.g.
+  "Locus picks them up natively" instead of "Locus picks them up
+  automatically").
+- `mkdocs build --strict` passes clean with the updated pages.
+
 ### Fixed (0.2.0b6) — OCI Responses live-shakedown follow-ups
 
 Caught by running the in-PR Responses code against real OCI for
