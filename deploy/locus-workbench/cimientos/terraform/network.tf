@@ -58,6 +58,22 @@ resource "oci_core_subnet" "pods" {
   freeform_tags              = local.common_tags
 }
 
+# Dedicated worker-node subnet — kept separate from the LB subnet
+# because OCI rejects the same subnet appearing in both
+# `service_lb_subnet_ids` and node_pool placement_configs ("service
+# subnets cannot be used by node pools"). Workers are public so the
+# kubelet can reach the OKE API endpoint without a NAT hop.
+resource "oci_core_subnet" "workers" {
+  compartment_id             = var.compartment_ocid
+  vcn_id                     = oci_core_vcn.workbench.id
+  cidr_block                 = "10.42.2.0/24"
+  display_name               = "${local.name}-subnet-workers"
+  dns_label                  = "workers"
+  route_table_id             = oci_core_route_table.public.id
+  prohibit_public_ip_on_vnic = false
+  freeform_tags              = local.common_tags
+}
+
 # -------------------------------------------------------------------
 # Network Security Groups — minimal allow-lists. Tight by default;
 # loosen only when the workbench needs to expose more than :5173.
