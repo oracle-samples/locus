@@ -8,6 +8,59 @@ policy.
 
 ## [Unreleased]
 
+### Feat (0.2.0b9) — opt-in LLM protocol picker + workbench cognitive routing
+
+- **`LLMProtocolPicker`** — second selection mode for the cognitive
+  router. Pass an instance to
+  `CognitiveCompiler(protocol_picker=...)` and the model picks the
+  protocol from the *filtered* candidate set (`handles ∋
+  primary_goal ∧ risk_max ≥ frame.risk ∧ requires_capabilities ⊆
+  caps`) instead of the rule-based `_rank_key()` tuple comparison.
+  Default behaviour is **unchanged** — opt in per compiler instance.
+- **Filter-then-pick invariant.** The compiler filters candidates
+  with the new public `ProtocolRegistry.filter_candidates()` *before*
+  the picker sees anything. If zero survive, raises
+  `NoMatchingProtocolError` without an LLM call. If exactly one
+  survives, returns it without an LLM call (token saving). If
+  multiple survive, the picker disambiguates.
+- **Safe fallback.** If the picker raises (`PickerError` /
+  arbitrary exception) or returns an id not in the candidate set,
+  the compiler falls back to `_rank_key()` and emits a new
+  `router.protocol.picker_fallback` event. Emergent mode never
+  reduces availability vs the rule-based path.
+- **Observability:** `router.protocol.selected` event gains two
+  fields — `method` (one of `rule_based`, `single_candidate`,
+  `llm_picked`, `rule_based_fallback`) and `rationale` (the picker's
+  one-sentence justification when LLM-picked). Additive — existing
+  SSE consumers ignore unknown keys.
+- **Workbench pattern: Cognitive routing.** New
+  `/api/run/cognitive_routing` endpoint in the FastAPI runner. The
+  patterns UI shows a Selection-mode segmented control (Rule-based
+  ⬌ LLM picker), runs the dispatch in-process, captures the
+  `method` + `rationale` off the event bus, and renders a chip
+  with the protocol id + method badge + rationale callout above
+  the reply.
+- **UX fix:** sidebar tabs (`Tutorials | Skills | Protocols |
+  Patterns`) now wrap onto a second row at narrow viewport widths
+  via `flex-wrap: wrap` — the rightmost tab no longer clips off
+  invisible.
+- **Docs:** new `concepts/router.md#emergent-picker-opt-in-second-mode`
+  section explains the filter-then-pick invariant, fallback
+  contract, and `method` enum. New tutorial 59 (`Emergent routing`)
+  runs both modes side-by-side. Updated `workbench.md` catalogue
+  (8 → 9 patterns) with a dedicated "Cognitive routing pattern"
+  subsection.
+- **OG / social card wiring.** The branded
+  `docs/img/og-card.png` (1280×640) shipped with the repo but was
+  never injected into the docs site's head. The mkdocs Material
+  `extrahead` override now emits the canonical OG + Twitter Card
+  meta tag set per page, so sharing a `locusagents.oracle.com` URL
+  on Slack / X / LinkedIn / Discord / Teams unfurls with the
+  locus brand card and a tailored per-page title + description.
+  (The GitHub repo URL's social preview is a separate setting
+  that requires a one-time manual upload at the repo's Settings →
+  Social preview.)
+
 ### Fix (0.2.0b8) — DALL-E 3 deprecation + home-page enterprise voice
 
 - **`OpenAIImageProvider`** default model changed from `"dall-e-3"`
