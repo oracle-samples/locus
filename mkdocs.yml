@@ -176,6 +176,8 @@ nav:
   - Foundations:
     - 00 · OCI Transports: tutorials/tutorial_00_oci_transports.md
     - 01 · Basic Agent: tutorials/tutorial_01_basic_agent.md
+    - 57 · OCI v1 (OCIOpenAIModel) deep dive: tutorials/tutorial_57_oci_openai_chat.md
+    - 58 · OCI Responses (OCIResponsesModel) deep dive: tutorials/tutorial_58_oci_responses.md
     - 02 · Agent with Tools: tutorials/tutorial_02_agent_with_tools.md
     - 03 · Memory & Checkpointing: tutorials/tutorial_03_agent_memory.md
     - 04 · Streaming & Events: tutorials/tutorial_04_agent_streaming.md

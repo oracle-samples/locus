@@ -8,6 +8,48 @@ policy.
 
 ## [Unreleased]
 
+### Fixed (0.2.0b6) — OCI Responses live-shakedown follow-ups
+
+Caught by running the in-PR Responses code against real OCI for
+streaming, multi-turn, and tool round-trip. All three fixes are
+scoped to `OCIResponsesModel` + `_responses_parse.py` — no other
+transport is affected.
+
+- **Zero Data Retention (ZDR) tenancies:** OCI tenancies with ZDR
+  enabled reject `previous_response_id` with `"Previous response
+  cannot be used for this organization due to Zero Data Retention."`
+  This broke the multi-turn value prop in every enterprise OCI
+  tenancy. Added an opt-in `store: bool = True` parameter to
+  `OCIResponsesModel`; setting `store=False` switches the model to
+  stateless mode — it sends `store: false` in every request body,
+  drops `previous_response_id`, and advertises `server_stateful=False`
+  so the agent runtime sends the full message history each turn (like
+  chat/completions). ZDR tenants still benefit from access to
+  Responses-only models (e.g. `openai.gpt-5.5-pro`).
+
+- **Tool round-trip via Agent:** assistant messages with tool calls
+  were emitting only `message` items in the Responses input but no
+  `function_call` items. When the next turn included a
+  `function_call_output` (the tool result), the server returned 400
+  because there was no `call_id` anchor in the input. Now emits one
+  `function_call` item per tool call, in order, in
+  `_responses_parse.build_request_body`. Verified live: Agent +
+  `@tool` + `OCIResponsesModel(store=False)` → tool fires → result
+  posted back → model produces final answer using the tool output.
+
+- **`server_stateful` is now a per-instance property** (was
+  `ClassVar`), reflecting `config.store`. Lets the same class behave
+  statelessly when ZDR mode is on without forcing two classes.
+  Runtime loop check switched from class-level (`type(...)`) to
+  instance-level (`getattr(self._model, ...) is True`) — still
+  MagicMock-safe because `Mock object is True → False`.
+
+Live wire-format coverage now includes: streaming end-to-end against
+gpt-5 (events, content deltas, completed event), two-turn stateless
+continuation (recalls user-shared facts from full history), and tool
+round-trip with real OCI returning a final answer derived from tool
+output.
+
 ### Added
 
 - `OCIResponsesModel` — third OCI transport, opt-in, for the OCI

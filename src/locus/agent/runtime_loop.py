@@ -1208,12 +1208,12 @@ class AgentRuntimeMixin:
         # ConversationManager strategies (window/summarize on the
         # full history) have nothing to operate on and are skipped.
         #
-        # Check the *class*, not the instance: ``getattr(instance, ...)``
-        # on a MagicMock returns a truthy Mock for any attribute, which
-        # would incorrectly engage the server-stateful path during
-        # tests. ``ClassVar`` lives on the class, so type(...) is the
-        # correct lookup.
-        server_stateful = getattr(type(self._model), "server_stateful", False) is True
+        # Check the instance attribute with ``is True`` — that's both
+        # MagicMock-safe (Mock() is True → False) and honours per-
+        # instance overrides such as OCIResponsesModel's ``store=False``
+        # ZDR mode, where the same class advertises False on certain
+        # instances. Class-level check would miss those.
+        server_stateful = getattr(self._model, "server_stateful", False) is True
 
         if server_stateful:
             messages = self._messages_since_last_assistant(state)

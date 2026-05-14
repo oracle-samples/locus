@@ -251,9 +251,16 @@ def test_init_requires_compartment_for_workload_identity() -> None:
         OCIResponsesModel(model="x", auth_type="instance_principal")
 
 
-def test_server_stateful_marker_is_true() -> None:
-    """Runtime loop branches on this flag — locked in by test."""
-    assert OCIResponsesModel.server_stateful is True
+def test_server_stateful_default_true() -> None:
+    """Default instance advertises server_stateful=True (full Responses flow)."""
+    model = _make_model()
+    assert model.server_stateful is True
+
+
+def test_server_stateful_false_when_store_disabled() -> None:
+    """store=False (ZDR tenancies) flips the model to stateless mode."""
+    model = _make_model(store=False)
+    assert model.server_stateful is False
 
 
 @respx.mock
@@ -275,6 +282,55 @@ async def test_complete_does_not_send_temperature_by_default() -> None:
 
     await model.complete([Message.user("hi")])
     assert "temperature" not in captured["body"]
+    await model.aclose()
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_store_false_sends_store_field_and_drops_previous_response_id() -> None:
+    """ZDR mode: body carries ``store: false`` and never sends previous_response_id
+    even when the agent threads one in."""
+    model = _make_model(store=False)
+    captured: dict[str, Any] = {}
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(200, json={"id": "r", "output": [], "usage": {}})
+
+    respx.post("https://fake-oci.test/openai/v1/responses").mock(side_effect=_handler)
+
+    # Even with provider_state threaded in, store=False drops it.
+    await model.complete(
+        [Message.user("hi")],
+        provider_state={"previous_response_id": "resp_old"},
+    )
+    body = captured["body"]
+    assert body["store"] is False
+    assert "previous_response_id" not in body
+    await model.aclose()
+
+
+@respx.mock
+@pytest.mark.asyncio
+async def test_store_true_default_sends_no_store_field_and_uses_continuation() -> None:
+    """Default mode: omit the store field (server default applies) and thread
+    previous_response_id when provided."""
+    model = _make_model()  # store default True
+    captured: dict[str, Any] = {}
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(200, json={"id": "r2", "output": [], "usage": {}})
+
+    respx.post("https://fake-oci.test/openai/v1/responses").mock(side_effect=_handler)
+
+    await model.complete(
+        [Message.user("hi")],
+        provider_state={"previous_response_id": "resp_prev"},
+    )
+    body = captured["body"]
+    assert "store" not in body  # default True → omitted, server default wins
+    assert body["previous_response_id"] == "resp_prev"
     await model.aclose()
 
 
