@@ -105,6 +105,18 @@
               <textarea id="pattern-prompt" data-testid="pattern-prompt" class="input" rows="3"
                 style="width:100%;resize:vertical;font-family:var(--font-mono,monospace);font-size:0.82rem"></textarea>
             </div>
+            <div id="pattern-routing-toggle" data-testid="pattern-routing-toggle"
+              style="display:none;margin-top:0.5rem;font-size:0.82rem">
+              <label style="display:inline-flex;align-items:center;gap:0.4rem;cursor:pointer">
+                <input type="checkbox" id="pattern-use-llm-picker"
+                  data-testid="pattern-use-llm-picker" />
+                <span>Use LLM picker
+                  <span style="color:var(--or-text-muted,#666);font-weight:normal">
+                    (opt-in — model picks the protocol; default is rule-based)
+                  </span>
+                </span>
+              </label>
+            </div>
             <div class="form-row" style="margin-top: 0.5rem">
               <div style="flex:1"></div>
               <button class="btn btn--primary" id="pattern-run-btn" data-testid="pattern-run-btn">Run</button>

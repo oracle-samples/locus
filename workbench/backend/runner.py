@@ -179,6 +179,11 @@ def build_model(cfg: ProviderConfig) -> Any:
 class RunRequest(BaseModel):
     prompt: str
     provider: ProviderConfig
+    # Cognitive-routing toggle. False = default rule-based ranker
+    # (deterministic). True = opt-in LLMProtocolPicker — the model
+    # picks the protocol from the filtered candidate set. Only honoured
+    # by the ``cognitive_routing`` pattern; ignored elsewhere.
+    use_llm_picker: bool = False
 
 
 class RunEvent(BaseModel):
@@ -300,6 +305,16 @@ PATTERNS: list[dict[str, Any]] = [
         "summary": (
             "Two-session demo: agent extracts memories from session 1, "
             "then injects them in session 2 — no raw history needed."
+        ),
+    },
+    {
+        "id": "cognitive_routing",
+        "title": "Cognitive routing (rule-based vs LLM)",
+        "tutorial": 59,
+        "summary": (
+            "Dispatch a prompt through the cognitive router. Toggle the "
+            "LLM picker checkbox to compare rule-based protocol selection "
+            "against the opt-in LLMProtocolPicker."
         ),
     },
 ]
@@ -798,6 +813,122 @@ def _sse(payload: dict[str, Any]) -> str:
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
 
+async def _run_cognitive_routing(req: RunRequest) -> RunResponse:
+    """Dispatch a single prompt through the cognitive router.
+
+    The checkbox toggle (``req.use_llm_picker``) flips the compiler's
+    selection mode:
+
+    - **False** (default): rule-based ``_rank_key`` ranker — deterministic.
+    - **True**: opt-in :class:`LLMProtocolPicker` — the model picks the
+      protocol from the filtered candidate set, with rationale captured
+      on the ``router.protocol.selected`` event.
+
+    Both modes share the same filter, capability index, and policy gate
+    — only the disambiguation step changes. The response surfaces the
+    chosen ``protocol_id`` plus the rationale (when LLM-picked) so the
+    UI can show *why* the model chose what it did.
+    """
+    from locus import Agent, tool  # noqa: PLC0415
+    from locus.router import (  # noqa: PLC0415
+        CapabilityIndex,
+        CognitiveCompiler,
+        GoalFrame,
+        LLMProtocolPicker,
+        PolicyGate,
+        ProtocolRegistry,
+        Router,
+        builtin_protocols,
+    )
+    from locus.tools.registry import create_registry  # noqa: PLC0415
+
+    @tool
+    def kb_search(query: str) -> str:
+        """Search the knowledge base for a topic."""
+        return f"kb entry for {query!r}"
+
+    @tool
+    def get_metric(name: str) -> str:
+        """Return the latest value of a named metric."""
+        return f"{name}=42 (mocked)"
+
+    @tool
+    def list_alerts(window_minutes: int = 30) -> str:
+        """List recent alerts."""
+        return "A-101 high checkout latency_p99 breach"
+
+    model = build_model(req.provider)
+    tools = create_registry(kb_search, get_metric, list_alerts)
+    capabilities = CapabilityIndex(tools)
+    capabilities.annotate(
+        "kb_search",
+        tool_name="kb_search",
+        description="Knowledge-base lookup.",
+        domain="research",
+    )
+    capabilities.annotate(
+        "metric_probe",
+        tool_name="get_metric",
+        description="Latest value of a named metric.",
+        domain="observability",
+    )
+    capabilities.annotate(
+        "alert_list",
+        tool_name="list_alerts",
+        description="Recent alerts in a window.",
+        domain="observability",
+    )
+
+    protocols = ProtocolRegistry()
+    protocols.register_many(builtin_protocols())
+
+    extractor = Agent(
+        model=model,
+        system_prompt=(
+            "Fill the GoalFrame schema based on the user's verb and intent. "
+            "required_capabilities can include: kb_search, metric_probe, alert_list."
+        ),
+        output_schema=GoalFrame,
+    )
+    picker = LLMProtocolPicker(model=model) if req.use_llm_picker else None
+    compiler = CognitiveCompiler(
+        protocols=protocols,
+        capabilities=capabilities,
+        policy=PolicyGate(),
+        model=model,
+        protocol_picker=picker,
+    )
+    router = Router(extractor=extractor, compiler=compiler)
+
+    events: list[RunEvent] = []
+    try:
+        result = await router.dispatch(req.prompt)
+    except Exception as exc:  # noqa: BLE001
+        events.append(
+            RunEvent(
+                kind="ErrorEvent",
+                text=f"{type(exc).__name__}: {exc}",
+                extra={"mode": "llm_picker" if req.use_llm_picker else "rule_based"},
+            ),
+        )
+        return RunResponse(
+            reply="",
+            events=events,
+        )
+
+    events.append(
+        RunEvent(
+            kind="ProtocolSelected",
+            text=result.protocol_id,
+            extra={
+                "mode": "llm_picker" if req.use_llm_picker else "rule_based",
+                "protocol_id": result.protocol_id,
+            },
+        ),
+    )
+    return RunResponse(reply=result.text or "", events=events)
+
+
 PATTERN_RUNNERS: dict[str, Any] = {
     "agent": _run_agent,
     "agent_with_tools": _run_agent_with_tools,
@@ -807,6 +938,7 @@ PATTERN_RUNNERS: dict[str, Any] = {
     "map_reduce": _run_map_reduce,
     "structured_output": _run_structured_output,
     "memory_manager": _run_memory_manager,
+    "cognitive_routing": _run_cognitive_routing,
 }
 
 

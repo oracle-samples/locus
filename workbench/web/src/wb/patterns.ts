@@ -80,6 +80,11 @@ function renderDetail(p: Pattern): void {
   promptEl.placeholder = _suggestedPrompt(p.id);
   const badge = $("#pattern-stream-badge");
   badge.style.display = p.streamable ? "inline-flex" : "none";
+  // The LLM-picker toggle is meaningful only for the cognitive routing
+  // pattern (other patterns ignore the field server-side). Hide it
+  // everywhere else so the UI stays focused.
+  const toggle = $("#pattern-routing-toggle") as HTMLElement;
+  toggle.style.display = p.id === "cognitive_routing" ? "" : "none";
   view.style.display = "";
 }
 
@@ -138,7 +143,12 @@ async function doRun(): Promise<void> {
         (msg) => { showError(msg); setRunning(false); cancelStream = null; },
       );
     } else {
-      const result = await runPattern(current.id, prompt, provider);
+      const useLLMPicker =
+        current.id === "cognitive_routing" &&
+        ($<HTMLInputElement>("#pattern-use-llm-picker")?.checked ?? false);
+      const result = await runPattern(current.id, prompt, provider, {
+        use_llm_picker: useLLMPicker,
+      });
       out.textContent = result.reply || "(no reply)";
       setRunning(false);
     }
@@ -164,6 +174,7 @@ function _suggestedPrompt(id: string): string {
     stategraph_loop: "Explain why immutability matters in functional programming.",
     map_reduce: "Review this function: def add(a, b): return a + b",
     structured_output: "Python vs JavaScript: which wins for backend work?",
+    cognitive_routing: "Compare swarm vs orchestrator patterns for open-ended research.",
   };
   return PROMPTS[id] ?? "Enter a prompt…";
 }
