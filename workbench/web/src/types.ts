@@ -8,7 +8,7 @@ export type Pattern = {
 
 export type ProviderType = "openai" | "anthropic" | "oci-session" | "oci-apikey";
 
-export type OciTransport = "auto" | "v1" | "sdk";
+export type OciTransport = "auto" | "v1" | "sdk" | "responses";
 
 export type ProviderConfig = {
   provider: ProviderType;
@@ -22,6 +22,8 @@ export type ProviderConfig = {
   region?: string;
   compartment_id?: string;
   oci_transport?: OciTransport;
+  // OCI Responses transport only: optional GenAI Project OCID.
+  project_ocid?: string;
 };
 
 export type RunEvent = {

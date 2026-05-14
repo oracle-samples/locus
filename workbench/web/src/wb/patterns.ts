@@ -13,11 +13,21 @@ function sidePatterns(): HTMLElement {
   return $("#side-patterns");
 }
 
+let runControlsInstalled = false;
+
 export async function bootstrapPatterns(): Promise<void> {
   try {
     patterns = await listPatterns();
     console.info(`[wb/patterns] loaded ${patterns.length} patterns`);
     renderList();
+    // The Run / Stop buttons live in the static HTML — install their
+    // click handlers exactly once, on first sidebar activation. Without
+    // this the Run button is a dead element and pattern execution never
+    // fires (caught via Playwright on 2026-05-13).
+    if (!runControlsInstalled) {
+      installPatternRunControls();
+      runControlsInstalled = true;
+    }
     if (patterns.length) {
       await selectPattern(patterns[0].id);
     }

@@ -276,7 +276,13 @@
             <option value="v1" selected>v1 — /openai/v1 (OpenAIModel-compat)</option>
             <option value="auto">auto (cohere.command-r* → sdk, else v1)</option>
             <option value="sdk">sdk — native OCI GenAI (regular)</option>
+            <option value="responses">responses — /openai/v1/responses (server-stateful)</option>
           </select>
+        </div>
+
+        <div class="field" id="row-project-ocid" style="display: none">
+          <label class="field__label">OCI GenAI Project OCID (optional)</label>
+          <input id="cfg-project-ocid" class="input" placeholder="ocid1.genaiagentproject.oc1..… (leave empty unless a Responses feature requires it)" data-testid="cfg-project-ocid" />
         </div>
 
         <div class="field" id="row-compartment" style="display: none">

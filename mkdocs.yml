@@ -157,6 +157,7 @@ nav:
   - Model Providers:
     - Overview: concepts/models.md
     - OCI: concepts/providers/oci.md
+    - OCI Responses API: concepts/oci-responses.md
     - OpenAI: concepts/providers/openai.md
     - Anthropic: concepts/providers/anthropic.md
     - Ollama: concepts/providers/ollama.md
@@ -173,6 +174,7 @@ nav:
   - Quickstart: how-to/quickstart.md
   - Overview: tutorials/index.md
   - Foundations:
+    - 00 · OCI Transports: tutorials/tutorial_00_oci_transports.md
     - 01 · Basic Agent: tutorials/tutorial_01_basic_agent.md
     - 02 · Agent with Tools: tutorials/tutorial_02_agent_with_tools.md
     - 03 · Memory & Checkpointing: tutorials/tutorial_03_agent_memory.md

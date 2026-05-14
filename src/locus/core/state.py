@@ -121,6 +121,16 @@ class AgentState(BaseModel):
     # Errors
     errors: tuple[str, ...] = Field(default_factory=tuple)
 
+    # Opaque per-provider continuation state. Default None for the
+    # vast majority of providers (chat/completions-style transports
+    # are stateless). Server-stateful transports such as
+    # ``OCIResponsesModel`` populate this with their continuation
+    # token (e.g. ``{"previous_response_id": "resp_abc"}``) so that
+    # the next turn references the server-held thread instead of
+    # resending the full message history. Checkpointer persists
+    # this; resume picks it up transparently.
+    provider_state: dict[str, Any] | None = None
+
     # Custom state (user-defined)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -164,6 +174,20 @@ class AgentState(BaseModel):
     def next_iteration(self) -> AgentState:
         """Increment iteration counter."""
         return self.with_iteration(self.iteration + 1)
+
+    def with_provider_state(self, provider_state: dict[str, Any] | None) -> AgentState:
+        """Replace the provider continuation state.
+
+        Server-stateful transports (e.g. ``OCIResponsesModel``) return
+        a continuation token in ``ModelResponse.provider_state``; the
+        agent calls this to thread the token into the next turn.
+        """
+        return self.model_copy(
+            update={
+                "provider_state": provider_state,
+                "updated_at": datetime.now(UTC),
+            }
+        )
 
     def with_tool_execution(self, execution: ToolExecution) -> AgentState:
         """Record a tool execution."""

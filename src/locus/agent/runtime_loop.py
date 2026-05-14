@@ -1200,16 +1200,34 @@ class AgentRuntimeMixin:
         state: AgentState,
     ) -> tuple[ModelResponse, AgentState]:
         """Get a response from the model."""
-        # Apply conversation manager if present
-        messages = list(state.messages)
-        if self._conversation_manager:
-            if hasattr(self._conversation_manager, "async_apply"):
-                messages = await self._conversation_manager.async_apply(messages)
-            else:
-                messages = self._conversation_manager.apply(messages)
+        # Server-stateful transports (e.g. OCIResponsesModel) own the
+        # conversation history server-side — we send only the input
+        # added since the last call (the initial system+user on turn
+        # one, tool results / next user message on subsequent turns)
+        # and pass the continuation token via ``provider_state``.
+        # ConversationManager strategies (window/summarize on the
+        # full history) have nothing to operate on and are skipped.
+        #
+        # Check the *class*, not the instance: ``getattr(instance, ...)``
+        # on a MagicMock returns a truthy Mock for any attribute, which
+        # would incorrectly engage the server-stateful path during
+        # tests. ``ClassVar`` lives on the class, so type(...) is the
+        # correct lookup.
+        server_stateful = getattr(type(self._model), "server_stateful", False) is True
 
-        # Validate message pairs (remove orphaned tool calls/results)
-        messages = self._validate_messages(messages)
+        if server_stateful:
+            messages = self._messages_since_last_assistant(state)
+        else:
+            # Apply conversation manager if present
+            messages = list(state.messages)
+            if self._conversation_manager:
+                if hasattr(self._conversation_manager, "async_apply"):
+                    messages = await self._conversation_manager.async_apply(messages)
+                else:
+                    messages = self._conversation_manager.apply(messages)
+
+            # Validate message pairs (remove orphaned tool calls/results)
+            messages = self._validate_messages(messages)
 
         # Get tool schemas
         tool_schemas = self._tool_registry.to_openai_schemas()
@@ -1247,6 +1265,9 @@ class AgentRuntimeMixin:
             if native_response_format is not None:
                 complete_kwargs["response_format"] = native_response_format
 
+            if server_stateful:
+                complete_kwargs["provider_state"] = state.provider_state
+
             response = await self._model.complete(**complete_kwargs)
 
             # Post-model hooks: event.retry = True to re-call
@@ -1260,7 +1281,29 @@ class AgentRuntimeMixin:
         # Add assistant message to state
         state = state.with_message(response.message)
 
+        # Server-stateful transports return a continuation token in
+        # ``response.provider_state``; thread it into AgentState so
+        # the next turn references the server-held thread.
+        if server_stateful and response.provider_state is not None:
+            state = state.with_provider_state(response.provider_state)
+
         return response, state
+
+    def _messages_since_last_assistant(self, state: AgentState) -> list[Message]:
+        """Return the slice of state.messages that the model hasn't seen yet.
+
+        Used on the server-stateful path (OCIResponsesModel et al.).
+        Walks state.messages backwards: everything after the most
+        recent assistant message is the new input to send. If no
+        assistant message exists yet (turn one), returns the full
+        list — the model class is responsible for splitting system
+        vs user appropriately for its wire protocol.
+        """
+        msgs = list(state.messages)
+        for i in range(len(msgs) - 1, -1, -1):
+            if msgs[i].role == "assistant":
+                return msgs[i + 1 :]
+        return msgs
 
     def _maybe_cached_idempotent_result(
         self,

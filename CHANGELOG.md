@@ -10,6 +10,32 @@ policy.
 
 ### Added
 
+- `OCIResponsesModel` — third OCI transport, opt-in, for the OCI
+  Generative AI **Responses API** (`/openai/v1/responses`). Server-
+  stateful: the OCI side holds the conversation thread between turns
+  and Locus references it via `previous_response_id`. Use it for
+  Responses-only OCI models (e.g. `openai.gpt-5.5-pro`) and for runs
+  where re-sending the full history each turn is wasteful. Auth surface
+  identical to `OCIOpenAIModel` (`profile=` for API key / session,
+  `auth_type="instance_principal" | "resource_principal"` for workload
+  identity). **Project OCID stays optional** — only required when a
+  specific Responses feature demands it, in which case
+  `OCIProjectRequiredError` points the caller at the constructor kwarg.
+  Expired/unknown continuation tokens raise `OCIResponsesStateLostError` so
+  resuming agents fail loud instead of silently dropping conversation.
+  See [`docs/concepts/oci-responses.md`](docs/concepts/oci-responses.md).
+- **Plumbing for server-stateful providers:** new
+  `ModelResponse.provider_state` and `AgentState.provider_state` fields
+  thread an opaque continuation token between turns. Stateless
+  providers ignore them — default `None`, zero behavior change. The
+  runtime loop detects `model.server_stateful` and sends only the
+  message slice added since the last assistant turn, skipping
+  `ConversationManager` strategies (which have nothing to operate on
+  when the history is server-side). Every other Locus primitive —
+  memory injection, Reflexion, GSAR, grounding, idempotency dedup,
+  tool/model/invocation hooks, checkpointer, output schema, streaming,
+  termination conditions — works identically on both transports.
+
 - `AfterToolCallEvent.tool_call_id` and `AfterToolCallEvent.arguments` —
   read-only fields on the after-tool-call hook event. Lets a single
   `on_after_tool_call` hook correlate with the matching

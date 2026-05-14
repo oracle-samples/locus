@@ -75,6 +75,13 @@ class ModelResponse(BaseModel):
     message: Message
     usage: dict[str, int] = Field(default_factory=dict)
     stop_reason: str | None = None
+    # Opaque per-provider continuation state. Stateless transports
+    # (the default — chat/completions-style) leave this as ``None``.
+    # Server-stateful transports (e.g. ``OCIResponsesModel``) return
+    # a continuation token here (e.g. ``{"previous_response_id":
+    # "resp_abc"}``) so the agent can thread it into the next
+    # ``complete()`` call without resending the full history.
+    provider_state: dict[str, Any] | None = None
 
     @property
     def content(self) -> str | None:
