@@ -1,7 +1,15 @@
-# Always-Free OKE cluster — BASIC_CLUSTER skips the $0.10/hr control
-# plane charge. Public endpoint so kubectl works from anywhere with
-# the cluster's kubeconfig. Single ARM A1.Flex node provides the
-# entire compute envelope for the workbench's 3 tiers.
+# OKE cluster — defaults to BASIC_CLUSTER which is the $0/hour
+# control-plane SKU on Always-Free. Switch ``type`` to
+# ``ENHANCED_CLUSTER`` if your tenancy already has the one BASIC slot
+# consumed by another cluster — the free-tier quota is one BASIC
+# cluster but up to 15 ENHANCED clusters (which cost $0.10/hr each
+# for the control plane). Use ``oci limits resource-availability get
+# --service-name container-engine --limit-name cluster-count`` to
+# check before applying.
+#
+# Public endpoint so kubectl works from anywhere with the cluster's
+# kubeconfig. Single ARM A1.Flex node provides the entire compute
+# envelope for the workbench's 3 tiers.
 
 data "oci_identity_availability_domains" "ads" {
   compartment_id = var.tenancy_ocid

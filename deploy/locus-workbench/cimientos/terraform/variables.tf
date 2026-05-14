@@ -40,7 +40,7 @@ variable "vcn_cidr" {
 variable "k8s_version" {
   description = "OKE Kubernetes version. Defaults to a current LTS line."
   type        = string
-  default     = "v1.31.10"
+  default     = "v1.32.10"
 }
 
 variable "node_pool_shape" {
