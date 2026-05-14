@@ -1,0 +1,24 @@
+# Copy to terraform.tfvars and fill in the two OCIDs.
+# All other vars have free-tier-safe defaults.
+
+# Tenancy OCID — find with:
+#   oci iam tenancy get --tenancy-id $(oci iam compartment list --query 'data[0]."tenancy-id"' --raw-output --profile API_FREE_TIER) --profile API_FREE_TIER
+tenancy_ocid = "ocid1.tenancy.oc1..xxxxxxxx"
+
+# Compartment to provision into. Use the tenancy root OCID for the
+# simplest free-tier setup (no IAM policy required).
+compartment_ocid = "ocid1.tenancy.oc1..xxxxxxxx"
+
+# Worker image OCID for the chosen k8s_version + region. Pull with:
+#   oci ce node-pool-options get --node-pool-option-id all \
+#     --profile API_FREE_TIER --region ca-toronto-1 \
+#     --query 'data.sources[?contains(\"source-name\", `OKE-1.31`) && contains(\"source-name\", `aarch64`)] | [0]."image-id"'
+# (Free Tier in YYZ as of 2026-05; bump when k8s_version moves.)
+node_pool_image_id = "ocid1.image.oc1.ca-toronto-1.xxxxxxxx"
+
+# Optional overrides — uncomment to deviate from defaults.
+# region              = "ca-toronto-1"
+# oci_profile         = "API_FREE_TIER"
+# node_pool_ocpus     = 2
+# node_pool_memory_gb = 12
+# node_pool_size      = 1

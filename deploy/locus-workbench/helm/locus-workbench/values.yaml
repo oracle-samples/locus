@@ -1,0 +1,108 @@
+# locus-workbench Helm values — Always-Free OKE defaults.
+# Override on the CLI:
+#   helm install locus-workbench ./helm/locus-workbench \
+#     --set image.repository=yyz.ocir.io/<namespace>/locus-workbench \
+#     --set image.tag=0.2.0b9
+
+image:
+  # Set to the OCIR ref printed by `terraform output -raw ocir_image_ref`.
+  repository: ''
+  tag: 0.2.0b9
+  # IfNotPresent works for tagged releases; switch to Always while
+  # iterating on a `latest` tag.
+  pullPolicy: IfNotPresent
+
+# OCIR pull secret. Created by the Makefile target `make ocir-secret`
+# from an auth token. Leave empty if the OKE node pool already has
+# an instance principal policy granting OCIR read.
+imagePullSecrets:
+- name: ocir-pull-secret
+
+replicaCount: 1
+
+service:
+  # LoadBalancer surfaces the workbench at a public IP. Flex 10 Mbps
+  # is free on OCI's Always-Free tier.
+  type: LoadBalancer
+  port: 80
+  targetPort: 5173
+  annotations:
+    # Force the 10 Mbps free-tier Flex shape. Any non-Always-Free
+    # shape silently bills.
+    service.beta.kubernetes.io/oci-load-balancer-shape: flexible
+    service.beta.kubernetes.io/oci-load-balancer-shape-flex-min: '10'
+    service.beta.kubernetes.io/oci-load-balancer-shape-flex-max: '10'
+
+# Optional: bind a real hostname via an Ingress (NGINX or OCI Native
+# Ingress). Disabled by default — LoadBalancer + IP is enough for a
+# demo deployment.
+ingress:
+  enabled: false
+  className: ''
+  hosts:
+  - host: workbench.example.com
+    paths:
+    - path: /
+      pathType: Prefix
+  tls: []
+
+resources:
+  # Free-tier worker has 2 OCPU + 12 GB. We give the workbench pod a
+  # generous slice — the Vite dev server alone uses ~700 MB; the OCI
+  # SDK pulls in ~200 MB more on cold import.
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    cpu: 1500m
+    memory: 3Gi
+
+# The container CMD already starts all 3 tiers. Override the
+# arg list only if you need to disable a tier (e.g. backend-only).
+command: []
+args: []
+
+env:
+  # Everything below is exposed inside the running container as a
+  # plain env var. Keep API keys in the externally-managed secret
+  # (see `envFromSecret`) rather than checking them in here.
+- name: LOCUS_MODEL_PROVIDER
+  value: openai     # users can override via Provider settings in the UI
+
+envFromSecret:
+  # Helm renders this into an `envFrom: - secretRef: name: <below>`
+  # block when set. Create the secret with:
+  #   kubectl create secret generic locus-workbench-keys \
+  #     --from-literal=OPENAI_API_KEY=sk-... \
+  #     --from-literal=ANTHROPIC_API_KEY=sk-ant-...
+  name: ''
+
+# Liveness + readiness on the Vite-facing port 5173.
+livenessProbe:
+  httpGet:
+    path: /
+    port: 5173
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 5
+readinessProbe:
+  httpGet:
+    path: /
+    port: 5173
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+
+serviceAccount:
+  create: true
+  name: ''
+  annotations: {}
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+securityContext: {}
+podSecurityContext: {}

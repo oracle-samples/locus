@@ -1,0 +1,16 @@
+apiVersion: v2
+name: locus-workbench
+description: Browser playground for every locus pattern. Single-pod deployment of the three workbench tiers (FastAPI runner, Express BFF, Vite web).
+type: application
+version: 0.1.0
+appVersion: 0.2.0b9
+keywords:
+- locus
+- workbench
+- oracle
+- oke
+- free-tier
+sources:
+- https://github.com/oracle-samples/locus
+maintainers:
+- name: Federico Kamelhar

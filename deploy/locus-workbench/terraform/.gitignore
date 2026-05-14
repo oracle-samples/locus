@@ -1,0 +1,7 @@
+# Terraform working state — do not commit
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfplan
+terraform.tfvars

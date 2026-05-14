@@ -27,8 +27,8 @@ repos:
   - id: check-yaml
     args: [--unsafe]        # Allow custom tags
     # Helm chart templates use Go templating ({{ ... }}) — not valid
-    # YAML before render. Exclude them from the pure-YAML check.
-    exclude: ^deploy/helm/.*/templates/
+    # YAML before render. Exclude every helm chart under deploy/.
+    exclude: ^deploy/.*helm/.*/templates/
   - id: destroyed-symlinks
   - id: detect-private-key
   - id: end-of-file-fixer
@@ -148,9 +148,9 @@ repos:
   - id: pretty-format-yaml
     args: [--autofix, --indent=2]
     # Helm templates use Go templating ({{ ... }}) — not valid YAML
-    # before render. They live under deploy/helm/*/templates/. The
-    # GitHub Actions workflow YAMLs use anchors the formatter mangles.
-    exclude: ^(\.github/|deploy/helm/.*/templates/)
+    # before render. The GitHub Actions workflow YAMLs use anchors
+    # the formatter mangles. Exclude every helm chart under deploy/.
+    exclude: ^(\.github/|deploy/.*helm/.*/templates/)
 
   # ==========================================================================
   # Markdown
