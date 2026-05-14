@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/oracle-samples/locus/main/docs/img/logo.svg" alt="locus — Multi-Agent Reasoning Orchestrator SDK" width="320">
+  <img src="https://raw.githubusercontent.com/oracle-samples/locus/main/docs/img/og-card.png" alt="locus — Multi-Agent SDK · pip install locus-sdk · Built inside Oracle · github.com/oracle-samples/locus" width="100%">
 </p>
 
 <p align="center">
