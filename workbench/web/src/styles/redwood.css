@@ -209,16 +209,23 @@ code, pre { font-family: var(--mono); }
   padding: 0 0.6rem 0.5rem;
 }
 
-/* Sidebar tab switcher (Tutorials / Skills). */
+/* Sidebar tab switcher (Tutorials / Skills / Protocols / Patterns). */
 .side__tabs {
   display: flex;
+  /* Wrap onto a second row when the four tabs don't fit. Without
+     this the rightmost tab (Patterns) clips off at default ~280px
+     sidebar width — invisible to the user. */
+  flex-wrap: wrap;
   gap: 0.25rem;
   padding: 0 0.5rem 0.6rem;
   border-bottom: 1px solid var(--or-border);
   margin-bottom: 0.5rem;
 }
 .side__tab {
-  flex: 1;
+  /* min-width keeps each tab readable when wrapping; flex-basis
+     lets two tabs share a row comfortably at narrow widths. */
+  flex: 1 1 calc(50% - 0.25rem);
+  min-width: 0;
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--radius);
