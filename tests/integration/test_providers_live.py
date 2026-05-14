@@ -10,7 +10,7 @@ aren't available:
 - ``HTTPXWebFetcher`` against ``https://example.com`` (network-only).
 - ``OpenAISearchPreviewProvider`` against ``gpt-4o-search-preview``
   (needs ``OPENAI_API_KEY``).
-- ``OpenAIImageProvider`` against ``dall-e-3`` (needs ``OPENAI_API_KEY``,
+- ``OpenAIImageProvider`` against ``gpt-image-1`` (needs ``OPENAI_API_KEY``,
   costs cents per call — gated behind ``LOCUS_LIVE_IMAGE=1``).
 - ``OpenAISpeechProvider`` round-trip TTS→STT (needs ``OPENAI_API_KEY``,
   costs cents per call — gated behind ``LOCUS_LIVE_SPEECH=1``).
@@ -106,7 +106,7 @@ async def test_openai_search_preview_returns_results() -> None:
 async def test_openai_image_provider_round_trip() -> None:
     from locus.providers.image import OpenAIImageProvider
 
-    provider = OpenAIImageProvider(model="dall-e-3")
+    provider = OpenAIImageProvider(model="gpt-image-1")
     results = await provider.generate(
         "a tiny cartoon orange octopus holding a wrench",
         size="1024x1024",

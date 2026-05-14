@@ -48,9 +48,11 @@ class OpenAIImageProvider:
     """Image generation via OpenAI ``images.generate`` (DALL-E / gpt-image).
 
     Args:
-        model: Model id — ``"dall-e-3"`` (default), ``"gpt-image-1"``,
-            or any OCI-hosted equivalent the user wants to call through
-            an OpenAI-compatible client.
+        model: Model id — ``"gpt-image-1"`` (default; OpenAI's current
+            image model), or any OCI-hosted equivalent the user wants to
+            call through an OpenAI-compatible client. ``"dall-e-3"`` and
+            ``"dall-e-2"`` are deprecated by OpenAI; pass them explicitly
+            if you still need them.
         api_key: Optional explicit key. Defaults to ``OPENAI_API_KEY``.
         base_url: Optional base URL for OpenAI-compatible endpoints
             (e.g. OCI's ``/openai/v1``).
@@ -61,7 +63,7 @@ class OpenAIImageProvider:
 
     def __init__(
         self,
-        model: str = "dall-e-3",
+        model: str = "gpt-image-1",
         *,
         api_key: str | None = None,
         base_url: str | None = None,
