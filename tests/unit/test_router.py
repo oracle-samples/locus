@@ -805,7 +805,10 @@ class TestLLMProtocolPicker:
 
     def test_picker_raises_falls_back_to_rule_based(self):
         """Picker exception → fall back to _rank_key, method =
-        rule_based_fallback."""
+        rule_based_fallback. Passes ``run_id`` so the
+        ``router.protocol.picker_fallback`` event is emitted on the
+        bus — verified by the in-process subscriber below."""
+        from locus.observability import get_event_bus
         from locus.router.picker import LLMProtocolPicker
 
         async def _boom(frame, candidates):
@@ -818,17 +821,33 @@ class TestLLMProtocolPicker:
         async def _drive():
             frame = _frame(primary_goal=TaskType.COMPARE)
             candidates = compiler.protocols.filter_candidates(frame, available_capabilities=set())
-            return await compiler._pick_protocol(frame, candidates, run_id=None)
+            captured: list[Any] = []
 
-        protocol, method, rationale = asyncio.run(_drive())
+            async def _collect() -> None:
+                async for ev in get_event_bus().subscribe("picker-fallback-1"):
+                    if ev.event_type == "router.protocol.picker_fallback":
+                        captured.append(ev)
+                        break
+
+            collect_task = asyncio.create_task(_collect())
+            result = await compiler._pick_protocol(frame, candidates, run_id="picker-fallback-1")
+            await asyncio.wait_for(collect_task, timeout=0.2)
+            return result, captured
+
+        (protocol, method, rationale), captured = asyncio.run(_drive())
         assert method == "rule_based_fallback"
         assert rationale is None
         # The fallback must produce a valid registered protocol.
         assert protocol.id in {p.id for p in builtin_protocols()}
+        # The picker_fallback event must fire with the wrapped error message.
+        assert len(captured) == 1
+        assert captured[0].data["error"].startswith("RuntimeError")
+        assert "model unreachable" in captured[0].data["error"]
 
     def test_picker_unknown_id_falls_back(self):
         """Picker returns id not in candidates → PickerError caught,
-        rule-based fallback wins."""
+        rule-based fallback wins. Passes ``run_id`` so the fallback
+        event fires (covers the PickerError branch in the emitter)."""
         from locus.router.picker import LLMProtocolPicker, PickerError
 
         async def _hallucinate(frame, candidates):
@@ -841,7 +860,7 @@ class TestLLMProtocolPicker:
         async def _drive():
             frame = _frame(primary_goal=TaskType.COMPARE)
             candidates = compiler.protocols.filter_candidates(frame, available_capabilities=set())
-            return await compiler._pick_protocol(frame, candidates, run_id=None)
+            return await compiler._pick_protocol(frame, candidates, run_id="picker-fallback-2")
 
         protocol, method, _ = asyncio.run(_drive())
         assert method == "rule_based_fallback"
