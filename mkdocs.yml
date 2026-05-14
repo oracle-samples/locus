@@ -249,6 +249,7 @@ nav:
     - Add a checkpointer backend: how-to/custom-checkpointer.md
     - OCI GenAI models: how-to/oci-models.md
     - OCI Dedicated AI Cluster (DAC): how-to/oci-dac.md
+    - Deploy workbench on Always-Free OKE: how-to/deploy-workbench-free-tier.md
 - Workbench: workbench.md
 - API reference:
   - Agent: api/agent.md
