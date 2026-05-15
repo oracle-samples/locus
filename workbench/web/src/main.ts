@@ -199,12 +199,12 @@ function syncSettingsRows() {
 function openSettings() {
   // First-open default depends on where we're running. On localhost the user
   // typically has a populated `~/.oci/config`, so OCI session is the natural
-  // pick. On a Codespace (or any non-localhost) the OCI session option is
-  // filtered out of the dropdown — handing it as the default makes the
-  // <select> render an empty value, which then crashes `syncSettingsRows`
-  // because `defaultsFor("")` falls through the switch and returns
-  // `undefined`. Pick `openai` in that case so the dropdown shows a real
-  // option from the start.
+  // pick. On any non-localhost host (e.g. a remote-served build) the OCI
+  // session option is filtered out of the dropdown — handing it as the
+  // default makes the <select> render an empty value, which then crashes
+  // `syncSettingsRows` because `defaultsFor("")` falls through the switch
+  // and returns `undefined`. Pick `openai` in that case so the dropdown
+  // shows a real option from the start.
   const firstOpenDefault: ProviderType = isLocalhost ? "oci-session" : "openai";
   fillFromConfig(provider ?? defaultsFor(firstOpenDefault));
   syncSettingsRows();

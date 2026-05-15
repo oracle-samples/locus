@@ -83,6 +83,38 @@ make web       # vite dev server
 make e2e
 ```
 
+## Run in Docker
+
+Single-image build, all three tiers in one container:
+
+```bash
+# from the repo root
+docker build -t locus-workbench -f workbench/Dockerfile .
+docker run --rm -p 5173:5173 -p 3101:3101 -p 8100:8100 locus-workbench
+# open http://localhost:5173
+```
+
+For OpenAI / Anthropic, paste the key into *Provider settings* once
+the UI is up — no extra container args needed.
+
+For OCI (api-key or session-token), the SDK reads `~/.oci/config`
+which references the private key at an **absolute** host path. The
+container has no such path by default, so bind-mount `~/.oci` at the
+same host path inside the container and set `HOME` so the SDK looks
+there:
+
+```bash
+docker run --rm -p 5173:5173 -p 3101:3101 -p 8100:8100 \
+  -v "$HOME/.oci:$HOME/.oci:ro" \
+  -e "HOME=$HOME" \
+  locus-workbench
+```
+
+The mount is read-only (`:ro`); the workbench never writes to your
+OCI directory. The host's `$HOME/.oci` is mirrored inside the
+container at the same path, so absolute `key_file` lines in
+`~/.oci/config` resolve.
+
 ## Tests
 
 `workbench/e2e/` — Playwright + chromium.

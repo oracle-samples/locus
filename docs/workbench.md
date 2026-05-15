@@ -1,18 +1,15 @@
 # Locus workbench
 
-A browser-based playground for every locus pattern. Two clicks to a
-running agent — no CLI, no `pip install`, no editor setup.
+A browser-based playground for every locus pattern. Two ways to run
+it — straight from source on your laptop, or inside a Docker
+container — both end at the same UI at <http://localhost:5173>.
 
-[Launch in Codespaces](https://codespaces.new/oracle-samples/locus?devcontainer_path=.devcontainer%2Fdevcontainer.json){ .md-button .md-button--primary }
-[View on GitHub](https://github.com/oracle-samples/locus){ .md-button }
+[View on GitHub](https://github.com/oracle-samples/locus){ .md-button .md-button--primary }
+[Workbench README](https://github.com/oracle-samples/locus/tree/main/workbench){ .md-button }
 
-**Click 1 — Launch.** GitHub provisions a Codespace, installs Python +
-Node deps, and boots all three tiers (FastAPI runner, Node BFF, Vite
-front-end). After ~2 minutes the workbench UI opens in a Simple Browser tab.
-
-**Click 2 — Run.** Open *Provider settings*, paste an OpenAI or
-Anthropic key, pick a tutorial in the sidebar, hit **Run**. A real
-agent streams events back into the browser.
+Once it's up: open *Provider settings*, paste an OpenAI / Anthropic
+key or wire up an OCI profile, pick a tutorial in the sidebar, hit
+**Run**. A real agent streams events back into the browser.
 
 ![locus workbench](img/workbench.gif)
 
@@ -27,9 +24,8 @@ sequential pipeline, a map-reduce fan-out, a critic loop with
 that imports locus, builds the agent, and streams events through to
 your browser.
 
-It's also the canonical demo for Codespaces and Docker: visitors
-arrive at this app, pick a workflow, and learn the SDK by running
-real ones.
+It's also the canonical demo: visitors arrive at this app, pick a
+workflow, and learn the SDK by running real ones.
 
 ```
 ┌───────────────────────────────────────┐
@@ -54,64 +50,131 @@ You paste your provider key once per tab — **the workbench never
 persists API keys to localStorage**, so closing the tab discards
 everything.
 
-## Three paths to spin it up
+## Run it locally (from source)
 
-Pick whichever fits — **Codespaces** for zero install, **Docker** for a
-local container with BYO key, or **From source** for iterating on the
-workbench itself.
+The dev-loop path. Best for iterating on the workbench code itself,
+debugging a pattern, or extending the runner.
 
-### Path A — GitHub Codespaces (zero install, free)
+### Prerequisites
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/oracle-samples/locus?devcontainer_path=.devcontainer%2Fdevcontainer.json)
+- **Python 3.11+** with `pip` (3.12 is what CI uses).
+- **Node 20+** with `npm`.
+- A model provider — one of: an `OPENAI_API_KEY`, an
+  `ANTHROPIC_API_KEY`, or a populated `~/.oci/config` for OCI GenAI.
 
-Click the badge on the [repo home page](https://github.com/oracle-samples/locus).
-GitHub provisions a Linux container in your account, runs
-`.devcontainer/postCreate.sh` to install Python + Node deps, then
-forwards port 5173 publicly. ~2-min cold start. You burn your own
-free Codespaces minutes (60 hrs/month), nothing on the locus side.
-
-### Path B — Docker (local, BYO key)
+### Step-by-step
 
 ```bash
-git clone https://github.com/oracle-samples/locus.git && cd locus
+git clone https://github.com/oracle-samples/locus.git
+cd locus
+pip install -e ".[server,oci,openai,anthropic]"  # core + provider extras
+```
+
+Three tiers, three terminals (or three tmux panes). They don't depend
+on each other at startup, but every tier expects the one downstream
+of it to come up within ~30 s:
+
+```bash
+# Terminal 1 — FastAPI runner (the actual workbench backend)
+cd workbench/backend
+python -m uvicorn --app-dir . runner:app --port 8100
+
+# Terminal 2 — Express BFF (proxies /api/* from the web tier to the runner)
+cd workbench/bff
+npm install
+npm run dev                                       # binds :3101
+
+# Terminal 3 — Vite dev server (the UI)
+cd workbench/web
+npm install
+npm run dev                                       # binds :5173
+```
+
+Or use the convenience `Makefile`:
+
+```bash
+cd workbench
+make install                                      # npm install in bff + web
+make backend                                      # pane 1 — :8100
+make bff                                          # pane 2 — :3101
+make web                                          # pane 3 — :5173
+```
+
+`make install` also runs `npx playwright install chromium` for the
+end-to-end test suite in `workbench/e2e/`. The `make backend` target
+is the workbench runner — distinct from `make backend-research` and
+`make backend-finance`, which spin up the A2A mesh demo peers for
+[tutorial 34](tutorials/tutorial_34_a2a_protocol.md), not the
+workbench.
+
+### Verify it's up
+
+```bash
+curl -s http://127.0.0.1:8100/api/health | jq        # runner
+curl -s http://127.0.0.1:3101/api/health | jq        # bff
+curl -sI http://127.0.0.1:5173/ | head -1            # web → HTTP/1.1 200 OK
+```
+
+Then open <http://localhost:5173>. Click **Provider settings** (top
+right), pick your provider, fill the credentials, hit Save. Pick a
+tutorial from the sidebar, hit **Run**.
+
+## Run it in Docker
+
+The packaged path. Best for handing the workbench to a teammate, a
+new laptop, or a demo machine where you don't want to install the
+Python and Node toolchains directly.
+
+### Build
+
+```bash
+git clone https://github.com/oracle-samples/locus.git
+cd locus
 docker build -t locus-workbench -f workbench/Dockerfile .
-docker run --rm -p 5173:5173 -p 3101:3101 -p 8100:8100 locus-workbench
-# open http://localhost:5173
-# → paste OpenAI / Anthropic key in Provider settings → Run a tutorial
 ```
 
 Image is ~1.3 GB on first build (Oracle Linux 9-slim base + Python
-3.12 + Node 20 + locus + the workbench source). Subsequent builds
-hit the layer cache.
+3.12 + Node 20 + locus + workbench source). Subsequent builds hit
+the BuildKit layer cache.
 
-## Codespaces — what happens after you click
+### Run
 
-1. **Cold start** — GitHub builds the container from
-   `.devcontainer/devcontainer.json` (Python 3.12 + Node 20). First
-   boot runs `postCreate.sh` to `pip install -e ".[dev,llm]"` plus
-   `fastapi` + `python-multipart`, and `npm install` both workbench
-   projects against the public npm registry. ~2 minutes.
-2. **Two tabs open** — GitHub Codespaces opens a **VS Code Web** tab
-   first (the editor session that owns the container). When Vite
-   binds on `:5173`, a **second tab** opens with the
-   workbench UI itself (`https://<codespace>-5173.app.github.dev`)
-   per `5173.onAutoForward: openBrowserOnce`. **The workbench is the
-   second tab, not VS Code.** If your browser blocks the popup, the
-   VS Code terminal panel shows a clearly-labelled `🚀 locus
-   workbench is ready` banner with a ⌘-clickable URL — same
-   destination.
-3. **Auto-boot** — `postStart.sh` backgrounds the three tiers in
-   detached `setsid` sessions so they survive after the lifecycle hook
-   exits: `uvicorn runner:app` on `:8100`, `npm run dev` (Express) on
-   `:3101`, `npm run dev` (Vite) on `:5173`.
-4. **Run a pattern** — *Provider settings* → paste an OpenAI or
-   Anthropic key → pick a tutorial → **Run**.
+For **OpenAI / Anthropic** providers — paste the key into *Provider
+settings* once the UI is up. Nothing extra to pass to the container:
 
-The OCI options in the Provider settings modal will not work in
-Codespaces — they need a local `~/.oci/config` that doesn't exist
-in the container. Use OpenAI or Anthropic for the cloud demo path.
+```bash
+docker run --rm -p 5173:5173 -p 3101:3101 -p 8100:8100 locus-workbench
+# open http://localhost:5173
+```
 
-## Docker — port-remap if 5173 is taken
+For **OCI** providers (api-key or session token), the OCI SDK reads
+`~/.oci/config` at runtime — and that config file contains an
+**absolute** `key_file` path on your host. The container has no such
+path by default, so the SDK reads the config but fails to load the
+key. The fix is to bind-mount your host's `~/.oci` at the same path
+inside the container *and* set `HOME` so the SDK looks for the
+config in the mirrored location:
+
+```bash
+docker run --rm -p 5173:5173 -p 3101:3101 -p 8100:8100 \
+  -v "$HOME/.oci:$HOME/.oci:ro" \
+  -e "HOME=$HOME" \
+  locus-workbench
+```
+
+Both pieces matter — the mount alone gets the config file readable
+but the `key_file` line points at a path that still doesn't resolve;
+the `HOME` env alone redirects the SDK to a path nothing is mounted
+at. Together they mirror your host layout into the container so every
+absolute reference inside `config` lines up.
+
+The mount is read-only (`:ro`) — the workbench never writes to your
+OCI directory.
+
+### Port collisions
+
+If 5173 / 3101 / 8100 are taken on the host (you have the local
+workbench running, for instance), remap them:
 
 ```bash
 docker run --rm \
@@ -120,38 +183,11 @@ docker run --rm \
 # then http://localhost:5273
 ```
 
-Stop with `Ctrl-C`; the `--rm` flag removes the container on exit.
+The container ports stay 5173/3101/8100 — only the host-side port
+changes. The Vite dev server inside the container always listens on
+5173; remapping doesn't break the BFF→backend or web→BFF wiring.
 
-### Path C — From source (development)
-
-For iterating on the workbench itself:
-
-```bash
-git clone https://github.com/oracle-samples/locus.git
-cd locus
-pip install -e ".[server,oci,openai,anthropic]"  # core + extras
-
-# Three terminals, one per tier:
-cd workbench/bff && npm install && npm run dev      # :3101
-cd workbench/web && npm install && npm run dev      # :5173
-cd workbench/backend && python -m uvicorn --app-dir . runner:app --port 8100
-```
-
-Or use the `Makefile` in `workbench/`:
-
-```bash
-cd workbench && make install
-make backend   # pane 1 — FastAPI runner on :8100
-make bff       # pane 2 — Express BFF on :3101
-make web       # pane 3 — Vite dev server on :5173
-```
-
-`make install` runs `npm install` for both `bff/` and `web/` plus
-`npx playwright install chromium` for the e2e suite. The `backend`
-target is the workbench's FastAPI runner — distinct from
-`backend-research` and `backend-finance`, which spin up the A2A
-mesh demo peers for [tutorial 34](tutorials/tutorial_34_a2a_protocol.md),
-not the workbench itself.
+Stop with `Ctrl-C`; `--rm` removes the container on exit.
 
 ## Provider settings
 
@@ -162,9 +198,11 @@ The header's **Provider settings** modal accepts four shapes:
   (defaults to `claude-sonnet-4-6`).
 - **OCI session token** — `profile` (e.g. `MY_PROFILE`) +
   `compartment_id` + `region`. Reads `~/.oci/config` at runtime;
-  needs a valid session token. Local-machine only.
-- **OCI api-key** — same shape, different OCI auth type. Local-machine
-  only.
+  needs a valid session token. Works on localhost out of the box;
+  works in Docker when you bind-mount `~/.oci` (see
+  [Run it in Docker](#run-it-in-docker)).
+- **OCI api-key** — same shape, different OCI auth type. Same
+  hosting requirements as OCI session token.
 
 Settings live in the page's memory. Closing the tab discards them.
 Reopening the page = paste again. This is intentional: an API key
@@ -272,22 +310,31 @@ for the architectural details.
 
 ## Cost
 
-**You pay $0** when someone uses the workbench. Each visitor's
-compute hits their own free GitHub / their own Docker, and their
-model calls hit their own provider key. Oracle pays $0 unless an
-oracle-employee opens it AND `oracle-samples` org Codespaces billing
-is enabled.
+**You pay $0 to run the workbench itself.** All three tiers run
+locally — your laptop or your Docker daemon. The only thing you pay
+for is the model calls your tutorials make, and those go directly
+to *your* provider key (OpenAI / Anthropic) or *your* OCI tenancy.
+Oracle pays nothing.
 
 ## Troubleshooting
 
-- **Sidebar is empty** — BFF couldn't reach the backend. Check
-  `docker logs <container>` or the runner pane: usually means the
-  backend hasn't finished starting yet (10-20s on cold boot).
+- **Sidebar is empty** — the BFF couldn't reach the backend. The
+  runner takes 10–20 s to start; reload the page once you see
+  `Uvicorn running on http://0.0.0.0:8100` in the backend logs
+  (or `docker logs <container>` for the Docker path).
 - **"Provider settings: setup required" never goes away** — you
   closed the modal without hitting Save. Reopen and click Save.
-- **OCI session-token auth says "no profile"** — you're running in
-  Codespaces / Docker; OCI auth needs `~/.oci/config` mounted in.
-  Switch to OpenAI or Anthropic.
+- **OCI auth says "no profile" or `KeyError: 'tenancy'`** — the OCI
+  SDK can't find `~/.oci/config`. On localhost: verify
+  `~/.oci/config` exists and the `[<your-profile>]` section has
+  `tenancy`, `user`, `fingerprint`, `key_file`. In Docker: you
+  forgot the bind-mount and `HOME` env — see [Run it in Docker](#run-it-in-docker)
+  for the exact command.
+- **OCI auth says the key file is missing** — your `key_file` line
+  in `~/.oci/config` is an absolute path. In Docker, that path has
+  to resolve inside the container. The `-v "$HOME/.oci:$HOME/.oci:ro"
+  -e "HOME=$HOME"` pair mirrors the host layout so absolute paths
+  line up.
 - **Tutorial fails with "no parsed Pydantic" / empty output** — your
   model is too small for structured output. Use `gpt-5.5-2026-04-23`,
   `gpt-4o`, or `claude-sonnet-4-6` for the demos that use
