@@ -75,6 +75,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 # Replace ``your_app:server.app`` with the import path of your own
 # AgentServer instance. The placeholder example below assumes a module
 # called ``app.py`` at /home/locus/app.py exposing a ``server`` symbol.
-#
-# An example ``app.py`` lives in deploy/oci-functions/app.py.
 CMD ["uvicorn", "app:server.app", "--host", "0.0.0.0", "--port", "8080"]

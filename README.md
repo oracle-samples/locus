@@ -304,10 +304,11 @@ server = AgentServer(agent=my_agent, api_key=os.environ["API_KEY"])
 server.run(host="0.0.0.0", port=8080)
 ```
 
-The repo ships a multi-stage `Dockerfile` and a Helm chart at
-[`deploy/helm/locus-agent/`](deploy/helm/locus-agent/) — Deployment, HPA, Ingress, OCI workload-identity hooks.
+The repo ships a multi-stage `Dockerfile` ready to drop into your own image
+pipeline. Deploy anywhere FastAPI runs — OCI Functions, Container Instances,
+OKE, Compute, or any cloud equivalent.
 
-→ [Deploy guide](https://oracle-samples.github.io/locus/tutorials/deploy/)
+→ [Deploy guide](https://oracle-samples.github.io/locus/how-to/deploy/)
 
 ---
 
