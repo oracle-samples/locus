@@ -527,7 +527,7 @@ html {
   align-self: center;
 }
 /* Stack the first topic vertically: "locus" wordmark + the
-   "MULTI-AGENT REASONING ORCHESTRATOR SDK" subtitle beneath, matching
+   "Multi Agent Reasoning SDK" subtitle beneath, matching
    the wordmark+tagline lockup the SVG logo carries. */
 .md-header__ellipsis > .md-header__topic:first-of-type {
   display: flex;
@@ -546,7 +546,7 @@ html {
   color: var(--locus-ink);
 }
 .md-header__ellipsis > .md-header__topic:first-of-type::after {
-  content: "MULTI-AGENT REASONING ORCHESTRATOR SDK";
+  content: "Multi Agent Reasoning SDK";
   font-family: var(--locus-sans);
   font-size: 0.55rem;
   font-weight: 600;
@@ -580,7 +580,7 @@ html {
 /* Site-wide: never let Material swap the header topic on scroll. The default
    behaviour translates topic #1 (site name + our tagline) up and fades in
    topic #2 (page title), which strips the
-   "MULTI-AGENT REASONING ORCHESTRATOR SDK" line and replaces it with the
+   "Multi Agent Reasoning SDK" line and replaces it with the
    current page's name. Pin topic #1 and hide #2 on every page so the brand
    banner (diamond mark + "locus" + tagline) stays put as the user scrolls. */
 .md-header__ellipsis > .md-header__topic:first-of-type {
@@ -663,18 +663,17 @@ html {
   color: #FFFFFF;
 }
 
-/* Header right slot — PyPI version badge (shields.io image) sits to the
-   right of the GitHub icon. Matches the OCI/GitHub vertical rhythm. */
+/* Header right slot — PyPI version badge sits to the right of the GitHub
+   icon, hugging the far right edge of the header. */
 .md-header__source.md-header__pypi {
   display: inline-flex;
   align-items: center;
-  padding: 0.25rem 0.4rem;
-  margin-left: 0.25rem;
-  border-radius: 6px;
-  transition: background-color 0.15s, transform 0.15s;
+  margin-left: 0.4rem;
+  padding: 0;
+  border-radius: 4px;
+  transition: transform 0.15s;
 }
 .md-header__source.md-header__pypi:hover {
-  background-color: rgba(199, 70, 52, 0.08);
   transform: translateY(-1px);
 }
 .md-header__pypi-badge {
@@ -683,8 +682,8 @@ html {
   display: block;
 }
 @media (max-width: 60em) {
-  .md-header__source.md-header__pypi { padding: 0.15rem 0.25rem; margin-left: 0.15rem; }
-  .md-header__pypi-badge { height: 18px; }
+  .md-header__source.md-header__pypi { margin-left: 0.25rem; }
+  .md-header__pypi-badge { height: 16px; }
 }
 .md-nav--primary .md-header__source.md-header__github:hover {
   color: #FFFFFF;
