@@ -8,7 +8,62 @@ policy.
 
 ## [Unreleased]
 
-### Feat (0.2.0b9) — opt-in LLM protocol picker + workbench cognitive routing
+## [0.2.0b10] - 2026-05-15
+
+### Fixed — /invoke + auth rough edges surfaced by an OCI GenAI e2e build
+
+Four small fixes and one error-message improvement, each of which
+independently blocked a real end-to-end build (orchestrator + specialists
+on `oci:openai.gpt-5` in `us-chicago-1`, exposed via an `AgentServer`
+behind a Fastify proxy). Each fix is gated by unit tests; the full suite
+stays green (4564 passed, 3 skipped). Closes
+[#191](https://github.com/oracle-samples/locus/issues/191).
+
+- **`[oci]` extra now pulls `openai>=1.50`.** The OCI provider
+  lazy-imports `openai` at request time (`OCIOpenAIModel.client`
+  property); without it in the extra, a fresh
+  `pip install "locus-sdk[oci]"` boots cleanly but the first
+  `.complete()` raises `ModuleNotFoundError: No module named 'openai'`.
+  The OCI Generative AI service speaks the OpenAI Chat Completions wire
+  protocol, so this dependency is mandatory for any consumer of the
+  `[oci]` extra. Pinned alongside the `[openai]` extra.
+
+- **`Agent.add_tool()` / `Agent.add_tools()` post-construct API.**
+  `Agent.__init__` compiles `config.tools` into the runtime
+  `_tool_registry` once, but the dataclass field stays writable —
+  meaning post-construct mutation of `agent.config.tools` was a silent
+  no-op (the model never saw the added tool). The new methods register
+  on the live registry and mirror into `config.tools` so a re-init
+  reconstructs the same shape. Common shape: orchestrator constructs
+  first, then `Agent.as_tool(specialist)` wrappers are attached
+  afterwards. The silent-mutation behaviour is now pinned by an explicit
+  regression test so a future "helpful" patch can't quietly re-break it.
+
+- **`InvokeResponse.duration_ms` is real wall time.** Previously
+  hardcoded `0.0`; the `agent.run(...)` async iteration is now wrapped
+  in `time.perf_counter()`. Every client-side latency metric reading the
+  field was getting zeros.
+
+- **`InvokeResponse.success` is derived from `stop_reason`.** Previously
+  hardcoded `True` regardless of outcome — runs that terminated with
+  `reason="error"`, `"max_iterations"`, or `"tool_loop"` came back as
+  `success=true`. Now backed by a module-level
+  `_INVOKE_SUCCESS_REASONS = {"complete", "confidence_met",
+  "terminal_tool"}` set and an `_invoke_success(reason)` helper, both
+  unit-tested. Callers can branch on the boolean without parsing the
+  reason string.
+
+- **`OCIOpenAIModel` auth-mode error is self-fixing.** The constructor
+  `ValueError` for zero or two auth modes now names both valid call
+  shapes (`profile='<section_from_~/.oci/config>'` for the API-key path
+  vs. `auth_type='instance_principal'|'resource_principal'|
+  'security_token'|'delegation_token'` together with `compartment_id=`)
+  and echoes the actual `profile=` / `auth_type=` values back. Saves the
+  next user a doc round-trip.
+
+## [0.2.0b9] - 2026-05-14
+
+### Feat — opt-in LLM protocol picker + workbench cognitive routing
 
 - **`LLMProtocolPicker`** — second selection mode for the cognitive
   router. Pass an instance to
@@ -61,7 +116,9 @@ policy.
   that requires a one-time manual upload at the repo's Settings →
   Social preview.)
 
-### Fix (0.2.0b8) — DALL-E 3 deprecation + home-page enterprise voice
+## [0.2.0b8] - 2026-05-14
+
+### Fix — DALL-E 3 deprecation + home-page enterprise voice
 
 - **`OpenAIImageProvider`** default model changed from `"dall-e-3"`
   (deprecated by OpenAI) to `"gpt-image-1"`. Existing callers that pin
@@ -76,7 +133,9 @@ policy.
   protocol chip so the eight-pattern row never breaks awkwardly across
   lines.
 
-### Docs (0.2.0b7) — OCI Responses surfaced across existing pages + voice pass
+## [0.2.0b7] - 2026-05-14
+
+### Docs — OCI Responses surfaced across existing pages + voice pass
 
 - **`concepts/providers/oci.md`** now lists three transports
   (`OCIOpenAIModel`, `OCIResponsesModel`, `OCIModel`) and includes
@@ -101,7 +160,9 @@ policy.
   automatically").
 - `mkdocs build --strict` passes clean with the updated pages.
 
-### Fixed (0.2.0b6) — OCI Responses live-shakedown follow-ups
+## [0.2.0b6] - 2026-05-14
+
+### Fixed — OCI Responses live-shakedown follow-ups
 
 Caught by running the in-PR Responses code against real OCI for
 streaming, multi-turn, and tool round-trip. All three fixes are
@@ -142,6 +203,12 @@ gpt-5 (events, content deltas, completed event), two-turn stateless
 continuation (recalls user-shared facts from full history), and tool
 round-trip with real OCI returning a final answer derived from tool
 output.
+
+## [0.2.0b1 → 0.2.0b5] - 2026-05-07 → 2026-05-14
+
+Cumulative entries from the first five betas, kept together because the
+release tags did not have one-to-one CHANGELOG sections at the time.
+Individual MR numbers in parentheses anchor each item to its source change.
 
 ### Added
 
@@ -306,5 +373,11 @@ First internal-review version. Core shape established:
 - Observability: OpenTelemetry spans and metrics, structured logging.
 - Streaming: `AsyncIterator[LocusEvent]`, SSE, console handler.
 
-[Unreleased]: https://orahub.oci.oraclecorp.com/saas-observ-eng/locus/-/compare/v0.1.0...main
-[0.1.0]: https://orahub.oci.oraclecorp.com/saas-observ-eng/locus/-/tree/v0.1.0
+[Unreleased]: https://github.com/oracle-samples/locus/compare/v0.2.0b10...main
+[0.2.0b10]: https://github.com/oracle-samples/locus/compare/v0.2.0b9...v0.2.0b10
+[0.2.0b9]: https://github.com/oracle-samples/locus/compare/v0.2.0b7...v0.2.0b9
+[0.2.0b8]: https://github.com/oracle-samples/locus/compare/v0.2.0b7...v0.2.0b9
+[0.2.0b7]: https://github.com/oracle-samples/locus/compare/v0.2.0b6...v0.2.0b7
+[0.2.0b6]: https://github.com/oracle-samples/locus/compare/v0.2.0b5...v0.2.0b6
+[0.2.0b1 → 0.2.0b5]: https://github.com/oracle-samples/locus/compare/v0.1.0...v0.2.0b5
+[0.1.0]: https://github.com/oracle-samples/locus/releases/tag/v0.1.0
