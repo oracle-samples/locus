@@ -21,7 +21,13 @@
   <a href="https://oracle-samples.github.io/locus/concepts/multi-agent/">Multi-agent</a> ·
   <a href="https://oracle-samples.github.io/locus/concepts/deepagent/">DeepAgent</a> ·
   <a href="examples/">56 Tutorials</a> ·
-  <a href="workbench/">Workbench</a>
+  <a href="https://oracle-samples.github.io/locus/workbench/">Workbench</a>
+</p>
+
+<p align="center">
+  <strong>Try every locus pattern in your browser →</strong>
+  <a href="https://oracle-samples.github.io/locus/workbench/"><strong>Workbench guide</strong></a><br>
+  <em>Step-by-step setup for the browser playground — run it on localhost in three terminals, or in a single Docker container. Bring your own OpenAI / Anthropic key, or wire up an OCI profile.</em>
 </p>
 
 ---
