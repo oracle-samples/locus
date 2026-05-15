@@ -2,7 +2,7 @@
 # the workers (so kubelet can reach the public OKE API endpoint
 # without a NAT hop) and the LoadBalancer service. Free-tier
 # topology — no NAT GW, no private subnet. Production deployments
-# should use a NAT GW with workers in a private subnet for a tighter blast radius.
+# should use the almariel pattern with workers behind a NAT.
 
 resource "oci_core_vcn" "workbench" {
   compartment_id = var.compartment_ocid
@@ -100,6 +100,27 @@ resource "oci_core_network_security_group_security_rule" "oke_api_ingress" {
   }
 }
 
+# OKE bootstrap port — TKW (Tenant Kubernetes Worker). During node
+# registration the kubelet fetches TLS certs from the OKE API
+# endpoint at https://<api-ip>:12250/tkw/tlscerts. Without this
+# rule the connection times out and node-pool create fails with
+# "1 nodes(s) register timeout". The traffic is intra-VCN — workers
+# subnet → OKE API subnet — so the source CIDR is the workers
+# subnet's range.
+resource "oci_core_network_security_group_security_rule" "oke_api_tkw_ingress" {
+  network_security_group_id = oci_core_network_security_group.oke_api.id
+  direction                 = "INGRESS"
+  protocol                  = "6" # TCP
+  source                    = var.vcn_cidr
+  source_type               = "CIDR_BLOCK"
+  tcp_options {
+    destination_port_range {
+      min = 12250
+      max = 12250
+    }
+  }
+}
+
 resource "oci_core_network_security_group" "workers" {
   compartment_id = var.compartment_ocid
   vcn_id         = oci_core_vcn.workbench.id
@@ -163,8 +184,8 @@ resource "oci_core_network_security_group_security_rule" "workers_ssh_ingress" {
 # node never moves to Ready and node-pool create eventually fails
 # with "1 nodes(s) register timeout". OKE's control plane lives on
 # Oracle's network (not in the VCN), so the source must be 0.0.0.0/0
-# — restricting to the VCN CIDR breaks registration. This matches the
-# OCI-recommended OKE worker NSG topology.
+# — restricting to the VCN CIDR breaks registration. This matches
+# how almariel's working cluster is configured.
 resource "oci_core_network_security_group_security_rule" "workers_kubelet_ingress" {
   network_security_group_id = oci_core_network_security_group.workers.id
   direction                 = "INGRESS"
@@ -181,7 +202,7 @@ resource "oci_core_network_security_group_security_rule" "workers_kubelet_ingres
 
 # Workers: ICMP type 3 code 4 — Path MTU Discovery (Fragmentation
 # Needed). Without this PMTUD breaks and large packets get black-
-# holed. Standard OKE worker-NSG requirement.
+# holed. Pulled from the almariel reference topology.
 resource "oci_core_network_security_group_security_rule" "workers_pmtud_ingress" {
   network_security_group_id = oci_core_network_security_group.workers.id
   direction                 = "INGRESS"
