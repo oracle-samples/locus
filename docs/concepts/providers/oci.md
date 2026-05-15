@@ -244,3 +244,16 @@ The agent doesn't care. That's the OCI provider's whole pitch.
 - [OpenAI](openai.md) — direct OpenAI when OCI lags.
 - [Anthropic](anthropic.md) — Claude direct when OCI lags.
 - [Ollama](ollama.md) — local development before swapping to OCI.
+
+### Oracle reference docs
+
+- [OCI Generative AI — documentation hub](https://docs.oracle.com/iaas/Content/generative-ai/home.htm)
+  — service overview, model catalog, regions.
+- [OCI Generative AI — concepts](https://docs.oracle.com/iaas/Content/generative-ai/concepts.htm)
+  — endpoints, serving modes, Dedicated AI Clusters.
+- [OCI Generative AI — Chat (V1 / SDK transport)](https://docs.oracle.com/iaas/Content/generative-ai/use-playground-chat.htm)
+  — the `/20231130/actions/chat` endpoint `OCIModel` calls.
+- [OCI OpenAI-compatible endpoints](https://docs.oracle.com/iaas/Content/generative-ai/openai-compatible-api.htm)
+  — the `/openai/v1/*` surface `OCIOpenAIModel` and `OCIResponsesModel` call.
+- [OCI Responses API](https://docs.oracle.com/iaas/Content/generative-ai/responses-api.htm)
+  — server-stateful Responses transport reference.

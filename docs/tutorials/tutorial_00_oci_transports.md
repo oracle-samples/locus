@@ -47,6 +47,12 @@ python examples/tutorial_00_oci_transports.py --transport v1
 - [Hooks](../concepts/hooks.md) — works identically on all transports
 - [MCP](../concepts/mcp.md) — host-side side effects via the same hook surface
 
+### Oracle reference docs
+
+- [OCI Generative AI — Chat](https://docs.oracle.com/iaas/Content/generative-ai/use-playground-chat.htm) — SDK transport
+- [OCI OpenAI-compatible endpoints](https://docs.oracle.com/iaas/Content/generative-ai/openai-compatible-api.htm) — V1 transport
+- [OCI Responses API](https://docs.oracle.com/iaas/Content/generative-ai/responses-api.htm) — Responses transport
+
 ## Source
 
 ```python

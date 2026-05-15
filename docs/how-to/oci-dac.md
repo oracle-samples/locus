@@ -157,3 +157,10 @@ DAC endpoint.
 
 - [OCI GenAI](../concepts/providers/oci.md) — overview of the V1 vs SDK transports.
 - [OCI models how-to](oci-models.md) — full transport story for on-demand.
+
+### Oracle reference docs
+
+- [OCI Generative AI — concepts](https://docs.oracle.com/iaas/Content/generative-ai/concepts.htm)
+  — DAC serving mode, fine-tuning, and provisioning.
+- [OCI Generative AI — documentation hub](https://docs.oracle.com/iaas/Content/generative-ai/home.htm)
+  — pricing, regions, and the management-plane operations for endpoints.

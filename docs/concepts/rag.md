@@ -206,3 +206,14 @@ re-ranking before they reach the agent.
 - [Tools](tools.md) — what `create_rag_tool` returns.
 - [Reasoning: grounding](reasoning.md#grounding) — verify model claims against retrieved passages.
 - [Multi-modal providers](multi-modal-providers.md) — for non-RAG audio / image use.
+
+### Oracle reference docs
+
+- [Oracle AI Database 26ai — AI Vector Search User's Guide](https://docs.oracle.com/en/database/oracle/oracle-database/23/vecse/index.html)
+  — `VECTOR` data type, `VECTOR_DISTANCE` operators, and vector indexes
+  used by the Oracle 26ai store.
+- [OCI Search with OpenSearch](https://docs.oracle.com/iaas/Content/search-opensearch/home.htm)
+  — managed OpenSearch service backing the `OpenSearchStore` adapter.
+- [OCI Generative AI — documentation hub](https://docs.oracle.com/iaas/Content/generative-ai/home.htm)
+  — embeddings models (`cohere.embed-*`, `cohere.rerank-*`) consumed by
+  the OCI embedder + reranker.

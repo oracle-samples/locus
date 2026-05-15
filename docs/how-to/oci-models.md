@@ -220,3 +220,14 @@ pytest tests/integration/test_oci_integration.py
 - `src/locus/models/providers/oci/_signing.py` — internal httpx OCI
   request signer used by V1's IAM path.
 - `src/locus/models/registry.py` — the `oci:` string-factory routing.
+
+### Oracle reference docs
+
+- [OCI Generative AI — documentation hub](https://docs.oracle.com/iaas/Content/generative-ai/home.htm)
+  — service overview, supported models, regional availability.
+- [OCI Generative AI — Chat](https://docs.oracle.com/iaas/Content/generative-ai/use-playground-chat.htm)
+  — the SDK transport's underlying API for Cohere R-series.
+- [OCI OpenAI-compatible endpoints](https://docs.oracle.com/iaas/Content/generative-ai/openai-compatible-api.htm)
+  — endpoint shape, auth modes, and the migration path from raw OpenAI.
+- [OCI Responses API](https://docs.oracle.com/iaas/Content/generative-ai/responses-api.htm)
+  — the opt-in Responses transport this how-to references.

@@ -238,3 +238,10 @@ directly for anything cross-thread that doesn't need LLM extraction
 - [Conversation management](conversation-management.md) — higher-level patterns built on checkpointers.
 - [Idempotency](idempotency.md) — replay-safe side effects when a checkpoint resume re-issues a tool call.
 - [How-to: custom checkpointer](../how-to/custom-checkpointer.md) — write your own backend.
+
+### Oracle reference docs
+
+- [OCI Object Storage — overview](https://docs.oracle.com/iaas/Content/Object/Concepts/objectstorageoverview.htm)
+  — buckets, namespaces, IAM policies. Backs the `oci_bucket_checkpointer()` factory.
+- [Oracle AI Database 26ai — AI Vector Search User's Guide](https://docs.oracle.com/en/database/oracle/oracle-database/23/vecse/index.html)
+  — referenced by the Oracle 26ai checkpointer + vector store.
