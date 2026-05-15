@@ -2,7 +2,7 @@
 # the workers (so kubelet can reach the public OKE API endpoint
 # without a NAT hop) and the LoadBalancer service. Free-tier
 # topology — no NAT GW, no private subnet. Production deployments
-# should use the almariel pattern with workers behind a NAT.
+# should use a NAT GW with workers in a private subnet for a tighter blast radius.
 
 resource "oci_core_vcn" "workbench" {
   compartment_id = var.compartment_ocid
@@ -154,5 +154,42 @@ resource "oci_core_network_security_group_security_rule" "workers_ssh_ingress" {
       min = 22
       max = 22
     }
+  }
+}
+
+# Workers: TCP 10250 ingress from anywhere — the OKE control plane
+# reaches back to the kubelet on this port for node registration,
+# `kubectl logs`, `kubectl exec`, metrics. Without this rule the
+# node never moves to Ready and node-pool create eventually fails
+# with "1 nodes(s) register timeout". OKE's control plane lives on
+# Oracle's network (not in the VCN), so the source must be 0.0.0.0/0
+# — restricting to the VCN CIDR breaks registration. This matches the
+# OCI-recommended OKE worker NSG topology.
+resource "oci_core_network_security_group_security_rule" "workers_kubelet_ingress" {
+  network_security_group_id = oci_core_network_security_group.workers.id
+  direction                 = "INGRESS"
+  protocol                  = "6" # TCP
+  source                    = "0.0.0.0/0"
+  source_type               = "CIDR_BLOCK"
+  tcp_options {
+    destination_port_range {
+      min = 10250
+      max = 10250
+    }
+  }
+}
+
+# Workers: ICMP type 3 code 4 — Path MTU Discovery (Fragmentation
+# Needed). Without this PMTUD breaks and large packets get black-
+# holed. Standard OKE worker-NSG requirement.
+resource "oci_core_network_security_group_security_rule" "workers_pmtud_ingress" {
+  network_security_group_id = oci_core_network_security_group.workers.id
+  direction                 = "INGRESS"
+  protocol                  = "1" # ICMP
+  source                    = "0.0.0.0/0"
+  source_type               = "CIDR_BLOCK"
+  icmp_options {
+    type = 3
+    code = 4
   }
 }

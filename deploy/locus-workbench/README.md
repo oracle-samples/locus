@@ -76,4 +76,4 @@ stays in `cimientos/terraform/terraform.tfstate` until you delete it.
 
 - [Deploy how-to with full walkthrough](../../docs/how-to/deploy-workbench-free-tier.md)
 - [Workbench guide](../../docs/workbench.md)
-- [Almariel infrastructure pattern](https://github.com/fede-kamel/almariel) — production-grade equivalent this stack borrows from
+- [Reference infrastructure pattern](<https://github.com/fede-kamel/the> team's production) — production-grade equivalent this stack borrows from
