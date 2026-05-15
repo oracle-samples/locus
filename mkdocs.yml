@@ -56,6 +56,7 @@ extra_javascript:
 copyright: <span class="footer-brand"><span class="footer-brand__o" aria-hidden="true"></span><span class="footer-brand__text">Oracle Generative AI</span></span><br><span class="footer-copy">Copyright &copy; 2025–2026 <span class="oracle-mark" aria-label="Oracle"></span> and/or its affiliates</span>
 
 extra:
+  homepage: https://oracle-samples.github.io/locus/
   social:
   - icon: fontawesome/brands/github
     link: https://github.com/oracle-samples/locus
@@ -174,10 +175,11 @@ nav:
   - Quickstart: how-to/quickstart.md
   - Overview: tutorials/index.md
   - Foundations:
-    - 00 · OCI Transports: tutorials/tutorial_00_oci_transports.md
+    - 00 · OCI Transports:
+      - tutorials/tutorial_00_oci_transports.md
+      - 57 · OCI v1 (OCIOpenAIModel) deep dive: tutorials/tutorial_57_oci_openai_chat.md
+      - 58 · OCI Responses (OCIResponsesModel) deep dive: tutorials/tutorial_58_oci_responses.md
     - 01 · Basic Agent: tutorials/tutorial_01_basic_agent.md
-    - 57 · OCI v1 (OCIOpenAIModel) deep dive: tutorials/tutorial_57_oci_openai_chat.md
-    - 58 · OCI Responses (OCIResponsesModel) deep dive: tutorials/tutorial_58_oci_responses.md
     - 02 · Agent with Tools: tutorials/tutorial_02_agent_with_tools.md
     - 03 · Memory & Checkpointing: tutorials/tutorial_03_agent_memory.md
     - 04 · Streaming & Events: tutorials/tutorial_04_agent_streaming.md
