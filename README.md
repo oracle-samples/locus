@@ -8,6 +8,7 @@
 </p>
 
 <p align="center">
+  <a href="https://pypi.org/project/locus-sdk/"><img src="https://img.shields.io/pypi/v/locus-sdk.svg?label=PyPI&color=blue" alt="PyPI version"></a>
   <img src="https://img.shields.io/badge/Python-3.11%E2%80%933.14-blue.svg" alt="Python 3.11–3.14">
   <img src="https://img.shields.io/badge/License-UPL--1.0-green.svg" alt="License">
   <img src="https://img.shields.io/badge/mypy-strict-brightgreen.svg" alt="mypy strict">
