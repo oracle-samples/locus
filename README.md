@@ -24,12 +24,6 @@
   <a href="workbench/">Workbench</a>
 </p>
 
-<p align="center">
-  <a href="https://codespaces.new/oracle-samples/locus?devcontainer_path=.devcontainer%2Fdevcontainer.json">
-    <img src="https://github.com/codespaces/badge.svg" alt="Open in GitHub Codespaces">
-  </a>
-</p>
-
 ---
 
 ## Your first agent — 5 lines
@@ -227,28 +221,25 @@ metadata), and **Patterns** (the nine first-class
 runtimes — including [Cognitive routing](docs/workbench.md#cognitive-routing-pattern)
 with a Rule-based ⬌ LLM-picker toggle).
 
-Pick the launch path that fits.
+Two ways to run it. Pick whichever fits.
 
-### Path A — GitHub Codespaces (zero install, free tier)
+### Run locally (from source)
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/oracle-samples/locus?devcontainer_path=.devcontainer%2Fdevcontainer.json)
+```bash
+git clone https://github.com/oracle-samples/locus.git && cd locus
+pip install -e ".[server,oci,openai,anthropic]"
 
-Click the badge above (or [this link](https://codespaces.new/oracle-samples/locus?devcontainer_path=.devcontainer%2Fdevcontainer.json)).
-GitHub provisions a Linux container in your account, runs
-`.devcontainer/postCreate.sh` (Python 3.12 + Node 20 + `pip install
--e ".[dev,llm]"` + `npm install` for the workbench projects), then
-backgrounds the three tiers (FastAPI runner :8100, Express BFF
-:3101, Vite :5173). After ~2 minutes the workbench UI opens in a
-second tab — VS Code Web on tab 1, the live app on tab 2. Click
-**Provider settings** in the header, paste an OpenAI or Anthropic
-key, pick a tutorial, hit **Run**.
+# Three terminals, one per tier:
+cd workbench/bff     && npm install && npm run dev   # BFF on :3101
+cd workbench/web     && npm install && npm run dev   # Vite on :5173
+cd workbench/backend && python -m uvicorn --app-dir . runner:app --port 8100
+```
 
-You burn your own free Codespaces minutes (60 hrs/month on a personal
-account). Oracle pays nothing. The OCI options in *Provider settings*
-require a local `~/.oci/config` so they don't apply in
-Codespaces — use OpenAI or Anthropic for the cloud demo path.
+Open <http://localhost:5173>, click **Provider settings**, pick a
+provider, fill in the credentials, save. OCI options work out of the
+box because the backend reads your local `~/.oci/config`.
 
-### Path B — Docker (local, BYO key)
+### Run in Docker
 
 ```bash
 git clone https://github.com/oracle-samples/locus.git && cd locus
@@ -257,32 +248,16 @@ docker run --rm -p 5173:5173 -p 3101:3101 -p 8100:8100 locus-workbench
 # open http://localhost:5173
 ```
 
-Image is ~1.3 GB on first build (Oracle Linux 9-slim base + Python
-3.12 + Node 20 + locus + the workbench source). Subsequent builds
-hit the layer cache. If ports 5173 / 3101 / 8100 are in use locally,
-remap them:
+OpenAI and Anthropic work as-is — paste the key into *Provider settings*.
+For the OCI providers (api-key or session token), bind-mount your `~/.oci`
+into the container at the same host path and pass `HOME` so the OCI SDK
+finds both the config and the `key_file` paths it references:
 
 ```bash
-docker run --rm \
-  -p 5273:5173 -p 3201:3101 -p 8200:8100 \
+docker run --rm -p 5173:5173 -p 3101:3101 -p 8100:8100 \
+  -v "$HOME/.oci:$HOME/.oci:ro" \
+  -e "HOME=$HOME" \
   locus-workbench
-# then http://localhost:5273
-```
-
-Stop with `Ctrl-C`; the `--rm` flag removes the container on exit.
-
-### Path C — From source (development)
-
-For iterating on the workbench itself:
-
-```bash
-git clone https://github.com/oracle-samples/locus.git && cd locus
-pip install -e ".[server,oci,openai,anthropic]"
-
-# Three terminals, one per tier:
-cd workbench/bff && npm install && npm run dev       # :3101
-cd workbench/web && npm install && npm run dev       # :5173
-cd workbench/backend && python -m uvicorn --app-dir . runner:app --port 8100
 ```
 
 → Full walkthrough: [Workbench guide](docs/workbench.md) · [Provider settings](docs/workbench.md#provider-settings) · [Cognitive routing pattern](docs/workbench.md#cognitive-routing-pattern) · [Troubleshooting](docs/workbench.md#troubleshooting)
@@ -338,7 +313,7 @@ src/locus/
 └── integrations/   MCP (client + server)
 
 workbench/          Browser playground — Tutorials / Skills / Protocols tabs,
-                    three model slots, SSE event stream, Codespaces-ready.
+                    three model slots, SSE event stream, Docker-ready.
 examples/           56 progressive tutorials, each a single runnable file.
 tests/unit/         Deterministic, no external deps. Runs in CI on every PR.
 tests/integration/  Live OCI / OpenAI / Oracle Database 26ai. Gated on credentials.

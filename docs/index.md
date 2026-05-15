@@ -17,7 +17,7 @@ Describe the task. locus selects the protocol and coordinates the agents.
 - **Self-critiquing agents with grounded outputs.** Every turn is scored; every factual claim is verified against the source that produced it. Hallucinations caught at the source, not in production.
 - **Full causal traceability.** Every decision, tool call, and reasoning step is a typed event you can replay, audit, and debug — at 2 a.m. or in your compliance report.
 
-[Launch workbench](https://codespaces.new/oracle-samples/locus?devcontainer_path=.devcontainer%2Fdevcontainer.json){ .md-button .md-button--primary }
+[Workbench guide](workbench.md){ .md-button .md-button--primary }
 [GitHub](https://github.com/oracle-samples/locus){ .md-button }
 
 ```bash
