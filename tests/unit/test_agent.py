@@ -306,6 +306,77 @@ class TestAgentInitialization:
                 tools=[{"not": "a tool"}],
             )
 
+    # ------ add_tool / add_tools (B2) ---------------------------------------
+
+    def test_add_tool_registers_post_construct(self, mock_model):
+        """``Agent.add_tool`` adds a tool to the live registry.
+
+        Regression: mutating ``agent.config.tools`` directly after
+        construction is a silent no-op because ``_initialize()`` runs
+        in ``__init__`` and compiles the tool list once. Verify that
+        the supported API actually attaches the tool to the registry.
+        """
+
+        @tool
+        def search(query: str) -> str:
+            """Search."""
+            return f"r:{query}"
+
+        agent = Agent(model=mock_model, tools=[])
+        # Pre-condition: registry is empty.
+        assert "search" not in agent.tools
+
+        agent.add_tool(search)
+
+        assert "search" in agent.tools
+        assert agent.tools.get("search") is not None
+        # config is mirrored so a re-init sees the same surface.
+        assert search in agent.config.tools
+
+    def test_silent_config_mutation_is_documented_no_op(self, mock_model):
+        """Directly assigning to config.tools does NOT update the registry.
+
+        This is the footgun ``add_tool`` exists to solve. Locking the
+        existing behaviour in a test prevents accidental regressions
+        (and surfaces the design choice if someone tries to "fix" it
+        by re-initialising on mutation).
+        """
+
+        @tool
+        def slow_search(query: str) -> str:
+            """Search slowly."""
+            return query
+
+        agent = Agent(model=mock_model, tools=[])
+        agent.config.tools.append(slow_search)
+        # Registry is NOT updated by direct mutation.
+        assert "slow_search" not in agent.tools
+
+    def test_add_tool_rejects_non_tool(self, mock_model):
+        """Non-Tool input fails fast with TypeError."""
+        agent = Agent(model=mock_model, tools=[])
+        with pytest.raises(TypeError, match="Expected Tool instance"):
+            agent.add_tool({"not": "a tool"})  # type: ignore[arg-type]
+
+    def test_add_tool_rejects_duplicates(self, mock_model):
+        """Duplicate names propagate ToolRegistry's ValueError."""
+
+        @tool
+        def search(query: str) -> str:
+            """Search."""
+            return query
+
+        agent = Agent(model=mock_model, tools=[search])
+        with pytest.raises(ValueError, match="already registered"):
+            agent.add_tool(search)
+
+    def test_add_tools_batch(self, mock_model, sample_tools):
+        """``add_tools`` registers each entry in order."""
+        agent = Agent(model=mock_model, tools=[])
+        agent.add_tools(sample_tools)
+        assert "search" in agent.tools
+        assert "calculator" in agent.tools
+
     def test_sequential_executor_config(self, mock_model, sample_tools, monkeypatch):
         """Test sequential executor is used when configured."""
         from locus.tools.executor import SequentialExecutor

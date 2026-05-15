@@ -75,6 +75,24 @@ class TestAuthModeValidation:
                 auth_type="instance_principal",
             )
 
+    def test_auth_mode_error_includes_remediation(self):
+        """The error message must spell out the two valid call shapes.
+
+        Regression target: the message used to be
+            "specify exactly one of profile=, auth_type="
+        which left users guessing what to pass. The expanded message
+        names the OCI config section, the auth_type values, and the
+        compartment_id requirement so the error is self-fixing.
+        """
+        with pytest.raises(ValueError) as excinfo:
+            OCIOpenAIModel(model="openai.gpt-5.5")
+        msg = str(excinfo.value)
+        # Self-fix breadcrumbs the user can act on.
+        assert "~/.oci/config" in msg
+        assert "DEFAULT" in msg
+        assert "instance_principal" in msg
+        assert "compartment_id" in msg
+
 
 class TestProfileMode:
     def test_config_set(self):
