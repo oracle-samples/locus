@@ -246,6 +246,62 @@ class TestInvoke:
         client.post("/invoke", json={"prompt": "hi", "metadata": {"trace": "abc"}})
         assert agent.seen_kwargs[0]["metadata"] == {"trace": "abc"}
 
+    # ------ duration_ms (B3) ------------------------------------------------
+
+    def test_invoke_reports_real_duration_ms(self) -> None:
+        """``duration_ms`` must reflect the wall time the run took.
+
+        Regression: it used to be hardcoded to 0.0, which made every
+        client-side latency metric useless. Even a zero-event /
+        immediate-terminate run takes a non-zero number of microseconds
+        to schedule the async generator, so ``duration_ms > 0`` is a
+        meaningful assertion against the old behaviour.
+        """
+        agent = _StubAgent(events=[_terminate(message="x")])
+        server = AgentServer(agent=agent, allow_unauthenticated=True)
+        client = TestClient(server.app)
+        body = client.post("/invoke", json={"prompt": "hi"}).json()
+        assert body["duration_ms"] > 0.0
+
+    # ------ success derivation (B4) -----------------------------------------
+
+    @pytest.mark.parametrize(
+        ("reason", "expected"),
+        [
+            ("complete", True),
+            ("confidence_met", True),
+            ("terminal_tool", True),
+            ("max_iterations", False),
+            ("tool_loop", False),
+            ("error", False),
+        ],
+    )
+    def test_invoke_success_derived_from_stop_reason(self, reason: str, expected: bool) -> None:
+        """``success`` must follow the terminal stop_reason.
+
+        Previously hardcoded to ``True`` regardless of how the run
+        ended, which made the field uninformative for callers that
+        wanted to branch on outcome without parsing ``stop_reason``.
+        """
+        agent = _StubAgent(events=[_terminate(message="x", reason=reason)])
+        server = AgentServer(agent=agent, allow_unauthenticated=True)
+        client = TestClient(server.app)
+        body = client.post("/invoke", json={"prompt": "hi"}).json()
+        assert body["stop_reason"] == reason
+        assert body["success"] is expected
+
+    def test_invoke_success_helper_directly(self) -> None:
+        """The ``_invoke_success`` mapping is the single source of truth."""
+        from locus.server.app import _INVOKE_SUCCESS_REASONS, _invoke_success
+
+        # Documented success reasons.
+        assert frozenset({"complete", "confidence_met", "terminal_tool"}) == _INVOKE_SUCCESS_REASONS
+        for r in _INVOKE_SUCCESS_REASONS:
+            assert _invoke_success(r) is True
+        # Anything else is a failure — including unrecognised strings.
+        for r in ("error", "max_iterations", "tool_loop", "", "unknown"):
+            assert _invoke_success(r) is False
+
 
 # ---------------------------------------------------------------------------
 # /stream

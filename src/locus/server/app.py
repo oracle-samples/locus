@@ -34,6 +34,7 @@ import ipaddress
 import json
 import logging
 import os
+import time
 import uuid
 from collections.abc import AsyncIterator
 from typing import Any
@@ -87,6 +88,24 @@ class InvokeResponse(BaseModel):
     iterations: int = 0
     tool_calls: int = 0
     duration_ms: float = 0.0
+
+
+# Stop reasons that count as a successful agent run. ``confidence_met``
+# and ``terminal_tool`` are deliberate, intended stops (the agent finished
+# because grounding cleared or a terminal tool fired); ``complete`` is the
+# normal model-driven completion. ``max_iterations``, ``tool_loop`` and
+# ``error`` indicate the run hit a guard or failed outright — those map
+# to ``success=False`` so callers can branch without parsing stop_reason.
+_INVOKE_SUCCESS_REASONS = frozenset({"complete", "confidence_met", "terminal_tool"})
+
+
+def _invoke_success(stop_reason: str) -> bool:
+    """Return whether a terminal stop_reason should be reported as success.
+
+    Exposed as a module-level helper so the mapping is unit-testable and
+    consumers can mirror the same semantics in their own code.
+    """
+    return stop_reason in _INVOKE_SUCCESS_REASONS
 
 
 class AgentServer:
@@ -242,8 +261,8 @@ class AgentServer:
             iterations = 0
             tool_calls = 0
             stop_reason = "complete"
-            success = True
 
+            t0 = time.perf_counter()
             async for event in agent.run(
                 request.prompt,
                 thread_id=scope_thread(principal, request.thread_id),
@@ -255,14 +274,15 @@ class AgentServer:
                 elif isinstance(event, ToolCompleteEvent):
                     tool_calls += 1
                 iterations += 1
+            duration_ms = (time.perf_counter() - t0) * 1000.0
 
             return InvokeResponse(
                 message=final,
-                success=success,
+                success=_invoke_success(stop_reason),
                 stop_reason=stop_reason,
                 iterations=iterations,
                 tool_calls=tool_calls,
-                duration_ms=0.0,
+                duration_ms=duration_ms,
             )
 
         @app.post("/stream")
