@@ -223,7 +223,14 @@ class OCIOpenAIModel(OpenAIModel):
         """
         modes_set = sum(x is not None for x in (profile, auth_type))
         if modes_set != 1:
-            msg = "specify exactly one of profile=, auth_type="
+            msg = (
+                "OCIOpenAIModel: specify exactly one auth mode. "
+                "Either profile='<section_from_~/.oci/config>' (api-key path; "
+                "use profile='DEFAULT' for the default section), "
+                "or auth_type='instance_principal'|'resource_principal'|"
+                "'security_token'|'delegation_token' together with compartment_id=. "
+                f"Got profile={profile!r}, auth_type={auth_type!r}."
+            )
             raise ValueError(msg)
         if auth_type is not None and auth_type not in _VALID_AUTH_TYPES:
             msg = f"auth_type must be one of {_VALID_AUTH_TYPES}, got {auth_type!r}"
