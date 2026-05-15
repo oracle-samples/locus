@@ -662,6 +662,30 @@ html {
 .md-drawer .md-header__source.md-header__github {
   color: #FFFFFF;
 }
+
+/* Header right slot — PyPI version badge (shields.io image) sits to the
+   right of the GitHub icon. Matches the OCI/GitHub vertical rhythm. */
+.md-header__source.md-header__pypi {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.4rem;
+  margin-left: 0.25rem;
+  border-radius: 6px;
+  transition: background-color 0.15s, transform 0.15s;
+}
+.md-header__source.md-header__pypi:hover {
+  background-color: rgba(199, 70, 52, 0.08);
+  transform: translateY(-1px);
+}
+.md-header__pypi-badge {
+  height: 20px;
+  width: auto;
+  display: block;
+}
+@media (max-width: 60em) {
+  .md-header__source.md-header__pypi { padding: 0.15rem 0.25rem; margin-left: 0.15rem; }
+  .md-header__pypi-badge { height: 18px; }
+}
 .md-nav--primary .md-header__source.md-header__github:hover {
   color: #FFFFFF;
   opacity: 0.8;
