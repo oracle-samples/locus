@@ -49,7 +49,12 @@ dependencies = [
 openai = ["openai>=1.50"]
 anthropic = ["anthropic>=0.40"]
 ollama = ["ollama>=0.3"]
-oci = ["oci>=2.173.0"]
+# OCI Generative AI speaks the OpenAI Chat Completions wire protocol;
+# locus.models.providers.oci.openai_compat lazy-imports the `openai`
+# client at request time (`client` property). Without it in the extra,
+# `pip install "locus-sdk[oci]"` boots fine but every .complete() call
+# raises ModuleNotFoundError. Pin alongside the [openai] extra.
+oci = ["oci>=2.173.0", "openai>=1.50"]
 
 # All LLM / model providers — short alias for pip discoverability.
 llm = [
