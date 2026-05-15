@@ -27,7 +27,7 @@
 <p align="center">
   <strong>Try every locus pattern in your browser →</strong>
   <a href="https://oracle-samples.github.io/locus/workbench/"><strong>Workbench guide</strong></a><br>
-  <em>Step-by-step setup for the browser playground — run it on localhost in three terminals, or in a single Docker container. Bring your own OpenAI / Anthropic key, or wire up an OCI profile.</em>
+  <em>Step-by-step setup for the browser playground — run it on localhost in three terminals, or in a single Docker container. Wire up an OCI profile, or bring your own OpenAI / Anthropic key.</em>
 </p>
 
 ---
