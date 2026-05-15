@@ -521,6 +521,55 @@ class Agent(AgentRuntimeMixin, BaseModel):
         self._initialize()
         return self._tool_registry
 
+    def add_tool(self, tool: Tool) -> None:
+        """Register a tool on this agent after construction.
+
+        Locus compiles ``config.tools`` into the runtime ``ToolRegistry``
+        once, inside ``__init__`` (via :func:`locus.agent.initializer.
+        initialize_agent`). Mutating ``self.config.tools`` directly after
+        that point is a silent no-op — the model never sees the added
+        tool because the registry has already been built.
+
+        Use this method (or :meth:`add_tools`) when you want to compose a
+        specialist fleet at runtime: build each specialist, wrap it via
+        ``Agent.as_tool(...)``, and attach the wrappers to the
+        orchestrator.
+
+        The tool is also appended to ``self.config.tools`` so that a
+        subsequent re-initialisation (e.g. after a config-driven
+        clone) sees the same shape.
+
+        Raises:
+            TypeError: if ``tool`` is not a :class:`locus.tools.Tool`
+                instance. Callable functions must be wrapped with the
+                :func:`@tool` decorator first.
+            ValueError: if a tool with the same ``name`` is already
+                registered (propagated from
+                :meth:`ToolRegistry.register`).
+        """
+        if not isinstance(tool, Tool):
+            raise TypeError(
+                f"Expected Tool instance (use @tool to wrap a function), got {type(tool)}"
+            )
+        self._initialize()
+        self._tool_registry.register(tool)
+        # Mirror into config so a re-initialisation reconstructs the
+        # same surface. ``config.tools`` is a list[Any] by Pydantic
+        # declaration, so we mutate in place rather than reassigning.
+        self.config.tools.append(tool)
+
+    def add_tools(self, tools: list[Tool]) -> None:
+        """Register multiple tools at once.
+
+        Equivalent to calling :meth:`add_tool` for each entry. If any
+        single registration fails (wrong type, duplicate name), the
+        whole call fails: tools registered before the failing one
+        remain in the registry. Validate inputs ahead of time when
+        atomic behaviour is required.
+        """
+        for t in tools:
+            self.add_tool(t)
+
     @property
     def system_prompt(self) -> str:
         """Get the configured system prompt as a string.
