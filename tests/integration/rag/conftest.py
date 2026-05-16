@@ -97,6 +97,35 @@ def get_qdrant_config():
     }
 
 
+def get_oracle_adb_config():
+    """Get Oracle ADB configuration from environment.
+
+    Required:
+    - ADB_DSN: TNS alias (e.g. ``deepresearch_low``).
+    - ADB_PASSWORD: ADMIN (or configured user) password.
+    - ADB_WALLET_LOCATION: directory holding ``tnsnames.ora`` + ``cwallet.sso``.
+
+    Optional:
+    - ADB_USER: defaults to ``ADMIN``.
+    - ADB_WALLET_PASSWORD: defaults to ``ADB_PASSWORD``.
+    """
+    dsn = os.environ.get("ADB_DSN")
+    password = os.environ.get("ADB_PASSWORD")
+    wallet = os.environ.get("ADB_WALLET_LOCATION")
+    if not (dsn and password and wallet):
+        raise ValueError(
+            "Set ADB_DSN, ADB_PASSWORD, and ADB_WALLET_LOCATION to run "
+            "Oracle ADB integration tests."
+        )
+    return {
+        "dsn": dsn,
+        "user": os.environ.get("ADB_USER", "ADMIN"),
+        "password": password,
+        "wallet_location": os.path.expanduser(wallet),
+        "wallet_password": os.environ.get("ADB_WALLET_PASSWORD", password),
+    }
+
+
 @pytest.fixture
 def oci_config():
     """OCI configuration fixture. Skips test if OCI_PROFILE not set."""
@@ -111,6 +140,15 @@ def opensearch_config():
     """OpenSearch configuration fixture. Skips test if env vars not set."""
     try:
         return get_opensearch_config()
+    except ValueError as e:
+        pytest.skip(str(e))
+
+
+@pytest.fixture
+def oracle_adb_config():
+    """Oracle ADB configuration. Skips test if env vars not set."""
+    try:
+        return get_oracle_adb_config()
     except ValueError as e:
         pytest.skip(str(e))
 
