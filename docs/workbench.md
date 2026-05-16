@@ -232,6 +232,17 @@ same behaviour as running the tutorial from a terminal, just inside
 the workbench so you can watch streamed events instead of tailing
 stdout.
 
+Tutorial 41 (DeepAgent) ships a `part5_datastores` section that
+exercises `create_deepagent(datastores={"medical": …})` against an
+in-memory `RAGRetriever`. The same auto-wiring backs the
+[deep-research project examples][dr] — seven runnable demos that
+swap the in-memory store for Oracle Autonomous Database, OpenSearch,
+or OCI Object Storage. The workbench surfaces the in-memory variant
+in the sidebar; the multi-backend versions live as standalone
+project demos in `examples/projects/deep-research/`.
+
+[dr]: https://github.com/oracle-samples/locus/tree/main/examples/projects/deep-research
+
 ### Long-term memory pattern
 
 Pick **Long-term memory** in the sidebar and paste a prompt that
