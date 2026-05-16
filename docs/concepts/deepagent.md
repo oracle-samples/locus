@@ -83,7 +83,7 @@ agent = create_deepagent(
 )
 
 result = agent.run_sync("Summarise our Q3 pipeline coverage.")
-report: ResearchResult = result.structured_output
+report: ResearchResult = result.parsed  # Pydantic-typed structured output
 ```
 
 ## Capability layers
@@ -186,11 +186,12 @@ agent = create_deepagent(
 ```
 
 For each entry, a `search_<name>` tool is auto-wired via
-`RAGRetriever.as_tool` and appended to the agent's tool list, and a
-per-store description block is prepended to the system prompt so the
-model can route each query to the right store. Mirrors the
-langchain-oci `create_deep_research_agent(datastores=...)` shape so
-existing recipes translate 1:1.
+`locus.rag.tools.create_rag_tool` (passing the retriever, top_k, and
+threshold) and appended to the agent's tool list, and a per-store
+description block is prepended to the system prompt so the model can
+route each query to the right store. Mirrors the langchain-oci
+`create_deep_research_agent(datastores=...)` shape so existing recipes
+translate 1:1.
 
 The retriever's `store` can be any `BaseVectorStore` implementation —
 `OracleVectorStore` (Autonomous DB), `OpenSearchVectorStore`,
