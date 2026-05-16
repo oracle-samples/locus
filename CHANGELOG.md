@@ -78,13 +78,20 @@ and verified output stats from a real ADB run.
   `RAGRetriever`, so the workbench picks the tutorial up and demos
   the auto-wiring without external dependencies.
 
-### Fixed — embedding-config rename + ratchet refresh
+### Fixed — embedding-config rename, ratchet refresh, docs audit
 
 - `MODEL_DIMENSIONS` constant renamed to `MODEL_DIMENSION_HINTS` (keys
   are now model_id strings rather than enum members). Old internal
   callers updated; `test_model_dimensions` aligned.
 - Coverage ratchet baseline refreshed for `src/locus/rag/embeddings/oci.py`
   (99.35% → 98.73%) to accept the intentional auto-detect branch.
+- `docs/concepts/deepagent.md`: Quickstart now uses `result.parsed`
+  (the actual Pydantic-typed structured-output field on `AgentResult`);
+  previously referenced a non-existent `result.structured_output`. The
+  Datastore auto-wiring section now points at
+  `locus.rag.tools.create_rag_tool` (the factory's actual call), not
+  `RAGRetriever.as_tool` (a thin wrapper that doesn't accept the
+  per-store `top_k`/`threshold` overrides).
 
 ## [0.2.0b10] - 2026-05-15
 
