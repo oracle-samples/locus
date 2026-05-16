@@ -8,6 +8,84 @@ policy.
 
 ## [Unreleased]
 
+## [0.2.0b11] - 2026-05-16
+
+### Added — `create_deepagent(datastores=...)` + seven deep-research locus demos
+
+`create_deepagent` now accepts a `datastores={name: {retriever, description, top_k, threshold}}`
+mapping and auto-wires a `search_<name>` tool for each entry, plus a per-store routing block
+prepended to the system prompt so the model picks the right store per query. Mirrors the
+`langchain-oci.create_deep_research_agent(datastores=...)` shape so existing recipes translate 1:1.
+Closes [#202](https://github.com/oracle-samples/locus/issues/202).
+
+- **API surface.** `from locus.deepagent import create_deepagent` —
+  `datastores=` accepts either a bare `RAGRetriever` or the dict form
+  `{retriever, description, top_k, threshold}`. The store name
+  interpolates into both the tool name (`search_medical`) and the
+  routing block in the system prompt.
+- **`OracleVectorStore` column overrides.** `id_column`, `content_column`,
+  `embedding_column`, `metadata_column`, `created_at_column` (set to
+  `None` to skip), and `auto_create_table=False` for attaching to
+  existing tables written by other ingestion pipelines (e.g.
+  `langchain_oracledb.vectorstores.OracleVS` writes `text` instead of
+  `content`). Lets locus read a foreign-schema ADB table without
+  re-ingestion.
+- **`cohere.embed-v4.0` dimension auto-detect.** The embedding-model
+  registry now treats `MODEL_DIMENSION_HINTS` as a hint table — models
+  not present in it discover their dimension via a one-shot probe call
+  at first use. New models work without an explicit entry.
+- **Defensive `float`/`int` coercion in the retrieval path.** Some
+  providers (notably `gpt-5.x`) JSON-encode tool args as strings —
+  `"min_score": "0.5"` rather than `0.5`. `RAGRetriever.retrieve` and
+  `OracleVectorStore.search` now coerce defensively so the downstream
+  `score < threshold` comparison never sees a string and never raises
+  `TypeError`.
+
+### Added — `examples/projects/deep-research/`
+
+Seven runnable demos that mirror upstream langchain-oci deep-research
+gists 1:1 on locus primitives, covering every retrieval backend locus
+supports:
+
+| Demo | Backend | Notes |
+|---|---|---|
+| `demo_hello_world.py` | none — `@tool` functions | Sanity check for `create_deepagent` |
+| `demo_smoke.py` | `InMemoryVectorStore` | No-DB end-to-end RAG smoke |
+| `demo_iron_metabolism.py` | Oracle Autonomous DB (241-doc corpus) | `gpt-5.1 @ 65K`; prints retrieved snippets and citation density |
+| `demo_memory_multi_turn.py` | ADB + `locus.memory.InMemoryStore` | Two-turn agent with response capture |
+| `demo_multi_datastore.py` | Two ADB vector tables | Cross-domain routing via `datastores={medical, news}` |
+| `demo_opensearch_multi_index.py` | Two OpenSearch indices | Same shape against `OpenSearchVectorStore` |
+| `demo_object_storage.py` | OCI Object Storage `@tool` wrappers | `list_bucket_objects` / `read_bucket_object` / `search_bucket_data` |
+
+The README documents the langchain-oci → locus translation table,
+runtime gotchas (`InMemoryStore` is async; `AsyncOpenSearch` clients
+need awaited operations; from inside an event loop use
+`async for event in agent.run(...)` instead of `agent.run_sync(...)`),
+and verified output stats from a real ADB run.
+
+### Added — documentation
+
+- `docs/concepts/deepagent.md` — new "Datastore auto-wiring" section
+  with an Oracle Autonomous DB example and the provider-quirk +
+  async-loop notes.
+- `docs/tutorials/tutorial_41_deepagent.md` — topic 6 cross-references
+  the deep-research project for the multi-backend variants.
+- `docs/workbench.md` and `workbench/README.md` — cross-references
+  under "What you can run" so workbench users discover the project
+  examples.
+- `examples/tutorial_41_deepagent.py` — new `part5_datastores()` that
+  exercises `create_deepagent(datastores=...)` against an in-memory
+  `RAGRetriever`, so the workbench picks the tutorial up and demos
+  the auto-wiring without external dependencies.
+
+### Fixed — embedding-config rename + ratchet refresh
+
+- `MODEL_DIMENSIONS` constant renamed to `MODEL_DIMENSION_HINTS` (keys
+  are now model_id strings rather than enum members). Old internal
+  callers updated; `test_model_dimensions` aligned.
+- Coverage ratchet baseline refreshed for `src/locus/rag/embeddings/oci.py`
+  (99.35% → 98.73%) to accept the intentional auto-detect branch.
+
 ## [0.2.0b10] - 2026-05-15
 
 ### Fixed — /invoke + auth rough edges surfaced by an OCI GenAI e2e build
