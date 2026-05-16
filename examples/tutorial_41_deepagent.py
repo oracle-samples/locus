@@ -321,11 +321,78 @@ async def part4_observability() -> None:
 # =============================================================================
 
 
+# =============================================================================
+# Part 5: Datastores — auto-wire `search_<name>` tools from a RAGRetriever
+# =============================================================================
+
+
+async def part5_datastores() -> None:
+    """Show ``datastores={name: {retriever, description, top_k}}`` auto-wiring.
+
+    For each entry, ``create_deepagent`` appends a ``search_<name>`` tool
+    built from ``RAGRetriever.as_tool`` and prepends a per-store routing
+    block to the system prompt. The agent decides which store to query
+    based on the description — multi-store routing falls out naturally.
+
+    Backends that work here: any ``BaseVectorStore``. This part uses the
+    in-memory store so the tutorial runs without external services. See
+    ``examples/projects/deep-research/`` for the same shape against an
+    Oracle Autonomous DB, OpenSearch, and OCI Object Storage.
+    """
+    import os
+
+    from locus.rag import OCIEmbeddings, RAGRetriever
+    from locus.rag.stores.memory import InMemoryVectorStore
+
+    embedder = OCIEmbeddings(
+        model_id="cohere.embed-v4.0",
+        compartment_id=os.environ.get("OCI_COMPARTMENT", "ocid1.tenancy.oc1..<your-tenancy>"),
+        profile_name=os.environ.get("OCI_PROFILE", "DEFAULT"),
+        auth_type=os.environ.get("OCI_AUTH_TYPE", "api_key"),
+    )
+    probe = await embedder.embed_query("probe")
+    store = InMemoryVectorStore(dimension=len(probe.embedding))
+    retriever = RAGRetriever(embedder=embedder, store=store)
+    await retriever.add_documents(
+        [
+            "Hepcidin is the master regulator of iron homeostasis.",
+            "Ferritin is the primary iron storage protein.",
+            "Transferrin saturation below 16% suggests iron deficiency.",
+            "Phlebotomy is first-line treatment for hereditary hemochromatosis.",
+        ]
+    )
+
+    agent = create_deepagent(
+        model=get_model(),
+        tools=[],
+        system_prompt=(
+            "You are a medical research assistant. When asked a hematology "
+            "question, call search_medical first, then answer briefly with "
+            "(doc-NN) citations."
+        ),
+        datastores={
+            "medical": {
+                "retriever": retriever,
+                "description": "iron metabolism, anemia, hemochromatosis",
+                "top_k": 3,
+            }
+        },
+        reflexion=False,
+        grounding=False,
+        max_iterations=4,
+    )
+
+    result = agent.run_sync("What regulates iron homeostasis? Cite the retrieved doc.")
+    print("part 5 response:", (result.text or "")[:300])
+    print("part 5 tool calls:", len(result.tool_executions or ()))
+
+
 async def main() -> None:
     await part1_basic()
     await part2_filesystem_and_todos()
     await part3_subagents()
     await part4_observability()
+    await part5_datastores()
 
 
 if __name__ == "__main__":

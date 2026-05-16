@@ -67,6 +67,22 @@ class OracleVectorConfig(BaseModel):
     table_name: str = "locus_vectors"
     schema_name: str | None = None
 
+    # Column overrides — let an existing table written by another tool be read
+    # without re-ingestion. The langchain_oracledb.OracleVS schema, for
+    # example, uses ``text`` instead of ``content`` and has no ``created_at``
+    # column. Set ``content_column="text"`` and ``created_at_column=None`` to
+    # point at one of those tables.
+    id_column: str = "id"
+    content_column: str = "content"
+    embedding_column: str = "embedding"
+    metadata_column: str = "metadata"
+    created_at_column: str | None = "created_at"
+
+    # When False, ``_ensure_table`` won't issue CREATE statements — useful for
+    # read-only attachment to a foreign-schema table populated by a different
+    # ingestion pipeline.
+    auto_create_table: bool = True
+
     # Vector settings
     dimension: int = 1024  # Cohere embed-v3 default
     distance_metric: str = "COSINE"  # COSINE, DOT, EUCLIDEAN
@@ -80,6 +96,15 @@ class OracleVectorConfig(BaseModel):
         _validate_sql_identifier(self.table_name, "table_name")
         if self.schema_name is not None:
             _validate_sql_identifier(self.schema_name, "schema_name")
+        for col_field in (
+            "id_column",
+            "content_column",
+            "embedding_column",
+            "metadata_column",
+        ):
+            _validate_sql_identifier(getattr(self, col_field), col_field)
+        if self.created_at_column is not None:
+            _validate_sql_identifier(self.created_at_column, "created_at_column")
         if self.distance_metric.upper() not in _ALLOWED_DISTANCE_METRICS:
             raise ValueError(
                 f"Invalid distance_metric: {self.distance_metric!r}. "
@@ -110,6 +135,20 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
         ...     host="adb.us-ashburn-1.oraclecloud.com",
         ...     port=1522,
         ...     service_name="xxx_high.adb.oraclecloud.com",
+        ... )
+
+    Example attaching to a langchain_oracledb-formatted table (column
+    names differ, no created_at column, table already exists):
+        >>> store = OracleVectorStore(
+        ...     dsn="mydb_low",
+        ...     user="ADMIN",
+        ...     password=adb_password,
+        ...     wallet_location="~/.oci/wallets/mydb",
+        ...     table_name="VECTOR_DOCUMENTS",
+        ...     content_column="text",
+        ...     created_at_column=None,
+        ...     auto_create_table=False,  # don't try to CREATE TABLE
+        ...     dimension=1536,  # match the existing column
         ... )
     """
 
@@ -202,12 +241,18 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
         return self.oracle_config.table_name
 
     async def _ensure_table(self) -> None:
-        """Create table if not exists."""
+        """Create table if not exists, unless ``auto_create_table=False``."""
         if self._initialized:
             return
 
         pool = await self._get_pool()
-        dim = self.oracle_config.dimension
+        cfg = self.oracle_config
+        dim = cfg.dimension
+        id_col = cfg.id_column
+        content_col = cfg.content_column
+        embedding_col = cfg.embedding_column
+        metadata_col = cfg.metadata_column
+        created_col = cfg.created_at_column
 
         async with pool.acquire() as conn, conn.cursor() as cursor:
             # Check if table exists
@@ -216,45 +261,77 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
                     SELECT COUNT(*) FROM user_tables
                     WHERE table_name = UPPER(:table_name)
                     """,
-                {"table_name": self.oracle_config.table_name},
+                {"table_name": cfg.table_name},
             )
             result = await cursor.fetchone()
             table_exists = result[0] > 0 if result else False
 
-            if not table_exists:
+            if not table_exists and cfg.auto_create_table:
                 # Create table with VECTOR column (Oracle 23ai/26ai)
+                created_at_ddl = (
+                    f", {created_col} TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP"
+                    if created_col
+                    else ""
+                )
                 await cursor.execute(f"""
                         CREATE TABLE {self._full_table_name} (
-                            id VARCHAR2(255) PRIMARY KEY,
-                            content CLOB,
-                            embedding VECTOR({dim}, FLOAT32),
-                            metadata CLOB DEFAULT '{{}}' CHECK (metadata IS JSON),
-                            created_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP
+                            {id_col} VARCHAR2(255) PRIMARY KEY,
+                            {content_col} CLOB,
+                            {embedding_col} VECTOR({dim}, FLOAT32),
+                            {metadata_col} CLOB DEFAULT '{{}}'
+                                CHECK ({metadata_col} IS JSON)
+                            {created_at_ddl}
                         )
                     """)
 
                 # Create vector index for fast similarity search
                 # Using IVF index for large datasets
                 await cursor.execute(f"""
-                        CREATE VECTOR INDEX idx_{self.oracle_config.table_name}_vec
-                        ON {self._full_table_name} (embedding)
+                        CREATE VECTOR INDEX idx_{cfg.table_name}_vec
+                        ON {self._full_table_name} ({embedding_col})
                         ORGANIZATION NEIGHBOR PARTITIONS
-                        WITH DISTANCE {self.oracle_config.distance_metric}
+                        WITH DISTANCE {cfg.distance_metric}
                     """)
 
-                # Create index on created_at for ordering
-                await cursor.execute(f"""
-                        CREATE INDEX idx_{self.oracle_config.table_name}_created
-                        ON {self._full_table_name} (created_at DESC)
-                    """)
+                if created_col:
+                    await cursor.execute(f"""
+                            CREATE INDEX idx_{cfg.table_name}_created
+                            ON {self._full_table_name} ({created_col} DESC)
+                        """)
 
                 await conn.commit()
+            # When auto_create_table=False and the table is missing, we leave
+            # it for the first SQL operation to surface ORA-00942 with full
+            # table context.
 
         self._initialized = True
 
     def _vector_to_string(self, embedding: list[float]) -> str:
         """Convert embedding list to Oracle VECTOR string format."""
         return "[" + ",".join(str(f) for f in embedding) + "]"
+
+    def _insert_sql(self) -> str:
+        """Build an INSERT statement that respects column-name overrides."""
+        cfg = self.oracle_config
+        cols = [cfg.id_column, cfg.content_column, cfg.embedding_column, cfg.metadata_column]
+        values = [":id", ":content", "TO_VECTOR(:embedding)", ":metadata"]
+        if cfg.created_at_column:
+            cols.append(cfg.created_at_column)
+            values.append(":created_at")
+        return (
+            f"INSERT INTO {self._full_table_name} ({', '.join(cols)}) VALUES ({', '.join(values)})"
+        )
+
+    def _insert_params(self, doc_id: str, doc: Document) -> dict[str, Any]:
+        params: dict[str, Any] = {
+            "id": doc_id,
+            "content": doc.content,
+            "embedding": self._vector_to_string(doc.embedding or []),
+            "metadata": json.dumps(doc.metadata),
+        }
+        if self.oracle_config.created_at_column:
+            params["created_at"] = doc.created_at
+        return params
 
     async def add(self, document: Document) -> str:
         """Add a document with embedding."""
@@ -267,20 +344,7 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
             raise ValueError("Document must have an embedding")
 
         async with pool.acquire() as conn, conn.cursor() as cursor:
-            await cursor.execute(
-                f"""
-                INSERT INTO {self._full_table_name}
-                (id, content, embedding, metadata, created_at)
-                VALUES (:id, :content, TO_VECTOR(:embedding), :metadata, :created_at)
-                """,
-                {
-                    "id": doc_id,
-                    "content": document.content,
-                    "embedding": self._vector_to_string(document.embedding),
-                    "metadata": json.dumps(document.metadata),
-                    "created_at": document.created_at,
-                },
-            )
+            await cursor.execute(self._insert_sql(), self._insert_params(doc_id, document))
             await conn.commit()
 
         return doc_id
@@ -291,6 +355,7 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
         pool = await self._get_pool()
 
         ids = []
+        sql = self._insert_sql()
         async with pool.acquire() as conn, conn.cursor() as cursor:
             for doc in documents:
                 doc_id = doc.id or uuid4().hex
@@ -299,36 +364,40 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
                 if doc.embedding is None:
                     raise ValueError(f"Document {doc_id} must have an embedding")
 
-                await cursor.execute(
-                    f"""
-                    INSERT INTO {self._full_table_name}
-                    (id, content, embedding, metadata, created_at)
-                    VALUES (:id, :content, TO_VECTOR(:embedding), :metadata, :created_at)
-                    """,
-                    {
-                        "id": doc_id,
-                        "content": doc.content,
-                        "embedding": self._vector_to_string(doc.embedding),
-                        "metadata": json.dumps(doc.metadata),
-                        "created_at": doc.created_at,
-                    },
-                )
+                await cursor.execute(sql, self._insert_params(doc_id, doc))
             await conn.commit()
 
         return ids
+
+    def _select_columns_sql(self, *, with_distance: str | None = None) -> str:
+        """Build the SELECT clause, optionally with a distance expression."""
+        cfg = self.oracle_config
+        parts = [
+            f"{cfg.id_column} AS id_",
+            f"{cfg.content_column} AS content_",
+            f"VECTOR_SERIALIZE({cfg.embedding_column}) AS embedding_",
+            f"{cfg.metadata_column} AS metadata_",
+        ]
+        if cfg.created_at_column:
+            parts.append(f"{cfg.created_at_column} AS created_at_")
+        else:
+            parts.append("NULL AS created_at_")
+        if with_distance:
+            parts.append(f"{with_distance} AS distance_")
+        return ", ".join(parts)
 
     async def get(self, doc_id: str) -> Document | None:
         """Get a document by ID."""
         await self._ensure_table()
         pool = await self._get_pool()
 
+        cfg = self.oracle_config
         async with pool.acquire() as conn, conn.cursor() as cursor:
             await cursor.execute(
                 f"""
-                SELECT id, content, VECTOR_SERIALIZE(embedding) as embedding,
-                       metadata, created_at
+                SELECT {self._select_columns_sql()}
                 FROM {self._full_table_name}
-                WHERE id = :id
+                WHERE {cfg.id_column} = :id
                 """,
                 {"id": doc_id},
             )
@@ -371,9 +440,10 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
         await self._ensure_table()
         pool = await self._get_pool()
 
+        cfg = self.oracle_config
         async with pool.acquire() as conn, conn.cursor() as cursor:
             await cursor.execute(
-                f"DELETE FROM {self._full_table_name} WHERE id = :id",
+                f"DELETE FROM {self._full_table_name} WHERE {cfg.id_column} = :id",
                 {"id": doc_id},
             )
             deleted: bool = cursor.rowcount > 0
@@ -392,12 +462,21 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
 
         Uses Oracle's VECTOR_DISTANCE function for efficient similarity search.
         """
+        # Some LLMs (notably gpt-5.x via tool calls) JSON-encode floats as
+        # strings (e.g. "0.5"); coerce defensively so the `score < threshold`
+        # comparison below doesn't TypeError.
+        if isinstance(threshold, str):
+            try:
+                threshold = float(threshold)
+            except ValueError:
+                threshold = None
         await self._ensure_table()
         pool = await self._get_pool()
 
+        cfg = self.oracle_config
         # Build distance function based on metric
-        metric = self.oracle_config.distance_metric.upper()
-        distance_func = f"VECTOR_DISTANCE(embedding, TO_VECTOR(:query_vec), {metric})"
+        metric = cfg.distance_metric.upper()
+        distance_func = f"VECTOR_DISTANCE({cfg.embedding_column}, TO_VECTOR(:query_vec), {metric})"
 
         # Build WHERE clause for metadata filtering
         where_clauses = []
@@ -412,7 +491,9 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
                     msg = f"Invalid metadata filter key: {key!r}"
                     raise ValueError(msg)
                 param_name = f"meta_{key}"
-                where_clauses.append(f"JSON_VALUE(metadata, '$.{key}') = :{param_name}")
+                where_clauses.append(
+                    f"JSON_VALUE({cfg.metadata_column}, '$.{key}') = :{param_name}"
+                )
                 params[param_name] = str(value)
 
         where_sql = ""
@@ -424,12 +505,10 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
         async with pool.acquire() as conn, conn.cursor() as cursor:
             await cursor.execute(
                 f"""
-                SELECT id, content, VECTOR_SERIALIZE(embedding) as embedding,
-                       metadata, created_at,
-                       {distance_func} as distance
+                SELECT {self._select_columns_sql(with_distance=distance_func)}
                 FROM {self._full_table_name}
                 {where_sql}
-                ORDER BY distance ASC
+                ORDER BY distance_ ASC
                 FETCH FIRST :limit ROWS ONLY
                 """,
                 params,

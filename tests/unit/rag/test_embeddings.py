@@ -152,10 +152,17 @@ class TestOCIEmbeddingsConfig:
         assert config.profile_name == "TEST"
 
     def test_model_dimensions(self):
-        """Test model dimension mapping."""
-        from locus.rag.embeddings.oci import MODEL_DIMENSIONS, OCIEmbeddingModel
+        """Test model dimension hint mapping (renamed from MODEL_DIMENSIONS).
 
-        assert MODEL_DIMENSIONS[OCIEmbeddingModel.COHERE_EMBED_ENGLISH_V3] == 1024
-        assert MODEL_DIMENSIONS[OCIEmbeddingModel.COHERE_EMBED_MULTILINGUAL_V3] == 1024
-        assert MODEL_DIMENSIONS[OCIEmbeddingModel.COHERE_EMBED_ENGLISH_LIGHT_V3] == 384
-        assert MODEL_DIMENSIONS[OCIEmbeddingModel.COHERE_EMBED_MULTILINGUAL_LIGHT_V3] == 384
+        The map is now a hint table - models not present in it auto-detect
+        their dimension via a probe call at first use. Keys are the model_id
+        string values rather than enum members.
+        """
+        from locus.rag.embeddings.oci import MODEL_DIMENSION_HINTS, OCIEmbeddingModel
+
+        assert MODEL_DIMENSION_HINTS[OCIEmbeddingModel.COHERE_EMBED_ENGLISH_V3.value] == 1024
+        assert MODEL_DIMENSION_HINTS[OCIEmbeddingModel.COHERE_EMBED_MULTILINGUAL_V3.value] == 1024
+        assert MODEL_DIMENSION_HINTS[OCIEmbeddingModel.COHERE_EMBED_ENGLISH_LIGHT_V3.value] == 384
+        assert (
+            MODEL_DIMENSION_HINTS[OCIEmbeddingModel.COHERE_EMBED_MULTILINGUAL_LIGHT_V3.value] == 384
+        )

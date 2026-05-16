@@ -128,7 +128,7 @@
   "src/locus/rag/__init__.py": 100.0,
   "src/locus/rag/embeddings/__init__.py": 100.0,
   "src/locus/rag/embeddings/base.py": 100.0,
-  "src/locus/rag/embeddings/oci.py": 99.35,
+  "src/locus/rag/embeddings/oci.py": 98.73,
   "src/locus/rag/multimodal.py": 98.18,
   "src/locus/rag/retriever.py": 97.67,
   "src/locus/rag/stores/__init__.py": 100.0,

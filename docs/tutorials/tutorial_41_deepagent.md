@@ -32,6 +32,13 @@ This tutorial covers:
    for focused sub-investigation without bloating the parent's context.
 5. Observability: `deepagent.*` SSE events — `subagent.spawned/completed`,
    `fs.read/write`, `todo.added/completed`.
+6. `datastores=`: auto-wire named `search_<name>` tools from
+   `RAGRetriever` instances so the agent can route queries to the
+   right vector store. See [the deep-research project][dr] for full
+   ports against Oracle Autonomous Database, OCI Object Storage, and
+   OpenSearch.
+
+[dr]: https://github.com/oracle-samples/locus/tree/main/examples/projects/deep-research
 
 Why this is differentiated:
 

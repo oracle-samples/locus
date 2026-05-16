@@ -126,7 +126,7 @@ repos:
         #   reqeusts    — intentional typo-squat fixture for OSV malware test
         #   unparseable — accepted English variant of ``unparsable``
         #   re-use      — accepted hyphenation
-    - --ignore-words-list=oci,orcl,te,whats,re-use,pres,reqeusts,unparseable
+    - --ignore-words-list=oci,orcl,te,whats,re-use,pres,reqeusts,unparseable,transferrin,transferring,ferritin,hepcidin,ferroportin,deferoxamine,deferasirox,deferiprone,erythroferrone,hemojuvelin,IRIDA,IDA,ACD
     - --skip=*.lock,*.json,*.yaml,*.yml,*.svg,*.gif,*.png,*.jpg,*.pdf
 
   # ==========================================================================
@@ -160,7 +160,9 @@ repos:
   hooks:
   - id: markdownlint
     args: [--fix, '--disable=MD013,MD033,MD040,MD041,MD029']
-    exclude: ^(docs/internal/|BA_DEPENDENCIES\.md|RELEASE_REQUEST\.md|locus_authorization_request\.md)
+    # Generated LLM output (memos, traces) lives under each project's
+    # output/ and isn't hand-authored prose worth linting.
+    exclude: ^(docs/internal/|BA_DEPENDENCIES\.md|RELEASE_REQUEST\.md|locus_authorization_request\.md|examples/projects/[^/]+/output/)
 
 ci:
   autofix_commit_msg: 'style: auto-fix by pre-commit hooks'

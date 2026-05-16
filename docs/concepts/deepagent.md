@@ -160,6 +160,56 @@ agent = create_deepagent(
 Missing paths are silently skipped so defaults like
 `["~/AGENTS.md", "./AGENTS.md"]` work without pre-checking.
 
+### Datastore auto-wiring
+
+```python
+from locus.rag import OCIEmbeddings, RAGRetriever
+from locus.rag.stores.oracle import OracleVectorStore
+
+retriever = RAGRetriever(
+    embedder=OCIEmbeddings(model_id="cohere.embed-v4.0", ...),
+    store=OracleVectorStore(dsn=..., table_name="VECTOR_DOCUMENTS", dimension=1536),
+)
+
+agent = create_deepagent(
+    # model=..., tools=..., system_prompt=... (required)
+    datastores={
+        "medical": {
+            "retriever": retriever,
+            "description": "clinical knowledge: anemia, hemochromatosis, "
+                           "iron diagnostics and treatment",
+            "top_k": 6,
+        },
+        # additional named stores — agent routes between them
+    },
+)
+```
+
+For each entry, a `search_<name>` tool is auto-wired via
+`RAGRetriever.as_tool` and appended to the agent's tool list, and a
+per-store description block is prepended to the system prompt so the
+model can route each query to the right store. Mirrors the
+langchain-oci `create_deep_research_agent(datastores=...)` shape so
+existing recipes translate 1:1.
+
+The retriever's `store` can be any `BaseVectorStore` implementation —
+`OracleVectorStore` (Autonomous DB), `OpenSearchVectorStore`,
+`InMemoryVectorStore`, `PgVectorStore`, `ChromaVectorStore`, etc. See
+[`examples/projects/deep-research/`][dr] for working ports of seven
+upstream deep-research gists covering all four major backends.
+
+[dr]: https://github.com/oracle-samples/locus/tree/main/examples/projects/deep-research
+
+A few interop notes:
+
+- Some model providers JSON-encode floats as strings — `gpt-5.x` sends
+  `"min_score": "0.5"`. `RAGRetriever.retrieve` and `OracleVectorStore.search`
+  coerce defensively so the threshold comparison doesn't `TypeError`.
+- From inside an async `def` use `async for event in agent.run(...)`,
+  not `agent.run_sync(...)` — `run_sync` spawns a new thread + event
+  loop where `AsyncOpenSearch` and similar loop-bound clients are
+  unusable, producing silent empty tool results.
+
 ### Conversation summarisation
 
 ```python
