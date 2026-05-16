@@ -35,12 +35,13 @@ from pydantic import BaseModel
 def create_deepagent(
     *,
     model: str | Any,
-    tools: list[Any],
+    tools: list[Any] | None = None,
     system_prompt: str,
     output_schema: type[BaseModel] | None = None,
     submit_tool: str = "submit_research",
     min_confidence: float = 0.8,
     max_tokens: int = 80_000,
+    max_output_tokens: int | None = None,
     max_iterations: int = 40,
     reflexion: bool = True,
     grounding: bool = True,
@@ -51,6 +52,8 @@ def create_deepagent(
     todo_state: Any | None = None,
     memory_files: list[str] | tuple[str, ...] | None = None,
     subagents: list[Any] | None = None,
+    datastores: dict[str, Any] | None = None,
+    datastore_top_k: int = 5,
     summarize_after_messages: int | None = None,
     summarize_keep_recent: int = 10,
     **agent_kwargs: Any,
@@ -73,7 +76,15 @@ def create_deepagent(
             is my structured answer". Default ``submit_research``.
         min_confidence: Confidence threshold the submission must clear
             for early-exit. Default 0.8.
-        max_tokens: Token budget. Default 80k.
+        max_tokens: Total-run token budget used in the typed termination
+            algebra (``TokenLimit(max_tokens)`` — exits when the cumulative
+            input+output tokens for the whole run exceed this). Default 80k.
+            *Not* a per-completion cap — see ``max_output_tokens`` for that.
+        max_output_tokens: Per-LLM-call output token budget, forwarded to
+            ``AgentConfig.max_tokens`` (and from there to the model
+            provider's ``max_tokens`` request field on every completion).
+            Default ``None`` = use the model's own default. Set this to
+            ``65_536`` for long-form Gemini 2.5 Pro outputs, etc.
         max_iterations: Cap on reasoning steps. Default 40.
         reflexion: Self-critique pass after each step. Default True.
         grounding: Citation-grounding eval against tool-call evidence.
@@ -105,6 +116,17 @@ def create_deepagent(
         subagents: Optional list of :class:`SubAgentDef` declaring
             subagents the parent can spawn mid-run via a ``task()``
             tool. Each subagent runs as a stateless one-shot.
+        datastores: Optional mapping of ``{name: RAGRetriever}`` (or
+            ``{name: {"retriever": RAGRetriever, "description": str,
+            "top_k": int}}``). For each entry, a ``search_{name}`` tool
+            is auto-wired via ``RAGRetriever.as_tool`` and appended to
+            ``tools``, and a per-store description block is prepended
+            to ``system_prompt`` so the model can route queries to the
+            right store. Mirrors the langchain-oci
+            ``create_deep_research_agent(datastores=...)`` shape.
+        datastore_top_k: Default top-k for auto-wired datastore tools.
+            Honored only when ``datastores`` is set and an entry doesn't
+            specify its own ``top_k``. Default 5.
         summarize_after_messages: If set, attaches locus's
             :class:`SummarizingManager` so older messages are
             condensed once the conversation exceeds this count.
@@ -142,7 +164,7 @@ def create_deepagent(
     # before constructing the Agent. The default backend is an
     # ephemeral in-memory StateBackend so callers who flip the flag
     # don't have to think about cleanup.
-    final_tools = list(tools)
+    final_tools = list(tools) if tools else []
     if enable_filesystem:
         from locus.deepagent.backends import StateBackend
         from locus.deepagent.tools import make_filesystem_tools
@@ -169,6 +191,65 @@ def create_deepagent(
             task_tool(subagents, parent_model=model),
         ]
 
+    # Datastore auto-wiring: turn ``{name: RAGRetriever}`` into a set of
+    # ``search_{name}`` tools the agent can call, and prepend a routing
+    # hint block so the model picks the right store per query. Mirrors
+    # the langchain-oci ``create_deep_research_agent(datastores=...)``
+    # contract so gist demos translate 1:1.
+    datastore_routing_block = ""
+    if datastores:
+        from locus.rag.retriever import RAGRetriever
+
+        ds_lines: list[str] = []
+        for ds_name, ds_value in datastores.items():
+            if isinstance(ds_value, RAGRetriever):
+                retriever = ds_value
+                ds_desc = ""
+                top_k = datastore_top_k
+                threshold: float | None = None
+            elif isinstance(ds_value, dict):
+                retriever = ds_value["retriever"]
+                ds_desc = ds_value.get("description", "")
+                top_k = ds_value.get("top_k", datastore_top_k)
+                threshold = ds_value.get("threshold", None)
+            else:
+                raise TypeError(
+                    f"datastores[{ds_name!r}] must be a RAGRetriever or "
+                    f"a dict with 'retriever' (+ optional 'description', "
+                    f"'top_k', 'threshold'); got {type(ds_value).__name__}."
+                )
+
+            from locus.rag.tools import create_rag_tool
+
+            tool_name = f"search_{ds_name}"
+            tool_desc = (
+                f"Search the {ds_name!r} datastore"
+                + (f" ({ds_desc})" if ds_desc else "")
+                + f". Returns up to {top_k} relevant documents."
+            )
+            # Default threshold=None (no min-score filter). The 0.5 default
+            # in create_rag_tool is tuned for sentence-transformer scores;
+            # raw cosine similarity over Cohere embeddings can dip below
+            # that for genuinely relevant matches.
+            final_tools = [
+                *final_tools,
+                create_rag_tool(
+                    retriever,
+                    name=tool_name,
+                    description=tool_desc,
+                    limit=top_k,
+                    threshold=threshold,
+                ),
+            ]
+            ds_lines.append(f"- `{tool_name}(query)`: " + (ds_desc or f"the {ds_name!r} datastore"))
+
+        datastore_routing_block = (
+            "# Datastores\n\n"
+            "You have these searchable datastores. Pick the one whose "
+            "description best matches each query (call multiple when the "
+            "question spans them):\n\n" + "\n".join(ds_lines)
+        )
+
     # Memory files: prepend to the system prompt so AGENTS.md-style
     # instructions land in front of the recipe-specific identity
     # block. Layered so users can stack base / user / project files.
@@ -179,6 +260,12 @@ def create_deepagent(
         memory_block = load_agents_md(list(memory_files))
         if memory_block:
             final_system_prompt = f"{memory_block}\n\n---\n\n{system_prompt}"
+
+    # Datastore routing hint goes immediately after any AGENTS.md memory
+    # but before the recipe-specific system prompt, so per-store
+    # descriptions are visible to the model on every turn.
+    if datastore_routing_block:
+        final_system_prompt = f"{datastore_routing_block}\n\n---\n\n{final_system_prompt}"
 
     # Summarization: thin pass-through to locus's SummarizingManager.
     # Active only when the caller asks for it; otherwise the agent
@@ -207,6 +294,10 @@ def create_deepagent(
         kwargs["output_schema"] = output_schema
     if checkpointer is not None:
         kwargs["checkpointer"] = checkpointer
+    # Forward per-completion output cap to the model. AgentConfig.max_tokens
+    # lands on every chat-completion request via runtime_loop.
+    if max_output_tokens is not None:
+        kwargs["max_tokens"] = max_output_tokens
     kwargs.update(agent_kwargs)
 
     agent = Agent(**kwargs)

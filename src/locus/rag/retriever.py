@@ -437,6 +437,19 @@ class RAGRetriever(BaseModel):
         Returns:
             RetrievalResult with ranked documents
         """
+        # Some LLMs (e.g. gpt-5.x via tool calls) JSON-encode floats as
+        # strings ("0.5"); coerce here so every store backend sees a real
+        # float / None and the threshold comparison below doesn't TypeError.
+        if isinstance(threshold, str):
+            try:
+                threshold = float(threshold)
+            except ValueError:
+                threshold = None
+        if isinstance(limit, str):
+            try:
+                limit = int(limit)
+            except ValueError:
+                limit = 5
         import time as _time
 
         from locus.observability.emit import (  # noqa: PLC0415

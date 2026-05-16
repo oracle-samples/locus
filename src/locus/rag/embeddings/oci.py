@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 
 class OCIEmbeddingModel(str, Enum):
-    """Available Cohere embedding models on OCI GenAI."""
+    """Known Cohere embedding models on OCI GenAI (non-exhaustive)."""
 
     COHERE_EMBED_ENGLISH_V3 = "cohere.embed-english-v3.0"
     COHERE_EMBED_MULTILINGUAL_V3 = "cohere.embed-multilingual-v3.0"
@@ -36,12 +36,15 @@ class OCIEmbeddingModel(str, Enum):
     COHERE_EMBED_MULTILINGUAL_LIGHT_V3 = "cohere.embed-multilingual-light-v3.0"
 
 
-# Model dimensions
-MODEL_DIMENSIONS = {
-    OCIEmbeddingModel.COHERE_EMBED_ENGLISH_V3: 1024,
-    OCIEmbeddingModel.COHERE_EMBED_MULTILINGUAL_V3: 1024,
-    OCIEmbeddingModel.COHERE_EMBED_ENGLISH_LIGHT_V3: 384,
-    OCIEmbeddingModel.COHERE_EMBED_MULTILINGUAL_LIGHT_V3: 384,
+# Fast-path dimension hints for known models. Not exhaustive — any model_id
+# not listed here is accepted, and the actual dimension is detected from the
+# first successful embed response (see `_detected_dimension`).
+DEFAULT_DIMENSION = 1024
+MODEL_DIMENSION_HINTS = {
+    OCIEmbeddingModel.COHERE_EMBED_ENGLISH_V3.value: 1024,
+    OCIEmbeddingModel.COHERE_EMBED_MULTILINGUAL_V3.value: 1024,
+    OCIEmbeddingModel.COHERE_EMBED_ENGLISH_LIGHT_V3.value: 384,
+    OCIEmbeddingModel.COHERE_EMBED_MULTILINGUAL_LIGHT_V3.value: 384,
 }
 
 
@@ -108,6 +111,10 @@ class OCIEmbeddings(BaseModel, BaseEmbedding):
     oci_config: OCIEmbeddingConfig = Field(default_factory=OCIEmbeddingConfig)
     _client: GenerativeAiInferenceClient | None = None
     _oci_config_dict: dict[str, Any] | None = None
+    # Populated from the first successful embed response; subsequent calls
+    # short-circuit dimension lookups. Lets any OCI model work without an
+    # entry in MODEL_DIMENSION_HINTS.
+    _detected_dimension: int | None = None
 
     model_config = {"arbitrary_types_allowed": True}
 
@@ -132,15 +139,17 @@ class OCIEmbeddings(BaseModel, BaseEmbedding):
 
     @property
     def config(self) -> EmbeddingConfig:
-        """Get embedding configuration."""
-        # Determine dimension from model
-        model_enum = None
-        for m in OCIEmbeddingModel:
-            if m.value == self.oci_config.model_id:
-                model_enum = m
-                break
+        """Get embedding configuration.
 
-        dimension = MODEL_DIMENSIONS.get(model_enum, 1024) if model_enum else 1024
+        Dimension resolution: detected from first embed response if available,
+        otherwise the fast-path hint for known models, otherwise a sensible
+        default. The OCI Cohere family covers 384/1024/1536-dim variants.
+        """
+        dimension = (
+            self._detected_dimension
+            or MODEL_DIMENSION_HINTS.get(self.oci_config.model_id)
+            or DEFAULT_DIMENSION
+        )
 
         return EmbeddingConfig(
             dimension=dimension,
@@ -282,6 +291,18 @@ class OCIEmbeddings(BaseModel, BaseEmbedding):
             return tenancy
         return ""
 
+    def _record_dimension(self, embeddings: list[list[float]]) -> None:
+        """Cache the detected embedding dimension from a successful response.
+
+        Idempotent — first call wins. Lets `config.dimension` reflect the
+        ground truth for whatever model OCI returned, without needing the
+        model to be listed in MODEL_DIMENSION_HINTS.
+        """
+        if self._detected_dimension is None and embeddings:
+            first = embeddings[0]
+            if first:
+                self._detected_dimension = len(first)
+
     async def embed(self, text: str) -> EmbeddingResult:
         """Embed a single text."""
         results = await self.embed_batch([text])
@@ -306,6 +327,7 @@ class OCIEmbeddings(BaseModel, BaseEmbedding):
 
         response = client.embed_text(embed_details)
         embeddings = response.data.embeddings
+        self._record_dimension(embeddings)
 
         results = []
         for i, text in enumerate(texts):
@@ -344,6 +366,7 @@ class OCIEmbeddings(BaseModel, BaseEmbedding):
         )
 
         response = client.embed_text(embed_details)
+        self._record_dimension(response.data.embeddings)
 
         return EmbeddingResult(
             embedding=response.data.embeddings[0],
@@ -380,6 +403,7 @@ class OCIEmbeddings(BaseModel, BaseEmbedding):
             )
 
             response = client.embed_text(embed_details)
+            self._record_dimension(response.data.embeddings)
 
             for j, text in enumerate(batch):
                 results.append(
