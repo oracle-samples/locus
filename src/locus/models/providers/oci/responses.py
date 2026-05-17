@@ -44,6 +44,7 @@ from locus.models.providers.oci.openai_compat import (
     _build_resource_principal_signer,
     _build_signer_from_profile,
     _load_profile_config,
+    _refresh_callable_for,
     build_oci_openai_base_url,
 )
 
@@ -260,8 +261,23 @@ class OCIResponsesModel(BaseModel):
         """Build (or reuse) the OCI-signed httpx client."""
         if self._client is None:
             signer = self._build_signer()
+            # Wire the signer's refresh hook so instance-principal /
+            # resource-principal federation tokens auto-refresh both
+            # on 401 and on a 10-minute periodic timer. Without this,
+            # the captured signer's token expires after ~15-30 min and
+            # every subsequent /v1/responses call 401s until the
+            # process restarts. Same fix as openai_compat.py — kept
+            # parallel via the shared _refresh_callable_for helper so
+            # future signer types get refresh support in one place.
+            # Static signers (user-principal API key) return None and
+            # the refresh branches stay dormant.
             client = httpx.AsyncClient(
-                auth=OCIRequestSigner(signer, compartment_id=self.config.compartment_id),
+                auth=OCIRequestSigner(
+                    signer,
+                    compartment_id=self.config.compartment_id,
+                    refresh_signer=_refresh_callable_for(signer),
+                    refresh_interval=600.0,
+                ),
                 timeout=httpx.Timeout(self.config.request_timeout),
                 base_url=self.config.base_url or "",
             )

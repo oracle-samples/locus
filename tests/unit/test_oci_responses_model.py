@@ -251,6 +251,62 @@ def test_init_requires_compartment_for_workload_identity() -> None:
         OCIResponsesModel(model="x", auth_type="instance_principal")
 
 
+class TestHttpClientWiresRefreshSigner:
+    """``_http_client`` must pass the signer's own ``refresh_security_token``
+    method into ``OCIRequestSigner`` so instance-principal federation
+    tokens auto-refresh both on 401 and on the periodic timer.
+    Without this, the captured token expires after ~15-30 min and every
+    subsequent /v1/responses call 401s. Same fix as openai_compat.py."""
+
+    def test_token_signer_gets_refresh_callback_and_short_interval(self) -> None:
+        from unittest.mock import MagicMock, patch
+
+        model = OCIResponsesModel(
+            model="openai.gpt-5.5-pro",
+            auth_type="instance_principal",
+            compartment_id="ocid1.compartment.oc1..fake",
+            base_url="https://fake-oci.test/openai/v1",
+        )
+        signer = MagicMock(name="instance_signer")
+        signer.refresh_security_token = MagicMock(name="refresh")
+        object.__setattr__(model, "_build_signer", lambda: signer)
+
+        with (
+            patch("locus.models.providers.oci.responses.OCIRequestSigner") as mock_sig_ctor,
+            patch("httpx.AsyncClient"),
+        ):
+            _ = model._http_client()
+            kwargs = mock_sig_ctor.call_args.kwargs
+            assert kwargs["compartment_id"] == "ocid1.compartment.oc1..fake"
+            # The signer's own refresh method must be passed so the
+            # auth_flow refresh-on-401 + periodic-refresh paths fire.
+            assert kwargs["refresh_signer"] is signer.refresh_security_token
+            # 600s beats the typical 15-30min federation-token TTL.
+            assert kwargs["refresh_interval"] == 600.0
+
+    def test_static_signer_gets_no_refresh_callback(self) -> None:
+        """User-principal API-key signers don't expire — refresh callback
+        should be None and the refresh branches stay dormant."""
+        from unittest.mock import MagicMock, patch
+
+        model = OCIResponsesModel(
+            model="openai.gpt-5.5-pro",
+            auth_type="instance_principal",
+            compartment_id="ocid1.compartment.oc1..fake",
+            base_url="https://fake-oci.test/openai/v1",
+        )
+        # Signer with no refresh_security_token attribute.
+        static_signer = MagicMock(spec=["do_request_sign"])
+        object.__setattr__(model, "_build_signer", lambda: static_signer)
+
+        with (
+            patch("locus.models.providers.oci.responses.OCIRequestSigner") as mock_sig_ctor,
+            patch("httpx.AsyncClient"),
+        ):
+            _ = model._http_client()
+            assert mock_sig_ctor.call_args.kwargs["refresh_signer"] is None
+
+
 def test_server_stateful_default_true() -> None:
     """Default instance advertises server_stateful=True (full Responses flow)."""
     model = _make_model()
