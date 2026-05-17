@@ -265,6 +265,110 @@ class TestAuthTypeMode:
             mock_build.assert_called_once_with()
 
 
+class TestRefreshCallableFor:
+    """``_refresh_callable_for`` is the bridge that prevents the
+    "instance principal token expires at ~15min, every subsequent
+    GenAI call 401s, only a pod restart recovers" production failure
+    mode. It returns the signer's own ``refresh_security_token``
+    method for token-based signers (instance / resource principal,
+    delegation token) and ``None`` for static signers (user API key).
+    The OCIRequestSigner refresh-on-401 path is dead code without it."""
+
+    def test_signer_with_refresh_security_token_returns_bound_method(self):
+        from locus.models.providers.oci.openai_compat import _refresh_callable_for
+
+        signer = MagicMock()
+        signer.refresh_security_token = MagicMock(name="refresh")
+        cb = _refresh_callable_for(signer)
+        assert cb is signer.refresh_security_token
+        cb()
+        signer.refresh_security_token.assert_called_once_with()
+
+    def test_static_signer_returns_none(self):
+        from locus.models.providers.oci.openai_compat import _refresh_callable_for
+
+        # User-principal API-key signer has no refresh_security_token —
+        # the API key doesn't expire so refresh is a no-op.
+        signer = MagicMock(spec=["do_request_sign"])
+        assert _refresh_callable_for(signer) is None
+
+    def test_non_callable_refresh_attribute_returns_none(self):
+        """Defensive: if a signer happens to have a `refresh_security_token`
+        attribute that isn't callable, fall back to None instead of
+        breaking auth_flow at call time."""
+        from locus.models.providers.oci.openai_compat import _refresh_callable_for
+
+        signer = MagicMock(spec=["do_request_sign", "refresh_security_token"])
+        signer.refresh_security_token = "not callable"  # noqa: S105 — test literal, not a credential
+        assert _refresh_callable_for(signer) is None
+
+
+class TestClientWiresRefreshSigner:
+    """The ``client`` property must construct ``OCIRequestSigner`` with
+    a ``refresh_signer`` callback for token-based signers AND with a
+    shorter ``refresh_interval`` than the upstream 1-hour default —
+    otherwise instance-principal federation tokens (which expire on
+    the order of 15-30 minutes) silently rot inside the http client."""
+
+    def test_instance_principal_passes_signer_refresh_to_signing_wrapper(self):
+        model = OCIOpenAIModel(
+            model="openai.gpt-5.5",
+            auth_type="instance_principal",
+            compartment_id=COMPARTMENT_OCID,
+        )
+        signer = MagicMock(name="instance_signer")
+        signer.refresh_security_token = MagicMock(name="refresh")
+
+        with (
+            patch(
+                "locus.models.providers.oci.openai_compat._build_instance_principal_signer",
+                return_value=signer,
+            ),
+            patch(
+                "locus.models.providers.oci._signing.OCIRequestSigner"
+            ) as mock_sig_ctor,
+            patch("openai.AsyncOpenAI"),
+            patch("httpx.AsyncClient"),
+        ):
+            _ = model.client
+            kwargs = mock_sig_ctor.call_args.kwargs
+            assert kwargs["compartment_id"] == COMPARTMENT_OCID
+            # The signer's own refresh method must be passed so
+            # OCIRequestSigner.auth_flow can refresh on 401 + on the
+            # periodic timer.
+            assert kwargs["refresh_signer"] is signer.refresh_security_token
+            # 600s is tighter than the upstream 3600s default — short
+            # enough that proactive refresh beats the typical 15-30min
+            # federation-token TTL.
+            assert kwargs["refresh_interval"] == 600.0
+
+    def test_user_principal_signer_gets_no_refresh_callback(self):
+        """API-key signers don't expire; passing a no-op refresh
+        wastes a clock check on every request, but the constructor
+        contract is None=disabled. Confirm the dispatch sends None."""
+        with patch(
+            "locus.models.providers.oci.openai_compat._load_profile_config",
+            return_value={"tenancy": COMPARTMENT_OCID},
+        ):
+            model = OCIOpenAIModel(model="openai.gpt-5.5", profile="MY_PROFILE")
+
+        # Static signer — no refresh_security_token attribute.
+        static_signer = MagicMock(spec=["do_request_sign"])
+        with (
+            patch(
+                "locus.models.providers.oci.openai_compat._build_signer_from_profile",
+                return_value=static_signer,
+            ),
+            patch(
+                "locus.models.providers.oci._signing.OCIRequestSigner"
+            ) as mock_sig_ctor,
+            patch("openai.AsyncOpenAI"),
+            patch("httpx.AsyncClient"),
+        ):
+            _ = model.client
+            assert mock_sig_ctor.call_args.kwargs["refresh_signer"] is None
+
+
 class TestBaseURLAndRegion:
     def test_explicit_base_url_wins(self):
         with patch(

@@ -8,6 +8,45 @@ policy.
 
 ## [Unreleased]
 
+## [0.2.0b12] - 2026-05-17
+
+### Fixed — OCI instance-principal token now auto-refreshes on the OpenAI-compat client
+
+`OCIOpenAIModel` (the transport behind every `oci:openai.<model>` and
+`oci:google.<model>` id) was constructing its `OCIRequestSigner` without
+passing a `refresh_signer` callback. `OCIRequestSigner.auth_flow` has a
+refresh-on-401 branch *and* a periodic-refresh branch — both early-return
+when `refresh_signer is None`, which meant the federation token captured
+at process start was used forever. On OKE, instance-principal tokens
+expire on the order of 15–30 minutes, so any agent pod older than that
+would 401 on every GenAI call until restarted. Production symptom: chats
+silently fall through to `reason=error` after ~15 minutes of pod uptime;
+pod restart was the only known workaround.
+
+The fix wires the signer's own `refresh_security_token` method
+(present on `InstancePrincipalsSecurityTokenSigner`,
+`get_resource_principals_signer()` returns a signer with the same
+contract, and any `DelegationTokenSigner` variant that follows the OCI
+SDK convention) into the wrapper via a new `_refresh_callable_for(signer)`
+helper. Static signers (user-principal API key) have no
+`refresh_security_token` attribute and the helper returns `None`, so
+the refresh path stays dormant for them. `refresh_interval` is tightened
+from the upstream 3600 s default to 600 s, short enough that proactive
+refresh beats the typical 15–30 minute federation-token TTL even if a
+401 doesn't fire first.
+
+No public-API change; the wiring is internal. Closes the
+"instance-principal 401 after ~15 min" failure mode observed against
+`oci:openai.gpt-5.5-2026-04-23` on OKE with instance-principal auth.
+
+- `src/locus/models/providers/oci/openai_compat.py` — new
+  `_refresh_callable_for(signer)` helper; `OCIOpenAIModel.client` now
+  passes `refresh_signer=_refresh_callable_for(signer)` and
+  `refresh_interval=600.0` when constructing `OCIRequestSigner`.
+- `tests/unit/test_oci_openai_compat.py` — `TestRefreshCallableFor`
+  (3 cases) and `TestClientWiresRefreshSigner` (2 cases) cover the
+  new helper and the wiring for both token-based and static signers.
+
 ## [0.2.0b11] - 2026-05-16
 
 ### Added — `create_deepagent(datastores=...)` + seven deep-research locus demos

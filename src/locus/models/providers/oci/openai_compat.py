@@ -47,7 +47,7 @@ Example::
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -163,6 +163,26 @@ def _build_resource_principal_signer() -> AbstractBaseSigner:
     from oci.auth.signers import get_resource_principals_signer
 
     return get_resource_principals_signer()
+
+
+def _refresh_callable_for(signer: AbstractBaseSigner) -> Callable[[], Any] | None:
+    """Return a callable that refreshes ``signer`` in place, or ``None``
+    when the signer carries no expiring credential.
+
+    Token-based signers — instance principal, resource principal, and
+    delegation-token variants — expose ``refresh_security_token`` on
+    the signer instance itself; calling it mutates the cached token so
+    subsequent ``do_request_sign`` calls use the new one. User-principal
+    (API key) signers don't expire, so they return None: the
+    refresh-on-401 path in :class:`OCIRequestSigner` is then a no-op.
+
+    Surface this generically (``hasattr`` rather than isinstance
+    checks) so additional OCI signer types that follow the same
+    convention (e.g. ``DelegationTokenSigner``) get refresh support
+    without further wiring.
+    """
+    refresh = getattr(signer, "refresh_security_token", None)
+    return refresh if callable(refresh) else None
 
 
 class OCIOpenAIModel(OpenAIModel):
@@ -344,6 +364,19 @@ class OCIOpenAIModel(OpenAIModel):
             from locus.models.providers.oci._signing import OCIRequestSigner
 
             signer = self._build_signer()
+            # Token-based signers (instance principal, resource principal,
+            # delegation token) carry credentials that expire on the
+            # order of minutes-to-hours; without a refresh callback the
+            # 401 retry path in OCIRequestSigner is a no-op and the
+            # process dies a slow death of "all GenAI calls 401 after
+            # ~15-30min". Pass the signer's own refresh hook so
+            # auth_flow can both (a) refresh-on-401 and (b) periodically
+            # refresh proactively. Static signers (user-principal API
+            # key) return None and the refresh path stays dormant.
+            # refresh_interval defaults to 1 hour upstream; tighten to
+            # 10 minutes here because instance-principal federation
+            # tokens routinely expire faster than that.
+            #
             # Pin the same timeout/retry knobs the parent OpenAIModel
             # uses so a stuck OCI request can't hang asyncio.gather()
             # forever (see ParallelPipeline) — without an explicit
@@ -353,6 +386,8 @@ class OCIOpenAIModel(OpenAIModel):
                 auth=OCIRequestSigner(
                     signer,
                     compartment_id=self.config.compartment_id,
+                    refresh_signer=_refresh_callable_for(signer),
+                    refresh_interval=600.0,
                 ),
                 timeout=httpx.Timeout(self.config.request_timeout),
             )
