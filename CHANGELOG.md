@@ -8,48 +8,65 @@ policy.
 
 ## [Unreleased]
 
-## [Unreleased]
+### Fixed — OCI instance-principal token now auto-refreshes on both openai-style HTTP transports
 
-### Fixed — OCI instance-principal token now auto-refreshes on the OpenAI-compat client
+`OCIOpenAIModel` (behind every `oci:openai.<model>` / `oci:google.<model>` id)
+**and** `OCIResponsesModel` (the `/v1/responses` transport) were both
+constructing their `OCIRequestSigner` without passing a `refresh_signer`
+callback. `OCIRequestSigner.auth_flow` has a refresh-on-401 branch *and*
+a periodic-refresh branch — both early-return when `refresh_signer is None`,
+which meant the federation token captured at process start was used
+forever. On OKE, instance-principal tokens expire on the order of 15–30
+minutes, so any agent pod older than that would 401 on every GenAI call
+until restarted.
 
-`OCIOpenAIModel` (the transport behind every `oci:openai.<model>` and
-`oci:google.<model>` id) was constructing its `OCIRequestSigner` without
-passing a `refresh_signer` callback. `OCIRequestSigner.auth_flow` has a
-refresh-on-401 branch *and* a periodic-refresh branch — both early-return
-when `refresh_signer is None`, which meant the federation token captured
-at process start was used forever. On OKE, instance-principal tokens
-expire on the order of 15–30 minutes, so any agent pod older than that
-would 401 on every GenAI call until restarted. Production symptom: chats
-silently fall through to `reason=error` after ~15 minutes of pod uptime;
-pod restart was the only known workaround.
+Production symptom: chats silently fall through to `reason=error` after
+~15 minutes of pod uptime, with httpx logs showing
+`HTTP/1.1 401 Unauthorized` on every `chat.completions` /
+`/v1/responses` call. Pod restart was the only known workaround.
 
-The fix wires the signer's own `refresh_security_token` method
-(present on `InstancePrincipalsSecurityTokenSigner`,
-`get_resource_principals_signer()` returns a signer with the same
-contract, and any `DelegationTokenSigner` variant that follows the OCI
-SDK convention) into the wrapper via a new `_refresh_callable_for(signer)`
-helper. Static signers (user-principal API key) have no
-`refresh_security_token` attribute and the helper returns `None`, so
-the refresh path stays dormant for them. `refresh_interval` is tightened
-from the upstream 3600 s default to 600 s, short enough that proactive
-refresh beats the typical 15–30 minute federation-token TTL even if a
-401 doesn't fire first.
+The fix wires the signer's own `refresh_security_token` method (present
+on `InstancePrincipalsSecurityTokenSigner`, `get_resource_principals_signer()`
+returns a signer with the same contract, and any `DelegationTokenSigner`
+variant that follows the OCI SDK convention) into the wrapper via a new
+`_refresh_callable_for(signer)` helper exported from `openai_compat.py`
+and reused by `responses.py`. Static signers (user-principal API key)
+have no `refresh_security_token` attribute and the helper returns
+`None`, so the refresh path stays dormant for them.
+`refresh_interval` is tightened from the upstream 3600 s default to
+600 s — short enough that proactive refresh beats the typical 15–30
+minute federation-token TTL even if a 401 doesn't fire first.
 
-No public-API change; the wiring is internal. Closes the
-"instance-principal 401 after ~15 min" failure mode observed against
-`oci:openai.gpt-5.5-2026-04-23` on OKE with instance-principal auth.
+**Scope of the fix.** Two transports use the httpx + `OCIRequestSigner`
+wrapper and are both patched here. Other OCI transports route signing
+through `oci.generative_ai_inference.GenerativeAiInferenceClient`,
+which delegates to the OCI Python SDK's built-in HTTP client and
+already refreshes federation tokens internally — those are unaffected
+by this bug:
+
+| Transport | File | Status |
+|---|---|---|
+| `OCIOpenAIModel` (Chat Completions) | `src/locus/models/providers/oci/openai_compat.py` | Fixed |
+| `OCIResponsesModel` (`/v1/responses`) | `src/locus/models/providers/oci/responses.py` | Fixed |
+| `OCIModel` (native OCI SDK) | `src/locus/models/providers/oci/client.py` | Unaffected (OCI SDK refresh) |
+| `OracleGenAIEmbeddings` (RAG) | `src/locus/rag/embeddings/oci.py` | Unaffected (OCI SDK refresh) |
+
+No public-API change; the wiring is internal.
 
 - `src/locus/models/providers/oci/openai_compat.py` — new
   `_refresh_callable_for(signer)` helper; `OCIOpenAIModel.client` now
   passes `refresh_signer=_refresh_callable_for(signer)` and
   `refresh_interval=600.0` when constructing `OCIRequestSigner`.
-- `src/locus/models/providers/oci/responses.py` — same `refresh_signer`
-  + `refresh_interval=600.0` wiring on `OCIResponsesModel` so the
-  Responses-API transport gets the same long-lived federation token
-  handling.
+- `src/locus/models/providers/oci/responses.py` — `OCIResponsesModel._http_client`
+  imports `_refresh_callable_for` from `openai_compat` and uses the
+  same `refresh_signer=_refresh_callable_for(signer)` +
+  `refresh_interval=600.0` wiring so the Responses-API transport
+  gets the same long-lived federation-token handling.
 - `tests/unit/test_oci_openai_compat.py` — `TestRefreshCallableFor`
   (3 cases) and `TestClientWiresRefreshSigner` (2 cases) cover the
-  new helper and the wiring for both token-based and static signers.
+  helper and the openai-compat wiring.
+- `tests/unit/test_oci_responses_model.py` — `TestHttpClientWiresRefreshSigner`
+  (2 cases) covers the `OCIResponsesModel` wiring with the same contract.
 
 ## [0.2.0b12] - 2026-05-16
 
