@@ -8,6 +8,8 @@ policy.
 
 ## [Unreleased]
 
+## [0.2.0b13] - 2026-05-16
+
 ### Fixed — OCI instance-principal token now auto-refreshes on both openai-style HTTP transports
 
 `OCIOpenAIModel` (behind every `oci:openai.<model>` / `oci:google.<model>` id)
