@@ -275,7 +275,11 @@ class OCIResponsesModel(BaseModel):
                 auth=OCIRequestSigner(
                     signer,
                     compartment_id=self.config.compartment_id,
-                    refresh_signer=_refresh_callable_for(signer),
+                    refresh_signer=_refresh_callable_for(
+                        signer,
+                        profile=self.config.profile,
+                        config_file=self.config.config_file,
+                    ),
                     refresh_interval=600.0,
                 ),
                 timeout=httpx.Timeout(self.config.request_timeout),

@@ -165,24 +165,83 @@ def _build_resource_principal_signer() -> AbstractBaseSigner:
     return get_resource_principals_signer()
 
 
-def _refresh_callable_for(signer: AbstractBaseSigner) -> Callable[[], Any] | None:
-    """Return a callable that refreshes ``signer`` in place, or ``None``
-    when the signer carries no expiring credential.
+def _refresh_callable_for(
+    signer: AbstractBaseSigner,
+    *,
+    profile: str | None = None,
+    config_file: str | None = None,
+) -> Callable[[], Any] | None:
+    """Return a callable that refreshes ``signer``, or ``None`` when there
+    is no recoverable expiring credential.
 
-    Token-based signers — instance principal, resource principal, and
-    delegation-token variants — expose ``refresh_security_token`` on
-    the signer instance itself; calling it mutates the cached token so
-    subsequent ``do_request_sign`` calls use the new one. User-principal
-    (API key) signers don't expire, so they return None: the
-    refresh-on-401 path in :class:`OCIRequestSigner` is then a no-op.
+    Three cases:
 
-    Surface this generically (``hasattr`` rather than isinstance
-    checks) so additional OCI signer types that follow the same
-    convention (e.g. ``DelegationTokenSigner``) get refresh support
-    without further wiring.
+    1. **Instance / resource principal / delegation token.** These signers
+       expose ``refresh_security_token`` on the instance itself; the
+       method mutates the cached token so subsequent ``do_request_sign``
+       calls use the new one. We return that bound method directly.
+    2. **Session token (``SecurityTokenSigner`` from a profile with a
+       ``security_token_file``).** The signer is immutable, but the file
+       on disk is the source of truth — ``oci session refresh`` (and any
+       external token-rotation daemon) updates the file out-of-band.
+       When ``profile`` + ``config_file`` are supplied, we capture them
+       in a closure that re-reads the token file and returns a fresh
+       ``SecurityTokenSigner``; :class:`OCIRequestSigner` swaps it in.
+       Without those args we can't rebuild the signer, so we return None
+       and the auth flow stays dormant.
+    3. **User principal (API key).** No expiring credential, no refresh.
+       Returns None.
+
+    Args:
+        signer: The OCI signer in use.
+        profile: OCI config profile name. Required to enable session-token
+            refresh; ignored for instance/resource principal.
+        config_file: Path to the OCI config file. Same constraint as
+            ``profile``.
+
+    Returns:
+        A zero-arg callable to invoke before signing on refresh, or
+        ``None`` when the credential is non-expiring.
     """
+    # Case 1: in-place refresh on the signer itself.
     refresh = getattr(signer, "refresh_security_token", None)
-    return refresh if callable(refresh) else None
+    if callable(refresh):
+        return refresh  # type: ignore[no-any-return]  # signer methods are untyped
+
+    # Case 2: SecurityTokenSigner rebuilt from disk.
+    if profile is not None and config_file is not None:
+        try:
+            cfg = _load_profile_config(profile, config_file)
+        except Exception:  # noqa: BLE001 — refresh stays disabled if config is unreadable
+            return None
+        if cfg.get("security_token_file"):
+            return _session_token_disk_refresh(cfg)
+
+    return None
+
+
+def _session_token_disk_refresh(cfg: dict[str, Any]) -> Callable[[], Any]:
+    """Build a refresh callable for a session-token profile.
+
+    Captures the ``security_token_file`` path, ``key_file`` path, and
+    ``pass_phrase`` from ``cfg`` in a closure. Each invocation re-reads
+    the token file from disk (picking up out-of-band refreshes from
+    ``oci session refresh`` or equivalent) and returns a fresh
+    ``SecurityTokenSigner`` that the caller can swap in.
+    """
+    from oci.auth.signers import SecurityTokenSigner
+    from oci.signer import load_private_key_from_file
+
+    token_path = Path(cfg["security_token_file"]).expanduser()
+    key_path = cfg["key_file"]
+    pass_phrase = cfg.get("pass_phrase")
+
+    def _refresh() -> AbstractBaseSigner:
+        token = token_path.read_text().strip()
+        private_key = load_private_key_from_file(key_path, pass_phrase)
+        return SecurityTokenSigner(token=token, private_key=private_key)
+
+    return _refresh
 
 
 class OCIOpenAIModel(OpenAIModel):
@@ -386,7 +445,11 @@ class OCIOpenAIModel(OpenAIModel):
                 auth=OCIRequestSigner(
                     signer,
                     compartment_id=self.config.compartment_id,
-                    refresh_signer=_refresh_callable_for(signer),
+                    refresh_signer=_refresh_callable_for(
+                        signer,
+                        profile=self.config.profile,
+                        config_file=self.config.config_file,
+                    ),
                     refresh_interval=600.0,
                 ),
                 timeout=httpx.Timeout(self.config.request_timeout),
