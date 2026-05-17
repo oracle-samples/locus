@@ -18,6 +18,7 @@ Reference (not vendored): oracle-samples/oci-genai-auth-python (UPL-1.0).
 
 from __future__ import annotations
 
+import logging
 import threading
 import time
 from collections.abc import Callable, Generator
@@ -28,6 +29,9 @@ import httpx
 
 if TYPE_CHECKING:
     from oci.signer import AbstractBaseSigner
+
+
+_logger = logging.getLogger(__name__)
 
 
 class _PreparedRequestProxy:
@@ -61,10 +65,20 @@ class OCIRequestSigner(httpx.Auth):
 
     For token-based signers that rotate (session, instance/resource
     principal), pass a ``refresh_signer`` callback that refreshes the
-    underlying signer in place. The auth flow will:
+    underlying signer. The auth flow will:
 
     - Periodically refresh on a timer (``refresh_interval`` seconds).
     - Refresh and retry once on a 401 response.
+
+    The callback can either mutate the current signer in place (typical
+    for instance/resource principals whose ``refresh_security_token``
+    method updates the signer's internal token) **or** return a brand-new
+    signer that should replace the current one (typical for session-token
+    signers that are immutable but need to be rebuilt from a refreshed
+    ``security_token_file`` on disk). Return-value handling: if the
+    callback returns anything that exposes ``do_request_sign``, the
+    wrapper swaps to it; otherwise the existing in-place mutation is
+    assumed.
     """
 
     requires_request_body = True
@@ -82,6 +96,22 @@ class OCIRequestSigner(httpx.Auth):
         self._refresh_interval = refresh_interval
         self._last_refresh = time.monotonic()
         self._lock = threading.Lock()
+        # Publicly readable last-refresh-error attribute. None means either
+        # "no refresh has run yet" or "the most recent refresh succeeded".
+        # Operators can inspect this to spot silent refresh failures (the
+        # auth flow keeps using the old signer rather than crashing).
+        self._last_refresh_error: Exception | None = None
+
+    @property
+    def last_refresh_error(self) -> Exception | None:
+        """The exception from the most recent failed refresh, or ``None``.
+
+        Reset to ``None`` on every successful refresh. Useful for health
+        checks: if this returns non-None for an extended window, the
+        underlying signer's credentials are likely stale and the next
+        401 will be unrecoverable.
+        """
+        return self._last_refresh_error
 
     def auth_flow(self, request: httpx.Request) -> Generator[httpx.Request, httpx.Response, None]:
         self._maybe_refresh()
@@ -105,10 +135,25 @@ class OCIRequestSigner(httpx.Auth):
             return
         with self._lock:
             try:
-                self._refresh()
-            except Exception:  # noqa: BLE001 — keep using the old signer if refresh fails
+                result = self._refresh()
+            except Exception as exc:  # noqa: BLE001 — keep using the old signer if refresh fails
+                self._last_refresh_error = exc
+                _logger.warning(
+                    "OCI signer refresh failed; continuing with previous "
+                    "credentials. Inspect OCIRequestSigner.last_refresh_error "
+                    "for the cause: %s",
+                    exc,
+                )
                 return
+            # If the callback returned a new signer instance, swap to it.
+            # Session-token signers are immutable, so refresh has to
+            # rebuild them; instance/resource principal signers mutate
+            # in place and typically return None.
+            if result is not None and hasattr(result, "do_request_sign"):
+                self._signer = result
             self._last_refresh = time.monotonic()
+            self._last_refresh_error = None
+            _logger.debug("OCI signer refresh completed successfully")
 
     def _sign(self, request: httpx.Request) -> None:
         # Drop any Authorization the openai SDK injected — OCI signing

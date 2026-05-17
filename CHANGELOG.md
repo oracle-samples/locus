@@ -8,6 +8,55 @@ policy.
 
 ## [Unreleased]
 
+## [0.2.0b14] - 2026-05-16
+
+### Added — session-token disk reload + refresh observability on `OCIRequestSigner`
+
+Two improvements to the OCI auth path, closing gaps surfaced by an audit
+against the `oci-genai-auth` reference (oracle-samples/oci-genai-auth-python).
+
+- **Session-token signers now auto-refresh from disk.** When the
+  config profile carries a `security_token_file`, the auth flow now
+  re-reads that file on the 10-minute periodic-refresh tick and on a
+  401 response, then rebuilds the underlying `SecurityTokenSigner`. So
+  if `oci session refresh` (or any external token-rotation daemon)
+  updates the file, the next signed request picks up the new token
+  without a process restart. Previously the `SecurityTokenSigner` was
+  immutable and locus had no rebuild path, meaning laptop dev sessions
+  on a session-token profile silently 401'd after the token's TTL
+  expired (~1h on a typical OCI session).
+
+- **`OCIRequestSigner.last_refresh_error` is now publicly readable.**
+  When `_do_refresh` previously swallowed an exception (to keep using
+  the old signer rather than crashing), there was no programmatic way
+  to spot that refresh had been failing for hours. The new attribute
+  exposes the last refresh exception (or `None` on success / never
+  refreshed), and refresh outcomes are also emitted via the module
+  logger so operators can grep pod logs.
+
+- **`OCIRequestSigner` refresh callback contract widened.** The
+  callback can now optionally return a *new* signer instance (instead
+  of mutating the current one in place); the wrapper detects this via
+  `hasattr(result, "do_request_sign")` and swaps `self._signer` to it.
+  Backwards compatible: existing in-place mutators (instance/resource
+  principal `refresh_security_token`) keep working unchanged.
+
+- `src/locus/models/providers/oci/_signing.py` — `last_refresh_error`
+  attribute + `last_refresh_error` property, refresh-result logging,
+  signer-swap on non-None callback return.
+- `src/locus/models/providers/oci/openai_compat.py` — `_refresh_callable_for`
+  takes optional `profile` / `config_file` kwargs and, for
+  `SecurityTokenSigner` signers, returns a closure that re-reads the
+  `security_token_file` from disk and yields a fresh
+  `SecurityTokenSigner`. `OCIOpenAIModel.client` plumbs the kwargs.
+- `src/locus/models/providers/oci/responses.py` — same plumbing on the
+  Responses transport so both paths get session-token disk reload.
+- `tests/unit/test_oci_signer_refresh_observability.py` — 9 cases
+  covering the new last_refresh_error attribute, swap-on-new-signer
+  contract, in-place-mutation backward compat, end-to-end disk
+  round-trip, and the guard paths that disable refresh when profile
+  context is missing.
+
 ## [0.2.0b13] - 2026-05-16
 
 ### Fixed — OCI instance-principal token now auto-refreshes on both openai-style HTTP transports
