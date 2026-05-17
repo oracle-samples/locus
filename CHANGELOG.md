@@ -8,6 +8,43 @@ policy.
 
 ## [Unreleased]
 
+## [0.2.0b12] - 2026-05-16
+
+### Added — `datastores=` parity on `create_research_workflow`
+
+`create_research_workflow` now accepts the same `datastores={name: {retriever, description, top_k, threshold}}`
+mapping as `create_deepagent`. Both factories share a `wire_datastores(...)`
+helper so the execute agent of either path gets an identical `search_<name>`
+tool surface plus a per-store routing block prepended to the system prompt.
+
+This closes the only remaining surface gap between the two research
+factories — recipes that ran on `create_deepagent(datastores=...)`
+translate to the StateGraph-with-grounding-loop variant verbatim.
+
+```python
+workflow = create_research_workflow(
+    model=...,
+    tools=[],
+    output_schema=Report,
+    datastores={"medical": {"retriever": medical_retriever, "top_k": 6}},
+    grounding_threshold=0.65,
+)
+```
+
+- `src/locus/deepagent/factory.py` — extracted the auto-wiring logic
+  into a new public `wire_datastores(datastores, datastore_top_k) ->
+  (tools, routing_block)` helper. `create_deepagent` now calls it
+  (semantics unchanged from b11).
+- `src/locus/deepagent/workflow.py` — `create_research_workflow` gains
+  `datastores=` and `datastore_top_k=` kwargs; the execute node sees
+  the merged tool list and the prepended routing block.
+- `docs/concepts/deepagent.md` — workflow `datastores=` example +
+  cross-reference under "When to use each".
+- `tests/unit/test_research_workflow_datastores.py` — 8 cases covering
+  `None`/empty input, bare-retriever vs dict form, multi-store routing,
+  `TypeError` on bad value types, and end-to-end workflow construction
+  with a configured datastore.
+
 ## [0.2.0b11] - 2026-05-16
 
 ### Added — `create_deepagent(datastores=...)` + seven deep-research locus demos
