@@ -322,6 +322,21 @@ print(f"grounding: {result.final_state['grounding_score']:.0%}")
 print(f"replans used: {result.final_state['replan_count']}")
 ```
 
+`create_research_workflow` accepts the same `datastores=` mapping as
+`create_deepagent`. Internally both call `wire_datastores(...)` so the
+execute agent gets the identical `search_<name>` tool surface and
+system-prompt routing block:
+
+```python
+workflow = create_research_workflow(
+    model=...,
+    tools=[],
+    output_schema=Report,
+    datastores={"medical": {"retriever": medical_retriever, "top_k": 6}},
+    grounding_threshold=0.65,
+)
+```
+
 **When to use each:**
 
 - Use `create_deepagent` when the agent runs *inside* a larger graph
