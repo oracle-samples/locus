@@ -571,6 +571,8 @@ def create_research_workflow(
     reflexion: bool = True,
     causal_inference: bool = True,
     checkpointer: Any | None = None,
+    datastores: dict[str, Any] | None = None,
+    datastore_top_k: int = 5,
 ) -> Any:
     """Compose the standard research workflow from individual node primitives.
 
@@ -596,20 +598,41 @@ def create_research_workflow(
         reflexion: Enable per-turn self-evaluation in execute agent.
         causal_inference: Insert causal_inference node before summarize.
         checkpointer: Optional locus checkpointer for the StateGraph.
+        datastores: Optional mapping of ``{name: RAGRetriever}`` (or
+            ``{name: {"retriever": ..., "description": ..., "top_k": ...,
+            "threshold": ...}}``). For each entry, a ``search_{name}`` tool
+            is auto-wired via ``locus.rag.tools.create_rag_tool`` and
+            appended to the execute agent's tool list, and a per-store
+            routing hint block is prepended to ``system_prompt`` so the
+            model picks the right store per query. Same shape as
+            ``create_deepagent(datastores=...)`` and the langchain-oci
+            ``create_deep_research_agent(datastores=...)`` contract.
+        datastore_top_k: Default top-k for auto-wired datastore tools when
+            an entry doesn't set its own ``top_k``. Default 5.
 
     Returns:
         A compiled ``locus.StateGraph``.
     """
+    from locus.deepagent.factory import wire_datastores  # noqa: PLC0415
     from locus.multiagent.graph import END, START, StateGraph  # noqa: PLC0415
 
     _sum_model = summarization_model or model
     _grd_model = grounding_model or model
 
+    # Datastore auto-wiring: identical surface to create_deepagent — the
+    # execute node gets the same search_<name> tools plus a routing block
+    # prepended to its system_prompt.
+    ds_tools, ds_routing_block = wire_datastores(datastores, datastore_top_k)
+    final_tools = [*tools, *ds_tools]
+    final_system_prompt = (
+        f"{ds_routing_block}\n\n---\n\n{system_prompt}" if ds_routing_block else system_prompt
+    )
+
     graph = StateGraph()
 
     graph.add_node(
         "execute",
-        make_execute_node(model, tools, system_prompt, reflexion, max_iterations),
+        make_execute_node(model, final_tools, final_system_prompt, reflexion, max_iterations),
     )
     if causal_inference:
         graph.add_node("causal_inference", make_causal_inference_node(model))

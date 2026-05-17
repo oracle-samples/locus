@@ -32,6 +32,89 @@ from typing import Any
 from pydantic import BaseModel
 
 
+def wire_datastores(
+    datastores: dict[str, Any] | None,
+    datastore_top_k: int = 5,
+) -> tuple[list[Any], str]:
+    """Turn ``{name: RAGRetriever}`` into auto-wired tools + a routing block.
+
+    Used by ``create_deepagent`` and ``create_research_workflow`` to give
+    both research factories an identical ``datastores=`` surface. For each
+    entry, a ``search_<name>`` tool is built via
+    ``locus.rag.tools.create_rag_tool`` and a one-line routing hint is
+    appended to the returned prompt block. Mirrors the langchain-oci
+    ``create_deep_research_agent(datastores=...)`` contract so existing
+    recipes translate 1:1.
+
+    Args:
+        datastores: Optional ``{name: RAGRetriever}`` or
+            ``{name: {"retriever": ..., "description": ..., "top_k": ...,
+            "threshold": ...}}``. Returns ``([], "")`` when ``None`` or
+            empty.
+        datastore_top_k: Default ``top_k`` used when an entry doesn't set
+            its own.
+
+    Returns:
+        ``(tools, routing_block)`` — the list of auto-wired tools to
+        append to the agent's tool list, and a Markdown block ready to
+        prepend to the system prompt (empty string when no datastores).
+    """
+    if not datastores:
+        return [], ""
+
+    from locus.rag.retriever import RAGRetriever
+    from locus.rag.tools import create_rag_tool
+
+    new_tools: list[Any] = []
+    ds_lines: list[str] = []
+    for ds_name, ds_value in datastores.items():
+        if isinstance(ds_value, RAGRetriever):
+            retriever = ds_value
+            ds_desc = ""
+            top_k = datastore_top_k
+            threshold: float | None = None
+        elif isinstance(ds_value, dict):
+            retriever = ds_value["retriever"]
+            ds_desc = ds_value.get("description", "")
+            top_k = ds_value.get("top_k", datastore_top_k)
+            threshold = ds_value.get("threshold", None)
+        else:
+            raise TypeError(
+                f"datastores[{ds_name!r}] must be a RAGRetriever or "
+                f"a dict with 'retriever' (+ optional 'description', "
+                f"'top_k', 'threshold'); got {type(ds_value).__name__}."
+            )
+
+        tool_name = f"search_{ds_name}"
+        tool_desc = (
+            f"Search the {ds_name!r} datastore"
+            + (f" ({ds_desc})" if ds_desc else "")
+            + f". Returns up to {top_k} relevant documents."
+        )
+        # Default threshold=None (no min-score filter). The 0.5 default
+        # in create_rag_tool is tuned for sentence-transformer scores;
+        # raw cosine similarity over Cohere embeddings can dip below
+        # that for genuinely relevant matches.
+        new_tools.append(
+            create_rag_tool(
+                retriever,
+                name=tool_name,
+                description=tool_desc,
+                limit=top_k,
+                threshold=threshold,
+            )
+        )
+        ds_lines.append(f"- `{tool_name}(query)`: " + (ds_desc or f"the {ds_name!r} datastore"))
+
+    routing_block = (
+        "# Datastores\n\n"
+        "You have these searchable datastores. Pick the one whose "
+        "description best matches each query (call multiple when the "
+        "question spans them):\n\n" + "\n".join(ds_lines)
+    )
+    return new_tools, routing_block
+
+
 def create_deepagent(
     *,
     model: str | Any,
@@ -193,62 +276,11 @@ def create_deepagent(
 
     # Datastore auto-wiring: turn ``{name: RAGRetriever}`` into a set of
     # ``search_{name}`` tools the agent can call, and prepend a routing
-    # hint block so the model picks the right store per query. Mirrors
-    # the langchain-oci ``create_deep_research_agent(datastores=...)``
-    # contract so gist demos translate 1:1.
-    datastore_routing_block = ""
-    if datastores:
-        from locus.rag.retriever import RAGRetriever
-
-        ds_lines: list[str] = []
-        for ds_name, ds_value in datastores.items():
-            if isinstance(ds_value, RAGRetriever):
-                retriever = ds_value
-                ds_desc = ""
-                top_k = datastore_top_k
-                threshold: float | None = None
-            elif isinstance(ds_value, dict):
-                retriever = ds_value["retriever"]
-                ds_desc = ds_value.get("description", "")
-                top_k = ds_value.get("top_k", datastore_top_k)
-                threshold = ds_value.get("threshold", None)
-            else:
-                raise TypeError(
-                    f"datastores[{ds_name!r}] must be a RAGRetriever or "
-                    f"a dict with 'retriever' (+ optional 'description', "
-                    f"'top_k', 'threshold'); got {type(ds_value).__name__}."
-                )
-
-            from locus.rag.tools import create_rag_tool
-
-            tool_name = f"search_{ds_name}"
-            tool_desc = (
-                f"Search the {ds_name!r} datastore"
-                + (f" ({ds_desc})" if ds_desc else "")
-                + f". Returns up to {top_k} relevant documents."
-            )
-            # Default threshold=None (no min-score filter). The 0.5 default
-            # in create_rag_tool is tuned for sentence-transformer scores;
-            # raw cosine similarity over Cohere embeddings can dip below
-            # that for genuinely relevant matches.
-            final_tools = [
-                *final_tools,
-                create_rag_tool(
-                    retriever,
-                    name=tool_name,
-                    description=tool_desc,
-                    limit=top_k,
-                    threshold=threshold,
-                ),
-            ]
-            ds_lines.append(f"- `{tool_name}(query)`: " + (ds_desc or f"the {ds_name!r} datastore"))
-
-        datastore_routing_block = (
-            "# Datastores\n\n"
-            "You have these searchable datastores. Pick the one whose "
-            "description best matches each query (call multiple when the "
-            "question spans them):\n\n" + "\n".join(ds_lines)
-        )
+    # hint block so the model picks the right store per query. Shared
+    # with ``create_research_workflow`` via ``wire_datastores`` so both
+    # paths produce an identical tool surface + system-prompt prefix.
+    new_tools, datastore_routing_block = wire_datastores(datastores, datastore_top_k)
+    final_tools = [*final_tools, *new_tools]
 
     # Memory files: prepend to the system prompt so AGENTS.md-style
     # instructions land in front of the recipe-specific identity
