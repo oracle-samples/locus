@@ -49,6 +49,18 @@ if not (_has_oci_config() and _PROFILE):  # pragma: no cover
 _REPO = Path(__file__).resolve().parents[2]
 _TUTORIALS_DIR = _REPO / "examples"
 
+# Default per-tutorial wall budget. Reasoning-class default model
+# (openai.gpt-5.5-*) spends real wall-clock on thinking tokens — most
+# tutorials finish well inside 6 min, but a handful with multiple
+# agent hops + parallel dispatch reliably need longer. Keep this as
+# the default and override per-tutorial below.
+_DEFAULT_TIMEOUT = 360
+_TUTORIAL_TIMEOUT_OVERRIDES: dict[str, int] = {
+    # tutorial_59_emergent_routing: 5 dispatches × 2-3 LLM calls each
+    # through a reasoning model — empirical wall time ~7-9 min.
+    "tutorial_59_emergent_routing.py": 900,
+}
+
 
 def _all_tutorials() -> list[Path]:
     return sorted(_TUTORIALS_DIR.glob("tutorial_*.py"))
@@ -84,15 +96,13 @@ def test_tutorial_runs_clean(tutorial: Path):
     if os.environ.get("OCI_COMPARTMENT"):
         env.setdefault("LOCUS_OCI_COMPARTMENT", os.environ["OCI_COMPARTMENT"])
 
+    timeout_s = _TUTORIAL_TIMEOUT_OVERRIDES.get(tutorial.name, _DEFAULT_TIMEOUT)
     proc = subprocess.run(  # noqa: S603 — controlled subprocess of our own script
         [sys.executable, str(tutorial)],
         cwd=str(_TUTORIALS_DIR),
         env=env,
         capture_output=True,
-        # Reasoning-class default model (openai.gpt-5.5-*) spends real
-        # wall-clock on thinking tokens; tutorials with multiple agent
-        # hops (16, 39, 48) routinely take >2 min. Allow 6 min per test.
-        timeout=360,
+        timeout=timeout_s,
         check=False,
     )
 
