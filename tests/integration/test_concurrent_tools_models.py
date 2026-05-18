@@ -66,7 +66,12 @@ _PROFILE: str = _PROFILE_OPT
 _OPENAI_COMPAT_MODELS = [
     pytest.param("openai.gpt-4o-mini", id="openai-gpt-4o-mini"),
     pytest.param("meta.llama-3.3-70b-instruct", id="meta-llama-3.3-70b"),
-    pytest.param("xai.grok-4-fast-non-reasoning", id="xai-grok-4-fast"),
+    # Frontier non-xAI vendor to keep the matrix off shared xAI team
+    # RPM limits that were tripping ``xai.grok-4-fast-non-reasoning``
+    # under matrix sweeps. OpenAI gpt-4.1 (full, not mini) is a
+    # different frontier class than the other slot's gpt-4o-mini and
+    # exercises the same OpenAI-compat ``tool_calls`` codepath.
+    pytest.param("openai.gpt-4.1", id="openai-gpt-4.1"),
     pytest.param("google.gemini-2.5-flash", id="google-gemini-2.5-flash"),
 ]
 
