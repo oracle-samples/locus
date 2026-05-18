@@ -81,6 +81,7 @@ from locus.rag.multimodal import (
 )
 
 # Retriever
+from locus.rag.reranker import CohereReranker, Reranker
 from locus.rag.retriever import RAGRetriever, RetrievalResult
 
 # Stores
@@ -118,6 +119,9 @@ __all__ = [
     # Retriever
     "RAGRetriever",
     "RetrievalResult",
+    # Reranker
+    "Reranker",
+    "CohereReranker",
     # Multimodal
     "ContentType",
     "MultimodalProcessor",
