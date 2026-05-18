@@ -78,7 +78,12 @@ sentences.
 export OCI_PROFILE=DEFAULT
 export OCI_COMPARTMENT=ocid1.tenancy.oc1..<your-tenancy>
 export ADB_DSN=<your-adb-tns>
-export ADB_PASSWORD=<your-adb-admin-password>
+# ADB_USER defaults to ``locus_app`` (a least-privileged app schema).
+# Provision it once as ADMIN — see docs/concepts/rag.md for the
+# CREATE USER / GRANT script. Override only if you've named your
+# app schema differently.
+export ADB_USER=locus_app
+export ADB_PASSWORD=<your-locus_app-password>
 export ADB_WALLET_LOCATION=~/.oci/wallets/<your-adb>
 export OCI_RESEARCH_MODEL=oci:openai.gpt-5.1
 export MAX_OUTPUT_TOKENS=65536
