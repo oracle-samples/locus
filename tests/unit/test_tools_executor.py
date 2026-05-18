@@ -422,6 +422,45 @@ def _registry_with(*tools_by_name: tuple[str, _Tool]) -> Any:
     return _R()
 
 
+class TestToolExecutorAbstractStreaming:
+    """The ABC's default ``execute_streaming`` impl — falls back to
+    ``execute`` and yields in input order. Reached only by subclasses that
+    don't override it (the two real executors below do)."""
+
+    @pytest.mark.asyncio
+    async def test_default_streaming_falls_back_to_execute(self) -> None:
+        from locus.core.messages import ToolResult
+        from locus.tools.executor import ToolExecutor
+
+        class _Stub(ToolExecutor):
+            async def execute(
+                self,
+                tool_calls: list,  # type: ignore[type-arg]
+                registry: object,
+                ctx_factory: object | None = None,
+            ) -> list[ToolResult]:
+                return [
+                    ToolResult(
+                        tool_call_id=tc.id,
+                        name=tc.name,
+                        content=f"stub:{tc.id}",
+                    )
+                    for tc in tool_calls
+                ]
+
+        registry = _registry_with(("t", _Tool(name="t")))
+        calls = [
+            ToolCall(id="c0", name="t", arguments={}),
+            ToolCall(id="c1", name="t", arguments={}),
+        ]
+
+        yielded: list[tuple[int, str]] = []
+        async for input_idx, result in _Stub().execute_streaming(calls, registry):
+            yielded.append((input_idx, result.tool_call_id))
+
+        assert yielded == [(0, "c0"), (1, "c1")]
+
+
 class TestSequentialExecutorStreaming:
     @pytest.mark.asyncio
     async def test_streaming_yields_in_input_order(self) -> None:
@@ -438,6 +477,15 @@ class TestSequentialExecutorStreaming:
 
 
 class TestConcurrentExecutorStreaming:
+    @pytest.mark.asyncio
+    async def test_streaming_empty_input_yields_nothing(self) -> None:
+        """Empty ``tool_calls`` is a clean no-op — the runtime loop only
+        enters Phase 2 when ``to_execute_calls`` is non-empty, but defensive
+        early-return keeps the executor safe to call directly with []."""
+        registry = _registry_with(("t", _Tool(name="t")))
+        async for _ in ConcurrentExecutor(max_concurrency=5).execute_streaming([], registry):
+            raise AssertionError("execute_streaming([]) yielded an item")
+
     @pytest.mark.asyncio
     async def test_streaming_yields_in_completion_order(self) -> None:
         """Fast tools surface before slow ones — completion-order delivery."""
