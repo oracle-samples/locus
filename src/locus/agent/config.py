@@ -289,6 +289,21 @@ class AgentConfig(BaseModel):
         description="Max concurrent tool executions",
     )
 
+    tool_event_order: Literal["sequential", "completion"] = Field(
+        default="sequential",
+        description=(
+            "When ``tool_execution='concurrent'``, controls *when* "
+            "``ToolCompleteEvent`` is emitted. ``'sequential'`` (default) "
+            "fires events in tool_call order after all parallel tools in a "
+            "batch have completed — deterministic event stream for batch "
+            "agents and tests. ``'completion'`` fires each event the moment "
+            "its tool finishes — lower-latency for interactive UIs that "
+            "want to surface 'tool X done' the moment it happens. "
+            "``state.tool_executions`` order stays in tool_call order in "
+            "both modes — only event timing changes."
+        ),
+    )
+
     max_tool_result_length: int = Field(
         default=32000,
         ge=0,

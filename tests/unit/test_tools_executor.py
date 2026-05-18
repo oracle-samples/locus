@@ -4,6 +4,7 @@
 
 """Unit tests for tools executor module."""
 
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -380,3 +381,213 @@ class TestCircuitBreakerExecutor:
         results = await executor.execute(tool_calls, registry)
         assert results[0].error == "ValueError: Failed"
         assert "Circuit breaker" not in results[0].error
+
+
+# =============================================================================
+# execute_streaming — added with the completion-order / interrupt-cancel
+# work in the #210 follow-up. The streaming variant is the path the runtime
+# loop now takes; ``execute`` stays for back-compat with anyone who already
+# constructs the executor directly.
+# =============================================================================
+
+
+class _Tool:
+    """Tiny stand-in for a registered tool whose body sleeps then echoes."""
+
+    def __init__(self, sleep_ms: float = 0.0, name: str = "stub") -> None:
+        import asyncio as _asyncio
+
+        async def _body(**kwargs: object) -> str:
+            await _asyncio.sleep(sleep_ms / 1000.0)
+            return f"{name}:{kwargs}"
+
+        self.execute = _body
+        self.name = name
+
+
+def _registry_with(*tools_by_name: tuple[str, _Tool]) -> Any:
+    """Return a duck-typed registry that ``.get(name)`` resolves to a tool.
+
+    Typed as ``Any`` because the executor's signature expects
+    ``ToolRegistry`` — these tests intentionally use lightweight
+    stand-ins to keep the focus on streaming/scheduling behaviour
+    rather than registry plumbing.
+    """
+    lookup = dict(tools_by_name)
+
+    class _R:
+        def get(self, name: str) -> _Tool | None:
+            return lookup.get(name)
+
+    return _R()
+
+
+class TestToolExecutorAbstractStreaming:
+    """The ABC's default ``execute_streaming`` impl — falls back to
+    ``execute`` and yields in input order. Reached only by subclasses that
+    don't override it (the two real executors below do)."""
+
+    @pytest.mark.asyncio
+    async def test_default_streaming_falls_back_to_execute(self) -> None:
+        from locus.core.messages import ToolResult
+        from locus.tools.executor import ToolExecutor
+
+        class _Stub(ToolExecutor):
+            async def execute(
+                self,
+                tool_calls: list,  # type: ignore[type-arg]
+                registry: object,
+                ctx_factory: object | None = None,
+            ) -> list[ToolResult]:
+                return [
+                    ToolResult(
+                        tool_call_id=tc.id,
+                        name=tc.name,
+                        content=f"stub:{tc.id}",
+                    )
+                    for tc in tool_calls
+                ]
+
+        registry = _registry_with(("t", _Tool(name="t")))
+        calls = [
+            ToolCall(id="c0", name="t", arguments={}),
+            ToolCall(id="c1", name="t", arguments={}),
+        ]
+
+        yielded: list[tuple[int, str]] = []
+        async for input_idx, result in _Stub().execute_streaming(calls, registry):
+            yielded.append((input_idx, result.tool_call_id))
+
+        assert yielded == [(0, "c0"), (1, "c1")]
+
+
+class TestSequentialExecutorStreaming:
+    @pytest.mark.asyncio
+    async def test_streaming_yields_in_input_order(self) -> None:
+        """SequentialExecutor.execute_streaming yields tuples in input order
+        (input order == completion order under sequential semantics)."""
+        registry = _registry_with(("t", _Tool(sleep_ms=10, name="t")))
+        calls = [ToolCall(id=f"c{i}", name="t", arguments={"i": i}) for i in range(3)]
+
+        yielded: list[tuple[int, str]] = []
+        async for input_idx, result in SequentialExecutor().execute_streaming(calls, registry):
+            yielded.append((input_idx, result.tool_call_id))
+
+        assert yielded == [(0, "c0"), (1, "c1"), (2, "c2")]
+
+
+class TestConcurrentExecutorStreaming:
+    @pytest.mark.asyncio
+    async def test_streaming_empty_input_yields_nothing(self) -> None:
+        """Empty ``tool_calls`` is a clean no-op — the runtime loop only
+        enters Phase 2 when ``to_execute_calls`` is non-empty, but defensive
+        early-return keeps the executor safe to call directly with []."""
+        registry = _registry_with(("t", _Tool(name="t")))
+        async for _ in ConcurrentExecutor(max_concurrency=5).execute_streaming([], registry):
+            raise AssertionError("execute_streaming([]) yielded an item")
+
+    @pytest.mark.asyncio
+    async def test_streaming_yields_in_completion_order(self) -> None:
+        """Fast tools surface before slow ones — completion-order delivery."""
+        registry = _registry_with(
+            ("slow", _Tool(sleep_ms=200, name="slow")),
+            ("med", _Tool(sleep_ms=100, name="med")),
+            ("fast", _Tool(sleep_ms=20, name="fast")),
+        )
+        calls = [
+            ToolCall(id="c-slow", name="slow", arguments={}),
+            ToolCall(id="c-med", name="med", arguments={}),
+            ToolCall(id="c-fast", name="fast", arguments={}),
+        ]
+
+        order: list[str] = []
+        async for _input_idx, result in ConcurrentExecutor(max_concurrency=5).execute_streaming(
+            calls, registry
+        ):
+            order.append(result.tool_call_id)
+
+        # fast (20ms) → med (100ms) → slow (200ms), opposite of input order.
+        assert order == ["c-fast", "c-med", "c-slow"]
+
+    @pytest.mark.asyncio
+    async def test_streaming_respects_max_concurrency(self) -> None:
+        """In-flight count never exceeds ``max_concurrency``."""
+        import asyncio as _asyncio
+
+        in_flight = 0
+        peak = 0
+        lock = _asyncio.Lock()
+
+        class _Counting:
+            name = "ct"
+
+            async def execute(self, **_kwargs: object) -> str:
+                nonlocal in_flight, peak
+                async with lock:
+                    in_flight += 1
+                    peak = max(peak, in_flight)
+                try:
+                    await _asyncio.sleep(0.05)
+                finally:
+                    async with lock:
+                        in_flight -= 1
+                return "ok"
+
+        registry = _registry_with(("ct", _Counting()))  # type: ignore[arg-type]
+        calls = [ToolCall(id=f"c{i}", name="ct", arguments={}) for i in range(10)]
+
+        async for _ in ConcurrentExecutor(max_concurrency=3).execute_streaming(calls, registry):
+            pass
+
+        assert peak <= 3, f"in-flight peaked at {peak} with max_concurrency=3"
+
+    @pytest.mark.asyncio
+    async def test_consumer_break_cancels_in_flight_siblings(self) -> None:
+        """Breaking the ``async for`` triggers cleanup that cancels remaining
+        tasks. This is the property the runtime loop relies on for
+        interrupt-driven sibling cancellation."""
+        import asyncio as _asyncio
+
+        executed: list[str] = []
+
+        class _Tracking:
+            name = "track"
+
+            def __init__(self, sleep_ms: float, tag: str) -> None:
+                self._sleep_ms = sleep_ms
+                self._tag = tag
+
+            async def execute(self, **_kwargs: object) -> str:
+                await _asyncio.sleep(self._sleep_ms / 1000.0)
+                executed.append(self._tag)
+                return self._tag
+
+        # First tool finishes fast; siblings take much longer. Consumer breaks
+        # after seeing the first → siblings must be cancelled before they get
+        # the chance to append to ``executed``.
+        lookup = {
+            "fast": _Tracking(sleep_ms=20, tag="fast"),
+            "slow1": _Tracking(sleep_ms=500, tag="slow1"),
+            "slow2": _Tracking(sleep_ms=500, tag="slow2"),
+        }
+
+        class _Reg:
+            def get(self, name: str) -> object:
+                return lookup[name]
+
+        calls = [
+            ToolCall(id="c0", name="fast", arguments={}),
+            ToolCall(id="c1", name="slow1", arguments={}),
+            ToolCall(id="c2", name="slow2", arguments={}),
+        ]
+
+        reg: Any = _Reg()
+        async for _input_idx, result in ConcurrentExecutor(max_concurrency=5).execute_streaming(
+            calls, reg
+        ):
+            if result.tool_call_id == "c0":
+                break
+
+        # Give the event loop one tick to settle cancellations.
+        await _asyncio.sleep(0.05)
+        assert executed == ["fast"], f"expected siblings cancelled; got {executed}"
