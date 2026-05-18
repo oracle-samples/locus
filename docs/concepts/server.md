@@ -33,7 +33,7 @@ if __name__ == "__main__":
 ### 1. Wrap an agent
 
 ```python
-from locus import Agent
+from locus.agent import Agent
 from locus.memory.backends.file import FileCheckpointer
 from locus.server import AgentServer
 

@@ -92,8 +92,7 @@ The pieces every shape is built from. Drop them into any graph node.
 ### `Send` — scatter / map-reduce
 
 ```python
-from locus import Send
-
+from locus.core.send import Send
 async def split(state):
     return [Send("worker", {"task": t}) for t in state["tasks"]]
 ```
@@ -135,8 +134,7 @@ Used by tutorial 48 to skip the negotiation loop when counsel says RESOLVED.
 
 ```python
 from pydantic import BaseModel
-from locus import Agent, AgentConfig
-
+from locus.agent import Agent, AgentConfig
 class Verdict(BaseModel):
     winner: str
     confidence: float
@@ -154,8 +152,7 @@ gives you a validated Pydantic instance. Used by tutorials 44, 46, 47, 48.
 ### `GraphConfig(allow_cycles=True)` — refinement loops
 
 ```python
-from locus import GraphConfig, StateGraph
-
+from locus.multiagent.graph import GraphConfig, StateGraph
 graph = StateGraph(config=GraphConfig(allow_cycles=True, max_iterations=20))
 graph.add_edge("critic", "writer")   # loop edge — only legal with allow_cycles
 ```

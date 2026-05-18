@@ -23,7 +23,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from locus import Agent
+from locus.agent import Agent
 from locus.core.structured import create_schema_prompt, parse_structured
 from locus.models import OCIOpenAIModel
 from locus.tools import tool

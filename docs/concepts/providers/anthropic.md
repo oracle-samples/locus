@@ -32,8 +32,7 @@ export ANTHROPIC_API_KEY=sk-ant-...
 ### 2. Pick a Claude model
 
 ```python
-from locus import Agent
-
+from locus.agent import Agent
 agent = Agent(
     model="anthropic:claude-sonnet-4-20250514",
     system_prompt="You are a helpful assistant.",
@@ -123,7 +122,7 @@ tags the last entry of the tool catalog the same way (Anthropic walks
 markers in order — the last tag anchors the cache point).
 
 ```python
-from locus import Agent
+from locus.agent import Agent
 from locus.models.native.anthropic import AnthropicModel
 
 agent = Agent(

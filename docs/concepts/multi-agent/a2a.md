@@ -53,7 +53,7 @@ URI), `DataPart` (structured JSON).
 ### Host side — expose an agent over A2A
 
 ```python
-from locus import Agent
+from locus.agent import Agent
 from locus.a2a import A2AServer, AgentSkill
 
 research_agent = Agent(

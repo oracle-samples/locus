@@ -538,7 +538,7 @@ async def example_agent_with_checkpointing():
     print("\nFull Agent + Checkpointer Pattern:")
     print("-" * 40)
     print("""
-    from locus import Agent
+    from locus.agent import Agent
     from locus.memory.backends import sqlite_checkpointer
 
     # Create checkpointer

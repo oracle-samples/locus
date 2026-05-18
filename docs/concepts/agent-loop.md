@@ -356,7 +356,7 @@ distinct calls.
 ## Putting it together
 
 ```python
-from locus import Agent
+from locus.agent import Agent
 from locus.tools.decorator import tool
 from locus.memory.backends import OCIBucketBackend
 from locus.core.termination import (

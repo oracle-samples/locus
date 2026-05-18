@@ -40,7 +40,7 @@ from pathlib import Path
 
 from config import get_model
 
-from locus import Agent, tool
+from locus.agent import Agent
 from locus.router import (
     CapabilityIndex,
     CognitiveCompiler,
@@ -56,6 +56,7 @@ from locus.router import (
 )
 from locus.router.runtime import FrameExtractionError
 from locus.skills import Skill
+from locus.tools import tool
 from locus.tools.registry import create_registry
 
 

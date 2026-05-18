@@ -6,8 +6,7 @@ answer into a typed instance for you.
 
 ```python
 from pydantic import BaseModel, Field
-from locus import Agent
-
+from locus.agent import Agent
 class Vendor(BaseModel):
     name: str = Field(description="Legal name of the vendor")
     score: float = Field(ge=0.0, le=1.0)

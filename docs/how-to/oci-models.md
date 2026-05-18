@@ -31,7 +31,7 @@ turns via `previous_response_id` — both modes covered below.
 ### From a laptop or CI
 
 ```python
-from locus import Agent
+from locus.agent import Agent
 from locus.models import OCIOpenAIModel
 
 model = OCIOpenAIModel(

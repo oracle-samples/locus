@@ -25,8 +25,7 @@ For production agents you usually want explicit policy:
 
 ```python
 from locus.hooks.builtin.retry import ModelRetryHook
-from locus import Agent
-
+from locus.agent import Agent
 agent = Agent(
     model="oci:openai.gpt-5.5",
     tools=[...],

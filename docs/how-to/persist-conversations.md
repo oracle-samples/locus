@@ -40,7 +40,7 @@ save/load will fail at runtime (the agent calls
 Native checkpointer (no wrapping):
 
 ```python
-from locus import Agent
+from locus.agent import Agent
 from locus.memory.backends import OCIBucketBackend
 
 checkpointer = OCIBucketBackend(

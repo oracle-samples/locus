@@ -36,8 +36,7 @@
 ## Your first agent — 5 lines
 
 ```python
-from locus import Agent
-
+from locus.agent import Agent
 agent = Agent(model="oci:openai.gpt-5")
 print(agent.run_sync("What is the capital of France?").text)
 # → Paris
@@ -51,8 +50,8 @@ Swap `"oci:openai.gpt-5"` for `"openai:gpt-4o"` or `"anthropic:claude-sonnet-4-6
 Tools are plain Python functions. The model sees the docstring and decides when to call them.
 
 ```python
-from locus import Agent, tool
-
+from locus.agent import Agent
+from locus.tools import tool
 @tool
 def get_weather(city: str) -> str:
     """Return the current weather for a city."""
@@ -87,28 +86,57 @@ No mandatory cloud account to start — `MockModel` lets every tutorial run offl
 ## The cognitive router — describe what you need, get the right shape
 
 Once you know agents, the next step is knowing *which* shape to use.
-The cognitive router takes a natural-language task, selects from eight proven coordination patterns,
-and instantiates the right primitive — without you hand-coding the topology.
+The cognitive router takes a natural-language task, fills a typed
+`GoalFrame` from an LLM extractor, deterministically picks one of eight
+built-in coordination protocols, and the `CognitiveCompiler` emits the
+matching runtime primitive (`Agent`, `SequentialPipeline`,
+`ParallelPipeline`, `LoopAgent`, an `A2AClient` call, or an
+approval-gated agent) — without you hand-coding the topology.
 
 ```python
-from locus.deepagent.workflow import create_research_workflow, KEY_PROMPT
+from locus.agent import Agent
+from locus.router import (
+    CapabilityIndex, CognitiveCompiler, GoalFrame, PolicyGate,
+    ProtocolRegistry, Router, SkillIndex, builtin_protocols,
+)
+from locus.tools.registry import create_registry
 
-workflow = create_research_workflow(
-    model=get_model(),
-    tools=[web_search, web_fetch],
-    grounding_threshold=0.65,
+# 1. Capabilities the router can bind to specialists.
+registry = create_registry([kb_search, get_metric, list_alerts])
+
+# 2. All 8 built-in protocols (answer / plan / specialist-fanout / debate
+#    / codegen-loop / approval / a2a-delegate / handoff-chain).
+protocols = ProtocolRegistry()
+for p in builtin_protocols():
+    protocols.register(p)
+
+# 3. The Router wires an Agent(output_schema=GoalFrame) extractor + the
+#    deterministic protocol picker + a CognitiveCompiler over the registry.
+router = Router(
+    frame_extractor=Agent(model=get_model(), output_schema=GoalFrame),
+    protocols=protocols,
+    capabilities=CapabilityIndex.from_registry(registry),
+    skills=SkillIndex(),
+    gate=PolicyGate(),
+    compiler=CognitiveCompiler(),
 )
 
-result = await workflow.execute({KEY_PROMPT: "What happened in mathematics in 2026?"})
-print(result.final_state["summary"])
+# 4. Dispatch — the router picks the protocol + compiles the shape.
+result = await router.dispatch(
+    "We just got a sev-1 latency alert on the checkout service. "
+    "Investigate and recommend remediation."
+)
+print(f"protocol={result.protocol_id} shape={result.runtime_shape}")
+print(result.output)
 ```
 
-The workflow runs: **execute (ReAct)** → **causal inference** → **summarize** → **grounding eval** →
-lightweight **regenerate** or full **replan** if grounding is too low.
-Every step emits `research.*` SSE events you can stream in real time.
+The same `router.dispatch(...)` call resolves a one-shot lookup to a
+single `Agent`, a multi-step incident triage to a `SequentialPipeline`
+of planner→executor→validator, and a write-affecting action to an
+approval-gated agent — chosen by protocol selection, not by the model.
 
 → [Cognitive router concept](https://oracle-samples.github.io/locus/concepts/router/) ·
-[Research workflow](https://oracle-samples.github.io/locus/concepts/deepagent/)
+[`examples/tutorial_51_cognitive_router.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_51_cognitive_router.py)
 
 ---
 
@@ -129,8 +157,7 @@ Every pattern uses the same `Agent` class and the same event stream.
 | **A2A** | Cross-process meshes over HTTP; agents advertise capabilities via AgentCard |
 
 ```python
-from locus import Agent, SequentialPipeline
-
+from locus.agent import Agent, SequentialPipeline
 researcher = Agent(model=model, system_prompt="Find three key facts about the topic.")
 critic     = Agent(model=model, system_prompt="Identify any gaps or errors in the research.")
 writer     = Agent(model=model, system_prompt="Write a clear one-paragraph summary.")

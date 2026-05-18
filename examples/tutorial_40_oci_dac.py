@@ -94,7 +94,7 @@ def example_configure_agent() -> None:
         print()
         print("Wiring (with the env vars set):")
         print("""
-  from locus import Agent
+  from locus.agent import Agent
   from locus.models import get_model
 
   # Pre-build the model — DAC needs provider-specific kwargs that
@@ -115,7 +115,7 @@ def example_configure_agent() -> None:
 """)
         return
 
-    from locus import Agent
+    from locus.agent import Agent
     from locus.models import get_model
 
     region = os.environ.get("OCI_DAC_REGION", "us-chicago-1")
@@ -250,7 +250,7 @@ async def example_agent_with_tool() -> None:
         print("Skipping — env vars not set.")
         return
 
-    from locus import Agent
+    from locus.agent import Agent
     from locus.models import get_model
     from locus.tools.decorator import tool
 

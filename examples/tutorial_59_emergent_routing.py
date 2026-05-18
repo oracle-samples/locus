@@ -38,7 +38,7 @@ import asyncio
 
 from config import get_model
 
-from locus import Agent, tool
+from locus.agent import Agent
 from locus.router import (
     CapabilityIndex,
     CognitiveCompiler,
@@ -49,6 +49,7 @@ from locus.router import (
     Router,
     builtin_protocols,
 )
+from locus.tools import tool
 from locus.tools.registry import create_registry
 
 

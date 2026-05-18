@@ -21,7 +21,7 @@ no Project OCID, no server-state lock-in.
 ## Quick start
 
 ```python
-from locus import Agent
+from locus.agent import Agent
 from locus.models.providers.oci import OCIResponsesModel
 
 model = OCIResponsesModel(

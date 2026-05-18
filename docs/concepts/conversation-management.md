@@ -8,7 +8,7 @@ checkpointer and a `thread_id`.
 ## The minimum
 
 ```python
-from locus import Agent
+from locus.agent import Agent
 from locus.memory.backends import OCIBucketBackend
 
 agent = Agent(

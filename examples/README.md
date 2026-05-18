@@ -3,7 +3,7 @@
 ## Quick Start
 
 ```python
-from locus import Agent
+from locus.agent import Agent
 from locus.models import OCIOpenAIModel
 
 model = OCIOpenAIModel(

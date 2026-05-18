@@ -33,7 +33,7 @@ from collections import defaultdict
 
 from config import get_model
 
-from locus import Agent
+from locus.agent import Agent
 from locus.agent.composition import LoopAgent, SequentialPipeline
 from locus.observability import get_event_bus, run_context
 

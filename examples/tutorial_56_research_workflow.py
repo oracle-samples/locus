@@ -38,7 +38,6 @@ import asyncio
 from config import get_model
 from pydantic import BaseModel, Field
 
-from locus import tool
 from locus.deepagent.workflow import (
     KEY_CAUSAL_CONFIDENCE,
     KEY_CAUSAL_HYPOTHESIS,
@@ -51,6 +50,7 @@ from locus.deepagent.workflow import (
     create_research_workflow,
 )
 from locus.observability import get_event_bus, run_context
+from locus.tools import tool
 
 
 # =============================================================================

@@ -42,7 +42,7 @@ For OpenAI / Anthropic / Ollama, set the relevant `*_API_KEY` or
 Save this as `hello_agent.py`:
 
 ```python
-from locus import Agent
+from locus.agent import Agent
 from locus.tools.decorator import tool
 
 @tool

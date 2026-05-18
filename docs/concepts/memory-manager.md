@@ -56,7 +56,7 @@ fact under the same key **updates** the record, not duplicates it.
 ## Quick start
 
 ```python
-from locus import Agent
+from locus.agent import Agent
 from locus.memory.manager import LLMMemoryManager, Memory, MemoryType
 from locus.memory.store import InMemoryStore
 

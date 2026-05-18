@@ -47,8 +47,7 @@ stdin/stdout, and discovers what tools the server exposes.
 ### 3. Pass the tools straight into an Agent
 
 ```python
-from locus import Agent
-
+from locus.agent import Agent
 agent = Agent(
     model="oci:openai.gpt-5.5",
     tools=[*fs.tools()],          # MCP tools become locus tools

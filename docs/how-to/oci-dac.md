@@ -16,8 +16,7 @@ because the V1 OpenAI-compatible endpoint doesn't speak
 pass a model id:
 
 ```python
-from locus import Agent
-
+from locus.agent import Agent
 agent = Agent(
     model="oci:ocid1.generativeaiendpoint.oc1.<region>....<id>",
     compartment_id="ocid1.compartment.oc1...",   # required for DAC
