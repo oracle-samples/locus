@@ -8,6 +8,142 @@ policy.
 
 ## [Unreleased]
 
+## [0.2.0b16] - 2026-05-18
+
+This release closes every issue in the 2026-05-18 audit feedback set
+(#213–#220) plus a Cohere reranker integration (#216) and the test
+plumbing follow-up to the b15 release. Seven PRs landed since b15:
+PR #221, PR #222, PR #223, PR #224, PR #225, PR #226, PR #227.
+
+### Added — Cohere Reranker V4 for retrieve-then-rerank RAG (closes #216)
+
+`locus.rag.reranker.Reranker` ABC + `CohereReranker` against OCI
+GenAI's `cohere.rerank-v4.0-fast` on the on-demand wire in
+`us-chicago-1`. Wires into `RAGRetriever(reranker=..., rerank_candidate_pool=50)`
+so calls over-fetch from the vector store, rerank with a cross-encoder,
+and trim to the user-requested limit. Reranker score lands on
+`SearchResult.score`; embedding score preserved on `.distance` so
+callers can compare both signals.
+
+```python
+from locus.rag import CohereReranker, RAGRetriever
+
+retriever = RAGRetriever(
+    embedder=embedder,
+    store=store,
+    reranker=CohereReranker(
+        model="cohere.rerank-v4.0-fast",
+        compartment_id=compartment,
+        profile_name="DEFAULT",
+        region="us-chicago-1",
+        top_n=5,
+    ),
+    rerank_candidate_pool=50,
+)
+hits = await retriever.retrieve("hepcidin in iron homeostasis", limit=5)
+```
+
+Reuses `OCIClient` internally so every auth mode (api_key /
+security_token / session_token / instance & resource principal) works
+without duplicating the signer plumbing.
+
+- New tutorial: [`tutorial_60_cohere_reranker.py`](examples/tutorial_60_cohere_reranker.py)
+  — runnable end-to-end demo against OCI.
+- New workbench pattern: `cohere_reranker` (id `Retrieve-then-rerank
+  (Cohere V4)`) reachable at `POST /api/run/cohere_reranker`.
+- Docs: new "Reranking — Cohere V4 cross-encoder" section in
+  `docs/concepts/rag.md`.
+
+### Added — `GraphRunnable` adapter (closes #213)
+
+Publish a Graph as an Agent / A2A server with one line — the same
+`AgentServer` / `A2AServer` machinery that Agents have always used.
+
+```python
+from locus.multiagent.graph import StateGraph
+from locus.server import AgentServer, GraphRunnable
+from locus.a2a import A2AServer, AgentSkill
+
+graph = StateGraph(...).compile()
+runnable = GraphRunnable(graph, input_key="prompt", output_key="answer")
+
+AgentServer(agent=runnable).run(port=8000)
+A2AServer(agent=runnable, api_key="...", skills=[...]).run(port=7421)
+```
+
+`GraphRunnable` builds `{input_key: prompt}`, drives `graph.stream(inputs)`,
+translates each intermediate `StreamEvent` to a `ThinkEvent` (SSE
+consumers see node-by-node progress), and the terminal final-state
+event to a `TerminateEvent` with `final_message = final_state[output_key]`.
+Duck-typed — any object with `stream(inputs) -> AsyncIterator` works.
+
+### Fixed — A2A AgentCard advertises bearer auth (closes #214)
+
+`A2AServer._build_card` now populates `securitySchemes` +
+`security` when `api_key` is configured (or `LOCUS_A2A_API_KEY` is
+set). Peers can discover the auth requirement from
+`/.well-known/agent-card.json` instead of finding out via a 401 on
+the first call. In `allow_unauthenticated=True` mode both fields stay
+`null` so the open mode is detectable by absence.
+
+### Added — env-var fallback `LOCUS_OCI_* → OCI_*` (closes #218)
+
+`examples/config.py` now resolves every OCI setting through a single
+`_oci_env(name, default)` helper:
+
+```
+LOCUS_OCI_<NAME>  →  OCI_<NAME>  →  default
+```
+
+So a user who's already run `oci session authenticate --profile-name
+DEFAULT` and exported `OCI_PROFILE` can run any tutorial without
+re-exporting variables. `LOCUS_OCI_*` still wins when set, preserving
+the existing use case where a tutorial points at a different profile
+from the user's shell-default OCI config. New docs page:
+[`docs/how-to/environment-variables.md`](docs/how-to/environment-variables.md).
+
+### Docs — OracleVectorStore production setup + tutorial 22 listing (closes #215, #217)
+
+- `OracleVectorStore` docstring rewritten: dropped `user="ADMIN"`
+  everywhere (Oracle security anti-pattern), introduced a
+  `locus_app` least-privileged schema, documented the auto-vs-pre-create
+  table provisioning matrix (`auto_create_table=True` for demos with
+  DDL; `False` for production with pre-created table + DML-only privs).
+  CREATE USER / GRANT script + ready-to-paste CREATE TABLE + CREATE
+  VECTOR INDEX in both the docstring and `docs/concepts/rag.md`.
+- Tutorial 22 (`using_vector_stores`) now lists `OracleVectorStore`
+  alongside the InMemory / Qdrant / OpenSearch / pgvector / Chroma
+  options.
+- Three deep-research demos and the project README now default
+  `ADB_USER` to `locus_app` (back-compat preserved — explicit
+  `ADB_USER=ADMIN` still works).
+
+### Docs — README + examples use canonical import paths (closes #219, #220)
+
+- 47 files swept (`README.md`, `examples/`, `docs/`): every
+  `from locus import X` shorthand replaced with the canonical
+  package path (`from locus.agent import Agent`,
+  `from locus.tools import tool`, etc.). The shorthand worked via
+  `locus/__init__.py`'s lazy `__getattr__` mapping but Pyright /
+  VS Code can't follow it; canonical paths resolve statically.
+- `examples/config.py` corrected: `OCIOpenAIModel` is imported from
+  `locus.models.providers.oci`, not `locus.models`.
+- README's "The cognitive router" section now demonstrates an actual
+  `Router` (`GoalFrame` extractor + `ProtocolRegistry` +
+  `CognitiveCompiler`) instead of the unrelated `create_research_workflow`
+  it accidentally showed before.
+
+### Tests — model swap + tutorial_59 timeout (closes #225 work)
+
+- Parallel-tool-calls matrix swapped `xai.grok-4-fast-non-reasoning`
+  (was hitting team-level RPM under back-to-back sweeps) for
+  `openai.gpt-4.1` — frontier OpenAI, different rate-limit pool, same
+  OpenAI-compat tool_calls codepath.
+- `test_tutorials_all_live._TUTORIAL_TIMEOUT_OVERRIDES` adds a
+  per-tutorial budget. `tutorial_59_emergent_routing` lifted from 360s
+  → 900s (legitimately takes ~10 min under the reasoning model with 5
+  dispatches × ≥3 LLM calls each).
+
 ## [0.2.0b15] - 2026-05-18
 
 ### Fixed — `tool_execution="concurrent"` actually runs in parallel (closes #210)
