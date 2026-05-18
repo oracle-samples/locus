@@ -10,6 +10,7 @@ import asyncio
 import re
 import time
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, PrivateAttr
@@ -163,6 +164,13 @@ if TYPE_CHECKING:
     from locus.tools.registry import ToolRegistry
 
 
+# Sentinel posted by ``ConcurrentExecutor.execute_streaming`` workers in
+# their ``finally`` clause so the consumer can count completions
+# (including cancellations) without ambiguity. Object identity, not
+# value equality, is what the consumer checks against.
+_STOP: object = object()
+
+
 class ToolContextFactory(BaseModel):
     """Factory for creating ToolContext instances."""
 
@@ -217,6 +225,38 @@ class ToolExecutor(BaseModel, ABC):
         """
         ...
 
+    async def execute_streaming(
+        self,
+        tool_calls: list[ToolCall],
+        registry: ToolRegistry,
+        ctx_factory: ToolContextFactory | None = None,
+    ) -> AsyncIterator[tuple[int, ToolResult]]:
+        """Yield ``(input_index, result)`` as each tool call completes.
+
+        The default implementation falls back to :meth:`execute` and yields
+        in input order — fine for executors with no useful streaming
+        semantics (sequential, single-shot rate-limited). Concurrent
+        executors override this to stream results in completion order.
+
+        Breaking out of the consumer ``async for`` (or raising inside its
+        body) must cancel any tasks the executor has in flight. Concrete
+        implementations are responsible for that guarantee — the runtime
+        loop relies on it for interrupt-driven sibling cancellation.
+
+        Args:
+            tool_calls: Tool calls to execute. ``input_index`` is the
+                position in this list.
+            registry: Tool registry to look up tools.
+            ctx_factory: Optional factory for creating tool contexts.
+
+        Yields:
+            Tuples of ``(input_index, ToolResult)``, in completion order
+            for concurrent executors, input order for sequential ones.
+        """
+        results = await self.execute(tool_calls, registry, ctx_factory)
+        for i, r in enumerate(results):
+            yield i, r
+
 
 class SequentialExecutor(ToolExecutor):
     """Execute tools one at a time."""
@@ -235,6 +275,23 @@ class SequentialExecutor(ToolExecutor):
             results.append(result)
 
         return results
+
+    async def execute_streaming(
+        self,
+        tool_calls: list[ToolCall],
+        registry: ToolRegistry,
+        ctx_factory: ToolContextFactory | None = None,
+    ) -> AsyncIterator[tuple[int, ToolResult]]:
+        """Yield ``(input_index, result)`` per call as it finishes.
+
+        Sequential execution means input order == completion order; this
+        impl exists so the runtime loop can treat both executors through
+        the same streaming interface. Breaking from the consumer simply
+        stops further calls — there are no siblings to cancel.
+        """
+        for i, tc in enumerate(tool_calls):
+            result = await self._execute_one(tc, registry, ctx_factory)
+            yield i, result
 
     async def _execute_one(
         self,
@@ -307,6 +364,73 @@ class ConcurrentExecutor(ToolExecutor):
         results = await asyncio.gather(*tasks)
 
         return list(results)
+
+    async def execute_streaming(
+        self,
+        tool_calls: list[ToolCall],
+        registry: ToolRegistry,
+        ctx_factory: ToolContextFactory | None = None,
+    ) -> AsyncIterator[tuple[int, ToolResult]]:
+        """Yield ``(input_index, result)`` in completion order.
+
+        Fan out one ``asyncio.Task`` per tool call (bounded by
+        ``max_concurrency`` via a shared semaphore). Results land on a
+        queue as they finish; the consumer iterates the queue and sees
+        events in completion order. If the consumer breaks early or
+        raises inside the ``async for`` body, the ``finally`` cancels
+        every still-in-flight task — that's how the runtime loop
+        propagates an interrupt to siblings.
+
+        We deliberately use ``create_task`` + a stop-marker pattern
+        instead of ``asyncio.TaskGroup``: TaskGroup blocks ``__aexit__``
+        on every task finishing, which deadlocks the streaming consumer
+        when a producer is cancelled (the cancelled task never puts on
+        the queue, so the consumer's ``queue.get()`` blocks forever).
+        The per-task ``finally`` here unconditionally posts a
+        stop-marker so the consumer always learns when each task is
+        done, even on cancellation.
+        """
+        if not tool_calls:
+            return
+
+        semaphore = asyncio.Semaphore(self.max_concurrency)
+        # Items: ``(input_index, ToolResult)`` for completed work,
+        # ``(input_index, _STOP)`` to signal that a producer finished
+        # (normally or via cancellation). Using a sentinel rather than
+        # a typed wrapper keeps the per-iteration overhead minimal.
+        queue: asyncio.Queue[tuple[int, Any]] = asyncio.Queue()
+
+        async def run_one(input_idx: int, tc: ToolCall) -> None:
+            try:
+                async with semaphore:
+                    result = await self._execute_one(tc, registry, ctx_factory)
+                queue.put_nowait((input_idx, result))
+            finally:
+                # Posted on success, exception, AND cancellation —
+                # the consumer relies on exactly one stop-marker per
+                # task to know when the batch has drained.
+                queue.put_nowait((input_idx, _STOP))
+
+        tasks = [
+            asyncio.create_task(run_one(i, tc), name=f"tool-{tc.name}-{i}")
+            for i, tc in enumerate(tool_calls)
+        ]
+
+        try:
+            remaining = len(tasks)
+            while remaining > 0:
+                input_idx, item = await queue.get()
+                if item is _STOP:
+                    remaining -= 1
+                    continue
+                yield input_idx, item
+        finally:
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            # ``return_exceptions=True`` swallows the CancelledError
+            # bubbles so cleanup never raises into the caller.
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     async def _execute_one(
         self,

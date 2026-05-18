@@ -11,6 +11,7 @@ deep research Oracle 26ai database.
 
 from __future__ import annotations
 
+import asyncio
 import time
 
 import pytest
@@ -21,6 +22,7 @@ from locus.core.events import (
     TerminateEvent,
     ThinkEvent,
     ToolCompleteEvent,
+    ToolStartEvent,
 )
 from locus.tools.decorator import tool
 from tests._safe_math import safe_math_eval
@@ -146,6 +148,108 @@ class TestParallelToolExecution:
         terminate = next((e for e in events if isinstance(e, TerminateEvent)), None)
         assert terminate is not None
         assert terminate.final_message is not None
+
+    @pytest.mark.asyncio
+    async def test_parallel_tool_calls_execute_concurrently_wall_time(self, model) -> None:  # type: ignore[no-untyped-def]
+        """End-to-end wall-time guard for ``tool_execution="concurrent"`` (#210).
+
+        The unit test ``tests/unit/test_agent_concurrent_tools.py`` uses a
+        scripted model to pin parallelism deterministically. This live-model
+        twin closes the same gap end-to-end: the previously-passing
+        :func:`test_agent_uses_multiple_tools_per_turn` only checked that
+        tools fired, not that they ran in parallel, so it never noticed
+        when ``ConcurrentExecutor`` was being fed singletons.
+
+        We skip cleanly if the live model never fans out (small models often
+        won't). When it does, the gap between the first ``ToolStartEvent``
+        and the last ``ToolCompleteEvent`` of that iteration must be far
+        below ``N * sleep_per_tool``.
+        """
+        sleep_per_tool = 0.6  # large enough to clear network jitter
+        n_target = 3  # ask the model for 3 lookups in one turn
+
+        @tool(name="lookup_async")
+        async def lookup_async(topic: str) -> str:
+            """Async lookup that takes ~0.6s per call (simulates remote I/O)."""
+            await asyncio.sleep(sleep_per_tool)
+            return f"info about {topic}"
+
+        agent = Agent(
+            model=model,
+            tools=[lookup_async],
+            system_prompt=(
+                "You are a research assistant. You MUST call lookup_async "
+                f"{n_target} times in your VERY FIRST response, all in a "
+                "single message — one call per topic the user asks about. "
+                "Do NOT call them one-at-a-time across iterations."
+            ),
+            max_iterations=3,
+            tool_execution="concurrent",
+            max_concurrency=10,
+        )
+
+        # Group events by iteration so we can measure each ThinkEvent → tools
+        # window independently. ``ThinkEvent`` starts a new iteration.
+        events: list = []
+        async for ev in agent.run(
+            "Look up these three topics: python, quantum, oracle. "
+            "Call the tool three times in one response."
+        ):
+            events.append((time.perf_counter(), ev))
+
+        # Find the first iteration in which >= 2 ToolStartEvents fire before
+        # any ThinkEvent (i.e. a fan-out turn).
+        per_iter_starts: list[list[tuple[float, ToolStartEvent]]] = []
+        per_iter_completes: list[list[tuple[float, ToolCompleteEvent]]] = []
+        current_starts: list[tuple[float, ToolStartEvent]] = []
+        current_completes: list[tuple[float, ToolCompleteEvent]] = []
+        for ts, ev in events:
+            if isinstance(ev, ThinkEvent):
+                if current_starts:
+                    per_iter_starts.append(current_starts)
+                    per_iter_completes.append(current_completes)
+                current_starts = []
+                current_completes = []
+            elif isinstance(ev, ToolStartEvent):
+                current_starts.append((ts, ev))
+            elif isinstance(ev, ToolCompleteEvent):
+                current_completes.append((ts, ev))
+        if current_starts:
+            per_iter_starts.append(current_starts)
+            per_iter_completes.append(current_completes)
+
+        # Pick the first iteration that actually fanned out.
+        fanout_idx = next(
+            (i for i, sts in enumerate(per_iter_starts) if len(sts) >= 2),
+            None,
+        )
+        if fanout_idx is None:
+            pytest.skip(
+                "Live model did not emit >=2 parallel tool_calls in any "
+                "iteration — can't measure parallelism. Try a stronger model."
+            )
+
+        starts = per_iter_starts[fanout_idx]
+        completes = per_iter_completes[fanout_idx]
+        n = len(starts)
+        assert len(completes) == n, (
+            f"start/complete count mismatch in fan-out iteration: "
+            f"starts={n}, completes={len(completes)}"
+        )
+
+        first_start = starts[0][0]
+        last_complete = completes[-1][0]
+        gap = last_complete - first_start
+
+        sequential_floor = n * sleep_per_tool
+        # Generous: half the serial floor catches the bug (which would land
+        # at ~100% of floor) without flaking on slow CI (parallel ~= 1 sleep
+        # plus model overhead).
+        assert gap < sequential_floor / 2, (
+            f"{n} concurrent tool calls took {gap:.2f}s "
+            f"(sequential floor {sequential_floor:.2f}s) — "
+            f"runtime loop may be serializing the executor again (#210)"
+        )
 
 
 # =============================================================================

@@ -463,48 +463,269 @@ class AgentRuntimeMixin:
                     )
                     break
 
-                # Execute tool calls
+                # Execute tool calls.
+                #
+                # Three phases so ``tool_execution="concurrent"`` is real
+                # (#210): per-call serial hook/cache work is hoisted out
+                # of the executor call so the survivors can run in a
+                # single ``asyncio.gather``. Without this split, the
+                # earlier per-call loop fed the executor singletons and
+                # ``ConcurrentExecutor`` collapsed to ``SequentialExecutor``.
+                #
+                #   Phase 1 — per call, serial: emit ToolStartEvent, run
+                #     before-hooks, resolve cancel/idempotent-cache short-
+                #     circuits (recorded on state immediately so a later
+                #     same-args call in this batch still cache-hits).
+                #   Phase 2 — one batched ``executor.execute(...)`` over
+                #     the surviving calls.
+                #   Phase 3 — per result, in tool_call order: interrupt
+                #     detection, result truncation/offload, state update,
+                #     ToolCompleteEvent, after-hook (with retry), write/
+                #     verification tracking.
                 tool_results: list[ToolResult] = []
                 reasoning_step_tools: list[ToolExecution] = []
+
+                # Phase 1 — pre-execute.
+                slots: list[dict[str, Any]] = []
+                to_execute_indices: list[int] = []
+                to_execute_calls: list[ToolCall] = []
+                # Within-batch idempotent dedup: when an ``@tool(idempotent=True)``
+                # appears twice in the same batch with the same arguments, the
+                # second slot becomes a ``batch_cache_ref`` pointing at the first
+                # slot. Phase 3 copies the first slot's result back. Without
+                # this, the README contract ("idempotent body fires once per
+                # run") is silently violated whenever a model fans out
+                # duplicates in one response — see #210 follow-up.
+                batch_idempotent_seen: dict[tuple[str, str], int] = {}
 
                 for tool_call in response.message.tool_calls:
                     _tool_calls_count += 1
 
-                    # Emit tool start event
                     yield ToolStartEvent(
                         tool_name=tool_call.name,
                         tool_call_id=tool_call.id,
                         arguments=tool_call.arguments,
                     )
 
-                    # Run hooks: before_tool_call (event.cancel to skip)
                     tool_event = await self._run_before_tool_hooks(
                         tool_call.name, tool_call.id, tool_call.arguments
                     )
 
-                    # Check for cancel via event
                     if tool_event.cancel:
                         cancel_msg = (
                             tool_event.cancel
                             if isinstance(tool_event.cancel, str)
                             else "Cancelled by hook"
                         )
-                        result = ToolResult(
+                        cancel_result = ToolResult(
                             tool_call_id=tool_call.id,
                             name=tool_call.name,
                             content=cancel_msg,
                             error=None,
                             duration_ms=0.0,
                         )
-                        tool_results.append(result)
-                        execution = ToolExecution(
-                            tool_name=result.name,
-                            tool_call_id=result.tool_call_id,
+                        cancel_execution = ToolExecution(
+                            tool_name=cancel_result.name,
+                            tool_call_id=cancel_result.tool_call_id,
                             arguments=tool_call.arguments,
-                            result=result.content,
+                            result=cancel_result.content,
                         )
-                        state = state.with_tool_execution(execution)
-                        reasoning_step_tools.append(execution)
+                        # NOTE: state is updated in Phase 3 (tool_call order),
+                        # not here, so concurrent batches keep deterministic
+                        # ordering on ``state.tool_executions``.
+                        slots.append(
+                            {
+                                "tool_call": tool_call,
+                                "arguments": tool_call.arguments,
+                                "kind": "cancel",
+                                "result": cancel_result,
+                                "execution": cancel_execution,
+                            }
+                        )
+                        continue
+
+                    modified_args = tool_event.arguments
+
+                    # Idempotent dedup: if the tool declared idempotent=True
+                    # and a prior call in this run used the same arguments,
+                    # reuse the prior result instead of invoking the body.
+                    # Without this, ``@tool(idempotent=True)`` is silently a
+                    # no-op for the main Agent.run() path (despite being
+                    # advertised on the README hero example).
+                    cached = self._maybe_cached_idempotent_result(
+                        state, tool_call.name, modified_args, tool_call.id
+                    )
+                    if cached is not None:
+                        cache_execution = ToolExecution(
+                            tool_name=cached.name,
+                            tool_call_id=cached.tool_call_id,
+                            arguments=modified_args,
+                            result=cached.content if cached.success else None,
+                            error=cached.error,
+                            duration_ms=cached.duration_ms,
+                            idempotent_cache_hit=True,
+                        )
+                        slots.append(
+                            {
+                                "tool_call": tool_call,
+                                "arguments": modified_args,
+                                "kind": "cache",
+                                "result": cached,
+                                "execution": cache_execution,
+                            }
+                        )
+                        continue
+
+                    # Within-batch dedup for idempotent tools whose duplicate
+                    # appears alongside the original in this same response.
+                    # Without this, a model emitting ``[submit(X), submit(X)]``
+                    # in one assistant message would fire the body twice — a
+                    # regression vs the pre-batching per-call loop, which
+                    # sneaked the dedup in via serial state updates.
+                    idempotent_key = self._idempotent_batch_key(tool_call.name, modified_args)
+                    if idempotent_key is not None:
+                        prior_slot = batch_idempotent_seen.get(idempotent_key)
+                        if prior_slot is not None:
+                            slots.append(
+                                {
+                                    "tool_call": tool_call,
+                                    "arguments": modified_args,
+                                    "kind": "batch_cache_ref",
+                                    "ref_slot": prior_slot,
+                                    "result": None,
+                                    "execution": None,
+                                }
+                            )
+                            continue
+                        batch_idempotent_seen[idempotent_key] = len(slots)
+
+                    slots.append(
+                        {
+                            "tool_call": tool_call,
+                            "arguments": modified_args,
+                            "kind": "execute",
+                            "result": None,
+                            "execution": None,
+                        }
+                    )
+                    to_execute_indices.append(len(slots) - 1)
+                    to_execute_calls.append(
+                        tool_call.model_copy(update={"arguments": modified_args})
+                    )
+
+                # Phase 2 — stream the survivors through the executor.
+                # Constructed after Phase 1 so ``state`` already reflects
+                # cancel / cache short-circuits, matching the pre-extraction
+                # per-call-loop semantics.
+                #
+                # Using ``execute_streaming`` (yields ``(input_idx, result)``
+                # in completion order for ConcurrentExecutor, input order for
+                # SequentialExecutor) gives us two things in one pass:
+                #   * Opt-in completion-order ``ToolCompleteEvent`` for UI
+                #     streaming (``AgentConfig.tool_event_order='completion'``).
+                #   * Active sibling cancellation on interrupt: a ``break``
+                #     out of the ``async for`` triggers the executor's
+                #     ``finally`` clause, which cancels in-flight sibling
+                #     tasks. The pre-streaming ``gather`` impl had no such
+                #     hook — every sibling completed and only the fold was
+                #     halted.
+                if to_execute_calls:
+                    ctx_factory = ToolContextFactory(
+                        run_id=state.run_id,
+                        agent_id=state.agent_id,
+                        iteration=state.iteration,
+                        state=state,
+                        invocation_metadata=metadata or {},
+                    )
+                    batch_start = time.perf_counter()
+                    interrupted_slot_idx: int | None = None
+                    try:
+                        async for input_idx, batched_result in self._executor.execute_streaming(
+                            to_execute_calls,
+                            self._tool_registry,
+                            ctx_factory,
+                        ):
+                            slot_idx = to_execute_indices[input_idx]
+                            slots[slot_idx]["result"] = batched_result
+
+                            if self.config.tool_event_order == "completion":
+                                # Stream the complete event the moment the
+                                # tool finishes. Phase 3 will skip its own
+                                # ToolCompleteEvent emission for execute-kind
+                                # slots when in completion mode.
+                                yield ToolCompleteEvent(
+                                    tool_name=batched_result.name,
+                                    tool_call_id=batched_result.tool_call_id,
+                                    result=(
+                                        batched_result.content if batched_result.success else None
+                                    ),
+                                    error=batched_result.error,
+                                    duration_ms=batched_result.duration_ms,
+                                )
+
+                            # Interrupt detection — break to trigger the
+                            # executor's cancellation of in-flight siblings.
+                            # Phase 3 will run the InterruptEvent emission
+                            # path on the interrupting slot exactly like the
+                            # pre-streaming code did.
+                            if (
+                                batched_result.content
+                                and '"__interrupt__": true' in batched_result.content
+                            ):
+                                interrupted_slot_idx = slot_idx
+                                break
+                    except Exception as e:  # noqa: BLE001 — ``_execute_one`` already traps user-tool exceptions; this catches a failure of the executor itself (registry blow-up, ctx_factory error) so a single bad call doesn't abort the whole turn.
+                        batch_duration = (time.perf_counter() - batch_start) * 1000
+                        for slot_idx, tc in zip(to_execute_indices, to_execute_calls, strict=True):
+                            if slots[slot_idx]["result"] is None:
+                                slots[slot_idx]["result"] = ToolResult(
+                                    tool_call_id=tc.id,
+                                    name=tc.name,
+                                    content="",
+                                    error=str(e),
+                                    duration_ms=batch_duration,
+                                )
+
+                    # Synthesize "cancelled by sibling interrupt" results
+                    # for slots whose tasks were cancelled (the interrupt
+                    # break happened before they completed). Folded as
+                    # ``kind="cancel"`` so Phase 3 treats them identically
+                    # to hook-cancelled calls — Start/Complete pair emits,
+                    # state records the cancellation, no after-hook fires.
+                    if interrupted_slot_idx is not None:
+                        for slot_idx in to_execute_indices:
+                            slot = slots[slot_idx]
+                            if slot["result"] is not None:
+                                continue
+                            tc = slot["tool_call"]
+                            cancelled_result = ToolResult(
+                                tool_call_id=tc.id,
+                                name=tc.name,
+                                content="Cancelled: sibling tool requested interrupt",
+                                error=None,
+                                duration_ms=0.0,
+                            )
+                            cancelled_execution = ToolExecution(
+                                tool_name=tc.name,
+                                tool_call_id=tc.id,
+                                arguments=slot["arguments"],
+                                result=cancelled_result.content,
+                            )
+                            slot["result"] = cancelled_result
+                            slot["execution"] = cancelled_execution
+                            slot["kind"] = "cancel"
+
+                # Phase 3 — per-result fold, in tool_call order.
+                for slot in slots:
+                    tool_call = slot["tool_call"]
+                    modified_args = slot["arguments"]
+                    kind = slot["kind"]
+                    result = slot["result"]
+
+                    if kind == "cancel":
+                        tool_results.append(result)
+                        state = state.with_tool_execution(slot["execution"])
+                        reasoning_step_tools.append(slot["execution"])
                         yield ToolCompleteEvent(
                             tool_name=result.name,
                             tool_call_id=result.tool_call_id,
@@ -512,33 +733,10 @@ class AgentRuntimeMixin:
                             duration_ms=0.0,
                         )
                         continue
-
-                    modified_args = tool_event.arguments
-
-                    # Idempotent dedup: if the tool declared idempotent=True
-                    # and an earlier call in this run used the same arguments,
-                    # reuse the prior result instead of invoking the body.
-                    # Without this, ``@tool(idempotent=True)`` is silently a no-op
-                    # for the main Agent.run() path (despite being advertised on
-                    # the README hero example).
-                    cached = self._maybe_cached_idempotent_result(
-                        state, tool_call.name, modified_args, tool_call.id
-                    )
-                    if cached is not None:
-                        result = cached
-                        # Track + emit immediately, skip executor entirely.
+                    if kind == "cache":
                         tool_results.append(result)
-                        execution = ToolExecution(
-                            tool_name=result.name,
-                            tool_call_id=result.tool_call_id,
-                            arguments=modified_args,
-                            result=result.content if result.success else None,
-                            error=result.error,
-                            duration_ms=result.duration_ms,
-                            idempotent_cache_hit=True,
-                        )
-                        state = state.with_tool_execution(execution)
-                        reasoning_step_tools.append(execution)
+                        state = state.with_tool_execution(slot["execution"])
+                        reasoning_step_tools.append(slot["execution"])
                         yield ToolCompleteEvent(
                             tool_name=result.name,
                             tool_call_id=result.tool_call_id,
@@ -547,32 +745,48 @@ class AgentRuntimeMixin:
                             duration_ms=result.duration_ms,
                         )
                         continue
-
-                    # Execute the tool
-                    start_time = time.perf_counter()
-                    try:
-                        ctx_factory = ToolContextFactory(
-                            run_id=state.run_id,
-                            agent_id=state.agent_id,
-                            iteration=state.iteration,
-                            state=state,
-                            invocation_metadata=metadata or {},
-                        )
-                        [result] = await self._executor.execute(
-                            [tool_call.model_copy(update={"arguments": modified_args})],
-                            self._tool_registry,
-                            ctx_factory,
-                        )
-                    except Exception as e:  # noqa: BLE001 — user tool bodies can raise anything; surface as ToolResult.error
+                    if kind == "batch_cache_ref":
+                        # Same-args duplicate of an earlier slot in this same
+                        # batch. The referenced slot's result is now resolved
+                        # (Phase 2 ran ``asyncio.gather`` to completion before
+                        # this loop). Reuse it and rebrand the result/execution
+                        # for this call's id.
+                        ref_slot = slots[slot["ref_slot"]]
+                        ref_result: ToolResult = ref_slot["result"]
                         result = ToolResult(
                             tool_call_id=tool_call.id,
                             name=tool_call.name,
-                            content="",
-                            error=str(e),
-                            duration_ms=(time.perf_counter() - start_time) * 1000,
+                            content=ref_result.content,
+                            error=ref_result.error,
+                            duration_ms=0.0,
                         )
+                        batch_cache_execution = ToolExecution(
+                            tool_name=result.name,
+                            tool_call_id=result.tool_call_id,
+                            arguments=modified_args,
+                            result=result.content if result.success else None,
+                            error=result.error,
+                            duration_ms=0.0,
+                            idempotent_cache_hit=True,
+                        )
+                        tool_results.append(result)
+                        state = state.with_tool_execution(batch_cache_execution)
+                        reasoning_step_tools.append(batch_cache_execution)
+                        yield ToolCompleteEvent(
+                            tool_name=result.name,
+                            tool_call_id=result.tool_call_id,
+                            result=result.content,
+                            error=result.error,
+                            duration_ms=0.0,
+                        )
+                        continue
 
-                    # Check for interrupt marker from ask_user tool
+                    # Interrupt marker from ``ask_user``. Sibling calls in
+                    # this batch have already executed in parallel — we
+                    # still pause here, leaving them un-folded into state.
+                    # An interrupt is rare and ``ask_user`` is the only
+                    # tool that emits it; we trust users not to fan it
+                    # out alongside high-cost siblings.
                     if result.content and '"__interrupt__": true' in result.content:
                         import json as _json
 
@@ -591,13 +805,13 @@ class AgentRuntimeMixin:
                                 )
                                 return  # Pause the generator
                         except (ValueError, KeyError):
-                            pass  # Not a valid interrupt marker, continue normally
+                            pass
 
                     # Cap oversized tool results so they don't blow the
-                    # model's context window. When ``tool_result_store``
-                    # is configured we offload the full payload through
-                    # it and inline a recoverable reference key;
-                    # otherwise we fall back to lossy head-truncation.
+                    # model's context window. When ``tool_result_store`` is
+                    # configured we offload the full payload through it and
+                    # inline a recoverable reference key; otherwise we fall
+                    # back to lossy head-truncation.
                     if (
                         self.config.max_tool_result_length > 0
                         and result.content
@@ -624,7 +838,6 @@ class AgentRuntimeMixin:
 
                     tool_results.append(result)
 
-                    # Track execution
                     execution = ToolExecution(
                         tool_name=result.name,
                         tool_call_id=result.tool_call_id,
@@ -639,16 +852,20 @@ class AgentRuntimeMixin:
                     if result.error:
                         _tool_errors_count += 1
 
-                    # Emit tool complete event
-                    yield ToolCompleteEvent(
-                        tool_name=result.name,
-                        tool_call_id=result.tool_call_id,
-                        result=result.content if result.success else None,
-                        error=result.error,
-                        duration_ms=result.duration_ms,
-                    )
+                    # Skip the per-slot ToolCompleteEvent yield in
+                    # completion mode — Phase 2 already streamed it the
+                    # moment this tool finished. Sequential mode (default)
+                    # still emits here so consumers see events in
+                    # tool_call order.
+                    if self.config.tool_event_order == "sequential":
+                        yield ToolCompleteEvent(
+                            tool_name=result.name,
+                            tool_call_id=result.tool_call_id,
+                            result=result.content if result.success else None,
+                            error=result.error,
+                            duration_ms=result.duration_ms,
+                        )
 
-                    # Run hooks: after_tool_call (may return HookAction to retry)
                     after_tool_event = await self._run_after_tool_hooks(
                         result.name,
                         result.content if result.success else None,
@@ -657,10 +874,9 @@ class AgentRuntimeMixin:
                         arguments=modified_args,
                     )
 
-                    # Retry tool if hook set event.retry = True
                     if after_tool_event.retry:
                         try:
-                            ctx_factory = ToolContextFactory(
+                            retry_ctx_factory = ToolContextFactory(
                                 run_id=state.run_id,
                                 agent_id=state.agent_id,
                                 iteration=state.iteration,
@@ -670,7 +886,7 @@ class AgentRuntimeMixin:
                             [result] = await self._executor.execute(
                                 [tool_call.model_copy(update={"arguments": modified_args})],
                                 self._tool_registry,
-                                ctx_factory,
+                                retry_ctx_factory,
                             )
                         except Exception as e:  # noqa: BLE001 — user tool bodies can raise anything; surface as ToolResult.error
                             result = ToolResult(
@@ -681,7 +897,6 @@ class AgentRuntimeMixin:
                                 duration_ms=0.0,
                             )
 
-                    # Track write/verification for completion gate
                     if result.name in self.config.verify_tools:
                         self._has_unverified_writes = True
                     if result.name in self.config.verification_tools:
@@ -1304,6 +1519,29 @@ class AgentRuntimeMixin:
             if msgs[i].role == "assistant":
                 return msgs[i + 1 :]
         return msgs
+
+    def _idempotent_batch_key(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any],
+    ) -> tuple[str, str] | None:
+        """Return a hashable (name, args) key for within-batch idempotent
+        dedup, or ``None`` if the tool is unknown / not idempotent.
+
+        Used by the Phase 1 pre-execute pass in :meth:`run` to detect when
+        the same idempotent call appears twice in one assistant response;
+        the duplicate is collapsed to a ``batch_cache_ref`` slot so the
+        body still fires only once per (name, args) per run.
+        """
+        tool = self._tool_registry.get(tool_name) if self._tool_registry else None
+        if tool is None or not getattr(tool, "idempotent", False):
+            return None
+        # ``default=str`` keeps the key well-defined for argument types
+        # ``json.dumps`` cannot serialise natively (e.g. datetimes); we
+        # only need stable equality, not round-trip fidelity.
+        import json as _json  # local import — only used here
+
+        return (tool_name, _json.dumps(arguments, sort_keys=True, default=str))
 
     def _maybe_cached_idempotent_result(
         self,
