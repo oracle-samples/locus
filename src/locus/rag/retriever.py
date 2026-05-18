@@ -113,6 +113,23 @@ class RAGRetriever(BaseModel):
     store: Any  # VectorStore
     chunk_size: int = Field(default=1000, description="Max characters per chunk")
     chunk_overlap: int = Field(default=200, description="Overlap between chunks")
+    reranker: Any = Field(
+        default=None,
+        description=(
+            "Optional ``locus.rag.reranker.Reranker``. When set, ``retrieve()`` "
+            "over-fetches ``rerank_candidate_pool`` hits from the vector "
+            "store, then has the reranker rescore + trim down to ``limit``. "
+            "Closes #216."
+        ),
+    )
+    rerank_candidate_pool: int = Field(
+        default=50,
+        ge=1,
+        description=(
+            "Number of vector-store hits to fetch before reranking when "
+            "``reranker`` is set. Ignored when the reranker is ``None``."
+        ),
+    )
 
     model_config = {"arbitrary_types_allowed": True}
 
@@ -470,13 +487,23 @@ class RAGRetriever(BaseModel):
         # Embed the query
         query_result = await self.embedder.embed_query(query)
 
+        # If a reranker is wired in, over-fetch from the vector store
+        # (cheap embedding search), then have the reranker rescore the
+        # wider pool against the query (cross-encoder, more expensive
+        # but materially more accurate). Trim back to ``limit`` after.
+        store_limit = max(limit, self.rerank_candidate_pool) if self.reranker is not None else limit
+
         # Search the store
         results = await self.store.search(
             query_embedding=query_result.embedding,
-            limit=limit,
+            limit=store_limit,
             threshold=threshold,
             metadata_filter=metadata_filter,
         )
+
+        if self.reranker is not None and results:
+            results = await self.reranker.rerank(query, results)
+            results = results[:limit]
 
         await emit(
             EV_RAG_QUERY_COMPLETED,
@@ -484,6 +511,7 @@ class RAGRetriever(BaseModel):
             top_score=results[0].score if results else None,
             duration_ms=(_time.perf_counter() - _started) * 1000,
             store_type=type(self.store).__name__,
+            reranker_type=type(self.reranker).__name__ if self.reranker is not None else None,
         )
 
         return RetrievalResult(

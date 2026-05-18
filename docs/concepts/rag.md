@@ -198,6 +198,63 @@ prompt-injection-via-corpus.
 For richer toolsets, use `RAGToolkit(retriever)` — it bundles search,
 context retrieval, and add-document tools.
 
+## Reranking — Cohere V4 cross-encoder (closes #216)
+
+For production-grade RAG, **retrieve-then-rerank** materially improves
+answer grounding. Embedding similarity scores query and document
+independently; a cross-encoder reranker scores them *together*, which
+catches relevance signals embeddings miss. The pattern:
+
+1. Embed once into the vector store.
+2. At query time, **over-fetch** a wider candidate set (e.g. 50 hits)
+   cheaply from the embedding store.
+3. Have the reranker rescore each candidate against the query and trim
+   to the top-N (e.g. 5).
+4. Feed the top-N to the LLM.
+
+Locus ships `CohereReranker` against OCI GenAI's Cohere V4 on-demand
+endpoint (`cohere.rerank-v4.0-fast` by default; `cohere.rerank-v4.0-pro`
+for the higher-accuracy variant; `cohere.rerank-v3.5` as a fallback).
+
+```python
+from locus.rag import (
+    CohereReranker, InMemoryVectorStore, OCIEmbeddings, RAGRetriever,
+)
+
+reranker = CohereReranker(
+    model="cohere.rerank-v4.0-fast",  # frontier on-demand V4
+    profile_name="DEFAULT",
+    region="us-chicago-1",
+    compartment_id=os.environ["OCI_COMPARTMENT"],
+    top_n=5,
+)
+
+retriever = RAGRetriever(
+    embedder=OCIEmbeddings(model_id="cohere.embed-english-v3.0", ...),
+    store=store,
+    reranker=reranker,            # opt-in; ``None`` keeps semantic-only order
+    rerank_candidate_pool=50,     # over-fetch from the store; default 50
+)
+
+# Same call as without a reranker — over-fetch happens behind the scenes.
+hits = await retriever.retrieve("hepcidin in iron homeostasis", limit=5)
+```
+
+Each returned `SearchResult` carries the reranker's relevance score on
+`.score` and the original embedding score on `.distance` so callers can
+compare both signals.
+
+Standalone use (no retriever):
+
+```python
+top_5 = await reranker.rerank(query, candidates)
+```
+
+See [`tutorial_60_cohere_reranker.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_60_cohere_reranker.py)
+for a runnable example, and the workbench has a `Retrieve-then-rerank
+(Cohere V4)` pattern that shows the embedding-vs-reranked ordering
+side-by-side at `/api/run/cohere_reranker`.
+
 ## Multimodal ingestion
 
 `retriever.add_file(path)` dispatches by file type:

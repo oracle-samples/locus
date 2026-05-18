@@ -317,6 +317,17 @@ PATTERNS: list[dict[str, Any]] = [
             "against the opt-in LLMProtocolPicker."
         ),
     },
+    {
+        "id": "cohere_reranker",
+        "title": "Retrieve-then-rerank (Cohere V4)",
+        "tutorial": 60,
+        "summary": (
+            "Same query, two orderings: embedding-only vs Cohere V4 "
+            "cross-encoder. The reranker promotes the canonical answer to "
+            "the top — visible side-by-side with scores. Requires an OCI "
+            "provider config (OCI on-demand rerank-v4 endpoint). Closes #216."
+        ),
+    },
 ]
 
 
@@ -955,6 +966,122 @@ async def _run_cognitive_routing(req: RunRequest) -> RunResponse:
     return RunResponse(reply=result.text or "", events=events)
 
 
+async def _run_cohere_reranker(req: RunRequest) -> RunResponse:
+    """Workbench demo for #216 — Cohere V4 rerank vs embedding baseline.
+
+    Embeds a small medical corpus into an InMemoryVectorStore, retrieves
+    the top-K against the user's query, then reruns the same query with
+    a CohereReranker(model="cohere.rerank-v4.0-fast") wired into the
+    same RAGRetriever via ``rerank_with=`` / ``rerank_candidate_pool=``.
+    Returns both orderings + scores so the UI can show the lift.
+    """
+    from locus.rag import (
+        CohereReranker,
+        InMemoryVectorStore,
+        OCIEmbeddings,
+        RAGRetriever,
+    )
+
+    if req.provider.provider not in {"oci-session", "oci-apikey"}:
+        raise HTTPException(
+            400,
+            "Cohere V4 reranker is OCI-only (rerank-v4 lives on OCI on-demand). "
+            "Switch the provider to OCI session or OCI api_key in the UI.",
+        )
+
+    corpus = [
+        "Iron is primarily absorbed in the duodenum and proximal jejunum of the small intestine.",
+        "Phlebotomy is the first-line treatment for hereditary hemochromatosis.",
+        "Ferritin is the primary iron storage protein and an acute-phase reactant.",
+        "Hepcidin, produced by the liver, is the master regulator of systemic iron homeostasis. "
+        "It binds ferroportin and induces its degradation, blocking iron export from "
+        "enterocytes and macrophages.",
+        "Transferrin saturation below 16% suggests iron deficiency.",
+        "MRI T2* relaxometry is the gold standard for non-invasive iron quantification.",
+        "Iron deficiency anemia is the most common nutritional deficiency worldwide.",
+        "First-line treatment for iron deficiency anemia is oral ferrous sulfate.",
+    ]
+    query = (req.prompt or "What is hepcidin's role in iron homeostasis?").strip()
+
+    cfg = req.provider
+    region = cfg.region or "us-chicago-1"
+    auth_type = "security_token" if cfg.provider == "oci-session" else "api_key"
+    endpoint = f"https://inference.generativeai.{region}.oci.oraclecloud.com"
+
+    embedder = OCIEmbeddings(
+        model_id="cohere.embed-english-v3.0",
+        profile_name=cfg.profile or "DEFAULT",
+        auth_type=auth_type,
+        compartment_id=cfg.compartment_id or "",
+        service_endpoint=endpoint,
+    )
+
+    store = InMemoryVectorStore(dimension=1024)
+    baseline = RAGRetriever(embedder=embedder, store=store)
+    await baseline.add_documents(corpus)
+
+    # 1. Baseline (embedding only).
+    baseline_hits = await baseline.retrieve(query, limit=4)
+
+    # 2. Reranked (Cohere V4 cross-encoder).
+    reranker = CohereReranker(
+        model="cohere.rerank-v4.0-fast",
+        compartment_id=cfg.compartment_id or "",
+        profile_name=cfg.profile or "DEFAULT",
+        auth_type=auth_type,
+        region=region,
+        top_n=4,
+    )
+    reranked_retriever = RAGRetriever(
+        embedder=embedder,
+        store=store,
+        reranker=reranker,
+        rerank_candidate_pool=len(corpus),
+    )
+    reranked_hits = await reranked_retriever.retrieve(query, limit=4)
+
+    events: list[RunEvent] = []
+    events.append(RunEvent(kind="info", text=f"query: {query}"))
+    events.append(RunEvent(kind="info", text="baseline order (embedding similarity):"))
+    for i, h in enumerate(baseline_hits.documents, start=1):
+        events.append(
+            RunEvent(
+                kind="baseline",
+                text=f"#{i}  score={h.score:.4f}  {h.document.content[:90]}",
+                extra={"rank": i, "score": h.score, "doc_id": h.document.id},
+            )
+        )
+    events.append(RunEvent(kind="info", text="reranked order (Cohere V4):"))
+    for i, h in enumerate(reranked_hits.documents, start=1):
+        events.append(
+            RunEvent(
+                kind="reranked",
+                text=f"#{i}  score={h.score:.4f}  {h.document.content[:90]}",
+                extra={
+                    "rank": i,
+                    "score": h.score,
+                    "doc_id": h.document.id,
+                    "embedding_score": h.distance,
+                },
+            )
+        )
+    top_baseline = baseline_hits.documents[0].document.content if baseline_hits.documents else ""
+    top_reranked = reranked_hits.documents[0].document.content if reranked_hits.documents else ""
+    if top_baseline == top_reranked:
+        reply = (
+            f"Both methods agree on the top result. Score spread shows the reranker is "
+            f"more confident: baseline={baseline_hits.documents[0].score:.3f} vs "
+            f"reranked={reranked_hits.documents[0].score:.3f}."
+        )
+    else:
+        reply = (
+            f"Rerank changed the top result:\n"
+            f"  baseline #1 → {top_baseline[:80]}\n"
+            f"  reranked #1 → {top_reranked[:80]}"
+        )
+    return RunResponse(reply=reply, events=events)
+
+
 PATTERN_RUNNERS: dict[str, Any] = {
     "agent": _run_agent,
     "agent_with_tools": _run_agent_with_tools,
@@ -965,6 +1092,7 @@ PATTERN_RUNNERS: dict[str, Any] = {
     "structured_output": _run_structured_output,
     "memory_manager": _run_memory_manager,
     "cognitive_routing": _run_cognitive_routing,
+    "cohere_reranker": _run_cohere_reranker,
 }
 
 
