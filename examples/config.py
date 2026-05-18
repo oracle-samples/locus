@@ -14,22 +14,32 @@ Environment Variables:
                             Default: "mock"
     LOCUS_MODEL_ID         - Model identifier (provider-specific)
 
-    # OCI GenAI
-    LOCUS_OCI_PROFILE      - OCI config profile name (default: DEFAULT)
+    # OCI GenAI — every LOCUS_OCI_* variable below falls back to its
+    # OCI_* equivalent (the OCI CLI standard) when unset. Closes #218.
+    # So once you've run ``oci session authenticate --profile-name X``
+    # and exported the resulting ``OCI_PROFILE``, every locus tutorial
+    # picks the same profile up automatically.
+    LOCUS_OCI_PROFILE      - OCI config profile name. Falls back to
+                              OCI_PROFILE. Default: DEFAULT.
     LOCUS_OCI_AUTH_TYPE    - "api_key", "security_token",
-                              "instance_principal", "resource_principal"
-    LOCUS_OCI_REGION       - OCI region (default: us-chicago-1)
-    LOCUS_OCI_COMPARTMENT  - Compartment OCID. Auto-derived from the
-                              profile's tenancy when LOCUS_OCI_PROFILE
-                              is set; required for instance/resource
-                              principal modes.
-    LOCUS_OCI_ENDPOINT     - Service endpoint URL (only honored by the
-                              SDK transport — OCIModel)
+                              "instance_principal", "resource_principal".
+                              Falls back to OCI_AUTH_TYPE.
+    LOCUS_OCI_REGION       - OCI region. Falls back to OCI_REGION.
+                              Default: us-chicago-1.
+    LOCUS_OCI_COMPARTMENT  - Compartment OCID. Falls back to
+                              OCI_COMPARTMENT. Auto-derived from the
+                              profile's tenancy when a profile is set;
+                              required for instance/resource principal
+                              modes.
+    LOCUS_OCI_ENDPOINT     - Service endpoint URL. Falls back to
+                              OCI_ENDPOINT. Only honored by the SDK
+                              transport (OCIModel).
     LOCUS_OCI_TRANSPORT    - "v1" or "sdk" — force a specific transport.
-                              By default the transport is picked
-                              automatically from LOCUS_MODEL_ID:
-                              cohere.command-r-* → "sdk" (OCIModel),
-                              everything else → "v1" (OCIOpenAIModel).
+                              Falls back to OCI_TRANSPORT. By default
+                              the transport is picked automatically from
+                              LOCUS_MODEL_ID: cohere.command-r-* → "sdk"
+                              (OCIModel), everything else → "v1"
+                              (OCIOpenAIModel).
 
     # OpenAI
     OPENAI_API_KEY         - OpenAI API key
@@ -76,6 +86,21 @@ from pydantic import BaseModel
 from locus.core.events import ModelChunkEvent
 from locus.core.messages import Message
 from locus.models.base import ModelResponse
+
+
+def _oci_env(name: str, default: str | None = None) -> str | None:
+    """Read an OCI config setting from the env with a consistent fallback chain.
+
+    Closes #218. Tutorials historically read ``LOCUS_OCI_*`` (the harness
+    namespace) but the OCI CLI and most other tooling speak ``OCI_*``.
+    Newcomers got bitten by having to maintain both. We now look up
+    ``LOCUS_OCI_<name>`` first (keeps existing behaviour for users who
+    already export the namespaced form), then fall back to the
+    OCI-CLI-standard ``OCI_<name>``, then ``default``. This way a user
+    who just typed ``oci session authenticate --profile-name DEFAULT``
+    can run any tutorial without re-exporting variables.
+    """
+    return os.environ.get(f"LOCUS_OCI_{name}") or os.environ.get(f"OCI_{name}") or default
 
 
 class MockModel(BaseModel):
@@ -246,7 +271,7 @@ def _pick_oci_transport(model_id: str) -> str:
 
     ``LOCUS_OCI_TRANSPORT=v1|sdk`` overrides the automatic choice.
     """
-    forced = os.environ.get("LOCUS_OCI_TRANSPORT")
+    forced = _oci_env("TRANSPORT")
     if forced in ("v1", "sdk"):
         return forced
     lowered = model_id.lower()
@@ -271,9 +296,9 @@ def _get_oci_v1_model(model_id: str, **kwargs: Any) -> Any:
     """Build an OCIOpenAIModel against /openai/v1/chat/completions."""
     from locus.models import OCIOpenAIModel
 
-    region = os.environ.get("LOCUS_OCI_REGION", "us-chicago-1")
-    compartment = os.environ.get("LOCUS_OCI_COMPARTMENT")
-    auth_type = os.environ.get("LOCUS_OCI_AUTH_TYPE", "")
+    region = _oci_env("REGION", "us-chicago-1") or "us-chicago-1"
+    compartment = _oci_env("COMPARTMENT")
+    auth_type = _oci_env("AUTH_TYPE", "") or ""
 
     if auth_type in ("instance_principal", "resource_principal"):
         if not compartment:
@@ -289,7 +314,7 @@ def _get_oci_v1_model(model_id: str, **kwargs: Any) -> Any:
 
     # Default: profile-based auth. compartment auto-derived from the
     # profile's tenancy unless overridden.
-    profile = os.environ.get("LOCUS_OCI_PROFILE", "DEFAULT")
+    profile = _oci_env("PROFILE", "DEFAULT") or "DEFAULT"
     return OCIOpenAIModel(
         model=model_id,
         profile=profile,
@@ -303,17 +328,17 @@ def _get_oci_sdk_model(model_id: str, **kwargs: Any) -> Any:
     """Build an OCIModel against /20231130/actions/v1/chat (SDK transport)."""
     from locus.models import OCIAuthType, OCIModel
 
-    profile = os.environ.get("LOCUS_OCI_PROFILE", "DEFAULT")
-    auth_type_str = os.environ.get("LOCUS_OCI_AUTH_TYPE", "api_key")
-    compartment = os.environ.get("LOCUS_OCI_COMPARTMENT")
-    endpoint = os.environ.get("LOCUS_OCI_ENDPOINT")
+    profile = _oci_env("PROFILE", "DEFAULT") or "DEFAULT"
+    auth_type_str = _oci_env("AUTH_TYPE", "api_key") or "api_key"
+    compartment = _oci_env("COMPARTMENT")
+    endpoint = _oci_env("ENDPOINT")
     # The OCI profile's home region is often *not* the GenAI region
     # (e.g. MY_PROFILE's us-ashburn-1 vs GenAI in us-chicago-1). Derive
-    # the endpoint from LOCUS_OCI_REGION when no explicit endpoint is
-    # set so cross-tenancy / cross-region session tokens still hit the
-    # right service.
+    # the endpoint from LOCUS_OCI_REGION / OCI_REGION when no explicit
+    # endpoint is set so cross-tenancy / cross-region session tokens
+    # still hit the right service.
     if not endpoint:
-        region = os.environ.get("LOCUS_OCI_REGION") or os.environ.get("OCI_REGION")
+        region = _oci_env("REGION")
         if region:
             endpoint = f"https://inference.generativeai.{region}.oci.oraclecloud.com"
 
