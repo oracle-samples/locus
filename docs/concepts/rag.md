@@ -82,9 +82,60 @@ from locus.rag import OracleVectorStore
 
 store = OracleVectorStore(
     dsn="mydb_high",
-    user="ADMIN",
-    password=os.environ["DB_PASSWORD"],
+    # Use a least-privileged application schema — NOT ADMIN. See the
+    # "Production setup" subsection below for the CREATE USER / GRANT
+    # script that provisions `locus_app`.
+    user="locus_app",
+    password=os.environ["LOCUS_DB_PASSWORD"],
     wallet_location="~/.oci/wallets/mydb",
+)
+```
+
+#### Production setup — least-privileged schema
+
+Running Locus against an Autonomous Database as `ADMIN` is an Oracle
+security anti-pattern: every connection has full DBA privileges, so a
+compromised credential or a malformed query has unbounded blast radius.
+Provision a dedicated app user instead — run this once as `ADMIN`:
+
+```sql
+CREATE USER locus_app IDENTIFIED BY "<strong-password>";
+GRANT CONNECT, RESOURCE TO locus_app;
+ALTER USER locus_app QUOTA 1G ON DATA;
+```
+
+#### Table provisioning — auto vs. pre-create
+
+`OracleVectorStore` defaults to `auto_create_table=True`, which issues
+`CREATE TABLE` + `CREATE VECTOR INDEX` on first use. Convenient for
+demos and notebooks; **requires DDL privileges** on the schema.
+
+For production, pre-create the table out-of-band and set
+`auto_create_table=False` so the application user can be restricted to
+`INSERT` / `SELECT` / `UPDATE` on a single table:
+
+```sql
+CREATE TABLE locus_app.locus_documents (
+    id            VARCHAR2(255) PRIMARY KEY,
+    content       CLOB,
+    embedding     VECTOR(1024, FLOAT32),
+    metadata      CLOB DEFAULT '{}' CHECK (metadata IS JSON)
+);
+CREATE VECTOR INDEX idx_locus_documents_vec
+    ON locus_app.locus_documents (embedding)
+    ORGANIZATION NEIGHBOR PARTITIONS
+    WITH DISTANCE COSINE;
+```
+
+```python
+store = OracleVectorStore(
+    dsn="mydb_high",
+    user="locus_app",
+    password=os.environ["LOCUS_DB_PASSWORD"],
+    wallet_location="~/.oci/wallets/mydb",
+    table_name="locus_documents",
+    auto_create_table=False,
+    dimension=1024,
 )
 ```
 

@@ -113,9 +113,17 @@ async def using_vector_stores():
     Vector stores save embeddings and enable fast similarity search.
 
     Locus supports multiple vector stores:
-    - InMemoryVectorStore: Great for prototyping
-    - QdrantVectorStore: Production-ready, cloud or local
-    - OpenSearchVectorStore: Enterprise search with vectors
+    - InMemoryVectorStore: Great for prototyping and tests.
+    - OracleVectorStore: Native VECTOR(N, FLOAT32) on Oracle 26ai — the
+      day-1 production target on OCI. See docs/concepts/rag.md for setup.
+    - QdrantVectorStore: Self-hosted (Docker) or cloud; fast filtered search.
+    - OpenSearchVectorStore: Enterprise search engine with k-NN plugin.
+    - PgVectorStore: Postgres + the pgvector extension.
+    - ChromaVectorStore: Local prototyping with on-disk persistence.
+
+    The tutorial below uses ``InMemoryVectorStore`` so it runs without any
+    external infrastructure. Swap the import + constructor for any of the
+    above to back the same retriever with a real store.
     """
     print("\n" + "=" * 60)
     print("Tutorial 22: Using Vector Stores")

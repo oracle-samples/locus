@@ -120,29 +120,72 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
     efficient similarity search. Supports cosine, dot product,
     and Euclidean distance metrics.
 
-    Example with DSN:
+    **Production setup — use a least-privileged schema, not ADMIN.**
+
+    Using ``ADMIN`` against an Autonomous Database is an Oracle security
+    anti-pattern: every connection runs with full DBA privileges, so a
+    compromised credential or a malformed query has unbounded blast
+    radius. Create a dedicated application schema with only the
+    privileges this store needs. Run once as ADMIN to provision::
+
+        -- Create a least-privileged owner for Locus's vector tables.
+        CREATE USER locus_app IDENTIFIED BY "<strong-password>";
+        GRANT CONNECT, RESOURCE TO locus_app;
+        ALTER USER locus_app QUOTA 1G ON DATA;
+
+        -- (Optional) pre-create the table yourself so locus runs with
+        -- DML-only privileges. See ``auto_create_table=False`` below.
+        CREATE TABLE locus_app.locus_documents (
+            id            VARCHAR2(255) PRIMARY KEY,
+            content       CLOB,
+            embedding     VECTOR(1024, FLOAT32),
+            metadata      CLOB DEFAULT '{}' CHECK (metadata IS JSON)
+        );
+        CREATE VECTOR INDEX idx_locus_documents_vec
+            ON locus_app.locus_documents (embedding)
+            ORGANIZATION NEIGHBOR PARTITIONS
+            WITH DISTANCE COSINE;
+
+    Then connect as the app user — never ADMIN — at application startup.
+
+    **Table provisioning: auto vs. pre-create.**
+
+    ``auto_create_table=True`` (the default) issues ``CREATE TABLE`` and
+    ``CREATE VECTOR INDEX`` on first use. Convenient for demos and
+    notebooks; **requires DDL privileges** on the schema. For production
+    workloads use ``auto_create_table=False`` and pre-create the table
+    out-of-band (DDL above) so the application user can be restricted
+    to ``INSERT`` / ``SELECT`` / ``UPDATE`` on the table only.
+
+    Example with DSN (least-privileged app schema):
         >>> store = OracleVectorStore(
         ...     dsn="mydb_high",
-        ...     user="admin",
-        ...     password="secret",
+        ...     user="locus_app",
+        ...     password=os.environ["LOCUS_DB_PASSWORD"],
+        ...     wallet_location="~/.oci/wallets/mydb",
         ...     dimension=1024,
         ... )
         >>> await store.add(document)
         >>> results = await store.search(query_embedding, limit=5)
 
-    Example with connection string:
+    Example with host/service_name + pre-created table:
         >>> store = OracleVectorStore(
         ...     host="adb.us-ashburn-1.oraclecloud.com",
         ...     port=1522,
         ...     service_name="xxx_high.adb.oraclecloud.com",
+        ...     user="locus_app",
+        ...     password=os.environ["LOCUS_DB_PASSWORD"],
+        ...     auto_create_table=False,  # locus_app has DML only
+        ...     dimension=1024,
         ... )
 
-    Example attaching to a langchain_oracledb-formatted table (column
-    names differ, no created_at column, table already exists):
+    Example attaching to an existing langchain_oracledb-formatted table
+    (column names differ, no ``created_at`` column, table already
+    exists):
         >>> store = OracleVectorStore(
         ...     dsn="mydb_low",
-        ...     user="ADMIN",
-        ...     password=adb_password,
+        ...     user="locus_app",
+        ...     password=os.environ["LOCUS_DB_PASSWORD"],
         ...     wallet_location="~/.oci/wallets/mydb",
         ...     table_name="VECTOR_DOCUMENTS",
         ...     content_column="text",
