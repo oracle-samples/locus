@@ -238,6 +238,44 @@ class TestWellKnownAgentCard:
         body = resp.json()
         assert body["skills"] == ["A"]
 
+    def test_card_advertises_bearer_auth_when_api_key_configured(self) -> None:
+        """Closes #214 — when the server enforces bearer auth, the AgentCard
+        must declare it via ``securitySchemes`` / ``security`` so peers can
+        discover the requirement from the well-known URL instead of via a
+        401 on the first call."""
+        server = A2AServer(agent=_StubAgent([]), api_key="secret", name="N", description="d")
+        _ = server.app
+        client = TestClient(server.app)
+        resp = client.get(
+            "/.well-known/agent-card.json",
+            headers={"Authorization": "Bearer secret"},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["securitySchemes"] == {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "description": (
+                    "Bearer token required on every route. "
+                    "Set via the ``api_key=`` constructor argument or "
+                    "the ``LOCUS_A2A_API_KEY`` environment variable."
+                ),
+            }
+        }
+        assert body["security"] == [{"bearerAuth": []}]
+
+    def test_card_security_fields_null_when_unauthenticated(self) -> None:
+        """Mirror: in ``allow_unauthenticated=True`` mode the card stays
+        silent on auth so clients detect the open mode by absence."""
+        server = _server_with(_StubAgent([]), name="N", description="d")
+        client = TestClient(server.app)
+        resp = client.get("/.well-known/agent-card.json")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["securitySchemes"] is None
+        assert body["security"] is None
+
 
 class TestJsonRpcMessageSend:
     def test_message_send_returns_completed_task(self) -> None:
