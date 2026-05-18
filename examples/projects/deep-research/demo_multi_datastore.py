@@ -157,7 +157,9 @@ async def main() -> None:
 
     adb_cfg = {
         "dsn": os.environ["ADB_DSN"],
-        "user": os.environ.get("ADB_USER", "ADMIN"),
+        # Default to a least-priv app schema (locus_app), not ADMIN.
+        # See docs/concepts/rag.md for the CREATE USER / GRANT script.
+        "user": os.environ.get("ADB_USER", "locus_app"),
         "password": os.environ["ADB_PASSWORD"],
         "wallet_location": os.path.expanduser(os.environ["ADB_WALLET_LOCATION"]),
         "wallet_password": os.environ.get("ADB_WALLET_PASSWORD", os.environ["ADB_PASSWORD"]),
