@@ -8,6 +8,67 @@ policy.
 
 ## [Unreleased]
 
+## [0.2.0b15] - 2026-05-18
+
+### Fixed — `tool_execution="concurrent"` actually runs in parallel (closes #210)
+
+The runtime loop was feeding `ConcurrentExecutor` one tool call at a time
+inside a `for` loop, so `asyncio.gather` only ever saw a singleton list —
+`tool_execution="concurrent"` was silently identical to `"sequential"`.
+A model emitting 100 MCP tool calls in one response took ~30s of wall
+time instead of the expected ~1s.
+
+`src/locus/agent/runtime_loop.py` is now split into three phases:
+
+- **Phase 1 (per call, serial):** emit `ToolStartEvent`, run before-hooks,
+  resolve cancel / idempotent-cache short-circuits into a `slots[]` array.
+- **Phase 2 (one batched call):** stream the survivors through the
+  executor's new `execute_streaming()` method — completion order on
+  `ConcurrentExecutor`, input order on `SequentialExecutor`.
+- **Phase 3 (per result, tool_call order):** truncation / offload, state
+  update, `ToolCompleteEvent`, after-hooks (with retry), write /
+  verification tracking.
+
+Same refactor restores **within-batch idempotent dedup**: if a model
+emits `[submit_invoice(X), submit_invoice(X), submit_invoice(X)]` in one
+response, the body fires exactly once. Cross-iteration dedup (the
+README hero case) is unchanged. Backed by `_idempotent_batch_key()` +
+a `batch_cache_ref` slot kind that resolves from the first slot's
+result in Phase 3.
+
+### Added — opt-in completion-order event streaming + interrupt-driven sibling cancellation
+
+- **`AgentConfig.tool_event_order: Literal["sequential", "completion"]`**
+  (default `"sequential"`). In completion mode, `ToolCompleteEvent` fires
+  the moment each tool finishes (in completion order); in sequential
+  mode (default) events still arrive in tool_call order after the whole
+  batch — preserving existing consumer assumptions.
+  `state.tool_executions` order stays in tool_call order in both modes.
+
+- **`ToolExecutor.execute_streaming()`** added to the ABC with a default
+  fallback to `execute()` + yield-in-input-order.
+  `ConcurrentExecutor.execute_streaming` overrides with a
+  `create_task` + queue + per-task `finally` stop-marker pattern
+  (chosen over `asyncio.TaskGroup`, which deadlocks the streaming
+  consumer when a producer is cancelled because the cancelled task
+  never puts on the queue). `SequentialExecutor.execute_streaming` is
+  a simple for-loop yield.
+
+- **Interrupt mid-batch now actively cancels in-flight siblings.** When
+  a tool returns the `__interrupt__` marker, the runtime loop breaks
+  out of the streaming `async for`, which triggers the executor's
+  `finally` to cancel still-in-flight sibling tasks. Pre-fix, siblings
+  completed in parallel under `gather` and only the post-batch fold
+  was halted — side effects already landed.
+
+### Files touched
+
+- `src/locus/agent/runtime_loop.py` — three-phase split + within-batch
+  dedup + `execute_streaming` consumer + interrupt-driven cancel.
+- `src/locus/tools/executor.py` — `ToolExecutor.execute_streaming()`
+  ABC method + `ConcurrentExecutor` / `SequentialExecutor` overrides.
+- `src/locus/agent/config.py` — `tool_event_order` field.
+
 ## [0.2.0b14] - 2026-05-16
 
 ### Added — session-token disk reload + refresh observability on `OCIRequestSigner`
