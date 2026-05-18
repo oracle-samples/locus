@@ -147,6 +147,49 @@ async def test_request_shape_carries_query_documents_and_compartment() -> None:
 
 
 @pytest.mark.asyncio
+async def test_build_client_routes_through_oci_client_helper(monkeypatch: Any) -> None:
+    """Without a ``_client`` override, ``_build_client`` constructs an
+    ``OCIClient`` from ``locus.models.providers.oci.client`` so every
+    auth mode (api_key / security_token / session_token / instance &
+    resource principal) works through the same plumbing as the rest
+    of the locus OCI surface. Covers the construction path (lines
+    134-157) without needing live OCI credentials."""
+    constructed: dict[str, Any] = {}
+
+    class _FakeOCIClient:
+        def __init__(self, cfg: Any) -> None:
+            constructed["config"] = cfg
+            self.compartment_id = "ocid1.compartment.oc1..auto-derived"
+            self.client = MagicMock(name="GenerativeAiInferenceClient")
+
+    monkeypatch.setattr(
+        "locus.models.providers.oci.client.OCIClient",
+        _FakeOCIClient,
+    )
+
+    reranker = CohereReranker(
+        model="cohere.rerank-v4.0-fast",
+        profile_name="DEFAULT",
+        auth_type="security_token",
+        region="us-chicago-1",
+        # compartment_id intentionally unset — should auto-derive.
+    )
+    client = reranker._build_client()
+
+    # The first call returns the fake client; second call is cached.
+    assert client is reranker._build_client()
+    # OCIClient was built with the reranker's auth + endpoint config.
+    cfg = constructed["config"]
+    assert cfg.profile_name == "DEFAULT"
+    assert cfg.auth_type.value == "security_token"
+    assert cfg.service_endpoint == (
+        "https://inference.generativeai.us-chicago-1.oci.oraclecloud.com"
+    )
+    # Compartment auto-derived from the profile's tenancy.
+    assert reranker.compartment_id == "ocid1.compartment.oc1..auto-derived"
+
+
+@pytest.mark.asyncio
 async def test_out_of_range_index_skipped_not_raised() -> None:
     """OCI returning a malformed index (out of range vs the candidate
     list) is logged-only — we skip the entry rather than crash the
