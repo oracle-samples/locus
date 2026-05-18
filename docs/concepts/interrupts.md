@@ -11,7 +11,7 @@ and resumes when the human responds.
 ## The shape
 
 ```python
-from locus import Agent
+from locus.agent import Agent
 from locus.tools.decorator import tool
 
 @tool

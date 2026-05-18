@@ -269,7 +269,7 @@ def _get_oci_model(**kwargs: Any) -> Any:
 
 def _get_oci_v1_model(model_id: str, **kwargs: Any) -> Any:
     """Build an OCIOpenAIModel against /openai/v1/chat/completions."""
-    from locus.models import OCIOpenAIModel
+    from locus.models.providers.oci import OCIOpenAIModel
 
     region = os.environ.get("LOCUS_OCI_REGION", "us-chicago-1")
     compartment = os.environ.get("LOCUS_OCI_COMPARTMENT")

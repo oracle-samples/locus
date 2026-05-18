@@ -39,7 +39,7 @@ ladders sprinkled through the loop.
 ### 1. Pick one condition
 
 ```python
-from locus import Agent
+from locus.agent import Agent
 from locus.core.termination import MaxIterations
 
 agent = Agent(

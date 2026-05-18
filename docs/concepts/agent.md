@@ -12,8 +12,8 @@ handoff desks) and the [cognitive router](router.md) instantiate under
 the hood — there's one agent abstraction, not five.
 
 ```python
-from locus import Agent, tool
-
+from locus.agent import Agent
+from locus.tools import tool
 @tool
 def search(query: str) -> str:
     """Search the knowledge base."""
@@ -81,7 +81,7 @@ explicitly and pass it, or let the `Agent` constructor build one from
 keyword arguments.
 
 ```python
-from locus import Agent
+from locus.agent import Agent
 from locus.agent import AgentConfig
 
 cfg = AgentConfig(
@@ -118,7 +118,7 @@ keyword on the `Agent(...)` constructor (sugar) or a field on
 
 ```python
 from pydantic import BaseModel
-from locus import Agent
+from locus.agent import Agent
 from locus.core.termination import MaxIterations, ToolCalled
 
 class VendorList(BaseModel):

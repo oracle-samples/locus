@@ -9,8 +9,7 @@ deploy. Every primitive on this page works inside any of the seven
 
 ```python
 from pydantic import BaseModel
-from locus import Agent, AgentConfig
-
+from locus.agent import Agent, AgentConfig
 class Postmortem(BaseModel):
     severity: str
     root_cause: str
@@ -38,8 +37,7 @@ Used by tutorials [44 (debate)][t44], [46 (incident)][t46],
 ## Idempotent tools — side effects fire once
 
 ```python
-from locus import tool
-
+from locus.tools import tool
 @tool(idempotent=True)
 def book_flight(flight_id: str, customer_id: str) -> dict:
     return billing.charge_and_book(flight_id, customer_id)
@@ -55,7 +53,7 @@ the difference between a reliable agent and a horror story.
 ## Durable memory — survive every restart
 
 ```python
-from locus import Agent, AgentConfig
+from locus.agent import Agent, AgentConfig
 from locus.memory.backends.oci_bucket import OCIBucketBackend
 
 agent = Agent(config=AgentConfig(
@@ -123,7 +121,7 @@ orchestrator, a swarm, or an A2A mesh.
 ## Observability — traces, metrics, hooks
 
 ```python
-from locus import Agent, AgentConfig
+from locus.agent import Agent, AgentConfig
 from locus.hooks.builtin import TelemetryHook
 
 agent = Agent(config=AgentConfig(
@@ -141,7 +139,7 @@ steer per-turn (`BeforeToolCallEvent`, `AfterToolCallEvent`,
 ## Safety & guardrails
 
 ```python
-from locus import Agent, AgentConfig
+from locus.agent import Agent, AgentConfig
 from locus.hooks.builtin.guardrails import GuardrailsHook, GuardrailConfig
 
 agent = Agent(config=AgentConfig(
@@ -178,7 +176,7 @@ specific node and event that diverged.
 A tutorial-46-style incident-response graph in production looks like:
 
 ```python
-from locus import Agent, AgentConfig
+from locus.agent import Agent, AgentConfig
 from locus.multiagent.graph import StateGraph, GraphConfig
 from locus.memory.backends.oci_bucket import OCIBucketBackend
 

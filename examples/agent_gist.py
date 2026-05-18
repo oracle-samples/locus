@@ -15,7 +15,7 @@ to ``DEFAULT``). For Cohere R-series, use ``OCIModel`` instead — see
 
 import os
 
-from locus import Agent
+from locus.agent import Agent
 from locus.models import OCIOpenAIModel
 
 

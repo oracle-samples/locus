@@ -46,7 +46,7 @@ first is pure Python.
 ### 1. GoalFrame — the typed contract
 
 ```python
-from locus import GoalFrame, TaskType, Risk, Complexity
+from locus.router import Complexity, GoalFrame, Risk, TaskType
 
 frame = GoalFrame(
     primary_goal=TaskType.DIAGNOSE,

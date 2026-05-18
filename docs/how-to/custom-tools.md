@@ -5,8 +5,7 @@ decorator inspects the signature and docstring to build the JSON
 schema the model will see.
 
 ```python
-from locus import tool
-
+from locus.tools import tool
 @tool
 def lookup_order(order_id: str) -> dict:
     """Look up an order by ID.
@@ -64,7 +63,7 @@ or per-invocation metadata passed via `agent.run(..., metadata=...)`,
 accept a `ctx: ToolContext` parameter:
 
 ```python
-from locus import tool
+from locus.tools import tool
 from locus.tools.context import ToolContext
 
 @tool

@@ -30,8 +30,7 @@ recorded. **Every subsequent call with the same key short-circuits
 to the cached response** without invoking the body.
 
 ```python
-from locus import tool
-
+from locus.tools import tool
 @tool(idempotent=True)
 def transfer(from_acct: str, to_acct: str, amount: float) -> dict:
     """Transfer funds. Re-fires within a run return the cached receipt."""

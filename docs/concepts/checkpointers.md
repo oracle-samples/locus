@@ -12,7 +12,7 @@ exits. With one, the same `thread_id` round-trips through restarts,
 across containers, and across regions.
 
 ```python
-from locus import Agent
+from locus.agent import Agent
 from locus.memory.backends import oci_bucket_checkpointer
 
 agent = Agent(

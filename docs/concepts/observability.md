@@ -20,7 +20,7 @@ whatever backend you run.
 
 ```python
 import logging
-from locus import Agent
+from locus.agent import Agent
 from locus.hooks.builtin import StructuredLoggingHook
 
 agent = Agent(
@@ -184,8 +184,7 @@ For non-async host code or agents you don't control at construction time:
 
 ```python
 from locus.observability import EventBusHook, get_event_bus
-from locus import Agent
-
+from locus.agent import Agent
 run_id = "my-run-1"
 agent = Agent(
     model="oci:openai.gpt-5.5",

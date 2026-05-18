@@ -22,7 +22,7 @@ directory and locus handles the disclosure tiers:
   when the agent reaches for them.
 
 ```python
-from locus import Agent
+from locus.agent import Agent
 from locus.agent import AgentConfig
 from locus.skills import Skill
 

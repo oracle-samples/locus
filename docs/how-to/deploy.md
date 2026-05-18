@@ -8,7 +8,7 @@ OCI Container Instances, OKE / Kubernetes, and OCI Compute.
 
 ```python
 # server.py
-from locus import Agent
+from locus.agent import Agent
 from locus.server import AgentServer
 from locus.memory.backends import OCIBucketBackend
 

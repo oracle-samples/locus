@@ -37,8 +37,7 @@ or anything that ships to a customer, it almost always does.
 Self-evaluate per turn.
 
 ```python
-from locus import Agent
-
+from locus.agent import Agent
 agent = Agent(
     model="oci:openai.gpt-5.5",
     tools=[search, summarise],

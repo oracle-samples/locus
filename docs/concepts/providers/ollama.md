@@ -44,8 +44,7 @@ addressable from locus immediately.
 ### 2. Wire locus
 
 ```python
-from locus import Agent
-
+from locus.agent import Agent
 agent = Agent(model="ollama:llama3.3", system_prompt="You are helpful.")
 ```
 

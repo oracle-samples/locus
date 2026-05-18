@@ -25,8 +25,7 @@ the rest of the framework gets out of your way.
 ### 1. Decorate a function
 
 ```python
-from locus import tool
-
+from locus.tools import tool
 @tool
 def search(query: str, limit: int = 10) -> list[str]:
     """Search the knowledge base for ``query``, up to ``limit`` results."""

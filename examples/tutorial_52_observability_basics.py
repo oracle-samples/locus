@@ -38,7 +38,7 @@ import asyncio
 
 from config import get_model
 
-from locus import Agent
+from locus.agent import Agent
 from locus.observability import get_event_bus, run_context
 
 

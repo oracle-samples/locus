@@ -193,8 +193,7 @@ export OCI_REGION=us-chicago-1
 
 ```python
 # Same code on your laptop and on OKE:
-from locus import Agent
-
+from locus.agent import Agent
 agent = Agent(
     model="oci:openai.gpt-5.5",
     system_prompt="You are a helpful assistant.",

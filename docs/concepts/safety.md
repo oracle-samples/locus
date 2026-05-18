@@ -30,7 +30,7 @@ others.
 ### Guardrails — block dangerous tools and redact PII
 
 ```python
-from locus import Agent
+from locus.agent import Agent
 from locus.hooks.builtin.guardrails import (
     GuardrailsHook, GuardrailConfig, GuardrailAction,
 )

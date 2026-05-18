@@ -38,7 +38,6 @@ import asyncio
 from config import get_model
 from pydantic import BaseModel, Field
 
-from locus import tool
 from locus.deepagent import (
     SubAgentDef,
     TodoState,
@@ -46,6 +45,7 @@ from locus.deepagent import (
     make_todo_tools,
 )
 from locus.observability import get_event_bus, run_context
+from locus.tools import tool
 
 
 # =============================================================================

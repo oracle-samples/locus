@@ -50,7 +50,8 @@ across consecutive iterations count as a loop.
 ## Quickstart
 
 ```python
-from locus import create_deepagent, tool
+from locus.deepagent import create_deepagent
+from locus.tools import tool
 from pydantic import BaseModel, Field
 
 

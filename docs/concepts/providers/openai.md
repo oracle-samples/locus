@@ -31,8 +31,7 @@ That's the only setup. locus reads the env var on import.
 ### 2. Pick a model
 
 ```python
-from locus import Agent
-
+from locus.agent import Agent
 agent = Agent(model="openai:gpt-5.5", system_prompt="You are helpful.")
 ```
 

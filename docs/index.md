@@ -31,7 +31,8 @@ Built inside Oracle · Used in production · Open source
 <div class="locus-hero__code" markdown>
 
 ```python
-from locus import Agent, tool
+from locus.agent import Agent
+from locus.tools import tool
 from locus.observability import run_context, get_event_bus
 
 @tool(idempotent=True)
@@ -160,7 +161,7 @@ Eight built-in protocols, each mapping to a different runtime shape:
 Agents can hallucinate. locus catches it. After every response, it scores the reasoning and checks each claim against the actual tool output. Claims that don't hold up get dropped or sent back for re-research before the user ever sees them.
 
 ```python
-from locus import Agent
+from locus.agent import Agent
 from locus.tools.decorator import tool
 
 @tool
@@ -194,7 +195,7 @@ print(f"grounding score: {result.grounding_score:.2f}")
 AI models sometimes retry the same action — after a glitch, an ambiguous result, or a restart. Add one decorator and locus guarantees the action only happens once, no matter how many times the model tries. Book a flight, submit an invoice, page an engineer — safely.
 
 ```python
-from locus import Agent
+from locus.agent import Agent
 from locus.tools.decorator import tool
 
 @tool(idempotent=True)
@@ -226,8 +227,7 @@ result = agent.run_sync("Approve Acme for the $42k laptop refresh.")
 Pass a task from one specialist agent to another — triage to billing, billing to shipping — while the user sees a single, seamless reply. Each specialist is a separate agent, deployed independently by its own team.
 
 ```python
-from locus import create_handoff_agent, create_handoff_manager, HandoffReason
-
+from locus.multiagent.handoff import HandoffReason, create_handoff_agent, create_handoff_manager
 triage = create_handoff_agent(
     name="Triage",
     description="Routes incoming customer issues",
@@ -260,7 +260,8 @@ desk = create_handoff_manager(
 Watch every step of every agent run in real time — what it thought, which tools it called, how many tokens it used. Wrap your code in one context manager to turn it on; remove it and there's zero performance cost. Connect to any monitoring system with a single OpenTelemetry hook.
 
 ```python
-from locus import Agent, tool
+from locus.agent import Agent
+from locus.tools import tool
 from locus.observability import run_context, get_event_bus
 
 @tool
@@ -301,7 +302,7 @@ Slow consumers get dropped events, never stall the publisher.
 Define precisely when your agent should finish — when a specific tool ran, when it's confident enough, or after a safety cap. Combine rules with `&` and `|`. The conditions are typed objects you can unit-test, inspect, and version-control like any other code.
 
 ```python
-from locus import Agent
+from locus.agent import Agent
 from locus.core.termination import (
     MaxIterations, ToolCalled, ConfidenceMet, TextMention,
 )
@@ -332,7 +333,7 @@ Turn any locus agent into a production API in two lines. You get streaming respo
 
 ```python
 import os
-from locus import Agent
+from locus.agent import Agent
 from locus.memory.backends import oci_bucket_checkpointer
 from locus.server import AgentServer
 
@@ -512,7 +513,7 @@ From simple parallel research to multi-team handoffs across services. Pick one p
 ## Hello, agent
 
 ```python
-from locus import Agent
+from locus.agent import Agent
 from locus.tools.decorator import tool
 
 @tool(idempotent=True)
