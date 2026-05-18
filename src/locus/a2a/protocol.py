@@ -313,6 +313,27 @@ class A2AServer:
         return out
 
     def _build_card(self) -> AgentCard:
+        # When the server enforces bearer auth on every route (the default
+        # when ``api_key`` / ``LOCUS_A2A_API_KEY`` is configured), advertise
+        # that requirement in the AgentCard so peers can discover it from
+        # ``/.well-known/agent-card.json`` instead of finding out via a
+        # 401 on the first call. See A2A spec §5.5 + §5.6 — closes #214.
+        security_schemes: dict[str, Any] | None = None
+        security: list[dict[str, list[str]]] | None = None
+        if self._api_key is not None:
+            security_schemes = {
+                "bearerAuth": {
+                    "type": "http",
+                    "scheme": "bearer",
+                    "description": (
+                        "Bearer token required on every route. "
+                        "Set via the ``api_key=`` constructor argument or "
+                        "the ``LOCUS_A2A_API_KEY`` environment variable."
+                    ),
+                }
+            }
+            security = [{"bearerAuth": []}]
+
         return AgentCard(
             name=self._name,
             description=self._description,
@@ -324,6 +345,8 @@ class A2AServer:
                 pushNotifications=False,
                 stateTransitionHistory=False,
             ),
+            securitySchemes=security_schemes,
+            security=security,
             defaultInputModes=["text/plain"],
             defaultOutputModes=["text/plain"],
             skills=self._skills,
