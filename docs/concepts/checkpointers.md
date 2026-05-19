@@ -280,7 +280,7 @@ to give an agent a long-term memory layer; you can also use the store
 directly for anything cross-thread that doesn't need LLM extraction
 (API tokens, user preferences, rate-limit counters).
 
-#### Production: `OracleStore` on Oracle 26ai
+### Production: `OracleStore` on Oracle 26ai
 
 Locus ships a native `BaseStore` implementation backed by Oracle 26ai —
 the equivalent of `langgraph-oracledb.OracleStore`, with **zero**

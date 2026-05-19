@@ -1,5 +1,6 @@
 {
   "src/locus/__init__.py": 100.0,
+  "src/locus/_oracle_pool_cache.py": 50.0,
   "src/locus/a2a/__init__.py": 100.0,
   "src/locus/a2a/protocol.py": 70.6,
   "src/locus/a2a/spec.py": 100.0,
