@@ -1,6 +1,6 @@
 /** Skills sidebar + detail view.
  *
- *  The sidebar has two tabs: Tutorials (the existing workbench) and
+ *  The sidebar has two tabs: Notebooks (the existing workbench) and
  *  Skills (this module). Toggling activates the relevant pane in the
  *  sidebar and swaps the main view. There is no URL routing — the
  *  workbench is single-page on purpose.
@@ -143,4 +143,4 @@ function renderDetail(skill: SkillDetail): void {
 }
 
 // `installSidebarTabs` now lives in ./protocols.ts so it can wire all
-// three sidebar tabs (Tutorials / Skills / Protocols) in one place.
+// three sidebar tabs (Notebooks / Skills / Protocols) in one place.

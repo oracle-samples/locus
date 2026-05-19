@@ -17,7 +17,7 @@ export function clearOutput(): void {
 }
 
 export function showEmptyState(): void {
-  out().innerHTML = `<div class="wb-output__empty">Hit <strong>Run</strong> to execute this tutorial against your configured provider. Output streams here.</div>`;
+  out().innerHTML = `<div class="wb-output__empty">Hit <strong>Run</strong> to execute this notebook against your configured provider. Output streams here.</div>`;
   liveThinkBody = null;
 }
 

@@ -117,6 +117,30 @@ app.get("/api/protocols/:pid", (req, res) => {
   void forward(req, res, { method: "GET" });
 });
 
+// /api/notebooks/* — aliases of /api/tutorials/* exposed by the
+// runner. The web frontend still calls /api/tutorials/* today, but the
+// alias lets external tooling reach the catalog under the "Notebooks"
+// name the docs use.
+app.get("/api/notebooks", (req, res) => {
+  void forward(req, res, { method: "GET" });
+});
+app.get("/api/notebooks/categories", (req, res) => {
+  void forward(req, res, { method: "GET" });
+});
+app.get("/api/notebooks/:tid", (req, res) => {
+  void forward(req, res, { method: "GET" });
+});
+
+// /api/database/test — Oracle 26ai connectivity probe used by the
+// per-tab Database settings panel before launching a Run.
+app.post("/api/database/test", (req, res) => {
+  void forward(req, res, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req.body),
+  });
+});
+
 // Telemetry SSE — these MUST stream; the existing `forward` helper buffers.
 async function streamSseForward(path: string, _req: Request, res: Response): Promise<void> {
   const url = `${BFF_TARGET}${path}`;

@@ -209,7 +209,7 @@ code, pre { font-family: var(--mono); }
   padding: 0 0.6rem 0.5rem;
 }
 
-/* Sidebar tab switcher (Tutorials / Skills / Protocols / Patterns). */
+/* Sidebar tab switcher (Notebooks / Skills / Protocols / Patterns). */
 .side__tabs {
   display: flex;
   /* Wrap onto a second row when the four tabs don't fit. Without
@@ -978,7 +978,7 @@ code, pre { font-family: var(--mono); }
 .wb-split .wb-editor {
   /* Pin the editor to a fixed height so CodeMirror scrolls internally
      instead of growing the card to fit every line. Without this, a long
-     tutorial source makes the workbench thousands of pixels tall and
+     notebook source makes the workbench thousands of pixels tall and
      pushes the resize divider off-screen. */
   height: 60vh;
   min-height: 360px;
@@ -1066,7 +1066,7 @@ code, pre { font-family: var(--mono); }
   line-height: 1.6;
 }
 
-/* ----- Tutorials sidebar: human-in-the-loop badge ----- */
+/* ----- Notebooks sidebar: human-in-the-loop badge ----- */
 .needs-stdin-badge {
   font-size: 0.78rem;
   color: var(--or-sand);

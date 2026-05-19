@@ -1549,34 +1549,30 @@ import tempfile
 from pathlib import Path
 
 
-# Notebooks kept out of the workbench because they require infra beyond
-# the model (Postgres, vector store, MCP server, multi-process A2A,
-# multimodal providers, dedicated AI cluster, etc.).
-TUTORIAL_BLOCKLIST = {
-    12,  # MCP — needs an external MCP server process
-    23,  # RAG providers — requires OPENAI_API_KEY for the OpenAI embeddings demo;
-    # graceful skip but confusing UX in the workbench
-    34,  # A2A — requires a second process running on a separate port
-    # 40 is NOT blocked — notebook 40 runs Part 1 (routing docs) and prints
-    # the wiring snippet for Parts 2-5, skipping live inference when
-    # OCI_DAC_ENDPOINT_OCID is not set. Graceful, educational, exit 0.
-    # Notebooks 45-48 call locus.core.interrupt() and block waiting for
-    # stdin that the workbench subprocess never receives.  They carry a
-    # needs_stdin badge already; adding them here prevents the Run button
-    # from launching a subprocess that would hang until the harness timeout.
-    45,
-    46,
-    47,
-    48,
+# Hard hide list — empty by design. Every notebook in the repo should
+# be visible in the workbench sidebar so users can read the source and
+# learn the patterns even when the workbench can't physically launch a
+# subprocess for them. Use ``NOTEBOOK_NEEDS_STDIN`` instead — it badges
+# the notebook and the runner refuses to start it, but the sidebar
+# still surfaces it.
+NOTEBOOK_BLOCKLIST: set[int] = set()
+
+# Notebooks that pause for human input via ``locus.core.interrupt()``.
+# The workbench subprocess has no stdin attached, so launching one
+# would hang until the harness timeout. They appear in the catalog
+# with a ``needs_stdin: true`` badge; the Run handler short-circuits
+# before spawning. Audit against ``grep -l 'locus.core.interrupt'
+# examples/notebook_*.py`` when renaming or adding interrupt-flow
+# notebooks.
+NOTEBOOK_NEEDS_STDIN = {
+    24,  # human_in_the_loop
+    38,  # multiagent_human_in_loop
+    62,  # incident_response
+    63,  # procurement_approval
+    64,  # contract_review
 }
 
-# Notebooks that pause for human input via locus.core.interrupt(). The
-# subprocess has no stdin attached, so these would hang until the
-# harness timeout. Surfaced in the catalog (needs_stdin: true) so the
-# UI can flag them and /api/tutorials/run can reject early.
-TUTORIAL_NEEDS_STDIN = {9, 45, 46, 47, 48}
-
-_TUTORIAL_DIR = (Path(__file__).resolve().parents[2] / "examples").resolve()
+_NOTEBOOK_DIR = (Path(__file__).resolve().parents[2] / "examples").resolve()
 
 
 # Topic progression for the workbench sidebar. Each notebook number is
@@ -1584,7 +1580,7 @@ _TUTORIAL_DIR = (Path(__file__).resolve().parents[2] / "examples").resolve()
 # here. Keep ranges contiguous so adding a new notebook slots in
 # without renumbering — gaps ("RAG suite blocked in workbench") leave
 # the category empty rather than reshuffling.
-TUTORIAL_CATEGORIES: list[dict[str, Any]] = [
+NOTEBOOK_CATEGORIES: list[dict[str, Any]] = [
     # Category order + members track docs/mkdocs.yml `Notebooks:` exactly.
     # When the catalog reorders, mirror it here.
     {
@@ -1675,13 +1671,13 @@ def _notebook_category(number: int) -> tuple[str, int]:
     declaration order rather than numeric sort, so we can manually
     foreground a notebook that's logically a prerequisite.
     """
-    for cat in TUTORIAL_CATEGORIES:
+    for cat in NOTEBOOK_CATEGORIES:
         if number in cat["members"]:
             return cat["id"], cat["members"].index(number)
     return "misc", number
 
 
-def _parse_tutorial(path: Path) -> dict[str, Any]:
+def _parse_notebook(path: Path) -> dict[str, Any]:
     """Pull (id, number, title, summary, source) out of a notebook file."""
     src = path.read_text()
     # Extract the leading triple-quoted docstring; first line is the
@@ -1693,6 +1689,19 @@ def _parse_tutorial(path: Path) -> dict[str, Any]:
     if docstring:
         lines = docstring.splitlines()
         title = lines[0].strip().rstrip(".")
+        # Strip the legacy "Tutorial NN:" / "Notebook NN:" prefix the
+        # docstrings carry from before the renumber. Show only the
+        # descriptive remainder so the sidebar reads cleanly. Also
+        # uppercase the first letter when the remainder is now a
+        # bare lowercase sentence ("call any non-R-series" → "Call …").
+        title = re.sub(
+            r"^(?:Tutorial|Notebook)\s+\d+\s*[:—-]\s*",
+            "",
+            title,
+            flags=re.IGNORECASE,
+        )
+        if title and title[0].islower():
+            title = title[0].upper() + title[1:]
         # Take the next non-empty narrative paragraph as summary.
         for ln in lines[1:]:
             if (
@@ -1714,25 +1723,25 @@ def _parse_tutorial(path: Path) -> dict[str, Any]:
         "summary": summary,
         "filename": path.name,
         "source": src,
-        "needs_stdin": number in TUTORIAL_NEEDS_STDIN,
+        "needs_stdin": number in NOTEBOOK_NEEDS_STDIN,
         "category": category_id,
         "category_order": order_in_category,
     }
 
 
-def _list_tutorials() -> list[dict[str, Any]]:
-    if not _TUTORIAL_DIR.is_dir():
+def _list_notebooks() -> list[dict[str, Any]]:
+    if not _NOTEBOOK_DIR.is_dir():
         return []
     out: list[dict[str, Any]] = []
-    for p in sorted(_TUTORIAL_DIR.glob("notebook_*.py")):
+    for p in sorted(_NOTEBOOK_DIR.glob("notebook_*.py")):
         m = re.match(r"notebook_(\d+)_", p.name)
         if not m:
             continue
         n = int(m.group(1))
-        if n in TUTORIAL_BLOCKLIST:
+        if n in NOTEBOOK_BLOCKLIST:
             continue
         try:
-            out.append(_parse_tutorial(p))
+            out.append(_parse_notebook(p))
         except Exception:  # pragma: no cover
             continue
 
@@ -1740,11 +1749,11 @@ def _list_tutorials() -> list[dict[str, Any]]:
     # notebook number) so the sidebar reads top-to-bottom as a curated
     # learning path rather than a numeric file dump. ``misc`` falls to
     # the end via the sentinel category index.
-    cat_index: dict[str, int] = {c["id"]: i for i, c in enumerate(TUTORIAL_CATEGORIES)}
-    cat_index.setdefault("misc", len(TUTORIAL_CATEGORIES))
+    cat_index: dict[str, int] = {c["id"]: i for i, c in enumerate(NOTEBOOK_CATEGORIES)}
+    cat_index.setdefault("misc", len(NOTEBOOK_CATEGORIES))
     out.sort(
         key=lambda t: (
-            cat_index.get(t["category"], len(TUTORIAL_CATEGORIES)),
+            cat_index.get(t["category"], len(NOTEBOOK_CATEGORIES)),
             t.get("category_order", t["number"]),
             t["number"],
         )
@@ -1752,52 +1761,61 @@ def _list_tutorials() -> list[dict[str, Any]]:
     return out
 
 
-@app.get("/api/tutorials")
-def list_tutorials() -> list[dict[str, Any]]:
-    return [{k: v for k, v in t.items() if k != "source"} for t in _list_tutorials()]
+# Canonical notebook catalog endpoints. The 2026 rebrand renamed the
+# user-facing label from "Tutorial" to "Notebook"; the legacy
+# /api/tutorials/* paths stay live for backwards compatibility and
+# delegate to these handlers.
 
 
-@app.get("/api/tutorials/categories")
-def list_tutorial_categories() -> list[dict[str, Any]]:
+@app.get("/api/notebooks")
+def list_notebooks() -> list[dict[str, Any]]:
+    """Notebook catalog with categories, titles, and badges."""
+    return [{k: v for k, v in t.items() if k != "source"} for t in _list_notebooks()]
+
+
+@app.get("/api/notebooks/categories")
+def list_notebook_categories() -> list[dict[str, Any]]:
     """Topic-progression categories the workbench renders as section
     headers. The ``members`` field is omitted from the wire payload —
     membership is already encoded on each notebook as ``category``."""
     return [
         {"id": c["id"], "name": c["name"], "description": c["description"]}
-        for c in TUTORIAL_CATEGORIES
+        for c in NOTEBOOK_CATEGORIES
     ]
 
 
-@app.get("/api/tutorials/{tid}")
-def get_tutorial_source(tid: str) -> dict[str, Any]:
-    for t in _list_tutorials():
+@app.get("/api/notebooks/{tid}")
+def get_notebook_source(tid: str) -> dict[str, Any]:
+    for t in _list_notebooks():
         if t["id"] == tid:
             return t
     raise HTTPException(404, f"unknown notebook: {tid}")
 
 
-# Notebook aliases — same payloads as the /api/tutorials/* endpoints
-# above. The 2026 rebrand renamed the user-facing label from "Tutorial"
-# to "Notebook"; the legacy paths stay live for backwards compatibility,
-# the new paths are the canonical surface going forward.
+# Legacy /api/tutorials/* aliases — same payloads, kept for clients
+# that haven't migrated to the notebook paths.
 
 
-@app.get("/api/notebooks")
-def list_notebooks() -> list[dict[str, Any]]:
-    """Alias of ``/api/tutorials``. Same payload, notebook-branded path."""
-    return list_tutorials()
+@app.get("/api/tutorials")
+def list_tutorials_legacy() -> list[dict[str, Any]]:
+    return list_notebooks()
 
 
-@app.get("/api/notebooks/categories")
-def list_notebook_categories() -> list[dict[str, Any]]:
-    """Alias of ``/api/tutorials/categories``."""
-    return list_tutorial_categories()
+@app.get("/api/tutorials/categories")
+def list_tutorial_categories_legacy() -> list[dict[str, Any]]:
+    return list_notebook_categories()
 
 
-@app.get("/api/notebooks/{tid}")
-def get_notebook_source(tid: str) -> dict[str, Any]:
-    """Alias of ``/api/tutorials/{tid}``."""
-    return get_tutorial_source(tid)
+@app.get("/api/tutorials/{tid}")
+def get_tutorial_source_legacy(tid: str) -> dict[str, Any]:
+    return get_notebook_source(tid)
+
+
+# /api/notebooks/run + /api/notebooks/runs/{id}/respond aliases live
+# below the canonical handlers because WorkbenchRunRequest /
+# RespondRequest are defined later in the file — FastAPI resolves the
+# body schema with ``get_type_hints`` at decoration time, so the
+# referenced classes must exist before the route is registered.
 
 
 # ---------------------------------------------------------------------------
@@ -2186,6 +2204,13 @@ class WorkbenchRunRequest(BaseModel):
     # ReflectEvent (assessment + guidance per step) on any provider /
     # transport, since reflexion is an SDK feature, not a model feature.
     reflexion: bool = False
+    # Optional Oracle 26ai credentials forwarded to the subprocess as
+    # ``ORACLE_DSN`` / ``ORACLE_USER`` / ``ORACLE_PASSWORD`` /
+    # ``ORACLE_WALLET`` / ``ORACLE_WALLET_PASSWORD``. The DB notebooks
+    # (06-12, 15, 43-45, 53) read these envvars; without them they
+    # fall back to graceful skip. Same shape the Database settings
+    # panel POSTs to ``/api/database/test``.
+    database: DatabaseConfig | None = None
 
 
 def _describe_provider(cfg: ProviderConfig) -> str:
@@ -2226,19 +2251,29 @@ def _provider_env(cfg: ProviderConfig) -> dict[str, str]:
     if cfg.provider in ("oci-session", "oci-apikey"):
         if cfg.profile:
             env["LOCUS_OCI_PROFILE"] = cfg.profile
+            # Also expose ``OCI_PROFILE`` for notebooks that read it
+            # directly (most of the OCI GenAI + RAG notebooks predate
+            # the LOCUS_OCI_* envelope and use the bare names).
+            env["OCI_PROFILE"] = cfg.profile
         if cfg.region:
             env["LOCUS_OCI_REGION"] = cfg.region
+            env["OCI_REGION"] = cfg.region
         if cfg.compartment_id:
             env["LOCUS_OCI_COMPARTMENT"] = cfg.compartment_id
+            # OCI_COMPARTMENT (no _ID suffix) is the variable the older
+            # notebooks read; OCI_COMPARTMENT_ID is the newer name some
+            # examples use. Set both so neither convention breaks.
+            env["OCI_COMPARTMENT"] = cfg.compartment_id
+            env["OCI_COMPARTMENT_ID"] = cfg.compartment_id
         # examples/config.py reads LOCUS_OCI_TRANSPORT to override its
         # auto pick. The workbench subprocess inherits this env so the
         # notebook's `from config import get_model` lands on the right
         # transport.
         if cfg.oci_transport != "auto":
             env["LOCUS_OCI_TRANSPORT"] = cfg.oci_transport
-        env["LOCUS_OCI_AUTH_TYPE"] = (
-            "security_token" if cfg.provider == "oci-session" else "api_key"
-        )
+        auth_type = "security_token" if cfg.provider == "oci-session" else "api_key"
+        env["LOCUS_OCI_AUTH_TYPE"] = auth_type
+        env["OCI_AUTH_TYPE"] = auth_type
     return env
 
 
@@ -2303,7 +2338,7 @@ def _split_future_imports(source: str) -> tuple[str, str]:
 
 
 @app.post("/api/tutorials/run")
-async def run_tutorial(req: WorkbenchRunRequest) -> StreamingResponse:
+async def run_notebook(req: WorkbenchRunRequest) -> StreamingResponse:
     """Execute user-edited notebook source in a subprocess; stream stdout/stderr as SSE.
 
     Each output line is wrapped in an SSE ``data:`` envelope with type
@@ -2317,8 +2352,8 @@ async def run_tutorial(req: WorkbenchRunRequest) -> StreamingResponse:
     ``/api/tutorials/runs/{run_id}/respond`` which writes a JSON line
     to the subprocess's stdin.
     """
-    repo_root = _TUTORIAL_DIR.parent
-    examples_dir = _TUTORIAL_DIR
+    repo_root = _NOTEBOOK_DIR.parent
+    examples_dir = _NOTEBOOK_DIR
     src_dir = repo_root / "src"
 
     # Bootstrap: monkey-patch Agent.__init__ so every agent the notebook
@@ -2551,6 +2586,21 @@ except Exception:
         # structured events as the legacy /api/tutorials/run consumer.
         "LOCUS_WORKBENCH_RUN_ID": run_id,
     }
+    # Oracle 26ai credentials — pass through to the subprocess so DB
+    # notebooks (06-12, 15, 43-45, 53) connect to a real Autonomous
+    # Database instead of taking the graceful-skip path. The
+    # Database settings panel POSTs the same shape to
+    # ``/api/database/test`` to validate it before launching a run.
+    if req.database is not None and req.database.dsn:
+        env["ORACLE_DSN"] = req.database.dsn
+        if req.database.user:
+            env["ORACLE_USER"] = req.database.user
+        if req.database.password:
+            env["ORACLE_PASSWORD"] = req.database.password
+        if req.database.wallet_location:
+            env["ORACLE_WALLET"] = req.database.wallet_location
+        if req.database.wallet_password:
+            env["ORACLE_WALLET_PASSWORD"] = req.database.wallet_password
 
     async def gen() -> _AI[str]:
         try:
@@ -2677,9 +2727,28 @@ async def respond_to_interrupt(run_id: str, req: RespondRequest) -> dict[str, An
     return {"ok": True, "run_id": run_id}
 
 
+# Notebook-namespaced aliases for the run + respond endpoints.
+# Registered after the canonical handlers + body-model classes so
+# FastAPI's body-schema resolution sees the request model symbols at
+# decoration time (the module sets ``from __future__ import annotations``,
+# so type hints are strings until ``get_type_hints`` resolves them).
+
+
+@app.post("/api/notebooks/run")
+async def run_notebook_alias(req: WorkbenchRunRequest) -> StreamingResponse:
+    """Notebook-namespaced alias of ``/api/tutorials/run``."""
+    return await run_notebook(req)
+
+
+@app.post("/api/notebooks/runs/{run_id}/respond")
+async def respond_to_interrupt_alias(run_id: str, req: RespondRequest) -> dict[str, Any]:
+    """Notebook-namespaced alias of ``/api/tutorials/runs/{id}/respond``."""
+    return await respond_to_interrupt(run_id, req)
+
+
 @app.get("/api/health")
 def health() -> dict[str, Any]:
-    count = len(_list_tutorials())
+    count = len(_list_notebooks())
     return {
         "ok": True,
         "patterns": [p["id"] for p in PATTERNS],

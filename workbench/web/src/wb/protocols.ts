@@ -142,13 +142,13 @@ function renderDetail(p: ProtocolDetail): void {
     : "";
 }
 
-/** Wire all four sidebar tabs: Tutorials / Skills / Protocols / Patterns. */
+/** Wire all four sidebar tabs: Notebooks / Skills / Protocols / Patterns. */
 export function installSidebarTabs(): void {
-  const tutsTab = $("#side-tab-tutorials");
+  const tutsTab = $("#side-tab-notebooks");
   const skillsTab = $("#side-tab-skills");
   const protocolsTab = $("#side-tab-protocols");
   const patternsTab = $("#side-tab-patterns");
-  const tutsPane = $("#side-pane-tutorials");
+  const tutsPane = $("#side-pane-notebooks");
   const skillsPane = $("#side-pane-skills");
   const protocolsPane = $("#side-pane-protocols");
   const patternsPane = $("#side-pane-patterns");
@@ -161,10 +161,10 @@ export function installSidebarTabs(): void {
   let protocolsInit = false;
   let patternsInit = false;
 
-  function activate(mode: "tutorials" | "skills" | "protocols" | "patterns"): void {
+  function activate(mode: "notebooks" | "skills" | "protocols" | "patterns"): void {
     const isSkills = mode === "skills";
     const isProtocols = mode === "protocols";
-    const isTutorials = mode === "tutorials";
+    const isTutorials = mode === "notebooks";
     const isPatterns = mode === "patterns";
 
     tutsTab.classList.toggle("side__tab--active", isTutorials);
@@ -204,7 +204,7 @@ export function installSidebarTabs(): void {
     }
   }
 
-  tutsTab.addEventListener("click", () => activate("tutorials"));
+  tutsTab.addEventListener("click", () => activate("notebooks"));
   skillsTab.addEventListener("click", () => activate("skills"));
   protocolsTab.addEventListener("click", () => activate("protocols"));
   patternsTab.addEventListener("click", () => activate("patterns"));
