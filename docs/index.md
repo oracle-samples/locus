@@ -33,20 +33,39 @@ Built inside Oracle · Used in production · Open source
 ```python
 from locus.agent import Agent
 from locus.tools import tool
+from locus.observability import run_context, get_event_bus
+
+@tool
+def get_metric(name: str) -> float:
+    """Current value of a named SRE metric."""
+    return monitoring.read(name)
+
+@tool
+def fetch_runbook(topic: str) -> str:
+    """Pull the runbook section for a topic."""
+    return wiki.fetch(topic)
 
 @tool(idempotent=True)
-def book_flight(flight_id: str, customer_id: str) -> dict:
-    """Book a flight. Idempotent — re-fires return the cached receipt."""
-    return billing.charge_and_book(flight_id, customer_id)
+def page_oncall(reason: str) -> str:
+    """Page the on-call engineer. Fires exactly once per reason."""
+    return pager.send(reason)
 
 agent = Agent(
     model="oci:openai.gpt-5",
-    tools=[book_flight],
-    system_prompt="You are a travel concierge. Book the flight the user asks for.",
+    tools=[get_metric, fetch_runbook, page_oncall],
+    reflexion=True,        # self-evaluates every turn
+    grounding=True,        # claims verified against tool output
 )
 
-print(agent.run_sync("Book TK-12 for customer C-42").message)
-# → Booked TK-12 for customer C-42. Confirmation BK-58291.
+async with run_context() as rid:
+    result = await agent.run(
+        "p99 on checkout-api spiked to 4.2s — investigate and page if critical."
+    )
+    async for ev in get_event_bus().subscribe(rid):
+        match ev.event_type:
+            case "agent.tool.started":   print("🔧", ev.data["tool_name"])
+            case "agent.tokens.used":    print("🪙", ev.data["total_tokens"])
+            case "agent.terminate":      print("✓", ev.data["final_message_preview"])
 ```
 
 </div>

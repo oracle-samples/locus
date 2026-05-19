@@ -140,6 +140,7 @@ Replace `InMemoryStore` with any `BaseStore` backend:
 
 ```python
 from locus.memory.backends import RedisBackend, PostgreSQLBackend, OracleBackend
+from locus.memory.store_backends import OracleStore   # Oracle 26ai native
 
 # Redis — distributed, fast (OCI Cache with Redis)
 manager = LLMMemoryManager(store=RedisBackend("redis://localhost:6379"))
@@ -147,9 +148,25 @@ manager = LLMMemoryManager(store=RedisBackend("redis://localhost:6379"))
 # PostgreSQL — relational, JSONB metadata (OCI Database with PostgreSQL)
 manager = LLMMemoryManager(store=PostgreSQLBackend(host="...", database="..."))
 
-# Oracle ADB — production, full-text + vector search
-manager = LLMMemoryManager(store=OracleBackend(dsn="..."))
+# Oracle 26ai (`OracleStore`) — namespaced key/value with optional VECTOR
+# search inside a namespace. Native locus, no langchain dep.
+manager = LLMMemoryManager(
+    store=OracleStore(
+        dsn="mydb_low",
+        user="locus_app",
+        password=os.environ["ORACLE_PW"],
+        wallet_location="~/.oci/wallets/mydb",
+        table_name="locus_store",
+        dimension=1024,   # set for semantic-recall memory; omit for plain K/V
+    ),
+)
 ```
+
+`OracleStore` is the locus-native equivalent of
+`langgraph-oracledb.OracleStore`: same connection envelope as the
+checkpointer (one wallet, one schema), namespaces persist as PK columns,
+and `put_with_embedding` + `search_by_embedding` give you semantic
+recall against a native `VECTOR(N, FLOAT32)` column.
 
 ## What gets injected
 

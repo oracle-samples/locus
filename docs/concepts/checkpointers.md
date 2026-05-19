@@ -41,6 +41,7 @@ agent.run_sync("What were we discussing?", thread_id="user-c42")
 | Postgres shop, want SQL queries on metadata | `postgresql_checkpointer` |
 | Need full-text search across past runs | `opensearch_checkpointer` |
 | Oracle Database shop, want JSON queries | `oracle_checkpointer` |
+| **Oracle 26ai with versioned history + pending writes** | `OracleCheckpointSaver` — LangGraph-shape, native |
 | **OCI-native, serverless, lifecycle policies** | `oci_bucket_checkpointer` — the day-1 OCI path |
 | Already have a checkpoint service over HTTP | `HTTPCheckpointer` |
 
@@ -120,6 +121,69 @@ agent = Agent(
 ```
 
 Fastest reads, optional TTL for ephemeral conversations.
+
+### Oracle 26ai: `oracle_checkpointer` + `OracleCheckpointSaver`
+
+If your stack is already on **Oracle Autonomous Database 26ai**, locus
+ships two native checkpointers — one to colocate agent state with the
+rest of your app data, the other to give LangGraph-style versioned
+history in the same database.
+
+#### Single-row per thread — `oracle_checkpointer`
+
+The default option. One row per `thread_id` (MERGE-upsert). Survives
+restarts, lives in the same schema as your business data, supports
+`list_threads` / `vacuum` / `search` over a `CLOB IS JSON` column.
+
+```python
+from locus.memory.backends import oracle_checkpointer
+
+agent = Agent(
+    model=...,
+    tools=[...],
+    checkpointer=oracle_checkpointer(
+        dsn="mydb_low",                      # tnsnames alias from the wallet
+        user="locus_app",                    # least-privileged app schema
+        password=os.environ["ORACLE_PW"],
+        wallet_location="~/.oci/wallets/mydb",
+        wallet_password=os.environ["WALLET_PW"],
+        table_name="locus_checkpoints",
+    ),
+)
+```
+
+CLOB columns are pinned via `setinputsizes(... = DB_TYPE_CLOB)` on every
+write — large agent states won't trip ORA-01461.
+
+#### Versioned history + pending writes — `OracleCheckpointSaver`
+
+Direct equivalent of `langgraph-oracledb.OracleSaver`. Two tables —
+one row per `(thread_id, checkpoint_ns, checkpoint_id)` for full
+graph-step history plus a `<table>_writes` table for intra-step
+durability. Zero `langchain` / `langgraph` dependency.
+
+```python
+from locus.memory.backends import OracleCheckpointSaver
+
+saver = OracleCheckpointSaver(
+    dsn="mydb_low",
+    user="locus_app",
+    password=os.environ["ORACLE_PW"],
+    wallet_location="~/.oci/wallets/mydb",
+    table_name="locus",                      # creates locus_checkpoints + locus_writes
+)
+await saver.put(thread_id="t1", checkpoint_id="v1", checkpoint_data={"step": 1})
+await saver.put_writes(
+    thread_id="t1", checkpoint_id="v1",
+    task_id="node-a",
+    writes=[("channel-x", "pending-write")],
+)
+latest = await saver.get(thread_id="t1")               # most-recent checkpoint
+history = await saver.list_checkpoints(thread_id="t1")  # walk lineage
+```
+
+Notebook walkthrough: [Notebook 07 — Oracle 26ai
+checkpointer](../tutorials/tutorial_07_oracle_26ai_checkpointer.md).
 
 ## Two checkpointer shapes — the gotcha to know
 
@@ -204,8 +268,6 @@ conversation.
 
 ```python
 from locus.memory.store import InMemoryStore   # tests / REPL
-# or: RedisBackend, PostgreSQLBackend, OracleBackend —
-# every storage-backed checkpointer backend also implements BaseStore.
 
 store = InMemoryStore()
 store.put(("locus_memory", "user"), "role", {"content": "Senior Python engineer"})
@@ -217,6 +279,36 @@ key)` pair. The [`LLMMemoryManager`](memory-manager.md) builds on this
 to give an agent a long-term memory layer; you can also use the store
 directly for anything cross-thread that doesn't need LLM extraction
 (API tokens, user preferences, rate-limit counters).
+
+#### Production: `OracleStore` on Oracle 26ai
+
+Locus ships a native `BaseStore` implementation backed by Oracle 26ai —
+the equivalent of `langgraph-oracledb.OracleStore`, with **zero**
+langchain/langgraph dependency. Namespaces persist as primary keys on
+a single table; optional vector search runs natively against an
+embedding column.
+
+```python
+from locus.memory.store_backends import OracleStore
+
+store = OracleStore(
+    dsn="mydb_low",
+    user="locus_app",
+    password=os.environ["ORACLE_PW"],
+    wallet_location="~/.oci/wallets/mydb",
+    table_name="locus_store",
+    dimension=1024,           # set for vector search; omit for plain K/V
+)
+await store.put(("memory", "u42"), "fact-1", {"note": "user likes cats"})
+await store.put_with_embedding(
+    ("memory", "u42"), "fact-2", {"note": "user dislikes mornings"},
+    embedding=[...],          # 1024-dim vector
+)
+hits = await store.search_by_embedding(("memory", "u42"), query=[...], limit=5)
+```
+
+Same connection envelope as `oracle_checkpointer` — one wallet, one
+schema, both checkpoint state and long-term memory live in Oracle.
 
 ## Common gotchas
 
