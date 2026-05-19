@@ -618,8 +618,8 @@ class OracleStore(BaseStore):
             prefix_flat = _flatten_namespace(prefix)
             # Match either the prefix exactly or anything beginning with
             # the prefix followed by the separator. Plain ``LIKE prefix||'%'``
-            # would also match ("foo", ...) when prefix is ("fo",), which
-            # is rarely what callers want.
+            # would also match ``("memorial", ...)`` when prefix is
+            # ``("memo",)`` — which is rarely what callers want.
             where = "WHERE namespace = :pfx OR namespace LIKE :pfx_sep "
             params["pfx"] = prefix_flat
             params["pfx_sep"] = prefix_flat + _NS_SEP + "%"
