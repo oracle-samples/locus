@@ -116,6 +116,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, SecretStr
 
+from locus._oracle_pool_cache import safe_acquire
 from locus.memory.backends._oracle_config import validate_sql_identifier
 from locus.rag.embeddings.base import (
     BaseEmbedding,
@@ -430,7 +431,7 @@ class OracleInDBEmbeddings(BaseEmbedding):
         this call path.
         """
         pool = await self._get_pool()
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(self._single_sql(), {"text": text})
             row = await cursor.fetchone()
         if row is None:
@@ -466,7 +467,7 @@ class OracleInDBEmbeddings(BaseEmbedding):
         sql = self._batch_sql(len(texts))
 
         pool = await self._get_pool()
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(sql, binds)
             rows = await cursor.fetchall()
 

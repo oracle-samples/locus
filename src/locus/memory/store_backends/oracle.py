@@ -46,6 +46,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, SecretStr
 
+from locus._oracle_pool_cache import safe_acquire
 from locus.memory.store import (
     BaseStore,
     SemanticSearchResult,
@@ -384,7 +385,7 @@ class OracleStore(BaseStore):
             return
 
         pool = await self._get_pool()
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(
                 """
                 SELECT COUNT(*) FROM user_tables
@@ -473,7 +474,7 @@ class OracleStore(BaseStore):
         pool = await self._get_pool()
         ns_flat = _flatten_namespace(namespace)
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             self._pin_clob(cursor)
             await cursor.execute(
                 self._merge_sql(with_embedding=False),
@@ -494,7 +495,7 @@ class OracleStore(BaseStore):
         pool = await self._get_pool()
         ns_flat = _flatten_namespace(namespace)
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(
                 f"SELECT value FROM {self._full_table_name} "
                 f"WHERE namespace = :namespace AND key = :key",
@@ -515,7 +516,7 @@ class OracleStore(BaseStore):
         pool = await self._get_pool()
         ns_flat = _flatten_namespace(namespace)
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(
                 f"DELETE FROM {self._full_table_name} WHERE namespace = :namespace AND key = :key",
                 {"namespace": ns_flat, "key": key},
@@ -534,7 +535,7 @@ class OracleStore(BaseStore):
         pool = await self._get_pool()
         ns_flat = _flatten_namespace(namespace)
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(
                 f"SELECT key FROM {self._full_table_name} "
                 f"WHERE namespace = :namespace "
@@ -571,7 +572,7 @@ class OracleStore(BaseStore):
             where += " AND LOWER(value) LIKE LOWER(:pattern)"
             params["pattern"] = f"%{query}%"
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(
                 f"SELECT namespace, key, value, updated_at "
                 f"FROM {self._full_table_name} "
@@ -626,7 +627,7 @@ class OracleStore(BaseStore):
             params["pfx"] = prefix_flat
             params["pfx_sep"] = prefix_flat + _NS_SEP + "%"
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(
                 f"SELECT DISTINCT namespace FROM {self._full_table_name} "
                 f"{where}"
@@ -665,7 +666,7 @@ class OracleStore(BaseStore):
         pool = await self._get_pool()
         ns_flat = _flatten_namespace(namespace)
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             self._pin_clob(cursor)
             await cursor.execute(
                 self._merge_sql(with_embedding=True),
@@ -699,7 +700,7 @@ class OracleStore(BaseStore):
         metric = self.config.distance_metric.upper()
         distance_expr = f"VECTOR_DISTANCE(embedding, TO_VECTOR(:q), {metric})"
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(
                 f"SELECT namespace, key, value, updated_at, "
                 f"       {distance_expr} AS distance_ "

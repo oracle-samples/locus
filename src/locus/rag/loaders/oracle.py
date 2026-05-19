@@ -45,6 +45,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field, SecretStr
 
+from locus._oracle_pool_cache import safe_acquire
 from locus.rag.stores.base import Document
 
 
@@ -270,7 +271,7 @@ class OracleADBLoader(BaseModel):
         """
         pool = await self._get_pool()
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             cursor.arraysize = self.fetch_arraysize
             await cursor.execute(self.sql, self.bind_params)
 

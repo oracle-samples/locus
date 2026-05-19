@@ -54,6 +54,7 @@ extra_css:
 extra_javascript:
 - javascripts/header-home.js
 - javascripts/notebook-filter.js
+- javascripts/sidebar-filter.js
 
 copyright: <span class="footer-brand"><span class="footer-brand__o" aria-hidden="true"></span><span class="footer-brand__text">Oracle Generative AI</span></span><br><span class="footer-copy">Copyright &copy; 2025–2026 <span class="oracle-mark" aria-label="Oracle"></span> and/or its affiliates</span>
 

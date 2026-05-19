@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, SecretStr
 
+from locus._oracle_pool_cache import safe_acquire
 from locus.core.state import AgentState
 from locus.memory.backends._oracle_config import (
     OracleConfig,
@@ -144,7 +145,7 @@ class OracleBackend(BaseModel):
 
         pool = await self._get_pool()
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             # Check if table exists
             await cursor.execute(
                 """
@@ -207,9 +208,6 @@ class OracleBackend(BaseModel):
         Returns:
             Checkpoint ID.
         """
-        await self._ensure_table()
-        pool = await self._get_pool()
-
         from uuid import uuid4
 
         # Handle both calling conventions:
@@ -221,43 +219,68 @@ class OracleBackend(BaseModel):
 
         checkpoint_id = checkpoint_id or uuid4().hex
         data = state.to_checkpoint() if isinstance(state, AgentState) else state
+        merge_sql = f"""
+            MERGE INTO {self._full_table_name} t
+            USING (SELECT :thread_id AS thread_id FROM dual) s
+            ON (t.thread_id = s.thread_id)
+            WHEN MATCHED THEN
+                UPDATE SET
+                    checkpoint_id = :checkpoint_id,
+                    data = :data,
+                    updated_at = SYSTIMESTAMP,
+                    metadata = :metadata
+            WHEN NOT MATCHED THEN
+                INSERT (thread_id, checkpoint_id, data, metadata)
+                VALUES (:thread_id, :checkpoint_id, :data, :metadata)
+            """
+        binds = {
+            "thread_id": thread_id,
+            "checkpoint_id": checkpoint_id,
+            "data": json.dumps(data, default=str),
+            "metadata": json.dumps(metadata or {}),
+        }
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
-            # Pin :data / :metadata to CLOB so large agent-state payloads
-            # don't hit ORA-01461 (character-to-LOB conversion) when
-            # oracledb thin mode tries to bind them as VARCHAR2. Mirrors
-            # the temporary-BLOB binding pattern langgraph-oracledb adopted
-            # for its checkpoint blob columns (oracle/langchain-oracle#224).
-            import oracledb as _oracledb
+        async def _do_save() -> None:
+            await self._ensure_table()
+            pool = await self._get_pool()
+            async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
+                # Pin :data / :metadata to CLOB so large agent-state payloads
+                # don't hit ORA-01461 (character-to-LOB conversion) when
+                # oracledb thin mode tries to bind them as VARCHAR2.
+                import oracledb as _oracledb
 
-            cursor.setinputsizes(
-                data=_oracledb.DB_TYPE_CLOB,
-                metadata=_oracledb.DB_TYPE_CLOB,
-            )
-            # Use MERGE for upsert
-            await cursor.execute(
-                f"""
-                    MERGE INTO {self._full_table_name} t
-                    USING (SELECT :thread_id AS thread_id FROM dual) s
-                    ON (t.thread_id = s.thread_id)
-                    WHEN MATCHED THEN
-                        UPDATE SET
-                            checkpoint_id = :checkpoint_id,
-                            data = :data,
-                            updated_at = SYSTIMESTAMP,
-                            metadata = :metadata
-                    WHEN NOT MATCHED THEN
-                        INSERT (thread_id, checkpoint_id, data, metadata)
-                        VALUES (:thread_id, :checkpoint_id, :data, :metadata)
-                    """,
-                {
-                    "thread_id": thread_id,
-                    "checkpoint_id": checkpoint_id,
-                    "data": json.dumps(data, default=str),
-                    "metadata": json.dumps(metadata or {}),
-                },
-            )
-            await conn.commit()
+                cursor.setinputsizes(
+                    data=_oracledb.DB_TYPE_CLOB,
+                    metadata=_oracledb.DB_TYPE_CLOB,
+                )
+                await cursor.execute(merge_sql, binds)
+                await conn.commit()
+
+        # Body-time retry: ADB intermittently kills pooled connections
+        # mid-operation (ORA-03138 security policy, DPY-4011 idle close,
+        # ORA-03146 TTC protocol desync). Drop the pool + retry up to
+        # two times before surfacing the error — the first retry
+        # rebuilds the pool, the second handles a fresh pool that
+        # inherited a poisoned connection from the same broken loop.
+        from locus._oracle_pool_cache import is_reconnectable
+
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            try:
+                await _do_save()
+                break
+            except Exception as exc:
+                if not is_reconnectable(exc) or attempt == max_attempts - 1:
+                    raise
+                # Try to drain the dead pool politely; ignore errors.
+                old_pool = self._pool
+                self._pool = None
+                self._initialized = False
+                if old_pool is not None:
+                    try:
+                        await old_pool.close(force=True)
+                    except Exception:  # noqa: BLE001
+                        pass
 
         return checkpoint_id
 
@@ -278,15 +301,36 @@ class OracleBackend(BaseModel):
         latest-state is the only retrievable checkpoint.
         """
         del checkpoint_id  # one-row-per-thread; arg present for parity
-        await self._ensure_table()
-        pool = await self._get_pool()
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
-            await cursor.execute(
-                f"SELECT data FROM {self._full_table_name} WHERE thread_id = :thread_id",
-                {"thread_id": thread_id},
-            )
-            row = await cursor.fetchone()
+        async def _do_load() -> Any:
+            await self._ensure_table()
+            pool = await self._get_pool()
+            async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
+                await cursor.execute(
+                    f"SELECT data FROM {self._full_table_name} WHERE thread_id = :thread_id",
+                    {"thread_id": thread_id},
+                )
+                return await cursor.fetchone()
+
+        from locus._oracle_pool_cache import is_reconnectable
+
+        row = None
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            try:
+                row = await _do_load()
+                break
+            except Exception as exc:
+                if not is_reconnectable(exc) or attempt == max_attempts - 1:
+                    raise
+                old_pool = self._pool
+                self._pool = None
+                self._initialized = False
+                if old_pool is not None:
+                    try:
+                        await old_pool.close(force=True)
+                    except Exception:  # noqa: BLE001
+                        pass
 
         if row is None:
             return None
@@ -307,7 +351,7 @@ class OracleBackend(BaseModel):
         await self._ensure_table()
         pool = await self._get_pool()
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(
                 f"DELETE FROM {self._full_table_name} WHERE thread_id = :thread_id",
                 {"thread_id": thread_id},
@@ -322,7 +366,7 @@ class OracleBackend(BaseModel):
         await self._ensure_table()
         pool = await self._get_pool()
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(
                 f"SELECT 1 FROM {self._full_table_name} WHERE thread_id = :thread_id",
                 {"thread_id": thread_id},
@@ -341,7 +385,7 @@ class OracleBackend(BaseModel):
         await self._ensure_table()
         pool = await self._get_pool()
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(
                 f"""
                     SELECT thread_id FROM {self._full_table_name}
@@ -360,7 +404,7 @@ class OracleBackend(BaseModel):
         await self._ensure_table()
         pool = await self._get_pool()
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(
                 f"""
                     SELECT checkpoint_id, created_at, updated_at, metadata
@@ -404,7 +448,7 @@ class OracleBackend(BaseModel):
         await self._ensure_table()
         pool = await self._get_pool()
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             # Validate key to prevent JSON path injection
             if not key.isidentifier():
                 raise ValueError(f"Invalid metadata key: {key!r}")
@@ -452,7 +496,7 @@ class OracleBackend(BaseModel):
         await self._ensure_table()
         pool = await self._get_pool()
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             # Simple LIKE search on JSON content
             # For production, use Oracle Text or JSON search index
             await cursor.execute(
@@ -498,7 +542,7 @@ class OracleBackend(BaseModel):
         await self._ensure_table()
         pool = await self._get_pool()
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             # Use NUMTODSINTERVAL for dynamic interval
             await cursor.execute(
                 f"""
@@ -517,7 +561,7 @@ class OracleBackend(BaseModel):
         await self._ensure_table()
         pool = await self._get_pool()
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(
                 f"SELECT COUNT(*) FROM {self._full_table_name} WHERE thread_id LIKE :pattern",
                 {"pattern": pattern},

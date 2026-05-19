@@ -71,6 +71,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, SecretStr
 
+from locus._oracle_pool_cache import safe_acquire
 from locus.memory.backends._oracle_config import (
     OracleConfig,
 )
@@ -296,7 +297,7 @@ class OracleCheckpointSaver(BaseModel):
             return
 
         pool = await self._get_pool()
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             # Check checkpoints table
             await cursor.execute(
                 """
@@ -417,7 +418,7 @@ class OracleCheckpointSaver(BaseModel):
         await self._ensure_tables()
         pool = await self._get_pool()
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             self._pin_checkpoint_clobs(cursor)
             await cursor.execute(
                 f"""
@@ -468,7 +469,7 @@ class OracleCheckpointSaver(BaseModel):
         await self._ensure_tables()
         pool = await self._get_pool()
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             if checkpoint_id is None:
                 # Latest row for the thread.
                 await cursor.execute(
@@ -538,7 +539,7 @@ class OracleCheckpointSaver(BaseModel):
         await self._ensure_tables()
         pool = await self._get_pool()
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             if before is None:
                 await cursor.execute(
                     f"""
@@ -626,7 +627,7 @@ class OracleCheckpointSaver(BaseModel):
         await self._ensure_tables()
         pool = await self._get_pool()
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             # Delete any prior writes for this task. ``put_writes`` is a
             # replace, not an append.
             await cursor.execute(
@@ -696,7 +697,7 @@ class OracleCheckpointSaver(BaseModel):
         await self._ensure_tables()
         pool = await self._get_pool()
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             if task_id is None:
                 await cursor.execute(
                     f"""
@@ -754,7 +755,7 @@ class OracleCheckpointSaver(BaseModel):
         await self._ensure_tables()
         pool = await self._get_pool()
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(
                 f"DELETE FROM {self._writes_table} WHERE thread_id = :thread_id",
                 {"thread_id": thread_id},

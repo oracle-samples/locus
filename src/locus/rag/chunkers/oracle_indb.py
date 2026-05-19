@@ -36,6 +36,7 @@ from typing import Any
 
 from pydantic import BaseModel, SecretStr
 
+from locus._oracle_pool_cache import safe_acquire
 from locus.memory.backends._oracle_config import (
     OracleConfig,
     validate_sql_identifier,
@@ -201,7 +202,7 @@ class OracleInDBChunker(BaseModel):
             ) t
             ORDER BY chunk_id
         """
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(sql, {"text": text, "params": self._params_json()})
             rows = await cursor.fetchall()
 
@@ -255,7 +256,7 @@ class OracleInDBChunker(BaseModel):
             {where_sql}
             ORDER BY src.{id_column}, chunk_id
         """
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(sql, {"params": self._params_json()})
             async for row in cursor:
                 yield {

@@ -18,6 +18,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field, SecretStr
 
+from locus._oracle_pool_cache import safe_acquire
 from locus.rag.stores._mmr import mmr_rerank as _mmr_rerank
 from locus.rag.stores._oracle_filter import compile_metadata_filter as _compile_metadata_filter
 from locus.rag.stores.base import (
@@ -357,7 +358,7 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
         metadata_col = cfg.metadata_column
         created_col = cfg.created_at_column
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             # Check if table exists
             await cursor.execute(
                 """
@@ -498,7 +499,7 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
             return
 
         pool = await self._get_pool()
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             if rebuild:
                 # Oracle has no "DROP IF EXISTS" for indexes; swallow the
                 # ORA-01418 (index does not exist) so callers can use
@@ -563,7 +564,7 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
         if document.embedding is None:
             raise ValueError("Document must have an embedding")
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             self._pin_clob_inputs(cursor)
             await cursor.execute(self._insert_sql(), self._insert_params(doc_id, document))
             await conn.commit()
@@ -577,7 +578,7 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
 
         ids = []
         sql = self._insert_sql()
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             for doc in documents:
                 doc_id = doc.id or uuid4().hex
                 ids.append(doc_id)
@@ -634,7 +635,7 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
         pool = await self._get_pool()
 
         cfg = self.oracle_config
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(
                 f"""
                 SELECT {self._select_columns_sql()}
@@ -683,7 +684,7 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
         pool = await self._get_pool()
 
         cfg = self.oracle_config
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(
                 f"DELETE FROM {self._full_table_name} WHERE {cfg.id_column} = :id",
                 {"id": doc_id},
@@ -765,7 +766,7 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
 
         # For cosine distance, lower is better (0 = identical)
         # Convert to similarity score: 1 - distance for cosine
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(
                 f"""
                 SELECT {self._select_columns_sql(with_distance=distance_func)}
@@ -861,7 +862,7 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
         cfg = self.oracle_config
         idx_name = f"idx_{cfg.table_name}_txt"
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             if drop_existing:
                 try:
                     await cursor.execute(f"DROP INDEX {idx_name}")
@@ -995,7 +996,7 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
             FETCH FIRST :limit ROWS ONLY
         """
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(sql, params)
             rows = await cursor.fetchall()
 
@@ -1050,7 +1051,7 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
         await self._ensure_table()
         pool = await self._get_pool()
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(f"SELECT COUNT(*) FROM {self._full_table_name}")
             row = await cursor.fetchone()
 
@@ -1061,7 +1062,7 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
         await self._ensure_table()
         pool = await self._get_pool()
 
-        async with pool.acquire() as conn, conn.cursor() as cursor:
+        async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
             await cursor.execute(f"SELECT COUNT(*) FROM {self._full_table_name}")
             row = await cursor.fetchone()
             count = row[0] if row else 0
