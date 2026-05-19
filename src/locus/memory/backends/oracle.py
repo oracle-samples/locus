@@ -244,16 +244,31 @@ class OracleBackend(BaseModel):
             await self._ensure_table()
             pool = await self._get_pool()
             async with safe_acquire(self, pool) as conn, conn.cursor() as cursor:
-                # Pin :data / :metadata to CLOB so large agent-state payloads
-                # don't hit ORA-01461 (character-to-LOB conversion) when
-                # oracledb thin mode tries to bind them as VARCHAR2.
+                # Stream large agent-state JSON through TEMPORARY CLOB
+                # locators. The naive ``cursor.setinputsizes(data=CLOB)``
+                # path inlines the payload in the TTC packet and corrupts
+                # the protocol stream (ORA-03146 "invalid buffer length
+                # for TTC field") once the JSON crosses a packet
+                # boundary — easy to hit once an agent accumulates a few
+                # turns + tool history + reflexion's confidence_history.
+                # ``conn.createlob`` + ``await lob.write`` round-trips
+                # the data via LOB locator instead, sidestepping the
+                # inline buffer entirely.
                 import oracledb as _oracledb
 
-                cursor.setinputsizes(
-                    data=_oracledb.DB_TYPE_CLOB,
-                    metadata=_oracledb.DB_TYPE_CLOB,
+                data_lob = await conn.createlob(_oracledb.DB_TYPE_CLOB)
+                await data_lob.write(binds["data"])
+                meta_lob = await conn.createlob(_oracledb.DB_TYPE_CLOB)
+                await meta_lob.write(binds["metadata"])
+                await cursor.execute(
+                    merge_sql,
+                    {
+                        "thread_id": binds["thread_id"],
+                        "checkpoint_id": binds["checkpoint_id"],
+                        "data": data_lob,
+                        "metadata": meta_lob,
+                    },
                 )
-                await cursor.execute(merge_sql, binds)
                 await conn.commit()
 
         # Body-time retry: ADB intermittently kills pooled connections
@@ -571,10 +586,24 @@ class OracleBackend(BaseModel):
         return row[0] if row else 0
 
     async def close(self) -> None:
-        """Close connection pool."""
-        if self._pool:
-            await self._pool.close()
+        """Close the connection pool and reset provisioning state.
+
+        ``force=True`` is the right choice here — by the time we close
+        the pool we are either tearing down at end of ``run_sync`` or
+        recovering from a network-level error; waiting for in-flight
+        operations to drain on a possibly-dead loop would just hang.
+        Cleanup must never raise; an exception here would mask the
+        primary error path callers actually care about.
+        """
+        if self._pool is not None:
+            try:
+                await self._pool.close(force=True)
+            except Exception:  # noqa: BLE001 — best-effort teardown
+                pass
             self._pool = None
+        # Reset so the next acquire re-verifies table existence on the
+        # fresh pool / connection.
+        self._initialized = False
 
     def __repr__(self) -> str:
         if self.config.dsn:
