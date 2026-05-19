@@ -1130,3 +1130,33 @@ html {
 .md-header__ellipsis {
   cursor: pointer;
 }
+
+/* ---------------------------------------------------------------------------
+ * Notebook index filter — workbench-style live search.
+ * --------------------------------------------------------------------------- */
+
+.notebook-filter {
+  margin: 1rem 0 1.5rem;
+}
+
+.notebook-filter__input {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  font: inherit;
+  font-size: 0.95rem;
+  background: var(--md-default-bg-color);
+  color: var(--md-default-fg-color);
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.5rem;
+  transition: border-color 120ms, box-shadow 120ms;
+}
+
+.notebook-filter__input:focus {
+  outline: none;
+  border-color: var(--md-accent-fg-color);
+  box-shadow: 0 0 0 3px rgba(196, 36, 32, 0.12);
+}
+
+.notebook-filter__input::placeholder {
+  color: var(--md-default-fg-color--light);
+}

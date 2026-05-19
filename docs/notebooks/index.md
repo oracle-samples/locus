@@ -5,6 +5,17 @@ against the bundled `MockModel` (no credentials required) and upgrades
 to live **Oracle Cloud Infrastructure (OCI) Generative AI** —
 or OpenAI / Anthropic / Ollama — by setting one environment variable.
 
+<div class="notebook-filter">
+  <input
+    type="search"
+    id="notebook-filter-input"
+    class="notebook-filter__input"
+    placeholder="Filter notebooks (e.g. oracle, rag, hooks)…  press ⌘K"
+    autocomplete="off"
+    autocorrect="off"
+    spellcheck="false" />
+</div>
+
 Run any notebook directly:
 
 ```bash
