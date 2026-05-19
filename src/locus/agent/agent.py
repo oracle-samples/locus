@@ -326,6 +326,21 @@ class Agent(AgentRuntimeMixin, BaseModel):
                     except Exception:  # noqa: BLE001 — cleanup must never mask a real error from _run()
                         pass
 
+                # Same reasoning for the checkpointer's connection pool.
+                # The oracledb thin-mode pool is bound to the asyncio loop
+                # that created it. Closing it here drains the connections
+                # *inside* this loop. Skipping this step means the next
+                # ``run_sync`` opens a fresh loop with the old pool still
+                # holding TCP handles from the dead loop — which surfaces
+                # as ORA-03146 / ORA-03138 / DPY-4011 on the next save.
+                ckpt = getattr(getattr(self, "config", None), "checkpointer", None)
+                ckpt_close = getattr(ckpt, "close", None) if ckpt is not None else None
+                if ckpt_close is not None:
+                    try:
+                        await ckpt_close()
+                    except Exception:  # noqa: BLE001 — cleanup must never mask _run() errors
+                        pass
+
                 # Drain any background tasks the SDK spawned (httpx's TLS
                 # teardown schedules ``loop.call_soon`` callbacks via
                 # anyio that fire after ``client.close()`` returns). If
