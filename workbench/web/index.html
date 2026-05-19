@@ -50,25 +50,11 @@
 
       <aside class="app__side" id="app-side" data-testid="app-side">
         <div class="side__tabs" role="tablist" aria-label="Sidebar section">
-          <button class="side__tab side__tab--active" id="side-tab-tutorials" data-testid="side-tab-tutorials" role="tab" aria-selected="true">Tutorials</button>
-          <button class="side__tab" id="side-tab-skills" data-testid="side-tab-skills" role="tab" aria-selected="false">Skills</button>
-          <button class="side__tab" id="side-tab-protocols" data-testid="side-tab-protocols" role="tab" aria-selected="false">Protocols</button>
-          <button class="side__tab" id="side-tab-patterns" data-testid="side-tab-patterns" role="tab" aria-selected="false">Patterns</button>
+          <button class="side__tab side__tab--active" id="side-tab-notebooks" data-testid="side-tab-notebooks" role="tab" aria-selected="true">Notebooks</button>
         </div>
-        <div id="side-pane-tutorials">
-          <input type="search" class="input" id="tutorial-search" placeholder="filter…" style="margin: 0 0.5rem 0.5rem; width: calc(100% - 1rem)" />
-          <div id="side-tutorials" data-testid="side-tutorials"></div>
-        </div>
-        <div id="side-pane-skills" style="display: none">
-          <input type="search" class="input" id="skill-search" placeholder="filter…" style="margin: 0 0.5rem 0.5rem; width: calc(100% - 1rem)" />
-          <div id="side-skills" data-testid="side-skills"></div>
-        </div>
-        <div id="side-pane-protocols" style="display: none">
-          <input type="search" class="input" id="protocol-search" placeholder="filter…" style="margin: 0 0.5rem 0.5rem; width: calc(100% - 1rem)" />
-          <div id="side-protocols" data-testid="side-protocols"></div>
-        </div>
-        <div id="side-pane-patterns" style="display: none">
-          <div id="side-patterns" data-testid="side-patterns"></div>
+        <div id="side-pane-notebooks">
+          <input type="search" class="input" id="notebook-search" placeholder="filter…" style="margin: 0 0.5rem 0.5rem; width: calc(100% - 1rem)" />
+          <div id="side-notebooks" data-testid="side-notebooks"></div>
         </div>
       </aside>
 
@@ -193,12 +179,12 @@
                 <div class="card__sub" id="wb-sub">Edit the source. Run executes a Python subprocess against your configured provider; events stream into the Output pane on the right.</div>
               </div>
               <div style="display: flex; gap: 0.4rem; align-items: center">
-                <button class="icon-btn" id="wb-prev-btn" data-testid="wb-prev-btn" title="Previous tutorial" aria-label="Previous tutorial">
+                <button class="icon-btn" id="wb-prev-btn" data-testid="wb-prev-btn" title="Previous notebook" aria-label="Previous notebook">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="15 18 9 12 15 6"></polyline>
                   </svg>
                 </button>
-                <button class="icon-btn" id="wb-next-btn" data-testid="wb-next-btn" title="Next tutorial" aria-label="Next tutorial">
+                <button class="icon-btn" id="wb-next-btn" data-testid="wb-next-btn" title="Next notebook" aria-label="Next notebook">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="9 18 15 12 9 6"></polyline>
                   </svg>
@@ -317,6 +303,43 @@
         <div class="field" id="row-compartment" style="display: none">
           <label class="field__label">OCI compartment OCID</label>
           <input id="cfg-compartment" class="input" placeholder="ocid1.compartment.oc1..…" data-testid="cfg-compartment" />
+        </div>
+
+        <hr style="margin: 1.25rem 0; border: 0; border-top: 1px solid var(--or-divider)" />
+
+        <h3 style="margin: 0 0 0.5rem">Oracle 26ai database (optional)</h3>
+        <p class="modal__lede" style="margin-top: 0">
+          Filled per-tab, never persisted. Required for the Oracle 26ai patterns (vector RAG, durable checkpoints). The wallet path must be readable by the backend process — under Docker, mount the wallet directory into the container.
+        </p>
+
+        <div class="field">
+          <label class="field__label">DSN</label>
+          <input id="cfg-db-dsn" class="input" placeholder="mydb_low — tnsnames alias in the wallet" data-testid="cfg-db-dsn" />
+        </div>
+
+        <div class="field">
+          <label class="field__label">User</label>
+          <input id="cfg-db-user" class="input" placeholder="locus_app (least-privileged app schema)" data-testid="cfg-db-user" />
+        </div>
+
+        <div class="field">
+          <label class="field__label">Password</label>
+          <input type="password" id="cfg-db-password" class="input" autocomplete="off" data-testid="cfg-db-password" />
+        </div>
+
+        <div class="field">
+          <label class="field__label">Wallet path</label>
+          <input id="cfg-db-wallet" class="input" placeholder="~/.oci/wallets/mydb — directory containing tnsnames.ora" data-testid="cfg-db-wallet" />
+        </div>
+
+        <div class="field">
+          <label class="field__label">Wallet password (if encrypted)</label>
+          <input type="password" id="cfg-db-wallet-password" class="input" autocomplete="off" data-testid="cfg-db-wallet-password" />
+        </div>
+
+        <div class="form-row" style="margin-top: 0.5rem">
+          <button class="btn" id="cfg-db-test" data-testid="cfg-db-test">Test connection</button>
+          <span id="cfg-db-status" style="margin-left:0.75rem;color:var(--or-text-mute);align-self:center"></span>
         </div>
 
         <div class="form-row" style="margin-top: 1rem">

@@ -29,7 +29,7 @@ schema. The workflow's terminal node returns a typed object — `Verdict`,
 `Postmortem`, `PurchaseOrder`, `ContractDecision` — that the rest of
 your system can consume without a brittle JSON re-parse.
 
-Used by tutorials [44 (debate)][t44], [46 (incident)][t46],
+Used by notebooks [44 (debate)][t44], [46 (incident)][t46],
 [47 (procurement)][t47], [48 (contract)][t48].
 
 → See [Structured output](../structured-output.md).
@@ -62,9 +62,9 @@ agent = Agent(config=AgentConfig(
 ))
 ```
 
-Nine backend implementations, one `Checkpointer` Protocol — Postgres,
-Redis, SQLite, OCI Bucket, OCI Object Storage, OpenSearch, Qdrant,
-Oracle ADB, in-memory. The graph snapshots state at every `interrupt()`
+Seven backend implementations, one `Checkpointer` Protocol — Postgres,
+Redis, OCI Bucket, OCI Object Storage, OpenSearch, Oracle ADB,
+in-memory. The graph snapshots state at every `interrupt()`
 boundary; you can pause for a human Friday afternoon and resume Monday
 morning from a different process, region, or runtime.
 
@@ -173,7 +173,7 @@ specific node and event that diverged.
 
 ## Putting it together
 
-A tutorial-46-style incident-response graph in production looks like:
+A notebook-46-style incident-response graph in production looks like:
 
 ```python
 from locus.agent import Agent, AgentConfig
@@ -195,7 +195,7 @@ That's the moat. Pick a [shape](../multi-agent.md) directly, or let
 right one from a typed intent. Then wire the primitives above through
 it and ship it.
 
-[t44]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_44_debate_with_judge.py
-[t46]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_46_incident_response.py
-[t47]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_47_procurement_approval.py
-[t48]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_48_contract_review.py
+[t44]: https://github.com/oracle-samples/locus/blob/main/examples/notebook_37_debate_with_judge.py
+[t46]: https://github.com/oracle-samples/locus/blob/main/examples/notebook_62_incident_response.py
+[t47]: https://github.com/oracle-samples/locus/blob/main/examples/notebook_63_procurement_approval.py
+[t48]: https://github.com/oracle-samples/locus/blob/main/examples/notebook_64_contract_review.py

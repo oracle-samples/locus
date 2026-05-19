@@ -127,10 +127,10 @@ anything leaves, see [Safety](safety.md).
 | Token totals are zero | The provider isn't returning usage in the response (older Ollama builds, some self-hosted endpoints). The locus loop can't make up the numbers. |
 | Tool args land in your logs unintentionally | Either `record_arguments=True` or your structured logger is dumping the full event dict. Configure either explicitly. |
 
-## Source and tutorials
+## Source and notebooks
 
-- [`tutorial_05_agent_hooks.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_05_agent_hooks.py) — first hook, including logging.
-- [`tutorial_27_hooks_advanced.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_27_hooks_advanced.py) — telemetry pipelines.
+- [`notebook_17_agent_hooks.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_17_agent_hooks.py) — first hook, including logging.
+- [`notebook_19_hooks_advanced.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_19_hooks_advanced.py) — telemetry pipelines.
 - [`locus.hooks.builtin.logging`](https://github.com/oracle-samples/locus/blob/main/src/locus/hooks/builtin/logging.py) — `LoggingHook`, `StructuredLoggingHook`.
 - [`locus.hooks.builtin.telemetry`](https://github.com/oracle-samples/locus/blob/main/src/locus/hooks/builtin/telemetry.py) — `TelemetryHook`, `NoOpTelemetryHook`.
 

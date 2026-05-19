@@ -223,7 +223,7 @@ identifying which path produced the pick:
 | `"llm_picked"` | Picker resolved the disambiguation; `rationale` field populated |
 | `"rule_based_fallback"` | Picker raised or hallucinated; `_rank_key` resolved it |
 
-See [tutorial 59](../tutorials/tutorial_59_emergent_routing.md) for a
+See [notebook 59](../notebooks/notebook_39_emergent_routing.md) for a
 runnable side-by-side comparison.
 
 ## Skills integration
@@ -373,7 +373,7 @@ See [SSE event catalogue](sse-events.md) for full payload field descriptions
 
 ## See also
 
-- Tutorial: [`examples/tutorial_51_cognitive_router.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_51_cognitive_router.py)
+- Notebook: [`examples/notebook_57_cognitive_router.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_57_cognitive_router.py)
 - [SSE event catalogue](sse-events.md) — `router.*` event payloads.
 - [Observability](observability.md) — `run_context`, `EventBus`, EventBusHook.
 - API reference: `locus.router` (`GoalFrame`, `Protocol`,

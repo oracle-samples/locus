@@ -7,6 +7,7 @@
 Available providers:
 - OCIEmbeddings: OCI GenAI with Cohere models (recommended for Oracle)
 - OpenAIEmbeddings: OpenAI text-embedding models
+- OracleInDBEmbeddings: Oracle 23ai/26ai in-database ONNX embeddings
 """
 
 from typing import Any
@@ -28,6 +29,8 @@ __all__ = [
     # Providers (lazy imports)
     "OCIEmbeddings",
     "OpenAIEmbeddings",
+    "OracleInDBEmbeddings",
+    "OracleSyncInDBEmbeddings",
 ]
 
 
@@ -42,6 +45,16 @@ def __getattr__(name: str) -> Any:
         from locus.rag.embeddings.openai import OpenAIEmbeddings
 
         return OpenAIEmbeddings
+
+    if name == "OracleInDBEmbeddings":
+        from locus.rag.embeddings.oracle_indb import OracleInDBEmbeddings
+
+        return OracleInDBEmbeddings
+
+    if name == "OracleSyncInDBEmbeddings":
+        from locus.rag.embeddings.oracle_sync import OracleSyncInDBEmbeddings
+
+        return OracleSyncInDBEmbeddings
 
     msg = f"module {__name__!r} has no attribute {name!r}"
     raise AttributeError(msg)

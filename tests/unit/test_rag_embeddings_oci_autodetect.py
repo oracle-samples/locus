@@ -33,7 +33,10 @@ def _make_embed_response(embeddings: list[list[float]]) -> Any:
 def embedder_with_mock_client(monkeypatch: pytest.MonkeyPatch) -> OCIEmbeddings:
     """An OCIEmbeddings instance whose underlying client is mocked."""
     e = OCIEmbeddings(
-        model_id="cohere.embed-v4.0",  # NOT in hints — verifies the fallback
+        # Synthetic id not in MODEL_DIMENSION_HINTS — verifies the
+        # auto-detection fallback. Real models with dimension hints
+        # (including ``cohere.embed-v4.0``) take the fast path instead.
+        model_id="vendor.experimental-embed-xyz",
         compartment_id="ocid1.compartment.oc1..test",
         profile_name="DEFAULT",
         auth_type="api_key",
@@ -54,7 +57,7 @@ def test_unknown_model_defaults_before_first_call(
 ) -> None:
     """Before any embed call, an unknown model reports the default dim."""
     e = embedder_with_mock_client
-    assert e.oci_config.model_id == "cohere.embed-v4.0"
+    assert e.oci_config.model_id == "vendor.experimental-embed-xyz"
     assert e.oci_config.model_id not in MODEL_DIMENSION_HINTS
     assert e._detected_dimension is None
     assert e.config.dimension == DEFAULT_DIMENSION  # 1024

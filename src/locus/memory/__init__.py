@@ -37,7 +37,7 @@ Backends (in locus.memory.backends):
 - MemoryCheckpointer: In-memory storage (testing/development)
 - FileCheckpointer: Local file storage
 - HTTPCheckpointer: Remote HTTP API storage
-- SQLiteBackend, RedisBackend, PostgreSQLBackend, etc.
+- RedisBackend, PostgreSQLBackend, OracleBackend, OpenSearchBackend, OCIBucketBackend
 """
 
 from locus.core.protocols import CheckpointerCapabilities

@@ -190,9 +190,9 @@ for execution in plan.executions:
 | `max_tool_calls` exhausts mid-step | Bump the limit or split the step in two — the model may need search-and-refine cycles. |
 | YAML loads but the agent doesn't follow it | Pass it through `PlaybookEnforcerHook(...)` — `Playbook` alone is just data. |
 
-## Source and tutorial
+## Source and notebook
 
-- [`tutorial_15_playbooks.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_15_playbooks.py) — runnable end-to-end with execution tracking.
+- [`notebook_47_playbooks.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_47_playbooks.py) — runnable end-to-end with execution tracking.
 - [`locus.playbooks`](https://github.com/oracle-samples/locus/tree/main/src/locus/playbooks) — `Playbook`, `PlaybookStep`, `PlaybookEnforcerHook`, `load_playbook`.
 
 ## See also

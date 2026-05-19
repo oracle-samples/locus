@@ -167,9 +167,9 @@ or whatever your platform expects.
 | Threads don't persist across restarts | `FileCheckpointer` writes to disk in the working directory — ephemeral container filesystems lose it. Mount a volume or move to `OCIBucketBackend`. |
 | `/threads/{tid}` 404s for the right tid | Thread IDs are scoped to the principal — `<principal>:<tid>` is what's stored. The path you pass is *your* tid; the server prefixes. |
 
-## Source and tutorial
+## Source and notebook
 
-- [`tutorial_28_agent_server.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_28_agent_server.py) — runnable wrapper plus a curl client.
+- [`notebook_67_agent_server.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_67_agent_server.py) — runnable wrapper plus a curl client.
 - [`locus.server`](https://github.com/oracle-samples/locus/tree/main/src/locus/server) — `AgentServer`, `InvokeRequest`, `InvokeResponse`.
 
 ## See also

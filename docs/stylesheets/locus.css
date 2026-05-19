@@ -193,7 +193,6 @@ html {
   line-height: 1.10;
   letter-spacing: -0.04em;       /* wordmark tracking */
   margin: 0 0 1.2rem;
-  text-transform: lowercase;     /* mirror the wordmark — never CamelCase */
 }
 @media (max-width: 76em) {
   .md-typeset h1 { font-size: 1.7rem !important; }
@@ -392,6 +391,14 @@ html {
   border-left: 3px solid var(--or-red);
   border-radius: 0 6px 6px 0;
   padding: 0.9rem 1rem;
+  /* Anchor the absolutely-positioned overlay link to the card. */
+  position: relative;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+.md-typeset .grid.cards.locus-feature-cards > ul > li:hover,
+.md-typeset .grid.cards.locus-feature-cards > ol > li:hover {
+  background-color: var(--or-surface-hover, rgba(199, 70, 52, 0.05));
+  transform: translateY(-1px);
 }
 .md-typeset .grid.cards.locus-feature-cards p {
   font-size: 0.82rem;
@@ -403,7 +410,24 @@ html {
   font-size: 1rem;
   display: block;
   margin-bottom: 0.25rem;
-  color: var(--or-text);
+  color: var(--or-accent, #C74634);
+}
+/* Make the whole card clickable: stretch the title's <a> over the card
+   surface so anywhere inside the <li> opens the linked concept page. */
+.md-typeset .grid.cards.locus-feature-cards strong a {
+  color: inherit;
+  text-decoration: none;
+}
+.md-typeset .grid.cards.locus-feature-cards strong a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.md-typeset .grid.cards.locus-feature-cards > ul > li:focus-within,
+.md-typeset .grid.cards.locus-feature-cards > ol > li:focus-within {
+  outline: 2px solid var(--or-accent, #C74634);
+  outline-offset: 2px;
 }
 @media (max-width: 76em) {
   .md-typeset .locus-hero {
@@ -1104,4 +1128,151 @@ html {
 /* Header title area — pointer cursor so users know it goes home. */
 .md-header__ellipsis {
   cursor: pointer;
+}
+
+/* ---------------------------------------------------------------------------
+ * Notebook index filter — workbench-style live search.
+ * --------------------------------------------------------------------------- */
+
+.notebook-filter {
+  margin: 1rem 0 1.5rem;
+}
+
+.notebook-filter__input {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  font: inherit;
+  font-size: 0.95rem;
+  background: var(--md-default-bg-color);
+  color: var(--md-default-fg-color);
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.5rem;
+  transition: border-color 120ms, box-shadow 120ms;
+}
+
+.notebook-filter__input:focus {
+  outline: none;
+  border-color: var(--md-accent-fg-color);
+  box-shadow: 0 0 0 3px rgba(196, 36, 32, 0.12);
+}
+
+.notebook-filter__input::placeholder {
+  color: var(--md-default-fg-color--light);
+}
+
+/* Sidebar notebook filter — same UX, scaled to the primary sidebar. */
+.sidebar-filter {
+  margin: 0.4rem 0.6rem 0.8rem;
+  list-style: none;
+}
+.sidebar-filter__input {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  font: inherit;
+  font-size: 0.72rem;
+  background: var(--md-default-bg-color);
+  color: var(--md-default-fg-color);
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 0.35rem;
+  transition: border-color 120ms, box-shadow 120ms;
+}
+.sidebar-filter__input:focus {
+  outline: none;
+  border-color: var(--md-accent-fg-color);
+  box-shadow: 0 0 0 2px rgba(196, 36, 32, 0.18);
+}
+.sidebar-filter__input::placeholder {
+  color: var(--md-default-fg-color--light);
+}
+
+/* ---------------------------------------------------------------------------
+ * Mobile polish — narrow viewports (<= 48em).
+ *
+ *   Material's default per-table horizontal scroll is workable for one
+ *   table but painful on /notebooks/ where the page is a stack of nine.
+ *   We let tables fit the viewport instead: 100% width, auto layout,
+ *   prose wraps with `overflow-wrap: anywhere` (which only breaks when
+ *   needed — unlike `break-all` which splits in the middle of perfectly
+ *   sized tokens like `openai.gpt-5.5-pro`).
+ *
+ *   Also: cap any in-content image (workbench gif, etc.) at the column
+ *   width so it never blows past the viewport edge.
+ * --------------------------------------------------------------------- */
+@media (max-width: 48em) {
+  /* Tables: make them fit the viewport rather than scroll horizontally. */
+  .md-typeset__scrollwrap {
+    margin-left: -0.4rem;
+    margin-right: -0.4rem;
+    overflow-x: hidden;
+  }
+  .md-typeset__table {
+    display: block;
+    width: 100%;
+    padding: 0 0.4rem;
+    overflow-x: visible;
+  }
+  .md-typeset__table > table:not([class]) {
+    width: 100%;
+    table-layout: auto;
+    font-size: 0.78rem;
+  }
+  .md-typeset table:not([class]) th,
+  .md-typeset table:not([class]) td {
+    padding: 0.45em 0.5em;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+  /* On /notebooks/ index the first column is the row number ("01"…"63") —
+     slim it to a chip so the prose columns get more room. Other pages
+     keep auto-sized first columns (Setting/DSN-style text headers). */
+  .notebook-filter ~ * .md-typeset__table > table:not([class]) th:first-child,
+  .notebook-filter ~ * .md-typeset__table > table:not([class]) td:first-child,
+  article:has(.notebook-filter) .md-typeset__table > table:not([class]) th:first-child,
+  article:has(.notebook-filter) .md-typeset__table > table:not([class]) td:first-child {
+    width: 1.6rem;
+    padding-left: 0.4em;
+    padding-right: 0.3em;
+    text-align: center;
+    color: var(--locus-mute);
+    font-variant-numeric: tabular-nums;
+  }
+  /* Cap in-content media at the column width. */
+  .md-typeset img,
+  .md-typeset video {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Mobile header — keep the wordmark, tagline, search icon, and source
+ * badges from colliding at narrow widths.
+ *
+ *   At ~480–560px the "locus" + tagline title block grows wide enough to
+ *   visually overlap the search magnifier sitting in the right rail. We
+ *   stage the trimming in two steps:
+ *     - ≤ 56em: shrink the wordmark, tighten the tagline letter-spacing.
+ *     - ≤ 30em: drop the tagline + the PyPI version pill entirely; the
+ *       wordmark and OCI/GitHub icons stay.
+ * --------------------------------------------------------------------- */
+@media (max-width: 56em) {
+  .md-header__ellipsis > .md-header__topic:first-of-type > .md-ellipsis {
+    font-size: 1.2rem;
+  }
+  .md-header__ellipsis > .md-header__topic:first-of-type::after {
+    letter-spacing: 0.06em;
+  }
+  /* Title takes only the space it needs; the right rail keeps its slot. */
+  .md-header__title { flex: 0 0 auto; }
+}
+@media (max-width: 30em) {
+  /* Drop the tagline and the PyPI badge to free up room on small phones. */
+  .md-header__ellipsis > .md-header__topic:first-of-type::after { display: none; }
+  .md-header__source.md-header__pypi { display: none; }
+  .md-header__ellipsis > .md-header__topic:first-of-type > .md-ellipsis {
+    font-size: 1.1rem;
+  }
+  /* Tighter spacing between right-rail icons. */
+  .md-header__source.md-header__oci { margin-left: 0.15rem; padding: 0.15rem 0.25rem; }
+  .md-header__source.md-header__github { margin-left: 0.2rem; }
 }

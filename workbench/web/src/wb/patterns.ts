@@ -1,7 +1,7 @@
 /** Patterns sidebar + run panel. */
 import { listPatterns, runPattern, streamPattern } from "../api";
 import type { Pattern } from "../types";
-import { loadProvider } from "../settings";
+import { loadDatabase, loadProvider } from "../settings";
 import { $ } from "./dom";
 
 let patterns: Pattern[] = [];
@@ -146,6 +146,7 @@ async function doRun(): Promise<void> {
       const useLLMPicker = current.id === "cognitive_routing" && readSelectedMode() === "llm";
       const result = await runPattern(current.id, prompt, provider, {
         use_llm_picker: useLLMPicker,
+        database: loadDatabase(),
       });
       if (current.id === "cognitive_routing") {
         renderRoutingResult(out, result, useLLMPicker);

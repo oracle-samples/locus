@@ -1,6 +1,6 @@
-import type { ProviderConfig } from "./types";
+import type { DatabaseConfig, DatabaseTestResult, ProviderConfig } from "./types";
 
-export type Tutorial = {
+export type Notebook = {
   id: string;
   number: number;
   title: string;
@@ -11,7 +11,7 @@ export type Tutorial = {
   category_order?: number;
 };
 
-export type TutorialDetail = Tutorial & { source: string };
+export type NotebookDetail = Notebook & { source: string };
 
 // Topic-progression headers the sidebars render. Same shape across
 // the three catalogues — one record per declared category.
@@ -21,22 +21,22 @@ export type CategoryInfo = {
   description: string;
 };
 
-export async function listTutorials(): Promise<Tutorial[]> {
-  const r = await fetch("/api/tutorials");
-  if (!r.ok) throw new Error(`tutorials ${r.status}`);
-  return (await r.json()) as Tutorial[];
+export async function listNotebooks(): Promise<Notebook[]> {
+  const r = await fetch("/api/notebooks");
+  if (!r.ok) throw new Error(`notebooks ${r.status}`);
+  return (await r.json()) as Notebook[];
 }
 
-export async function listTutorialCategories(): Promise<CategoryInfo[]> {
-  const r = await fetch("/api/tutorials/categories");
-  if (!r.ok) throw new Error(`tutorial categories ${r.status}`);
+export async function listNotebookCategories(): Promise<CategoryInfo[]> {
+  const r = await fetch("/api/notebooks/categories");
+  if (!r.ok) throw new Error(`notebook categories ${r.status}`);
   return (await r.json()) as CategoryInfo[];
 }
 
-export async function getTutorial(id: string): Promise<TutorialDetail> {
-  const r = await fetch(`/api/tutorials/${encodeURIComponent(id)}`);
-  if (!r.ok) throw new Error(`tutorial ${r.status}`);
-  return (await r.json()) as TutorialDetail;
+export async function getNotebook(id: string): Promise<NotebookDetail> {
+  const r = await fetch(`/api/notebooks/${encodeURIComponent(id)}`);
+  if (!r.ok) throw new Error(`notebook ${r.status}`);
+  return (await r.json()) as NotebookDetail;
 }
 
 // ---------------------------------------------------------------------------
@@ -125,7 +125,7 @@ export type WorkbenchEvent =
   | { type: "runStarted"; run_id: string };
 
 export async function respondToInterrupt(runId: string, response: unknown): Promise<void> {
-  const r = await fetch(`/api/tutorials/runs/${encodeURIComponent(runId)}/respond`, {
+  const r = await fetch(`/api/notebooks/runs/${encodeURIComponent(runId)}/respond`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ response }),
@@ -136,7 +136,7 @@ export async function respondToInterrupt(runId: string, response: unknown): Prom
   }
 }
 
-export function runTutorialSource(
+export function runNotebookSource(
   source: string,
   provider: ProviderConfig,
   onEvent: (e: WorkbenchEvent) => void,
@@ -145,12 +145,12 @@ export function runTutorialSource(
   const ctrl = new AbortController();
   void (async () => {
     try {
-      const r = await fetch("/api/tutorials/run", {
+      const r = await fetch("/api/notebooks/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // 8 minutes — long enough for the multi-protocol tutorial 51
+        // 8 minutes — long enough for the multi-protocol notebook 51
         // (5 prompts × multi-LLM-call protocols can stack to ~5min wall
-        // time). Shorter tutorials still finish in well under a minute.
+        // time). Shorter notebooks still finish in well under a minute.
         body: JSON.stringify({ source, provider, timeout_seconds: 480 }),
         signal: ctrl.signal,
       });
@@ -216,11 +216,14 @@ export async function runPattern(
   patternId: string,
   prompt: string,
   provider: ProviderConfig,
-  options: { use_llm_picker?: boolean } = {},
+  options: { use_llm_picker?: boolean; database?: DatabaseConfig | null } = {},
 ): Promise<PatternRunResponse> {
   const body: Record<string, unknown> = { prompt, provider };
   if (options.use_llm_picker !== undefined) {
     body.use_llm_picker = options.use_llm_picker;
+  }
+  if (options.database) {
+    body.database = options.database;
   }
   const r = await fetch(`/api/run/${encodeURIComponent(patternId)}`, {
     method: "POST",
@@ -229,6 +232,16 @@ export async function runPattern(
   });
   if (!r.ok) throw new Error(`run ${r.status}: ${await r.text()}`);
   return (await r.json()) as PatternRunResponse;
+}
+
+export async function testDatabase(cfg: DatabaseConfig): Promise<DatabaseTestResult> {
+  const r = await fetch("/api/database/test", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(cfg),
+  });
+  if (!r.ok) throw new Error(`database test ${r.status}: ${await r.text()}`);
+  return (await r.json()) as DatabaseTestResult;
 }
 
 export function streamPattern(

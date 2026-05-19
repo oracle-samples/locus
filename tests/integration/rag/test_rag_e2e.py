@@ -53,41 +53,6 @@ class TestRAGEndToEnd:
 
         return retriever
 
-    @pytest.fixture
-    async def retriever_qdrant(self, embedder, qdrant_config):
-        """Create retriever with Qdrant store."""
-        from locus.rag import RAGRetriever
-        from locus.rag.stores.qdrant import QdrantVectorStore
-
-        store = QdrantVectorStore(
-            url=qdrant_config["url"],
-            api_key=qdrant_config["api_key"],
-            collection_name="locus_e2e_test",
-            dimension=1024,
-        )
-
-        # Clean up
-        try:
-            await store._ensure_collection()
-            await store.clear()
-        except Exception:
-            pass
-
-        retriever = RAGRetriever(
-            embedder=embedder,
-            store=store,
-            chunk_size=500,
-        )
-
-        yield retriever
-
-        # Cleanup
-        try:
-            await store.clear()
-            await store.close()
-        except Exception:
-            pass
-
     @pytest.mark.asyncio
     async def test_add_and_retrieve_memory(self, retriever_memory):
         """Test adding documents and retrieving with in-memory store."""
@@ -111,29 +76,6 @@ class TestRAGEndToEnd:
         # Python document should be most relevant
         contents = [r.document.content for r in result.documents]
         assert any("Python" in c for c in contents)
-
-    @pytest.mark.asyncio
-    async def test_add_and_retrieve_qdrant(self, retriever_qdrant):
-        """Test adding documents and retrieving with Qdrant."""
-        # Add documents
-        await retriever_qdrant.add_documents(
-            [
-                "Python is a high-level programming language known for its simplicity.",
-                "Oracle Database is a powerful relational database management system.",
-                "Machine learning is a subset of artificial intelligence.",
-            ]
-        )
-
-        # Retrieve
-        result = await retriever_qdrant.retrieve(
-            "Tell me about databases",
-            limit=2,
-        )
-
-        assert len(result.documents) >= 1
-        # Oracle document should be relevant
-        contents = [r.document.content for r in result.documents]
-        assert any("Oracle" in c or "database" in c.lower() for c in contents)
 
     @pytest.mark.asyncio
     async def test_chunking(self, retriever_memory):

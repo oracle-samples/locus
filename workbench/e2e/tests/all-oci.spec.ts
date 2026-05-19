@@ -1,8 +1,8 @@
 /**
- * Per-tutorial OCI v1 sweep — runs every non-stdin tutorial through the
+ * Per-notebook OCI v1 sweep — runs every non-stdin notebook through the
  * workbench against OCI Generative AI's /openai/v1 endpoint
  * (OCIOpenAIModel transport). Each test spawns its own browser context,
- * configures the OCI provider, then drives one tutorial.
+ * configures the OCI provider, then drives one notebook.
  *
  * All identifiers (profile, tenancy/compartment OCID) come from env so
  * nothing tenant-specific lives in this file:
@@ -28,28 +28,28 @@ const TRANSPORT = process.env.OCI_TRANSPORT ?? "v1"; // v1 | auto | sdk
 const MODEL = process.env.OCI_MODEL ?? "openai.gpt-5.5-2026-04-23";
 const MODEL_B = process.env.OCI_MODEL_B ?? "";
 const MODEL_C = process.env.OCI_MODEL_C ?? "";
-const PER_TUTORIAL_MS = Number(process.env.PER_TUTORIAL_MS ?? 360_000);
+const PER_NOTEBOOK_MS = Number(process.env.PER_NOTEBOOK_MS ?? 360_000);
 const STAGGER_MS = Number(process.env.STAGGER_MS ?? 4_000);
 const BFF = process.env.BFF_URL ?? "http://127.0.0.1:3101";
 
-// Tutorials hardcoded against an OCI-only model (gpt-audio); they're
+// Notebooks hardcoded against an OCI-only model (gpt-audio); they're
 // fine here in principle but they expect an OCI session, not API key —
 // keep them out of the sweep so a single auth shape covers everything.
 const SKIP = new Set<string>([
-  "tutorial_49_audio_response",
-  "tutorial_50_audio_chat",
+  "notebook_49_audio_response",
+  "notebook_50_audio_chat",
   // DeepAgent runs 4 parts with subagents — takes >10 min on any real model.
   // Covered by CLI tests; skipped here to keep the workbench sweep bounded.
-  "tutorial_41_deepagent",
+  "notebook_41_deepagent",
   // Requires structured-output support; Cohere R-series returns 400 on
   // json_schema response_format. The guard exits 0 with a helpful message
   // only when LOCUS_MODEL_PROVIDER=oci+cohere — skip in the OCI sweep too.
-  "tutorial_14_reasoning_patterns",
-  // RAG tutorials call OCIEmbeddings which defaults to api_key auth —
+  "notebook_14_reasoning_patterns",
+  // RAG notebooks call OCIEmbeddings which defaults to api_key auth —
   // incompatible with session-token profiles (e.g. BOAT-OC1). The embed
   // client needs a separate API-key profile or LOCUS_OCI_AUTH_TYPE=security_token.
-  "tutorial_22_rag_basics",
-  "tutorial_24_rag_agents",
+  "notebook_22_rag_basics",
+  "notebook_24_rag_agents",
 ]);
 
 test.use({ video: "off", trace: "off", screenshot: "off" });
@@ -57,7 +57,7 @@ test.use({ video: "off", trace: "off", screenshot: "off" });
 type CatalogEntry = { id: string; number: number; title: string; needs_stdin?: boolean };
 
 const catalog: CatalogEntry[] = PROFILE
-  ? JSON.parse(execSync(`curl -sf ${BFF}/api/tutorials`).toString())
+  ? JSON.parse(execSync(`curl -sf ${BFF}/api/notebooks`).toString())
   : [];
 const runnable = catalog.filter((t) => !t.needs_stdin && !SKIP.has(t.id));
 
@@ -83,7 +83,7 @@ async function configureOCI(page: Page): Promise<void> {
 }
 
 async function runOne(page: Page, id: string): Promise<{ code: number; tail: string }> {
-  await page.getByTestId(`tutorial-${id}`).click();
+  await page.getByTestId(`notebook-${id}`).click();
   await expect
     .poll(
       () => page.evaluate(() => ((window as any).__wb?.getSource?.() ?? "").length),
@@ -92,17 +92,17 @@ async function runOne(page: Page, id: string): Promise<{ code: number; tail: str
     .toBeGreaterThan(50);
   await page.getByTestId("wb-run-btn").click();
   const output = page.getByTestId("wb-output");
-  await expect(output).toContainText(/exited with code \d+/i, { timeout: PER_TUTORIAL_MS });
+  await expect(output).toContainText(/exited with code \d+/i, { timeout: PER_NOTEBOOK_MS });
   const text = (await output.textContent()) ?? "";
   const code = Number(text.match(/exited with code (\d+)/i)?.[1] ?? "-1");
   const tail = text.slice(-400).replace(/\s+/g, " ");
   return { code, tail };
 }
 
-const SLOW_TUTORIALS = new Set<string>([
-  "tutorial_41_deepagent",
-  "tutorial_51_cognitive_router",
-  "tutorial_56_research_workflow",
+const SLOW_NOTEBOOKS = new Set<string>([
+  "notebook_41_deepagent",
+  "notebook_51_cognitive_router",
+  "notebook_56_research_workflow",
 ]);
 const SLOW_MULTIPLIER = 3;
 
@@ -112,9 +112,9 @@ test.describe.configure({ mode: "parallel" });
 
 for (const entry of runnable) {
   guard(`#${String(entry.number).padStart(2, "0")} ${entry.id}`, async ({ page }) => {
-    const budget = SLOW_TUTORIALS.has(entry.id)
-      ? PER_TUTORIAL_MS * SLOW_MULTIPLIER
-      : PER_TUTORIAL_MS;
+    const budget = SLOW_NOTEBOOKS.has(entry.id)
+      ? PER_NOTEBOOK_MS * SLOW_MULTIPLIER
+      : PER_NOTEBOOK_MS;
     test.setTimeout(budget + 60_000);
     if (STAGGER_MS > 0) await page.waitForTimeout(Math.random() * STAGGER_MS);
     await configureOCI(page);

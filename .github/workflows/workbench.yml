@@ -6,7 +6,7 @@ on:
     paths:
       - "workbench/**"
       - "src/locus/**"
-      - "examples/tutorial_*.py"
+      - "examples/notebook_*.py"
       - "pyproject.toml"
       - ".github/workflows/workbench.yml"
   workflow_dispatch:

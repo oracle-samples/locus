@@ -83,7 +83,6 @@ server = [
 
 # Checkpoint backends — one extra per backend under
 # src/locus/memory/backends/ that needs a runtime dep. Keep in sync.
-sqlite = ["aiosqlite>=0.20"]
 redis = ["redis>=5.0"]
 postgresql = ["asyncpg>=0.29"]
 opensearch = ["opensearch-py>=2.4"]
@@ -91,7 +90,6 @@ oracledb = ["oracledb>=2.2.0"]
 
 # All checkpoint backends.
 checkpoints = [
-    "aiosqlite>=0.20",
     "redis>=5.0",
     "asyncpg>=0.29",
     "opensearch-py>=2.4",
@@ -101,21 +99,14 @@ checkpoints = [
 
 # RAG vector stores — one extra per store under src/locus/rag/stores/
 # that needs a runtime dep. Keep in sync.
-qdrant = ["qdrant-client>=1.11"]
-chroma = ["chromadb>=0.5"]
-pinecone = ["pinecone>=5.0"]
 pgvector = ["asyncpg>=0.29"]
 
 # Full RAG stack — every vector store Locus ships. Use this if you
 # want to pick a store at runtime rather than installing one up front.
 rag = [
-    "qdrant-client>=1.11",
-    "chromadb>=0.5",
-    "pinecone>=5.0",
     "asyncpg>=0.29",
     "opensearch-py>=2.4",
     "oracledb>=2.2.0",
-    "aiosqlite>=0.20",
     "oci>=2.173.0",
     "openai>=1.50",
 ]
@@ -132,14 +123,10 @@ sdk = [
     "mcp>=1.0",
     "fastapi>=0.110",
     "uvicorn[standard]>=0.27",
-    "aiosqlite>=0.20",
     "redis>=5.0",
     "asyncpg>=0.29",
     "opensearch-py>=2.4",
     "oracledb>=2.2.0",
-    "qdrant-client>=1.11",
-    "chromadb>=0.5",
-    "pinecone>=5.0",
 ]
 
 # Development
@@ -158,7 +145,6 @@ dev = [
     # rather than in ``[dependency-groups].dev`` so a plain
     # ``pip install -e ".[dev]"`` (used by CI and contributors) covers
     # the entire test surface.
-    "aiosqlite>=0.22.1",  # used by SQLite checkpointer tests
     "fastmcp>=3.2.0",     # MCP server tests in tests/unit/test_fastmcp.py
     "pyyaml>=6.0.3",      # Playbook YAML loader tests
     "redis>=7.1.0",       # Redis checkpointer tests
@@ -242,8 +228,8 @@ features = [
     "dev",
     "openai", "anthropic", "ollama", "oci",
     "telemetry", "mcp", "server",
-    "sqlite", "redis", "postgresql", "opensearch", "oracledb",
-    "qdrant", "chroma", "pinecone", "pgvector",
+    "redis", "postgresql", "opensearch", "oracledb",
+    "pgvector",
 ]
 
 [[tool.hatch.envs.test.matrix]]
@@ -381,16 +367,21 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "examples/checkpointer_examples.py" = ["ALL"]
 "examples/config.py" = ["F821", "RET503"]
-"examples/tutorial_11_swarm_multiagent.py" = ["F821"]
-"examples/tutorial_05_agent_hooks.py" = ["PLE2510"]
+"examples/notebook_11_swarm_multiagent.py" = ["F821"]
+"examples/notebook_05_agent_hooks.py" = ["PLE2510"]
 "examples/projects/**/*.py" = ["PLE2510"]
 "workbench/scripts/*.py" = ["EXE001", "EXE005"]
+"workbench/backend/runner.py" = [
+    "ASYNC240", # os.path in async — wallet-path resolution, fast/local
+    "PTH111",   # os.path.expanduser — OCI / wallet config paths
+]
 "tests/**/*.py" = [
     "ARG",     # unused arguments in fixtures
     "FBT",     # boolean trap in tests
     "PLR2004", # magic values
     "S101",    # assert
     "SLF001",  # private member access
+    "N802",    # test method names with mixed case (test_implicit_AND_…)
     "RUF059",  # unpacked-but-unused vars in (state, events) destructuring
     "B011",    # assert False — idiomatic in try/except asserting raise
     "PT015",   # same as above — pytest's preferred form is opt-in
@@ -413,7 +404,8 @@ ignore = [
     "ASYNC240", # pathlib in async tests — fine, trio.Path/anyio.path overkill
 ]
 "examples/**/*.py" = [
-    "T201",     # print — tutorials/examples intentionally use print
+    "S608",     # Oracle notebooks construct SQL from validated identifiers
+    "T201",     # print — notebooks/examples intentionally use print
     "DTZ005",   # datetime.now without tz — fine for demo UX
     "BLE001",   # blind except — simplified error handling in examples
     "S108",     # /tmp/... demo paths — examples write to /tmp on purpose
@@ -422,22 +414,22 @@ ignore = [
     "PTH110",   # os.path.exists — keep examples accessible to readers
     "PTH111",   # os.path.expanduser — idiomatic for user-facing configs
     "PTH118",   # os.path.join — pedagogical readability over Path / "x"
-    "PTH208",   # os.listdir — same; tutorials avoid pathlib import noise
+    "PTH208",   # os.listdir — same; notebooks avoid pathlib import noise
     "A002",     # builtin arg shadowing — pedagogical clarity
     "B007",     # unused loop variable — counter patterns are pedagogical
     "SLF001",   # private-member access — examples illustrate internals
-    "F401",     # unused imports — tutorials show available API surface
+    "F401",     # unused imports — notebooks show available API surface
     "F541",     # f-string without placeholders — pedagogical scaffolding
-    "F841",     # unused local — tutorials demonstrate APIs that return
+    "F841",     # unused local — notebooks demonstrate APIs that return
                 # values for inspection even when they're not consumed
                 # downstream.
     "ARG005",   # unused lambda arg — demo lambda signatures
-    "ASYNC210", # blocking HTTP — tutorials may demo sync libs alongside async
+    "ASYNC210", # blocking HTTP — notebooks may demo sync libs alongside async
     "ASYNC240", # os.path in async — examples favor stdlib readability
 ]
 "scripts/**/*.py" = [
     "T201",    # print — runner scripts are CLI tools that print to stdout
-    "S603",    # subprocess call — runner intentionally execs tutorials
+    "S603",    # subprocess call — runner intentionally execs notebooks
     "BLE001",  # blind except — runner reports failures generically
 ]
 "src/locus/memory/backends/**/*.py" = [
@@ -448,8 +440,15 @@ ignore = [
     "S608",    # SQL built from validated identifiers
     "PYI063",  # PEP 570 positional-only — `__context` is Pydantic's spelling
 ]
+"src/locus/memory/store_backends/**/*.py" = [
+    "S608",    # SQL built from validated identifiers (regex-checked at init)
+    "PYI063",  # PEP 570 positional-only — `__context` is Pydantic's spelling
+]
 "src/locus/agent/agent.py" = [
     "SLF001",  # Private attr access for internal state (_has_unverified_writes)
+]
+"src/locus/_oracle_pool_cache.py" = [
+    "SLF001",  # this helper IS the private-state plumbing — by design
 ]
 "src/locus/agent/initializer.py" = [
     "SLF001",  # Extracted constructor body — its job is to populate
@@ -468,8 +467,7 @@ ignore = [
     "FURB110",  # Ternary vs or — readability preference
     "PTH108",   # os.unlink vs Path.unlink — temp file cleanup
     "PTH111",   # os.path.expanduser — OCI config paths
-    # S324 (md5 for deterministic IDs) no longer needed — Qdrant point IDs
-    # are now derived via UUIDv5 under a fixed namespace.
+    "S608",     # SQL built from validated identifiers — see _oracle_filter / chunkers
     "UP042",    # str+Enum — needed for serialization compat
 ]
 "src/locus/core/interrupt.py" = [
@@ -494,10 +492,6 @@ ignore = [
 ]
 "src/locus/memory/backends/oci_bucket.py" = [
     "FURB162", # Timezone replacement — OCI API returns specific format
-]
-"src/locus/memory/backends/sqlite.py" = [
-    "S608",    # SQL from validated identifiers
-    "PYI063",  # PEP 570 positional-only
 ]
 
 [tool.ruff.lint.isort]
@@ -559,9 +553,6 @@ module = [
     "mcp.*",
     "anthropic.*",
     "ollama.*",
-    "chromadb.*",
-    "qdrant_client.*",
-    "pinecone.*",
     "oracledb.*",
     "opensearchpy.*",
     "redis.*",
@@ -636,8 +627,6 @@ omit = [
     "src/locus/rag/stores/opensearch.py",
     "src/locus/rag/stores/oracle.py",
     "src/locus/rag/stores/pgvector.py",
-    "src/locus/rag/stores/pinecone.py",
-    "src/locus/rag/stores/qdrant.py",
     "src/locus/rag/embeddings/openai.py",
     "src/locus/memory/backends/opensearch.py",
     "src/locus/memory/backends/oracle.py",

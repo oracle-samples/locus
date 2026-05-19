@@ -4,14 +4,14 @@
 
 """Tests for the workbench /categories endpoints.
 
-The workbench backend serves three catalogues — tutorials, skills,
+The workbench backend serves three catalogues — notebooks, skills,
 protocols — each with a parallel ``/categories`` endpoint that feeds
 the sidebar's topic-progression section headers. The contract:
 
 * ``GET /api/{noun}/categories`` returns
   ``[{"id", "name", "description"}, ...]`` in declaration order.
 * Every list item's ``category`` field is the id of one of those
-  categories OR a fallback sentinel (``"misc"`` for tutorials,
+  categories OR a fallback sentinel (``"misc"`` for notebooks,
   ``"other"`` for skills/protocols).
 * The user-facing nav rests on a curated set of category ids
   (``fundamentals``, ``graphs``, ..., ``observability``) — that set
@@ -50,13 +50,13 @@ def client() -> TestClient:
 
 
 # ---------------------------------------------------------------------------
-# Tutorials
+# Notebooks
 # ---------------------------------------------------------------------------
 
 
-class TestTutorialCategories:
+class TestNotebookCategories:
     def test_endpoint_returns_curated_categories(self, client: TestClient) -> None:
-        r = client.get("/api/tutorials/categories")
+        r = client.get("/api/notebooks/categories")
         assert r.status_code == 200, r.text
         cats = r.json()
         assert cats, "expected at least one category"
@@ -65,35 +65,35 @@ class TestTutorialCategories:
         # facing learning path. Drift here = the README / nav docs are
         # describing categories that no longer exist.
         for required in ("fundamentals", "graphs", "multi-agent", "router", "observability"):
-            assert required in ids, f"missing tutorial category: {required}"
+            assert required in ids, f"missing notebook category: {required}"
         for c in cats:
             assert c["name"], f"category {c['id']} has empty name"
             assert c["description"], f"category {c['id']} has empty description"
 
-    def test_every_tutorial_has_known_category(self, client: TestClient) -> None:
-        cats = {c["id"] for c in client.get("/api/tutorials/categories").json()}
+    def test_every_notebook_has_known_category(self, client: TestClient) -> None:
+        cats = {c["id"] for c in client.get("/api/notebooks/categories").json()}
         cats.add("misc")
-        for t in client.get("/api/tutorials").json():
+        for t in client.get("/api/notebooks").json():
             assert t.get("category") in cats, (
-                f"tutorial {t['id']} has unknown category {t.get('category')!r}"
+                f"notebook {t['id']} has unknown category {t.get('category')!r}"
             )
 
-    def test_observability_category_contains_new_sse_tutorials(self, client: TestClient) -> None:
-        """Tutorials 52-55 (the SSE retrofit suite) must live under
+    def test_observability_category_contains_new_sse_notebooks(self, client: TestClient) -> None:
+        """Notebooks 52-55 (the SSE retrofit suite) must live under
         ``observability`` so the sidebar surfaces them as a group."""
         obs_numbers = sorted(
             t["number"]
-            for t in client.get("/api/tutorials").json()
+            for t in client.get("/api/notebooks").json()
             if t.get("category") == "observability"
         )
         for n in (52, 53, 54, 55):
-            assert n in obs_numbers, f"tutorial {n} missing from 'observability'"
+            assert n in obs_numbers, f"notebook {n} missing from 'observability'"
 
-    def test_tutorials_sorted_by_category_then_order(self, client: TestClient) -> None:
+    def test_notebooks_sorted_by_category_then_order(self, client: TestClient) -> None:
         """The catalogue is pre-sorted by (category position,
-        category_order, number). Two consecutive tutorials in the same
+        category_order, number). Two consecutive notebooks in the same
         category must have non-decreasing ``category_order``."""
-        ts = client.get("/api/tutorials").json()
+        ts = client.get("/api/notebooks").json()
         for prev, curr in pairwise(ts):
             if prev["category"] == curr["category"]:
                 assert prev.get("category_order", 0) <= curr.get("category_order", 0), (

@@ -72,9 +72,7 @@ embedder = OCIEmbeddings(
 |---|---|---|
 | **Oracle 26ai** | `OracleVectorStore` | Native `VECTOR(N, FLOAT32)` + `VECTOR_DISTANCE` — day-1 target on OCI. |
 | OpenSearch | `OpenSearchVectorStore` | k-NN plugin; pairs well with existing search infra. |
-| Qdrant | `QdrantVectorStore` | Self-hosted, fast filtered search. |
 | pgvector | `PgVectorStore` | Postgres shops. |
-| Chroma | `ChromaVectorStore` | Local prototyping. |
 | In-memory | `InMemoryVectorStore` | Tests. |
 
 ```python
@@ -250,7 +248,7 @@ Standalone use (no retriever):
 top_5 = await reranker.rerank(query, candidates)
 ```
 
-See [`tutorial_60_cohere_reranker.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_60_cohere_reranker.py)
+See [`notebook_05_cohere_reranker.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_05_cohere_reranker.py)
 for a runnable example, and the workbench has a `Retrieve-then-rerank
 (Cohere V4)` pattern that shows the embedding-vs-reranked ordering
 side-by-side at `/api/run/cohere_reranker`.
@@ -302,11 +300,11 @@ re-ranking before they reach the agent.
 | Slow first query | Vector index hasn't been built. Oracle 26ai builds an HNSW index after `add_documents`; force it earlier with `await store.build_index()` when supported. |
 | Prompt injection from indexed content | The default tool description warns the model not to execute instructions inside retrieved content; sanitise high-risk corpora at ingest time too. |
 
-## Source and tutorials
+## Source and notebooks
 
-- [`tutorial_22_rag_basics.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_22_rag_basics.py) — minimal end-to-end RAG.
-- [`tutorial_23_rag_providers.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_23_rag_providers.py) — picking an embedder + store.
-- [`tutorial_24_rag_agents.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_24_rag_agents.py) — `create_rag_tool` plugged into an agent.
+- [`notebook_43_rag_basics.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_43_rag_basics.py) — minimal end-to-end RAG.
+- [`notebook_44_rag_providers.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_44_rag_providers.py) — picking an embedder + store.
+- [`notebook_45_rag_agents.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_45_rag_agents.py) — `create_rag_tool` plugged into an agent.
 - [`locus.rag`](https://github.com/oracle-samples/locus/tree/main/src/locus/rag) — `RAGRetriever`, all embedders, all stores, `create_rag_tool`, `RAGToolkit`.
 
 ## See also

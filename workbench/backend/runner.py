@@ -21,9 +21,9 @@ playground runs locally against developer credentials.
 Endpoints (all POST, all return ``{reply, events}``):
 
 - ``/api/patterns``                    catalog of patterns + descriptions
-- ``/api/run/agent``                   one-shot agent (tutorial 01)
-- ``/api/run/agent_with_tools``        agent + tools (tutorial 02)
-- ``/api/run/composition``             SequentialPipeline (tutorial 25)
+- ``/api/run/agent``                   one-shot agent (notebook 01)
+- ``/api/run/agent_with_tools``        agent + tools (notebook 02)
+- ``/api/run/composition``             SequentialPipeline (notebook 25)
 - ``/api/run/orchestrator``            Orchestrator + Specialists (17)
 - ``/api/run/stategraph_loop``         critic loop with cycles (43)
 - ``/api/run/map_reduce``              Send fan-out + reduce (42)
@@ -63,7 +63,7 @@ class ProviderConfig(BaseModel):
 
     provider: Literal["openai", "anthropic", "oci-session", "oci-apikey"]
     model: str = Field(default="", description="primary model id (slot A)")
-    # Optional secondary slots so a tutorial can mix models — e.g. haiku
+    # Optional secondary slots so a notebook can mix models — e.g. haiku
     # for triage, sonnet for the deep specialist. Both fall through to
     # ``model`` (slot A) when empty. Same provider + credentials as A.
     model_b: str | None = None
@@ -176,9 +176,30 @@ def build_model(cfg: ProviderConfig) -> Any:
 # ---------------------------------------------------------------------------
 
 
+class DatabaseConfig(BaseModel):
+    """Per-request Oracle 26ai connection envelope.
+
+    Lets the workbench UI collect ADB credentials per browser tab
+    instead of forcing every user to set ORACLE_* env vars on the
+    backend host. The wallet_location is a *path on the backend's
+    filesystem* — for Docker, that path must be visible inside the
+    container via a volume mount.
+    """
+
+    dsn: str = ""
+    user: str = ""
+    password: str = ""
+    wallet_location: str = ""
+    wallet_password: str = ""
+
+    def is_set(self) -> bool:
+        return bool(self.dsn and self.user and self.password)
+
+
 class RunRequest(BaseModel):
     prompt: str
     provider: ProviderConfig
+    database: DatabaseConfig | None = None
     # Cognitive-routing toggle. False = default rule-based ranker
     # (deterministic). True = opt-in LLMProtocolPicker — the model
     # picks the protocol from the filtered candidate set. Only honoured
@@ -257,51 +278,74 @@ async def _drive_pipeline(runnable: Any, prompt: str) -> tuple[str, list[RunEven
 
 PATTERNS: list[dict[str, Any]] = [
     {
+        "id": "oracle_26ai_rag",
+        "title": "Oracle 26ai RAG (native VECTOR)",
+        "notebook": 61,
+        "summary": (
+            "OracleVectorStore against an Autonomous Database wallet — native "
+            "VECTOR(1024, FLOAT32) + VECTOR_DISTANCE COSINE, same RAGRetriever "
+            "as the in-memory notebooks. Requires ORACLE_DSN / ORACLE_USER / "
+            "ORACLE_PASSWORD / ORACLE_WALLET on the backend plus an OCI "
+            "provider for embeddings."
+        ),
+    },
+    {
+        "id": "cohere_reranker",
+        "title": "Retrieve-then-rerank (Cohere V4)",
+        "notebook": 60,
+        "summary": (
+            "Same query, two orderings: embedding-only vs Cohere V4 "
+            "cross-encoder. The reranker promotes the canonical answer to "
+            "the top — visible side-by-side with scores. Requires an OCI "
+            "provider config (OCI on-demand rerank-v4 endpoint)."
+        ),
+    },
+    {
         "id": "agent",
         "title": "Basic agent",
-        "tutorial": 1,
+        "notebook": 1,
         "summary": "One Agent answers a prompt. Hello world for the SDK.",
     },
     {
         "id": "agent_with_tools",
         "title": "Agent + tools",
-        "tutorial": 2,
+        "notebook": 2,
         "summary": "Agent with two trivial tools — sees ReAct loop in action.",
     },
     {
         "id": "composition",
         "title": "Composition (Sequential)",
-        "tutorial": 25,
+        "notebook": 25,
         "summary": "Two agents chained: researcher → summariser.",
     },
     {
         "id": "orchestrator",
         "title": "Orchestrator + specialists",
-        "tutorial": 17,
+        "notebook": 17,
         "summary": "One coordinator, two specialists, parallel dispatch.",
     },
     {
         "id": "stategraph_loop",
         "title": "StateGraph (critic loop)",
-        "tutorial": 43,
+        "notebook": 43,
         "summary": "Writer → Critic loop until critic approves; allow_cycles.",
     },
     {
         "id": "map_reduce",
         "title": "Map-reduce code review",
-        "tutorial": 42,
+        "notebook": 42,
         "summary": "Send fan-out across N reviewers, reduce findings.",
     },
     {
         "id": "structured_output",
         "title": "Structured output (Verdict)",
-        "tutorial": 13,
+        "notebook": 13,
         "summary": "Pydantic output_schema — typed Verdict, not free text.",
     },
     {
         "id": "memory_manager",
         "title": "Long-term memory",
-        "tutorial": None,
+        "notebook": None,
         "summary": (
             "Two-session demo: agent extracts memories from session 1, "
             "then injects them in session 2 — no raw history needed."
@@ -310,22 +354,11 @@ PATTERNS: list[dict[str, Any]] = [
     {
         "id": "cognitive_routing",
         "title": "Cognitive routing (rule-based vs LLM)",
-        "tutorial": 59,
+        "notebook": 59,
         "summary": (
             "Dispatch a prompt through the cognitive router. Toggle the "
             "LLM picker checkbox to compare rule-based protocol selection "
             "against the opt-in LLMProtocolPicker."
-        ),
-    },
-    {
-        "id": "cohere_reranker",
-        "title": "Retrieve-then-rerank (Cohere V4)",
-        "tutorial": 60,
-        "summary": (
-            "Same query, two orderings: embedding-only vs Cohere V4 "
-            "cross-encoder. The reranker promotes the canonical answer to "
-            "the top — visible side-by-side with scores. Requires an OCI "
-            "provider config (OCI on-demand rerank-v4 endpoint). Closes #216."
         ),
     },
 ]
@@ -1082,7 +1115,131 @@ async def _run_cohere_reranker(req: RunRequest) -> RunResponse:
     return RunResponse(reply=reply, events=events)
 
 
+def _resolve_db(cfg: DatabaseConfig | None) -> DatabaseConfig:
+    """Pick the DatabaseConfig to use, falling back to ORACLE_* env vars.
+
+    Per-request config wins; env vars only kick in if every UI field is
+    blank. That lets a deployment hard-code creds via env while still
+    letting individual tabs override them.
+    """
+    if cfg and cfg.is_set():
+        return cfg
+    return DatabaseConfig(
+        dsn=os.environ.get("ORACLE_DSN", ""),
+        user=os.environ.get("ORACLE_USER", ""),
+        password=os.environ.get("ORACLE_PASSWORD", ""),
+        wallet_location=os.environ.get("ORACLE_WALLET", ""),
+        wallet_password=os.environ.get("ORACLE_WALLET_PASSWORD", ""),
+    )
+
+
+async def _run_oracle_26ai_rag(req: RunRequest) -> RunResponse:
+    """Workbench demo for notebook 06 — Oracle 26ai native VECTOR RAG.
+
+    Embeds a tiny Oracle-themed corpus with ``OCIEmbeddings``
+    (Cohere V3, 1024-dim) and stores it in an ``OracleVectorStore``
+    backed by an Autonomous Database wallet. The store auto-creates a
+    ``VECTOR(1024, FLOAT32)`` table on first use and serves cosine
+    similarity via ``VECTOR_DISTANCE``.
+
+    Requires the database side via env vars (set them where the
+    workbench backend runs): ``ORACLE_DSN``, ``ORACLE_USER``,
+    ``ORACLE_PASSWORD``, ``ORACLE_WALLET``, and (if the wallet is
+    encrypted) ``ORACLE_WALLET_PASSWORD``. The OCI side comes from
+    the provider panel in the UI.
+    """
+    from locus.rag import OCIEmbeddings, OracleVectorStore, RAGRetriever
+
+    if req.provider.provider not in {"oci-session", "oci-apikey"}:
+        raise HTTPException(
+            400,
+            "Oracle 26ai RAG requires OCI embeddings (Cohere V3 on us-chicago-1). "
+            "Switch the provider to OCI session or OCI api_key in the UI.",
+        )
+
+    db = _resolve_db(req.database)
+    if not db.is_set():
+        raise HTTPException(
+            400,
+            "Oracle ADB connection envelope not provided. Fill in the "
+            "Database panel (DSN, user, password, wallet path) and click "
+            "'Test connection' before running this pattern. The wallet "
+            "path must be readable by the backend process — when running "
+            "in Docker, mount it into the container.",
+        )
+
+    corpus = [
+        "Oracle 26ai introduces a native VECTOR(N, FLOAT32) column type "
+        "with HNSW and IVF index organisations.",
+        "VECTOR_DISTANCE(embedding, :query, COSINE) returns the cosine "
+        "distance between a stored vector and a query vector.",
+        "Autonomous Database wallets bundle a tnsnames.ora alias per "
+        "consumer group — _low, _medium, _high, _tp, _tpurgent.",
+        "Locus exposes Oracle 26ai through OracleVectorStore; the same "
+        "RAGRetriever drives every backend uniformly.",
+        "A vector index on a VECTOR column is built asynchronously after "
+        "the first INSERT, so the first query may be slower than steady-state.",
+        "PostgreSQL stores embeddings through the pgvector extension, not a native type.",
+    ]
+    query = (req.prompt or "How does Oracle 26ai store and search embeddings?").strip()
+
+    cfg = req.provider
+    region = cfg.region or "us-chicago-1"
+    auth_type = "security_token" if cfg.provider == "oci-session" else "api_key"
+    endpoint = f"https://inference.generativeai.{region}.oci.oraclecloud.com"
+
+    embedder = OCIEmbeddings(
+        model_id="cohere.embed-english-v3.0",
+        profile_name=cfg.profile or "DEFAULT",
+        auth_type=auth_type,
+        compartment_id=cfg.compartment_id or "",
+        service_endpoint=endpoint,
+    )
+
+    store = OracleVectorStore(
+        dsn=db.dsn,
+        user=db.user,
+        password=db.password,
+        wallet_location=os.path.expanduser(db.wallet_location),
+        wallet_password=db.wallet_password,
+        table_name="locus_workbench_61",
+        dimension=1024,
+        distance_metric="COSINE",
+    )
+
+    retriever = RAGRetriever(embedder=embedder, store=store)
+    await retriever.add_documents(corpus)
+    hits = await retriever.retrieve(query, limit=3)
+
+    events: list[RunEvent] = [
+        RunEvent(kind="info", text=f"query: {query}"),
+        RunEvent(
+            kind="info",
+            text=f"backend: OracleVectorStore dsn={os.environ['ORACLE_DSN']} "
+            f"dim=1024 metric=COSINE",
+        ),
+    ]
+    for i, h in enumerate(hits.documents, start=1):
+        events.append(
+            RunEvent(
+                kind="hit",
+                text=f"#{i}  score={h.score:.4f}  {h.document.content[:90]}",
+                extra={"rank": i, "score": h.score, "doc_id": h.document.id},
+            )
+        )
+
+    top = hits.documents[0].document.content if hits.documents else ""
+    reply = (
+        f"Top match (VECTOR_DISTANCE / COSINE):\n{top}"
+        if top
+        else "No documents returned — the table is empty or the query embedding failed."
+    )
+    return RunResponse(reply=reply, events=events)
+
+
 PATTERN_RUNNERS: dict[str, Any] = {
+    "oracle_26ai_rag": _run_oracle_26ai_rag,
+    "cohere_reranker": _run_cohere_reranker,
     "agent": _run_agent,
     "agent_with_tools": _run_agent_with_tools,
     "composition": _run_composition,
@@ -1092,7 +1249,6 @@ PATTERN_RUNNERS: dict[str, Any] = {
     "structured_output": _run_structured_output,
     "memory_manager": _run_memory_manager,
     "cognitive_routing": _run_cognitive_routing,
-    "cohere_reranker": _run_cohere_reranker,
 }
 
 
@@ -1111,6 +1267,61 @@ app.add_middleware(
 
 
 STREAMABLE = {"agent", "agent_with_tools", "structured_output"}
+
+
+@app.post("/api/database/test")
+async def test_database(cfg: DatabaseConfig) -> dict[str, Any]:
+    """Open a connection pool, run SELECT 1, return ok/error.
+
+    Validates the connection envelope before the user attempts to run
+    any Oracle-backed pattern. Surfaces the underlying oracledb error
+    verbatim so wallet / TLS / credential problems are diagnosable
+    from the UI. Works the same way against a local backend or a
+    Docker backend as long as the wallet path is readable from where
+    the process runs.
+    """
+    if not cfg.is_set():
+        return {
+            "ok": False,
+            "detail": "DSN / user / password are required.",
+        }
+    try:
+        import oracledb
+    except ImportError as exc:
+        raise HTTPException(500, "oracledb package not installed on backend") from exc
+
+    try:
+        params: dict[str, Any] = {}
+        if cfg.wallet_location:
+            wallet = os.path.expanduser(cfg.wallet_location)
+            params["config_dir"] = wallet
+            params["wallet_location"] = wallet
+            if cfg.wallet_password:
+                params["wallet_password"] = cfg.wallet_password
+
+        pool = oracledb.create_pool_async(
+            user=cfg.user,
+            password=cfg.password,
+            dsn=cfg.dsn,
+            min=1,
+            max=1,
+            **params,
+        )
+        async with pool.acquire() as conn, conn.cursor() as cur:
+            await cur.execute("SELECT 1 FROM dual")
+            row = await cur.fetchone()
+        await pool.close()
+        return {
+            "ok": True,
+            "detail": f"Connection OK (SELECT 1 returned {row[0]}).",
+            "dsn": cfg.dsn,
+        }
+    except Exception as exc:  # surface to UI verbatim
+        return {
+            "ok": False,
+            "detail": f"{type(exc).__name__}: {exc}",
+            "dsn": cfg.dsn,
+        }
 
 
 @app.get("/api/patterns")
@@ -1325,9 +1536,11 @@ async def list_models(req: ListModelsRequest) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Workbench — list every model-only tutorial under examples/, serve its
+# Workbench — list every model-only notebook under examples/, serve its
 # source code, and run user-edited copies in a subprocess with streamed
-# stdout/stderr over SSE.
+# stdout/stderr over SSE. Notebook files follow the legacy
+# ``notebook_NN_*.py`` naming convention; the user-facing label is
+# "Notebook" everywhere we surface it.
 # ---------------------------------------------------------------------------
 
 import re
@@ -1336,125 +1549,139 @@ import tempfile
 from pathlib import Path
 
 
-# Tutorials kept out of the workbench because they require infra beyond
-# the model (Postgres, vector store, MCP server, multi-process A2A,
-# multimodal providers, dedicated AI cluster, etc.).
-TUTORIAL_BLOCKLIST = {
-    12,  # MCP — needs an external MCP server process
-    23,  # RAG providers — requires OPENAI_API_KEY for the OpenAI embeddings demo;
-    # graceful skip but confusing UX in the workbench
-    34,  # A2A — requires a second process running on a separate port
-    # 40 is NOT blocked — tutorial 40 runs Part 1 (routing docs) and prints
-    # the wiring snippet for Parts 2-5, skipping live inference when
-    # OCI_DAC_ENDPOINT_OCID is not set. Graceful, educational, exit 0.
-    # Tutorials 45-48 call locus.core.interrupt() and block waiting for
-    # stdin that the workbench subprocess never receives.  They carry a
-    # needs_stdin badge already; adding them here prevents the Run button
-    # from launching a subprocess that would hang until the harness timeout.
-    45,
-    46,
-    47,
-    48,
+# Hard hide list — empty by design. Every notebook in the repo should
+# be visible in the workbench sidebar so users can read the source and
+# learn the patterns even when the workbench can't physically launch a
+# subprocess for them. Use ``NOTEBOOK_NEEDS_STDIN`` instead — it badges
+# the notebook and the runner refuses to start it, but the sidebar
+# still surfaces it.
+NOTEBOOK_BLOCKLIST: set[int] = set()
+
+# Notebooks that pause for human input via ``locus.core.interrupt()``.
+# The workbench subprocess has no stdin attached, so launching one
+# would hang until the harness timeout. They appear in the catalog
+# with a ``needs_stdin: true`` badge; the Run handler short-circuits
+# before spawning. Audit against ``grep -l 'locus.core.interrupt'
+# examples/notebook_*.py`` when renaming or adding interrupt-flow
+# notebooks.
+NOTEBOOK_NEEDS_STDIN = {
+    24,  # human_in_the_loop
+    38,  # multiagent_human_in_loop
+    62,  # incident_response
+    63,  # procurement_approval
+    64,  # contract_review
 }
 
-# Tutorials that pause for human input via locus.core.interrupt(). The
-# subprocess has no stdin attached, so these would hang until the
-# harness timeout. Surfaced in the catalog (needs_stdin: true) so the
-# UI can flag them and /api/tutorials/run can reject early.
-TUTORIAL_NEEDS_STDIN = {9, 45, 46, 47, 48}
-
-_TUTORIAL_DIR = (Path(__file__).resolve().parents[2] / "examples").resolve()
+_NOTEBOOK_DIR = (Path(__file__).resolve().parents[2] / "examples").resolve()
 
 
-# Topic progression for the workbench sidebar. Each tutorial number is
+# Topic progression for the workbench sidebar. Each notebook number is
 # bound to one category; categories are rendered in the order declared
-# here. Keep ranges contiguous so adding a new tutorial slots in
+# here. Keep ranges contiguous so adding a new notebook slots in
 # without renumbering — gaps ("RAG suite blocked in workbench") leave
 # the category empty rather than reshuffling.
-TUTORIAL_CATEGORIES: list[dict[str, Any]] = [
+NOTEBOOK_CATEGORIES: list[dict[str, Any]] = [
+    # Category order + members track docs/mkdocs.yml `Notebooks:` exactly.
+    # When the catalog reorders, mirror it here.
     {
-        "id": "fundamentals",
-        "name": "Fundamentals",
-        "description": "Build your first agent — model, tools, memory, streaming, hooks.",
+        "id": "oci-genai",
+        "name": "OCI Generative AI (start here)",
+        "description": "Pick a transport, point at a cluster, layer in a reranker.",
         "members": [1, 2, 3, 4, 5],
     },
     {
+        "id": "oracle",
+        "name": "Oracle Database 26ai",
+        "description": (
+            "Native primitives for Oracle 26ai — vector store, checkpointer, "
+            "loader, in-DB chunker + embeddings, long-term store, versioned "
+            "saver. Zero langchain dependency."
+        ),
+        "members": [6, 7, 8, 9, 10, 11, 12],
+    },
+    {
+        "id": "fundamentals",
+        "name": "Agent Foundations",
+        "description": "Build your first agent — model, tools, memory, streaming, hooks.",
+        "members": [13, 14, 15, 16, 17, 18, 19, 20],
+    },
+    {
         "id": "graphs",
-        "name": "Graphs & flow control",
-        "description": "StateGraph, conditional routing, reducers, HITL, advanced patterns.",
-        "members": [6, 7, 8, 9, 10, 35, 36, 37],
-    },
-    {
-        "id": "structured-output",
-        "name": "Structured reasoning",
-        "description": "Typed outputs, playbooks, reasoning patterns, GSAR grounding, evaluation.",
-        "members": [13, 14, 15, 26, 39],
-    },
-    {
-        "id": "composition",
-        "name": "Composition",
-        "description": "SequentialPipeline, ParallelPipeline, LoopAgent — wiring agents together.",
-        "members": [25],
+        "name": "Graphs & composition",
+        "description": "StateGraph, conditional routing, reducers, HITL, composition, functional API.",
+        "members": [21, 22, 23, 24, 25, 26, 27, 28],
     },
     {
         "id": "multi-agent",
         "name": "Multi-agent",
-        "description": "Swarm, handoff, orchestrator, specialists, A2A, debate, supervisor patterns, DeepAgent.",
-        "members": [11, 16, 17, 18, 33, 34, 41, 42, 43, 44],
+        "description": "Swarm, handoff, orchestrator, specialists, A2A, DeepAgent, map-reduce, debate.",
+        "members": [29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
+    },
+    {
+        "id": "reasoning",
+        "name": "Reasoning & structured output",
+        "description": "Typed outputs, reasoning patterns, GSAR typed grounding.",
+        "members": [40, 41, 42],
+    },
+    {
+        "id": "rag",
+        "name": "RAG",
+        "description": "Provider-agnostic RAG basics, providers, agents.",
+        "members": [43, 44, 45],
+    },
+    {
+        "id": "skills-plugins",
+        "name": "Skills, playbooks & plugins",
+        "description": "MCP integration, playbooks, plugins, skills, steering.",
+        "members": [46, 47, 48, 49, 50],
     },
     {
         "id": "production",
         "name": "Production",
-        "description": "Guardrails, hooks (advanced), model providers, servers, checkpoint backends.",
-        "members": [19, 20, 21, 27, 28, 29, 30, 38, 40],
+        "description": "Guardrails, checkpoint backends, evaluation, model providers, multi-modal.",
+        "members": [51, 52, 53, 54, 55, 56],
     },
     {
-        "id": "skills-plugins",
-        "name": "Skills & plugins",
-        "description": "Pluggable skill packs and integration plugins (MCP, fastmcp, more).",
-        "members": [12, 31, 32],
+        "id": "router-observability",
+        "name": "Cognitive router & observability",
+        "description": "PRISM router + opt-in EventBus telemetry, agent yield bridge, event catalogue.",
+        "members": [57, 58, 59, 60, 61],
     },
     {
         "id": "real-world",
         "name": "Real-world workflows",
-        "description": "End-to-end use cases — incident response, contract review, audio chat.",
-        "members": [45, 46, 47, 48, 49, 50],
+        "description": "End-to-end use cases — incident response, contract review, voice.",
+        "members": [62, 63, 64, 65, 66],
     },
     {
-        "id": "router",
-        "name": "Cognitive router (PRISM)",
-        "description": "Bounded graph generation — typed extraction → registry → compiler.",
-        "members": [51],
-    },
-    {
-        "id": "observability",
-        "name": "Observability & SSE",
-        "description": "Opt-in telemetry — run_context, event bus, agent yield bridge, token usage, full catalogue.",
-        "members": [52, 53, 54, 55],
+        "id": "server",
+        "name": "Server & full pipelines",
+        "description": "Agent server, full research workflow.",
+        "members": [67, 68],
     },
 ]
 
 
-def _tutorial_category(number: int) -> tuple[str, int]:
-    """Return ``(category_id, order_within_category)`` for a tutorial.
+def _notebook_category(number: int) -> tuple[str, int]:
+    """Return ``(category_id, order_within_category)`` for a notebook.
 
-    Tutorials not bound to a category fall under ``"misc"`` so a stray
-    ``tutorial_99_*`` still renders. ``order_within_category`` is the
+    Notebooks not bound to a category fall under ``"misc"`` so a stray
+    ``notebook_99_*`` still renders. ``order_within_category`` is the
     member's index in the category's ``members`` list — preserves
     declaration order rather than numeric sort, so we can manually
-    foreground a tutorial that's logically a prerequisite.
+    foreground a notebook that's logically a prerequisite.
     """
-    for cat in TUTORIAL_CATEGORIES:
+    for cat in NOTEBOOK_CATEGORIES:
         if number in cat["members"]:
             return cat["id"], cat["members"].index(number)
     return "misc", number
 
 
-def _parse_tutorial(path: Path) -> dict[str, Any]:
-    """Pull (id, number, title, summary, source) out of a tutorial file."""
+def _parse_notebook(path: Path) -> dict[str, Any]:
+    """Pull (id, number, title, summary, source) out of a notebook file."""
     src = path.read_text()
     # Extract the leading triple-quoted docstring; first line is the
-    # title, everything else up to "This tutorial covers:" is the summary.
+    # title, everything else up to "This notebook covers:" is the summary.
     m = re.search(r'^"""(.*?)"""', src, re.DOTALL | re.MULTILINE)
     docstring = m.group(1).strip() if m else ""
     title = path.stem.replace("_", " ").title()
@@ -1462,20 +1689,33 @@ def _parse_tutorial(path: Path) -> dict[str, Any]:
     if docstring:
         lines = docstring.splitlines()
         title = lines[0].strip().rstrip(".")
+        # Strip the legacy "Notebook NN:" / "Notebook NN:" prefix the
+        # docstrings carry from before the renumber. Show only the
+        # descriptive remainder so the sidebar reads cleanly. Also
+        # uppercase the first letter when the remainder is now a
+        # bare lowercase sentence ("call any non-R-series" → "Call …").
+        title = re.sub(
+            r"^(?:Notebook|Notebook)\s+\d+\s*[:—-]\s*",
+            "",
+            title,
+            flags=re.IGNORECASE,
+        )
+        if title and title[0].islower():
+            title = title[0].upper() + title[1:]
         # Take the next non-empty narrative paragraph as summary.
         for ln in lines[1:]:
             if (
                 ln.strip()
                 .lower()
-                .startswith(("this tutorial covers", "prerequisites", "difficulty"))
+                .startswith(("this notebook covers", "prerequisites", "difficulty"))
             ):
                 break
             if ln.strip():
                 summary = ln.strip()
                 break
-    num_match = re.match(r"tutorial_(\d+)_", path.name)
+    num_match = re.match(r"notebook_(\d+)_", path.name)
     number = int(num_match.group(1)) if num_match else 0
-    category_id, order_in_category = _tutorial_category(number)
+    category_id, order_in_category = _notebook_category(number)
     return {
         "id": path.stem,
         "number": number,
@@ -1483,37 +1723,37 @@ def _parse_tutorial(path: Path) -> dict[str, Any]:
         "summary": summary,
         "filename": path.name,
         "source": src,
-        "needs_stdin": number in TUTORIAL_NEEDS_STDIN,
+        "needs_stdin": number in NOTEBOOK_NEEDS_STDIN,
         "category": category_id,
         "category_order": order_in_category,
     }
 
 
-def _list_tutorials() -> list[dict[str, Any]]:
-    if not _TUTORIAL_DIR.is_dir():
+def _list_notebooks() -> list[dict[str, Any]]:
+    if not _NOTEBOOK_DIR.is_dir():
         return []
     out: list[dict[str, Any]] = []
-    for p in sorted(_TUTORIAL_DIR.glob("tutorial_*.py")):
-        m = re.match(r"tutorial_(\d+)_", p.name)
+    for p in sorted(_NOTEBOOK_DIR.glob("notebook_*.py")):
+        m = re.match(r"notebook_(\d+)_", p.name)
         if not m:
             continue
         n = int(m.group(1))
-        if n in TUTORIAL_BLOCKLIST:
+        if n in NOTEBOOK_BLOCKLIST:
             continue
         try:
-            out.append(_parse_tutorial(p))
+            out.append(_parse_notebook(p))
         except Exception:  # pragma: no cover
             continue
 
     # Sort by (category position, member position within the category,
-    # tutorial number) so the sidebar reads top-to-bottom as a curated
+    # notebook number) so the sidebar reads top-to-bottom as a curated
     # learning path rather than a numeric file dump. ``misc`` falls to
     # the end via the sentinel category index.
-    cat_index: dict[str, int] = {c["id"]: i for i, c in enumerate(TUTORIAL_CATEGORIES)}
-    cat_index.setdefault("misc", len(TUTORIAL_CATEGORIES))
+    cat_index: dict[str, int] = {c["id"]: i for i, c in enumerate(NOTEBOOK_CATEGORIES)}
+    cat_index.setdefault("misc", len(NOTEBOOK_CATEGORIES))
     out.sort(
         key=lambda t: (
-            cat_index.get(t["category"], len(TUTORIAL_CATEGORIES)),
+            cat_index.get(t["category"], len(NOTEBOOK_CATEGORIES)),
             t.get("category_order", t["number"]),
             t["number"],
         )
@@ -1521,28 +1761,42 @@ def _list_tutorials() -> list[dict[str, Any]]:
     return out
 
 
-@app.get("/api/tutorials")
-def list_tutorials() -> list[dict[str, Any]]:
-    return [{k: v for k, v in t.items() if k != "source"} for t in _list_tutorials()]
+# Canonical notebook catalog endpoints. The 2026 rebrand renamed the
+# user-facing label from "Notebook" to "Notebook"; the legacy
+# /api/notebooks/* paths stay live for backwards compatibility and
+# delegate to these handlers.
 
 
-@app.get("/api/tutorials/categories")
-def list_tutorial_categories() -> list[dict[str, Any]]:
+@app.get("/api/notebooks")
+def list_notebooks() -> list[dict[str, Any]]:
+    """Notebook catalog with categories, titles, and badges."""
+    return [{k: v for k, v in t.items() if k != "source"} for t in _list_notebooks()]
+
+
+@app.get("/api/notebooks/categories")
+def list_notebook_categories() -> list[dict[str, Any]]:
     """Topic-progression categories the workbench renders as section
     headers. The ``members`` field is omitted from the wire payload —
-    membership is already encoded on each tutorial as ``category``."""
+    membership is already encoded on each notebook as ``category``."""
     return [
         {"id": c["id"], "name": c["name"], "description": c["description"]}
-        for c in TUTORIAL_CATEGORIES
+        for c in NOTEBOOK_CATEGORIES
     ]
 
 
-@app.get("/api/tutorials/{tid}")
-def tutorial_source(tid: str) -> dict[str, Any]:
-    for t in _list_tutorials():
+@app.get("/api/notebooks/{tid}")
+def get_notebook_source(tid: str) -> dict[str, Any]:
+    for t in _list_notebooks():
         if t["id"] == tid:
             return t
-    raise HTTPException(404, f"unknown tutorial: {tid}")
+    raise HTTPException(404, f"unknown notebook: {tid}")
+
+
+# /api/notebooks/run + /api/notebooks/runs/{id}/respond aliases live
+# below the canonical handlers because WorkbenchRunRequest /
+# RespondRequest are defined later in the file — FastAPI resolves the
+# body schema with ``get_type_hints`` at decoration time, so the
+# referenced classes must exist before the route is registered.
 
 
 # ---------------------------------------------------------------------------
@@ -1882,12 +2136,12 @@ _LE_PREFIX = "__LE__:"
 
 
 async def _bridge_subprocess_line_to_bus(run_id: str, kind: str, text: str) -> None:
-    """Republish one tutorial-subprocess output line on the EventBus.
+    """Republish one notebook-subprocess output line on the EventBus.
 
     Lines that start with ``__LE__:`` are typed locus events
     (``ThinkEvent``, ``ToolStartEvent``, etc.) — the JSON payload
     becomes the StreamEvent ``data``. Everything else is republished
-    as a plain ``tutorial.stdout`` / ``tutorial.stderr`` event so a
+    as a plain ``notebook.stdout`` / ``notebook.stderr`` event so a
     bus subscriber gets the full output stream from one channel.
     """
     from locus.observability import StreamEvent, get_event_bus  # noqa: PLC0415
@@ -1916,7 +2170,7 @@ async def _bridge_subprocess_line_to_bus(run_id: str, kind: str, text: str) -> N
         await bus.publish(
             StreamEvent(
                 run_id=run_id,
-                event_type=f"tutorial.{kind}",
+                event_type=f"notebook.{kind}",
                 data={"text": text},
             ),
         )
@@ -1927,10 +2181,17 @@ class WorkbenchRunRequest(BaseModel):
     provider: ProviderConfig
     timeout_seconds: int = 120
     # When true, the bootstrap force-enables reflexion=True on every
-    # Agent the tutorial creates — exposes chain-of-thought via
+    # Agent the notebook creates — exposes chain-of-thought via
     # ReflectEvent (assessment + guidance per step) on any provider /
     # transport, since reflexion is an SDK feature, not a model feature.
     reflexion: bool = False
+    # Optional Oracle 26ai credentials forwarded to the subprocess as
+    # ``ORACLE_DSN`` / ``ORACLE_USER`` / ``ORACLE_PASSWORD`` /
+    # ``ORACLE_WALLET`` / ``ORACLE_WALLET_PASSWORD``. The DB notebooks
+    # (06-12, 15, 43-45, 53) read these envvars; without them they
+    # fall back to graceful skip. Same shape the Database settings
+    # panel POSTs to ``/api/database/test``.
+    database: DatabaseConfig | None = None
 
 
 def _describe_provider(cfg: ProviderConfig) -> str:
@@ -1961,9 +2222,9 @@ def _provider_env(cfg: ProviderConfig) -> dict[str, str]:
     elif cfg.provider in ("oci-session", "oci-apikey"):
         env["LOCUS_MODEL_PROVIDER"] = "oci"
         env["LOCUS_MODEL_ID"] = cfg.model or "openai.gpt-5.5-2026-04-23"
-    # Optional secondary slots — tutorials read these via get_model_b()
+    # Optional secondary slots — notebooks read these via get_model_b()
     # / get_model_c() in examples/config.py. Empty means "fall back to
-    # slot A" so existing tutorials stay correct.
+    # slot A" so existing notebooks stay correct.
     if cfg.model_b:
         env["LOCUS_MODEL_ID_B"] = cfg.model_b
     if cfg.model_c:
@@ -1971,19 +2232,29 @@ def _provider_env(cfg: ProviderConfig) -> dict[str, str]:
     if cfg.provider in ("oci-session", "oci-apikey"):
         if cfg.profile:
             env["LOCUS_OCI_PROFILE"] = cfg.profile
+            # Also expose ``OCI_PROFILE`` for notebooks that read it
+            # directly (most of the OCI GenAI + RAG notebooks predate
+            # the LOCUS_OCI_* envelope and use the bare names).
+            env["OCI_PROFILE"] = cfg.profile
         if cfg.region:
             env["LOCUS_OCI_REGION"] = cfg.region
+            env["OCI_REGION"] = cfg.region
         if cfg.compartment_id:
             env["LOCUS_OCI_COMPARTMENT"] = cfg.compartment_id
+            # OCI_COMPARTMENT (no _ID suffix) is the variable the older
+            # notebooks read; OCI_COMPARTMENT_ID is the newer name some
+            # examples use. Set both so neither convention breaks.
+            env["OCI_COMPARTMENT"] = cfg.compartment_id
+            env["OCI_COMPARTMENT_ID"] = cfg.compartment_id
         # examples/config.py reads LOCUS_OCI_TRANSPORT to override its
         # auto pick. The workbench subprocess inherits this env so the
-        # tutorial's `from config import get_model` lands on the right
+        # notebook's `from config import get_model` lands on the right
         # transport.
         if cfg.oci_transport != "auto":
             env["LOCUS_OCI_TRANSPORT"] = cfg.oci_transport
-        env["LOCUS_OCI_AUTH_TYPE"] = (
-            "security_token" if cfg.provider == "oci-session" else "api_key"
-        )
+        auth_type = "security_token" if cfg.provider == "oci-session" else "api_key"
+        env["LOCUS_OCI_AUTH_TYPE"] = auth_type
+        env["OCI_AUTH_TYPE"] = auth_type
     return env
 
 
@@ -1991,7 +2262,7 @@ import uuid as _uuid
 
 
 # Active subprocess runs that can accept human-input responses via
-# `POST /api/tutorials/runs/{run_id}/respond`. Keyed by run id, value is
+# `POST /api/notebooks/runs/{run_id}/respond`. Keyed by run id, value is
 # the asyncio subprocess so the endpoint can write JSON to its stdin.
 _RUNS: dict[str, asyncio.subprocess.Process] = {}
 
@@ -2047,29 +2318,29 @@ def _split_future_imports(source: str) -> tuple[str, str]:
     return "".join(lines[:last_future]), "".join(lines[last_future:])
 
 
-@app.post("/api/tutorials/run")
-async def run_tutorial(req: WorkbenchRunRequest) -> StreamingResponse:
-    """Execute user-edited tutorial source in a subprocess; stream stdout/stderr as SSE.
+@app.post("/api/notebooks/run")
+async def run_notebook(req: WorkbenchRunRequest) -> StreamingResponse:
+    """Execute user-edited notebook source in a subprocess; stream stdout/stderr as SSE.
 
     Each output line is wrapped in an SSE ``data:`` envelope with type
     ``stdout``, ``stderr``, ``exit``, or ``error``. The frontend renders a
     terminal-shaped log.
 
-    Tutorials that call ``locus.core.interrupt()`` are supported now —
+    Notebooks that call ``locus.core.interrupt()`` are supported now —
     the bootstrap monkey-patches ``interrupt`` to emit an
     ``InterruptEvent`` SSE line and block on stdin for the response.
     The frontend pops a modal and POSTs the answer to
-    ``/api/tutorials/runs/{run_id}/respond`` which writes a JSON line
+    ``/api/notebooks/runs/{run_id}/respond`` which writes a JSON line
     to the subprocess's stdin.
     """
-    repo_root = _TUTORIAL_DIR.parent
-    examples_dir = _TUTORIAL_DIR
+    repo_root = _NOTEBOOK_DIR.parent
+    examples_dir = _NOTEBOOK_DIR
     src_dir = repo_root / "src"
 
-    # Bootstrap: monkey-patch Agent.__init__ so every agent the tutorial
+    # Bootstrap: monkey-patch Agent.__init__ so every agent the notebook
     # creates emits a typed event line per turn. Lines start with __LE__:
     # so the frontend can split them out from regular stdout. Only fires
-    # when the tutorial hasn't already wired its own callback_handler.
+    # when the notebook hasn't already wired its own callback_handler.
     bootstrap = """\
 import json as __le_json, sys as __le_sys, os as __le_os
 __LE_PREFIX = "__LE__:"
@@ -2116,11 +2387,11 @@ try:
 except Exception:
     pass
 
-# Hard guard: never let a tutorial silently fall back to MockModel. The
+# Hard guard: never let a notebook silently fall back to MockModel. The
 # workbench always sets LOCUS_MODEL_PROVIDER to a real provider, but
-# guard against any tutorial that hardcodes mock or imports MockModel
+# guard against any notebook that hardcodes mock or imports MockModel
 # directly. Wraps `from config import get_model` so the returned object
-# is asserted real before the tutorial uses it.
+# is asserted real before the notebook uses it.
 __SB_PROVIDER = "__SB_PROVIDER_VALUE__"
 __le_sys.stdout.write(f"[locus-workbench] running against {__SB_PROVIDER}\\n")
 __le_sys.stdout.flush()
@@ -2182,7 +2453,7 @@ def __locus_emit__(ev):
 
 # 1. After every Agent is constructed, attach a callback_handler so we
 #    see Think / Tool / Terminate events as they fire — regardless of
-#    whether the tutorial passed model=… directly or config=AgentConfig(…).
+#    whether the notebook passed model=… directly or config=AgentConfig(…).
 #    Also wrap run_sync / run so we emit a "QueryEvent" at the very top
 #    of each call carrying the prompt — that way the UI shows
 #    QUERY → ... before the THINK / TOOL chips, instead of after.
@@ -2222,7 +2493,7 @@ except Exception:
 
 # Override locus.core.interrupt so it emits an InterruptEvent SSE line
 # and blocks on stdin for the user's response. The runner's
-# /api/tutorials/runs/{run_id}/respond endpoint writes a JSON line to
+# /api/notebooks/runs/{run_id}/respond endpoint writes a JSON line to
 # the subprocess's stdin on the user's behalf.
 try:
     import locus.core as __sb_lcore
@@ -2263,7 +2534,7 @@ except Exception:
 # tokens land live inside the THINK chip. That patch reconstructs the
 # ModelResponse from chunks (Message.assistant(content=...)) and was
 # subtly losing fields like message-id metadata which broke
-# conversation memory in checkpointed tutorials. We rely on the agent's
+# conversation memory in checkpointed notebooks. We rely on the agent's
 # ThinkEvent body for the chain-of-thought instead — the reasoning
 # field already carries the model's response and is rendered live as
 # soon as the event fires.
@@ -2272,12 +2543,12 @@ except Exception:
 """
 
     # Write the user's source to a tmp file. Keep it inside examples/ so
-    # tutorials' relative imports (`from config import get_model`) resolve.
+    # notebooks' relative imports (`from config import get_model`) resolve.
     tmp_dir = Path(tempfile.mkdtemp(prefix="locus-wb-"))
-    tmp_file = tmp_dir / "tutorial_workbench.py"
+    tmp_file = tmp_dir / "notebook_workbench.py"
     rendered = bootstrap.replace("__SB_PROVIDER_VALUE__", _describe_provider(req.provider))
     # `from __future__` imports MUST be the first executable statement in
-    # the file. If the tutorial has any, split them out and place them
+    # the file. If the notebook has any, split them out and place them
     # at the very top, with the bootstrap after.
     user_preamble, user_rest = _split_future_imports(req.source)
     tmp_file.write_text(user_preamble + rendered + user_rest)
@@ -2293,9 +2564,24 @@ except Exception:
         # __LE__:{...} line with the parent's run_id. The parent then
         # republishes those lines on the EventBus under the same run_id
         # so the unified /api/events/{run_id} SSE consumer sees the same
-        # structured events as the legacy /api/tutorials/run consumer.
+        # structured events as the legacy /api/notebooks/run consumer.
         "LOCUS_WORKBENCH_RUN_ID": run_id,
     }
+    # Oracle 26ai credentials — pass through to the subprocess so DB
+    # notebooks (06-12, 15, 43-45, 53) connect to a real Autonomous
+    # Database instead of taking the graceful-skip path. The
+    # Database settings panel POSTs the same shape to
+    # ``/api/database/test`` to validate it before launching a run.
+    if req.database is not None and req.database.dsn:
+        env["ORACLE_DSN"] = req.database.dsn
+        if req.database.user:
+            env["ORACLE_USER"] = req.database.user
+        if req.database.password:
+            env["ORACLE_PASSWORD"] = req.database.password
+        if req.database.wallet_location:
+            env["ORACLE_WALLET"] = req.database.wallet_location
+        if req.database.wallet_password:
+            env["ORACLE_WALLET_PASSWORD"] = req.database.wallet_password
 
     async def gen() -> _AI[str]:
         try:
@@ -2325,7 +2611,7 @@ except Exception:
 
         _RUNS[run_id] = proc
         # First SSE message gives the client the run id so it can POST
-        # responses back to /api/tutorials/runs/{run_id}/respond when an
+        # responses back to /api/notebooks/runs/{run_id}/respond when an
         # InterruptEvent fires.
         yield _sse({"type": "runStarted", "run_id": run_id})
 
@@ -2365,7 +2651,7 @@ except Exception:
                 # Bridge structured agent events (__LE__:{json}) onto the
                 # observability EventBus so the unified SSE endpoint
                 # /api/events/{run_id} sees the same telemetry the legacy
-                # /api/tutorials/run consumer sees. Plain stdout/stderr
+                # /api/notebooks/run consumer sees. Plain stdout/stderr
                 # lines also flow as bus events so users can tail
                 # everything from one channel.
                 await _bridge_subprocess_line_to_bus(run_id, kind, text)
@@ -2380,7 +2666,7 @@ except Exception:
             await bus.publish(
                 StreamEvent(
                     run_id=run_id,
-                    event_type="tutorial.exited",
+                    event_type="notebook.exited",
                     data={"code": rc},
                 )
             )
@@ -2401,7 +2687,7 @@ class RespondRequest(BaseModel):
     response: Any
 
 
-@app.post("/api/tutorials/runs/{run_id}/respond")
+@app.post("/api/notebooks/runs/{run_id}/respond")
 async def respond_to_interrupt(run_id: str, req: RespondRequest) -> dict[str, Any]:
     """Pipe a JSON-encoded response into the running subprocess's stdin.
 
@@ -2422,11 +2708,30 @@ async def respond_to_interrupt(run_id: str, req: RespondRequest) -> dict[str, An
     return {"ok": True, "run_id": run_id}
 
 
+# Notebook-namespaced aliases for the run + respond endpoints.
+# Registered after the canonical handlers + body-model classes so
+# FastAPI's body-schema resolution sees the request model symbols at
+# decoration time (the module sets ``from __future__ import annotations``,
+# so type hints are strings until ``get_type_hints`` resolves them).
+
+
+@app.post("/api/notebooks/run")
+async def run_notebook_alias(req: WorkbenchRunRequest) -> StreamingResponse:
+    """Notebook-namespaced alias of ``/api/notebooks/run``."""
+    return await run_notebook(req)
+
+
+@app.post("/api/notebooks/runs/{run_id}/respond")
+async def respond_to_interrupt_alias(run_id: str, req: RespondRequest) -> dict[str, Any]:
+    """Notebook-namespaced alias of ``/api/notebooks/runs/{id}/respond``."""
+    return await respond_to_interrupt(run_id, req)
+
+
 @app.get("/api/health")
 def health() -> dict[str, Any]:
     return {
         "ok": True,
         "patterns": [p["id"] for p in PATTERNS],
         "streamable": sorted(STREAMABLE),
-        "tutorials": len(_list_tutorials()),
+        "notebooks": len(_list_notebooks()),
     }

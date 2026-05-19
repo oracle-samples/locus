@@ -7,16 +7,25 @@ review and sign-off process, the coding standards we hold the codebase
 to, and how to verify your change against the workbench end-to-end
 before opening a pull request.
 
+Quick links for the most common drops:
+
+- **Adding a notebook?** Jump to [Notebook authoring](#notebook-authoring).
+- **Touching the README?** Jump to [README updates](#readme-updates).
+- **Adding a model provider?** Jump to [Notebook authoring](#notebook-authoring) for the multi-model demo conventions, then [Coding Standards](#coding-standards) for the `BaseModel` interface.
+- **Verifying against real OCI / OpenAI / Anthropic?** Jump to [Workbench end-to-end sweeps](#workbench-end-to-end-sweeps).
+
 ## Table of Contents
 
 - [Code of Conduct](#code-of-conduct)
 - [Getting Started](#getting-started)
 - [Development Setup](#development-setup)
+- [Notebook authoring](#notebook-authoring)
 - [Making Changes](#making-changes)
 - [Pull Request Process](#pull-request-process)
 - [Coding Standards](#coding-standards)
 - [Testing](#testing)
 - [Documentation](#documentation)
+- [Release checklist](#release-checklist)
 
 ## Code of Conduct
 
@@ -42,7 +51,7 @@ We welcome:
 
 - **Bug fixes** - Fix issues and improve stability
 - **Features** - New capabilities aligned with the roadmap
-- **Documentation** - Tutorials, examples, API docs
+- **Documentation** - Notebooks, examples, API docs
 - **Tests** - Unit tests, integration tests, benchmarks
 - **Performance** - Optimizations and efficiency improvements
 
@@ -111,9 +120,70 @@ export POSTGRES_PORT="5432"
 export POSTGRES_USER="postgres"
 export POSTGRES_PASSWORD="postgres"
 export POSTGRES_DB="locus"
-export QDRANT_HOST="localhost"
-export QDRANT_PORT="6333"
 ```
+
+## Notebook authoring
+
+`examples/notebook_NN_*.py` is the primary teaching surface — every
+notebook is also a workbench-runnable demo, a docs page, an
+integration-test target, and a regression target for the matrix CI.
+Treat them as production code, not throwaways.
+
+### Where it goes
+
+The numbering is contiguous and category-bound. Find the right track,
+then take the next free number at the end of that range:
+
+| Track | Range |
+|---|---|
+| OCI Generative AI | 01–05 |
+| Oracle Database 26ai | 06–12 |
+| Agent Foundations | 13–20 |
+| Graphs & composition | 21–28 |
+| Multi-agent | 29–39 |
+| Reasoning & structured output | 40–42 |
+| RAG | 43–45 |
+| Skills, playbooks, plugins | 46–50 |
+| Production | 51–56 |
+| Cognitive router & observability | 57–61 |
+| Real-world workflows | 62–66 |
+| Server & full pipelines | 67–68 |
+
+`workbench/backend/runner.py` `NOTEBOOK_CATEGORIES` is the source of
+truth — update it when you add a notebook so the workbench sidebar
+groups the new entry correctly.
+
+### File requirements
+
+1. **Naming**: `examples/notebook_NN_short_topic.py` — two-digit
+   number, snake_case slug.
+2. **Header docstring**: first line is the title the workbench
+   sidebar will show. Strip the leading `Notebook NN:` prefix if you
+   include one — the runner cleans it. Follow with one short
+   paragraph explaining what the reader gets.
+3. **Multi-model demos**: if the notebook fits as a multi-model
+   demonstration (orchestrator, handoff, debate, supervisor-critic),
+   use `get_model_b()` and `get_model_c()` for the lighter roles —
+   each falls back to slot A when the workbench's "Model B / C"
+   dropdowns are empty, so plain CLI runs stay correct.
+4. **Graceful skip**: if the notebook needs credentials the harness
+   may not have (ORACLE_DSN, OCI_COMPARTMENT, etc.), check the env
+   vars at the top of `main()` and print a skip banner with a one-line
+   wiring snippet instead of crashing. The CI runs every notebook —
+   nothing is allowed to traceback on a missing optional env.
+5. **`locus.core.interrupt()`**: notebooks that call `interrupt()`
+   for human approval (Notebooks 24, 38, 62, 63, 64 today) get a
+   `needs_stdin: true` badge in the workbench. Add the notebook
+   number to `NOTEBOOK_NEEDS_STDIN` in `workbench/backend/runner.py`
+   when you add another one.
+6. **Docs stub**: add a matching markdown stub at
+   `docs/notebooks/notebook_NN_short_topic.md`. The docs tooling
+   generates one page per `examples/notebook_*.py`.
+7. **Real-provider check**: run it through the workbench against the
+   provider your audience cares about before opening the PR — the
+   Playwright sweeps catch regressions, but a manual click-through
+   catches the unloved corner cases (prompt phrasing, output
+   readability).
 
 ## Making Changes
 
@@ -122,9 +192,9 @@ export QDRANT_PORT="6333"
 Use descriptive branch names:
 
 ```
-feat/add-pinecone-store
+feat/add-opensearch-store
 fix/memory-leak-in-checkpointer
-docs/rag-tutorial-improvements
+docs/rag-notebook-improvements
 test/add-swarm-integration-tests
 ```
 
@@ -155,9 +225,9 @@ Types:
 Examples:
 
 ```bash
-git commit -s -m "feat(rag): add Pinecone vector store support"
+git commit -s -m "feat(rag): add OpenSearch vector store support"
 git commit -s -m "fix(memory): resolve checkpoint corruption on concurrent writes"
-git commit -s -m "docs(tutorials): add RAG with Oracle 26ai example"
+git commit -s -m "docs(notebooks): add RAG with Oracle 26ai example"
 ```
 
 ### Code Changes
@@ -372,7 +442,7 @@ class TestAgent:
 ### Workbench end-to-end sweeps
 
 The workbench app (`workbench/`) ships three Playwright specs that drive
-every non-stdin tutorial through the UI against a single provider:
+every non-stdin notebook through the UI against a single provider:
 
 ```bash
 # Bring up the three workbench tiers (terminal 1).
@@ -394,7 +464,7 @@ OCI_COMPARTMENT=ocid1.compartment.oc1.... \
 ```
 
 The OCI sweep also honours `OCI_MODEL` (slot A) and `OCI_MODEL_B` /
-`OCI_MODEL_C` so you can validate multi-model tutorials end-to-end.
+`OCI_MODEL_C` so you can validate multi-model notebooks end-to-end.
 Headless by default; pass `--headed` to watch the run.
 
 ## Documentation
@@ -406,29 +476,31 @@ Headless by default; pass `--headed` to watch the run.
 - Include type hints
 - Add examples for complex APIs
 
-### Tutorials
+### Notebooks
 
-When adding tutorials to `examples/`:
+See [Notebook authoring](#notebook-authoring) above for the full
+authoring guide — numbering, naming, multi-model demo conventions,
+graceful-skip checklist, and how to wire a new notebook into the
+workbench sidebar.
 
-1. Follow naming: `XX_topic_name.py`
-2. Include header comment explaining the tutorial
-3. Use clear, educational code
-4. Test that it runs successfully against a real provider via the workbench
-5. If the tutorial fits naturally as a multi-model demo (orchestrator,
-   handoff, debate, supervisor-critic), use `get_model_b()` for the
-   lighter role(s) — it falls back to slot A when the workbench's
-   "Model B" dropdown is empty, so plain CLI runs stay correct.
-6. Add a matching markdown stub under `docs/tutorials/` — the docs
-   tooling generates one page per `examples/tutorial_*.py`.
-
-### README Updates
+### README updates
 
 For significant features, update:
 
-- Feature matrix in `docs/FEATURES.md`
-- Quick Start examples in `README.md` (only if the feature changes the
-  five-things-that-make-Locus-different shape)
-- Architecture section in `README.md` (if a new top-level module)
+- **Capability matrix** in `docs/FEATURES.md` and `docs/capabilities.md`
+  (these are the source of truth — `README.md` mirrors them).
+- **`README.md` hero** — the *"OCI Generative AI · OpenAI · Anthropic · Ollama"*
+  transport strip and the *"Talk to any provider"* table only need updates
+  when you add a new provider or transport.
+- **`README.md` "Backed by Oracle Database 26ai" block** — keep the
+  seven-primitive table in sync with `locus.rag.stores` and
+  `locus.memory.backends`. Bump when you add a new Oracle 26ai surface.
+- **`README.md` notebook track table** — the ranges must match
+  `workbench/backend/runner.py` `NOTEBOOK_CATEGORIES` and
+  `docs/notebooks/index.md`.
+- **`README.md` Quick Start examples** — only when the feature changes
+  the *five-things-that-make-locus-different* shape.
+- **`README.md` Repo layout** — only when a new top-level module lands.
 
 ## Release checklist
 

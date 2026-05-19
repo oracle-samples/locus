@@ -12,7 +12,6 @@ Embeddings (convert text to vectors):
 Vector Stores (persist and search vectors):
 - OracleVectorStore: Oracle 26ai with native VECTOR type (recommended)
 - OpenSearchVectorStore: OpenSearch with k-NN plugin
-- QdrantVectorStore: Qdrant vector database
 - InMemoryVectorStore: In-memory store (testing)
 
 Retriever (combines embedding + store):
@@ -105,6 +104,7 @@ __all__ = [
     "EmbeddingResult",
     # Embeddings - Providers (lazy)
     "OCIEmbeddings",
+    "OracleInDBEmbeddings",
     # Stores - Base
     "BaseVectorStore",
     "Document",
@@ -114,8 +114,10 @@ __all__ = [
     # Stores - Implementations (lazy)
     "OracleVectorStore",
     "OpenSearchVectorStore",
-    "QdrantVectorStore",
     "InMemoryVectorStore",
+    # Loaders / chunkers (lazy)
+    "OracleADBLoader",
+    "OracleInDBChunker",
     # Retriever
     "RAGRetriever",
     "RetrievalResult",
@@ -153,15 +155,26 @@ def __getattr__(name: str) -> Any:
 
         return OpenSearchVectorStore
 
-    if name == "QdrantVectorStore":
-        from locus.rag.stores.qdrant import QdrantVectorStore
-
-        return QdrantVectorStore
-
     if name == "InMemoryVectorStore":
         from locus.rag.stores.memory import InMemoryVectorStore
 
         return InMemoryVectorStore
+
+    # In-DB primitives (Oracle 23ai/26ai DBMS_VECTOR_CHAIN).
+    if name == "OracleInDBEmbeddings":
+        from locus.rag.embeddings.oracle_indb import OracleInDBEmbeddings
+
+        return OracleInDBEmbeddings
+
+    if name == "OracleADBLoader":
+        from locus.rag.loaders.oracle import OracleADBLoader
+
+        return OracleADBLoader
+
+    if name == "OracleInDBChunker":
+        from locus.rag.chunkers.oracle_indb import OracleInDBChunker
+
+        return OracleInDBChunker
 
     msg = f"module {__name__!r} has no attribute {name!r}"
     raise AttributeError(msg)

@@ -55,7 +55,7 @@ export function setEditorContent(text: string): void {
   ed.dispatch({
     changes: { from: 0, to: ed.state.doc.length, insert: text },
     // Park cursor at the very top + scroll line 1 into view so picking
-    // a tutorial drops you on its first line, not wherever the cursor
+    // a notebook drops you on its first line, not wherever the cursor
     // was in the previous source.
     selection: { anchor: 0 },
     effects: EditorView.scrollIntoView(0, { y: "start" }),

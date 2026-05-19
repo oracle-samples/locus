@@ -102,11 +102,11 @@ The receiving agent picks up the same loop. It does not see the
 handoff as a "new turn"; it sees the previous transcript and the
 customer's last message.
 
-## Tutorials
+## Notebooks
 
-- [`tutorial_16_agent_handoff.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_16_agent_handoff.py)
+- [`notebook_30_agent_handoff.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_30_agent_handoff.py)
   — full triage + billing + shipping + returns escalation flow.
-- [`tutorial_45_multiagent_human_in_loop.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_45_multiagent_human_in_loop.py)
+- [`notebook_38_multiagent_human_in_loop.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_38_multiagent_human_in_loop.py)
   — handoff to a human via `interrupt()` (one of three HITL patterns
   in the same file).
 

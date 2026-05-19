@@ -54,7 +54,6 @@ locus uses the following open-source libraries. Their licenses are reproduced be
 
 | Package | License | Copyright |
 |---|---|---|
-| `aiosqlite` | MIT | © Amethyst Reese |
 | `redis` | MIT | © Redis Inc. |
 | `asyncpg` | Apache-2.0 | © MagicStack Inc. |
 | `opensearch-py` | Apache-2.0 | © OpenSearch Contributors |

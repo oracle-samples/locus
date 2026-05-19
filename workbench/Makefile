@@ -9,13 +9,13 @@
 #   make backend   (uvicorn :8100)   | make bff   (Express :3101)
 #   make web       (Vite :5173)
 # The backend-research / backend-finance targets below are unrelated — they
-# spin up the A2A mesh demo peers for tutorial 34, not the workbench itself.
+# spin up the A2A mesh demo peers for notebook 34, not the workbench itself.
 WORKBENCH_PORT ?= 8100
 
 backend:
 	cd backend && python -m uvicorn --app-dir . runner:app --port $(WORKBENCH_PORT)
 
-# === A2A mesh demo peers (tutorial 34 — separate from the workbench) =========
+# === A2A mesh demo peers (notebook 34 — separate from the workbench) =========
 # Reuses the merged a2a-mesh project under examples/projects/a2a-mesh/src.
 # Pass LOCUS_MODEL_PROVIDER=oci + the BOAT-OC1 env block from your shell to
 # run against real OCI GenAI; defaults to MockModel.

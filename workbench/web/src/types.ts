@@ -1,7 +1,7 @@
 export type Pattern = {
   id: string;
   title: string;
-  tutorial: number | null;
+  notebook: number | null;
   summary: string;
   streamable: boolean;
 };
@@ -24,6 +24,20 @@ export type ProviderConfig = {
   oci_transport?: OciTransport;
   // OCI Responses transport only: optional GenAI Project OCID.
   project_ocid?: string;
+};
+
+export type DatabaseConfig = {
+  dsn: string;
+  user: string;
+  password: string;
+  wallet_location: string;
+  wallet_password: string;
+};
+
+export type DatabaseTestResult = {
+  ok: boolean;
+  detail: string;
+  dsn?: string;
 };
 
 export type RunEvent = {

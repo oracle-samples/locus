@@ -16,8 +16,6 @@
 
 ::: locus.memory.backends.OCIBucketBackend
 
-::: locus.memory.backends.SQLiteBackend
-
 ::: locus.memory.backends.RedisBackend
 
 ::: locus.memory.backends.PostgreSQLBackend

@@ -49,9 +49,9 @@ RUN python3.12 -m pip install --no-cache-dir ".[server,oci,openai,anthropic]"
 # of the COPY context so we install fresh inside the image.
 COPY workbench/ /app/workbench/
 
-# Tutorial catalog. The runner walks `<repo>/examples/tutorial_*.py`
+# Notebook catalog. The runner walks `<repo>/examples/notebook_*.py`
 # to populate the sidebar — without this COPY the catalog is empty
-# and every Run hits a "no such tutorial" error.
+# and every Run hits a "no such notebook" error.
 COPY examples/ /app/examples/
 
 # Node dependency install for both BFF and web.

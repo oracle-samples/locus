@@ -1,7 +1,7 @@
 # Environment variables — `OCI_*` vs `LOCUS_OCI_*`
 
 Locus reads two families of environment variables to configure the OCI
-GenAI transport. Both are valid, and the tutorial harness in
+GenAI transport. Both are valid, and the notebook harness in
 `examples/config.py` reads them with a consistent fallback chain.
 
 ## The rule
@@ -15,21 +15,21 @@ GenAI transport. Both are valid, and the tutorial harness in
 | `LOCUS_OCI_ENDPOINT`    | `OCI_ENDPOINT`    | *(region-derived)* |
 | `LOCUS_OCI_TRANSPORT`   | `OCI_TRANSPORT`   | *(auto from model id)* |
 
-The same rule applies to every `LOCUS_OCI_<name>` lookup the tutorial
+The same rule applies to every `LOCUS_OCI_<name>` lookup the notebook
 harness performs.
 
 ## Why two names?
 
 - **`OCI_*`** is the OCI CLI / SDK standard. If you already typed
   `oci session authenticate --profile-name DEFAULT` and exported the
-  resulting variables, the Locus tutorials pick them up unchanged.
-- **`LOCUS_OCI_*`** is the namespaced form the tutorial harness reads
-  first. Useful when you want a Locus tutorial to use a *different*
+  resulting variables, the Locus notebooks pick them up unchanged.
+- **`LOCUS_OCI_*`** is the namespaced form the notebook harness reads
+  first. Useful when you want a Locus notebook to use a *different*
   profile or region from your shell-default OCI configuration —
   point `LOCUS_OCI_PROFILE` somewhere else without touching
   `OCI_PROFILE`.
 
-## Minimum set for a tutorial run
+## Minimum set for a notebook run
 
 ```bash
 # Pick a model + provider.
@@ -41,13 +41,13 @@ export LOCUS_MODEL_ID=openai.gpt-4o-mini
 export OCI_PROFILE=DEFAULT
 export OCI_REGION=us-chicago-1
 
-# Run any tutorial:
-python examples/tutorial_01_basic_agent.py
+# Run any notebook:
+python examples/notebook_13_basic_agent.py
 ```
 
-When the SDK itself is constructed directly (not via the tutorial
+When the SDK itself is constructed directly (not via the notebook
 harness), pass profile / region as constructor arguments — the
-`LOCUS_OCI_*` fallback chain is a tutorial-harness convenience, not
+`LOCUS_OCI_*` fallback chain is a notebook-harness convenience, not
 a runtime contract.
 
 ## Other env vars

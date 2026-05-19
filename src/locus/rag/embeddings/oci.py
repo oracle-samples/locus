@@ -45,6 +45,11 @@ MODEL_DIMENSION_HINTS = {
     OCIEmbeddingModel.COHERE_EMBED_MULTILINGUAL_V3.value: 1024,
     OCIEmbeddingModel.COHERE_EMBED_ENGLISH_LIGHT_V3.value: 384,
     OCIEmbeddingModel.COHERE_EMBED_MULTILINGUAL_LIGHT_V3.value: 384,
+    # Cohere V4 returns 1536-dim vectors on OCI on-demand. The library
+    # previously fell through to DEFAULT_DIMENSION=1024 and crashed any
+    # downstream table-create against Oracle 26ai with ORA-51803.
+    "cohere.embed-v4.0": 1536,
+    "cohere.embed-multilingual-v4.0": 1536,
 }
 
 
@@ -201,7 +206,7 @@ class OCIEmbeddings(BaseModel, BaseEmbedding):
         self._oci_config_dict = config_dict
 
         # Determine service endpoint. Treat an empty-string config (which
-        # tutorials pass when no env override is set) the same as None and
+        # notebooks pass when no env override is set) the same as None and
         # auto-derive from a region. Region preference is:
         #   1. LOCUS_OCI_REGION env (so a session-token profile whose
         #      home region is e.g. us-ashburn-1 can still hit GenAI in

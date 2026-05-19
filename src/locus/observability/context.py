@@ -84,7 +84,7 @@ def set_run_id(run_id: str | None) -> object:
 
     Lower-level than :func:`run_context` — exposed so the workbench
     bootstrap can pin the contextvar from an env variable inside the
-    tutorial subprocess. Most code should use the context manager.
+    notebook subprocess. Most code should use the context manager.
     """
     return _run_id_var.set(run_id)
 
@@ -115,7 +115,7 @@ async def run_context(run_id: str | None = None) -> AsyncIterator[str]:
         The context manager does **not** call
         :meth:`EventBus.close_stream` — callers decide when to close
         based on their own lifecycle (the router does it at end of
-        dispatch; tutorial subprocesses do it on exit).
+        dispatch; notebook subprocesses do it on exit).
     """
     rid = run_id or uuid4().hex
     token = _run_id_var.set(rid)

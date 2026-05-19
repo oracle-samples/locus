@@ -126,9 +126,9 @@ observable as their own event types.
 | Causal graph has many disconnected nodes | The model isn't naming entities consistently across turns. Sharpen the system prompt to name entities the same way each time. |
 | Reasoning add-ons feel slow | They're extra model calls — that's the trade. Keep them for runs that ship to a human, drop them for hot paths. |
 
-## Source and tutorial
+## Source and notebook
 
-- [`tutorial_14_reasoning_patterns.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_14_reasoning_patterns.py) — all three add-ons end-to-end.
+- [`notebook_41_reasoning_patterns.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_41_reasoning_patterns.py) — all three add-ons end-to-end.
 - [`locus.reasoning.reflexion`](https://github.com/oracle-samples/locus/blob/main/src/locus/reasoning/reflexion.py)
 - [`locus.reasoning.grounding`](https://github.com/oracle-samples/locus/blob/main/src/locus/reasoning/grounding.py)
 - [`locus.reasoning.causal`](https://github.com/oracle-samples/locus/blob/main/src/locus/reasoning/causal.py)

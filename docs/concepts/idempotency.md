@@ -127,11 +127,11 @@ the side effects still fire exactly once.
 | Body raised first time, cache returns the exception | This is by design — the failure is part of the "result" of the first call. The model sees the failure and can react. To re-attempt, the model must change an argument. |
 | Read-only lookup tagged `idempotent=True` | Harmless but wasteful — the cache hit savings are negligible vs the read itself. Leave it off. |
 
-## Source and tutorial
+## Source and notebook
 
 - [`@tool` decorator with idempotency hook](https://github.com/oracle-samples/locus/blob/main/src/locus/tools/decorator.py)
 - [`_find_matching_execution`](https://github.com/oracle-samples/locus/blob/main/src/locus/loop/nodes.py#L114) — where the dedup actually happens, in the ReAct loop's Execute node.
-- [`tutorial_03_tools_and_state.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_03_tools_and_state.py) — walks through `@tool(idempotent=True)` end-to-end.
+- [`notebook_14_agent_with_tools.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_14_agent_with_tools.py) — walks through the `@tool` decorator end-to-end (idempotency covered in the agent-loop walkthrough).
 
 ## See also
 

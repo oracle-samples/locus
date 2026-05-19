@@ -1,7 +1,7 @@
 /** Run lifecycle — orchestrates the click→subprocess→stream→output
  *  flow. Handles run-id capture, interrupt-event detection, and the
  *  pre-run UI flips (full-screen, busy pill, lock prev/next). */
-import { runTutorialSource, type WorkbenchEvent } from "../api";
+import { runNotebookSource, type WorkbenchEvent } from "../api";
 import { loadProvider } from "../settings";
 import type { ProviderConfig, RunEvent } from "../types";
 import { $ } from "./dom";
@@ -14,7 +14,7 @@ import {
   clearOutput,
   endLiveStream,
 } from "./output";
-import { getCurrent, renderNavState } from "./tutorials";
+import { getCurrent, renderNavState } from "./notebooks";
 
 let cancelRun: (() => void) | null = null;
 
@@ -41,7 +41,7 @@ export function installRunControls(): void {
 function setRunning(running: boolean): void {
   $<HTMLButtonElement>("#wb-run-btn").style.display = running ? "none" : "inline-flex";
   $<HTMLButtonElement>("#wb-stop-btn").style.display = running ? "inline-flex" : "none";
-  // Lock tutorial navigation while a subprocess is in flight.
+  // Lock notebook navigation while a subprocess is in flight.
   const prev = $<HTMLButtonElement>("#wb-prev-btn");
   const next = $<HTMLButtonElement>("#wb-next-btn");
   if (running) {
@@ -73,7 +73,7 @@ async function runEdited(): Promise<void> {
     return;
   }
   const cur = getCurrent();
-  console.info("[wb/run] starting", { tutorial: cur?.id, sourceLen: source.length });
+  console.info("[wb/run] starting", { notebook: cur?.id, sourceLen: source.length });
   clearOutput();
   endLiveStream();
   const pill = $("#wb-output-pill");
@@ -87,7 +87,7 @@ async function runEdited(): Promise<void> {
   let stdoutLines = 0;
   let stderrLines = 0;
 
-  cancelRun = runTutorialSource(
+  cancelRun = runNotebookSource(
     source,
     provider as ProviderConfig,
     (e: WorkbenchEvent | RunEvent) => onEvent(e, () => runId, (id) => (runId = id)),

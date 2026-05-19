@@ -196,7 +196,7 @@ translate 1:1.
 
 The retriever's `store` can be any `BaseVectorStore` implementation —
 `OracleVectorStore` (Autonomous DB), `OpenSearchVectorStore`,
-`InMemoryVectorStore`, `PgVectorStore`, `ChromaVectorStore`, etc. See
+`InMemoryVectorStore`, `PgVectorStore`, etc. See
 [`examples/projects/deep-research/`][dr] for working ports of seven
 upstream deep-research gists covering all four major backends.
 
@@ -349,7 +349,7 @@ workflow = create_research_workflow(
 
 ## See also
 
-- [Tutorial 41](../tutorials/tutorial_41_deepagent.md) — four-part
+- [Notebook 41](../notebooks/notebook_34_deepagent.md) — four-part
   walkthrough: basic factory, filesystem + todos, subagents, observability.
 - [API reference — DeepAgent](../api/deepagent.md) — full class and
   function signatures including `create_research_workflow`.

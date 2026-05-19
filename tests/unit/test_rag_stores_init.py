@@ -50,12 +50,6 @@ class TestRagStoresLazyImports:
 
         assert InMemoryVectorStore is not None
 
-    def test_lazy_import_chroma_store(self):
-        """Test lazy importing ChromaVectorStore."""
-        from locus.rag.stores import ChromaVectorStore
-
-        assert ChromaVectorStore is not None
-
     def test_lazy_import_oracle_store(self):
         """Test lazy importing OracleVectorStore."""
         try:
@@ -73,24 +67,6 @@ class TestRagStoresLazyImports:
             assert OpenSearchVectorStore is not None
         except ImportError:
             pytest.skip("OpenSearch dependencies not available")
-
-    def test_lazy_import_qdrant_store(self):
-        """Test lazy importing QdrantVectorStore."""
-        try:
-            from locus.rag.stores import QdrantVectorStore
-
-            assert QdrantVectorStore is not None
-        except ImportError:
-            pytest.skip("Qdrant dependencies not available")
-
-    def test_lazy_import_pinecone_store(self):
-        """Test lazy importing PineconeVectorStore."""
-        try:
-            from locus.rag.stores import PineconeVectorStore
-
-            assert PineconeVectorStore is not None
-        except ImportError:
-            pytest.skip("Pinecone dependencies not available")
 
     def test_lazy_import_pgvector_store(self):
         """Test lazy importing PgVectorStore."""
@@ -132,4 +108,3 @@ class TestRagStoresAll:
         from locus.rag import stores
 
         assert "InMemoryVectorStore" in stores.__all__
-        assert "ChromaVectorStore" in stores.__all__

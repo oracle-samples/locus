@@ -43,7 +43,7 @@ def calculate(expression: str) -> str:
     """Evaluate a math expression.
 
     NOTE: Never pass untrusted/model-generated strings to eval(). Use a safe
-    AST-based evaluator in real applications — see examples/tutorial_04 for
+    AST-based evaluator in real applications — see examples/notebook_04 for
     a concrete example.
     """
     import ast

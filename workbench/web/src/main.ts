@@ -1,6 +1,13 @@
-import { listModels } from "./api";
-import { defaultModelFor, defaultsFor, loadProvider, saveProvider } from "./settings";
-import type { ProviderConfig, ProviderType } from "./types";
+import { listModels, testDatabase } from "./api";
+import {
+  defaultModelFor,
+  defaultsFor,
+  loadDatabase,
+  loadProvider,
+  saveDatabase,
+  saveProvider,
+} from "./settings";
+import type { DatabaseConfig, ProviderConfig, ProviderType } from "./types";
 import { initWorkbench, refreshWorkbenchProvider } from "./workbench";
 
 // ---------------------------------------------------------------------------
@@ -36,6 +43,15 @@ const rowCompartment = $("#row-compartment");
 const rowTransport = $("#row-transport");
 const rowProjectOcid = $("#row-project-ocid");
 const providerWarning = $("#provider-warning");
+
+// Database panel
+const cfgDbDsn = $<HTMLInputElement>("#cfg-db-dsn");
+const cfgDbUser = $<HTMLInputElement>("#cfg-db-user");
+const cfgDbPassword = $<HTMLInputElement>("#cfg-db-password");
+const cfgDbWallet = $<HTMLInputElement>("#cfg-db-wallet");
+const cfgDbWalletPassword = $<HTMLInputElement>("#cfg-db-wallet-password");
+const cfgDbTest = $<HTMLButtonElement>("#cfg-db-test");
+const cfgDbStatus = $("#cfg-db-status");
 
 // ---------------------------------------------------------------------------
 // State
@@ -207,9 +223,53 @@ function openSettings() {
   // shows a real option from the start.
   const firstOpenDefault: ProviderType = isLocalhost ? "oci-session" : "openai";
   fillFromConfig(provider ?? defaultsFor(firstOpenDefault));
+  fillDatabaseFromState();
   syncSettingsRows();
   settingsModal.classList.add("modal--open");
   void refreshModels();
+}
+
+function fillDatabaseFromState() {
+  const db = loadDatabase();
+  cfgDbDsn.value = db?.dsn ?? "";
+  cfgDbUser.value = db?.user ?? "";
+  cfgDbPassword.value = db?.password ?? "";
+  cfgDbWallet.value = db?.wallet_location ?? "";
+  cfgDbWalletPassword.value = db?.wallet_password ?? "";
+  cfgDbStatus.textContent = "";
+  cfgDbStatus.style.color = "var(--or-text-mute)";
+}
+
+function readDatabaseForm(): DatabaseConfig {
+  return {
+    dsn: cfgDbDsn.value.trim(),
+    user: cfgDbUser.value.trim(),
+    password: cfgDbPassword.value,
+    wallet_location: cfgDbWallet.value.trim(),
+    wallet_password: cfgDbWalletPassword.value,
+  };
+}
+
+async function handleDatabaseTest() {
+  const cfg = readDatabaseForm();
+  if (!cfg.dsn || !cfg.user || !cfg.password) {
+    cfgDbStatus.textContent = "Need DSN, user, and password.";
+    cfgDbStatus.style.color = "var(--or-warning, #b54708)";
+    return;
+  }
+  cfgDbStatus.textContent = "Testing…";
+  cfgDbStatus.style.color = "var(--or-text-mute)";
+  cfgDbTest.disabled = true;
+  try {
+    const r = await testDatabase(cfg);
+    cfgDbStatus.textContent = r.detail;
+    cfgDbStatus.style.color = r.ok ? "var(--or-success, #067647)" : "var(--or-error, #b42318)";
+  } catch (e) {
+    cfgDbStatus.textContent = `Request failed: ${e}`;
+    cfgDbStatus.style.color = "var(--or-error, #b42318)";
+  } finally {
+    cfgDbTest.disabled = false;
+  }
 }
 
 function closeSettings() {
@@ -241,6 +301,7 @@ function saveSettings() {
   }
   provider = cfg;
   saveProvider(cfg);
+  saveDatabase(readDatabaseForm());
   closeSettings();
   providerWarning.style.display = "none";
   refreshWorkbenchProvider();
@@ -271,6 +332,7 @@ settingsBtn.addEventListener("click", openSettings);
 settingsClose.addEventListener("click", closeSettings);
 settingsCancel.addEventListener("click", closeSettings);
 settingsSave.addEventListener("click", saveSettings);
+cfgDbTest.addEventListener("click", () => void handleDatabaseTest());
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && settingsModal.classList.contains("modal--open")) {
     closeSettings();

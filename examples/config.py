@@ -2,22 +2,34 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 """
-Shared configuration for Locus tutorials.
+Shared configuration for Locus notebooks.
 
-Tutorials are designed to work with any LLM provider. By default, they use
-a mock model so you can explore Locus's features without API credentials.
+Locus is built first-class on **Oracle Cloud Infrastructure (OCI)
+Generative AI**, so the notebooks default to OCI when an OCI profile
+is detected and fall back to a built-in mock model when one isn't.
+That means:
 
-To run with a real model, set environment variables before running tutorials.
+  - On a developer laptop with ``~/.oci/config`` present, every notebook
+    runs against live OCI GenAI with zero extra setup.
+  - On a clean machine (no OCI config, no env vars), notebooks still run
+    end-to-end against the mock model so you can read the output and
+    understand the shape before authenticating.
+
+OpenAI, Anthropic, and Ollama are first-class alternatives — pick any
+one by setting a single environment variable. See
+``docs/how-to/oci-models.md`` for OCI specifics.
 
 Environment Variables:
-    LOCUS_MODEL_PROVIDER   - Provider: "mock", "oci", "openai"
-                            Default: "mock"
+    LOCUS_MODEL_PROVIDER   - "oci" (default when OCI is reachable), "mock",
+                              "openai", "anthropic", or "ollama". When unset
+                              we auto-detect: OCI if a profile exists,
+                              otherwise mock.
     LOCUS_MODEL_ID         - Model identifier (provider-specific)
 
     # OCI GenAI — every LOCUS_OCI_* variable below falls back to its
     # OCI_* equivalent (the OCI CLI standard) when unset. Closes #218.
     # So once you've run ``oci session authenticate --profile-name X``
-    # and exported the resulting ``OCI_PROFILE``, every locus tutorial
+    # and exported the resulting ``OCI_PROFILE``, every locus notebook
     # picks the same profile up automatically.
     LOCUS_OCI_PROFILE      - OCI config profile name. Falls back to
                               OCI_PROFILE. Default: DEFAULT.
@@ -46,20 +58,20 @@ Environment Variables:
 
 Examples:
     # Run with mock (default - no credentials needed):
-    python examples/tutorial_01_basic_agent.py
+    python examples/notebook_13_basic_agent.py
 
     # Run with OCI GenAI (V1 transport, OpenAI-compatible endpoint):
     export LOCUS_MODEL_PROVIDER=oci
     export LOCUS_MODEL_ID=openai.gpt-5.5-2026-04-23
     export LOCUS_OCI_PROFILE=MY_PROFILE
-    python examples/tutorial_01_basic_agent.py
+    python examples/notebook_13_basic_agent.py
 
     # Run with OCI GenAI (SDK transport, required for Cohere R-series):
     export LOCUS_MODEL_PROVIDER=oci
     export LOCUS_MODEL_ID=cohere.command-r-plus-08-2024
     export LOCUS_OCI_PROFILE=MY_PROFILE
     export LOCUS_OCI_ENDPOINT=https://inference.generativeai.us-chicago-1.oci.oraclecloud.com
-    python examples/tutorial_01_basic_agent.py
+    python examples/notebook_13_basic_agent.py
 
     # Run with OCI on an OCI VM / OKE node (workload identity):
     export LOCUS_MODEL_PROVIDER=oci
@@ -70,7 +82,7 @@ Examples:
     # Run with OpenAI:
     export LOCUS_MODEL_PROVIDER=openai
     export OPENAI_API_KEY=sk-...
-    python examples/tutorial_01_basic_agent.py
+    python examples/notebook_13_basic_agent.py
 
 See `docs/how-to/oci-models.md` for the full transport story.
 """
@@ -91,21 +103,21 @@ from locus.models.base import ModelResponse
 def _oci_env(name: str, default: str | None = None) -> str | None:
     """Read an OCI config setting from the env with a consistent fallback chain.
 
-    Closes #218. Tutorials historically read ``LOCUS_OCI_*`` (the harness
+    Closes #218. Notebooks historically read ``LOCUS_OCI_*`` (the harness
     namespace) but the OCI CLI and most other tooling speak ``OCI_*``.
     Newcomers got bitten by having to maintain both. We now look up
     ``LOCUS_OCI_<name>`` first (keeps existing behaviour for users who
     already export the namespaced form), then fall back to the
     OCI-CLI-standard ``OCI_<name>``, then ``default``. This way a user
     who just typed ``oci session authenticate --profile-name DEFAULT``
-    can run any tutorial without re-exporting variables.
+    can run any notebook without re-exporting variables.
     """
     return os.environ.get(f"LOCUS_OCI_{name}") or os.environ.get(f"OCI_{name}") or default
 
 
 class MockModel(BaseModel):
     """
-    Mock model for testing tutorials without API calls.
+    Mock model for testing notebooks without API calls.
 
     Returns predetermined responses for common prompts.
     """
@@ -192,7 +204,7 @@ def check_structured_output_capable() -> None:
         else f"Cohere R-series ({model_id}) does not support constrained JSON decoding."
     )
     print(
-        f"\n⚠  This tutorial requires structured-output (JSON schema) support.\n"
+        f"\n⚠  This notebook requires structured-output (JSON schema) support.\n"
         f"   {reason}\n\n"
         "   Run with a model that supports constrained decoding:\n\n"
         "     export LOCUS_MODEL_PROVIDER=oci\n"
@@ -206,19 +218,35 @@ def check_structured_output_capable() -> None:
     sys.exit(0)
 
 
-def get_model(**kwargs: Any) -> Any:
+def _auto_detect_provider() -> str:
+    """Pick a sensible default provider when ``LOCUS_MODEL_PROVIDER`` is unset.
+
+    Prefer OCI — that is the platform Locus is built on — and only fall
+    back to ``mock`` when an OCI profile clearly isn't available. We probe
+    for ``~/.oci/config`` or any of the workload-identity env vars
+    (instance/resource principal). The probe is cheap and never raises.
     """
-    Get the configured model based on environment variables.
+    if os.environ.get("LOCUS_OCI_AUTH_TYPE") in ("instance_principal", "resource_principal"):
+        return "oci"
+    if os.environ.get("OCI_AUTH_TYPE") in ("instance_principal", "resource_principal"):
+        return "oci"
+    if (Path.home() / ".oci" / "config").exists():
+        return "oci"
+    return "mock"
+
+
+def get_model(**kwargs: Any) -> Any:
+    """Return the configured model for the current notebook.
+
+    Reads ``LOCUS_MODEL_PROVIDER`` first. If it isn't set, auto-detects:
+    OCI when an OCI profile is reachable, otherwise the bundled mock.
 
     Args:
-        **kwargs: Override any model parameters (max_tokens, temperature, etc.)
-                  Pass ``model_id="..."`` to use a specific model id without
-                  changing ``LOCUS_MODEL_ID``.
-
-    Returns:
-        Configured model instance (MockModel, OCIModel, or OpenAIModel)
+        **kwargs: Override any model parameters (max_tokens, temperature, …).
+            Pass ``model_id="..."`` to use a specific model id without
+            changing ``LOCUS_MODEL_ID``.
     """
-    provider = os.environ.get("LOCUS_MODEL_PROVIDER", "mock").lower()
+    provider = os.environ.get("LOCUS_MODEL_PROVIDER", "").lower() or _auto_detect_provider()
 
     if provider == "mock":
         kwargs.pop("model_id", None)  # MockModel ignores model_id
@@ -231,16 +259,16 @@ def get_model(**kwargs: Any) -> Any:
         return _get_anthropic_model(**kwargs)
     else:
         raise ValueError(
-            f"Unknown model provider: {provider}. Use 'mock', 'oci', 'openai', or 'anthropic'."
+            f"Unknown model provider: {provider}. Use 'oci', 'mock', 'openai', or 'anthropic'."
         )
 
 
 def get_model_b(**kwargs: Any) -> Any:
     """Secondary model slot — typically a cheaper/faster variant for
-    triage, routing, or color commentary in multi-agent tutorials.
+    triage, routing, or color commentary in multi-agent notebooks.
 
     Reads ``LOCUS_MODEL_ID_B`` (set by the workbench's "Model B" slot).
-    Falls back to ``LOCUS_MODEL_ID`` (= slot A) when unset, so tutorials
+    Falls back to ``LOCUS_MODEL_ID`` (= slot A) when unset, so notebooks
     that call ``get_model_b()`` still work in plain CLI runs where only
     one model is configured.
     """
@@ -397,7 +425,7 @@ def _get_anthropic_model(**kwargs: Any) -> Any:
 
 def print_config():
     """Print current configuration for debugging."""
-    provider = os.environ.get("LOCUS_MODEL_PROVIDER", "mock")
+    provider = os.environ.get("LOCUS_MODEL_PROVIDER", "").lower() or _auto_detect_provider()
     model_id = os.environ.get("LOCUS_MODEL_ID", "(default)")
 
     print(f"Model Provider: {provider}")

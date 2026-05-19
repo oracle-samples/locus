@@ -1,4 +1,25 @@
-import type { ProviderConfig, ProviderType } from "./types";
+import type { DatabaseConfig, ProviderConfig, ProviderType } from "./types";
+
+
+// Per-tab Oracle 26ai connection envelope. Kept strictly in JS memory —
+// never written to localStorage or cookies, never echoed back to the
+// page. Closing the tab discards it.
+let memoryDatabase: DatabaseConfig | null = null;
+
+export function loadDatabase(): DatabaseConfig | null {
+  return memoryDatabase;
+}
+
+export function saveDatabase(cfg: DatabaseConfig | null): void {
+  // Treat an all-empty config as "not set" so the backend falls through
+  // to ORACLE_* env vars rather than dispatching a half-populated
+  // envelope that would fail validation.
+  if (!cfg || (!cfg.dsn && !cfg.user && !cfg.password)) {
+    memoryDatabase = null;
+    return;
+  }
+  memoryDatabase = cfg;
+}
 
 // API keys are session-only (never written to localStorage).
 // Non-sensitive OCI fields persist across reloads.

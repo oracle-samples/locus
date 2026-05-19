@@ -8,10 +8,9 @@ Available backends:
 - MemoryCheckpointer: In-memory storage for testing/development
 - FileCheckpointer: Local file-based storage
 - HTTPCheckpointer: Remote HTTP API storage
-- SQLiteBackend: Local SQLite database
-- RedisBackend: Redis key-value store
-- PostgreSQLBackend: PostgreSQL database with JSONB support
-- OpenSearchBackend: OpenSearch with full-text search
+- RedisBackend: Redis key-value store (runs on OCI Cache with Redis)
+- PostgreSQLBackend: PostgreSQL with JSONB (runs on OCI Database with PostgreSQL)
+- OpenSearchBackend: OpenSearch with full-text search (runs on OCI Search with OpenSearch)
 - OCIBucketBackend: OCI Object Storage for cloud deployments
 - OracleBackend: Oracle Database with JSON support
 
@@ -19,15 +18,12 @@ Usage:
     ```python
     from locus.memory.backends import (
         MemoryCheckpointer,
-        SQLiteBackend,
         RedisBackend,
+        PostgreSQLBackend,
     )
 
     # For testing
     checkpointer = MemoryCheckpointer()
-
-    # For local persistence
-    checkpointer = SQLiteBackend("./checkpoints.db")
 
     # For production (choose based on your infrastructure)
     checkpointer = RedisBackend("redis://localhost:6379")
@@ -45,7 +41,6 @@ from locus.memory.backends.adapters import (
     oracle_checkpointer,
     postgresql_checkpointer,
     redis_checkpointer,
-    sqlite_checkpointer,
 )
 from locus.memory.backends.file import FileCheckpointer
 from locus.memory.backends.http import HTTPCheckpointer
@@ -53,9 +48,10 @@ from locus.memory.backends.memory import MemoryCheckpointer
 from locus.memory.backends.oci_bucket import OCIBucketBackend
 from locus.memory.backends.opensearch import OpenSearchBackend
 from locus.memory.backends.oracle import OracleBackend
+from locus.memory.backends.oracle_sync import OracleSyncBackend, OracleSyncCheckpointSaver
+from locus.memory.backends.oracle_versioned import OracleCheckpointSaver
 from locus.memory.backends.postgresql import PostgreSQLBackend
 from locus.memory.backends.redis import RedisBackend
-from locus.memory.backends.sqlite import SQLiteBackend
 
 
 __all__ = [
@@ -67,9 +63,13 @@ __all__ = [
     "OCIBucketBackend",
     "OpenSearchBackend",
     "OracleBackend",
+    # Versioned (LangGraph-shape) saver
+    "OracleCheckpointSaver",
+    # Sync companions (langgraph-oracledb-style split)
+    "OracleSyncBackend",
+    "OracleSyncCheckpointSaver",
     "PostgreSQLBackend",
     "RedisBackend",
-    "SQLiteBackend",
     # Adapter and factory functions
     "StorageBackendAdapter",
     "oci_bucket_checkpointer",
@@ -77,5 +77,4 @@ __all__ = [
     "oracle_checkpointer",
     "postgresql_checkpointer",
     "redis_checkpointer",
-    "sqlite_checkpointer",
 ]

@@ -29,13 +29,13 @@ async function configureOCI(page: Page, opts: { transport?: "auto" | "v1" | "sdk
 }
 
 test.describe("locus workbench · main", () => {
-  test("loads tutorial catalog from BFF", async ({ page }) => {
+  test("loads notebook catalog from BFF", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator(".app__brand-mark")).toHaveText("locus");
-    await expect(page.getByTestId("side-tutorials").locator(".side__item").first()).toBeVisible({
+    await expect(page.getByTestId("side-notebooks").locator(".side__item").first()).toBeVisible({
       timeout: 30_000,
     });
-    const items = page.getByTestId("side-tutorials").locator(".side__item");
+    const items = page.getByTestId("side-notebooks").locator(".side__item");
     expect(await items.count()).toBeGreaterThan(20);
   });
 
@@ -61,7 +61,7 @@ test.describe("locus workbench · main", () => {
     ).toBe(true);
   });
 
-  test("runs an edited tutorial subprocess against OCI gpt-5.5", async ({ page }) => {
+  test("runs an edited notebook subprocess against OCI gpt-5.5", async ({ page }) => {
     test.setTimeout(180_000);
     await configureOCI(page);
     await expect.poll(async () => page.evaluate(() => Boolean((window as any).__wb)), { timeout: 10_000 }).toBe(true);
@@ -80,13 +80,13 @@ test.describe("locus workbench · main", () => {
     await expect(page.getByTestId("wb-output")).toContainText(/exited with code 0/i, { timeout: 60_000 });
   });
 
-  test("agent tutorial emits Terminate event chip via the callback handler", async ({ page }) => {
+  test("agent notebook emits Terminate event chip via the callback handler", async ({ page }) => {
     test.setTimeout(240_000);
     await configureOCI(page);
     await expect.poll(async () => page.evaluate(() => Boolean((window as any).__wb)), { timeout: 10_000 }).toBe(true);
-    // Tiny tutorial that builds an Agent and prints its reply. The
+    // Tiny notebook that builds an Agent and prints its reply. The
     // bootstrap injects a callback_handler so we should see a Terminate
-    // chip in the output even though the tutorial only calls run_sync.
+    // chip in the output even though the notebook only calls run_sync.
     await page.evaluate(() => {
       const wb = (window as any).__wb as { setSource: (s: string) => void };
       wb.setSource(`from config import get_model
@@ -138,10 +138,10 @@ print(agent.run_sync("ping").message)
     expect(Math.abs(persisted - after)).toBeLessThan(24);
   });
 
-  test("prev/next buttons walk the tutorial catalog", async ({ page }) => {
+  test("prev/next buttons walk the notebook catalog", async ({ page }) => {
     await page.goto("/");
     await expect.poll(async () => page.evaluate(() => Boolean((window as any).__wb)), { timeout: 10_000 }).toBe(true);
-    // First tutorial loaded (tutorial 01); prev should be disabled.
+    // First notebook loaded (notebook 01); prev should be disabled.
     await expect(page.getByTestId("wb-prev-btn")).toBeDisabled();
     await expect(page.getByTestId("wb-next-btn")).toBeEnabled();
     const titleBefore = await page.locator("#wb-title").textContent();
@@ -162,11 +162,11 @@ print(agent.run_sync("ping").message)
       const wb = (window as any).__wb as { setSource: (s: string) => void };
       wb.setSource("import time\ntime.sleep(2)\nprint('done')\n");
     });
-    // Step to tutorial 02 first so both prev and next start enabled.
+    // Step to notebook 02 first so both prev and next start enabled.
     await page.getByTestId("wb-next-btn").click();
     await expect(page.getByTestId("wb-prev-btn")).toBeEnabled();
     await expect(page.getByTestId("wb-next-btn")).toBeEnabled();
-    // Refresh source to our sleep stub (selectTutorial just overwrote it).
+    // Refresh source to our sleep stub (selectNotebook just overwrote it).
     await page.evaluate(() => {
       const wb = (window as any).__wb as { setSource: (s: string) => void };
       wb.setSource("import time\ntime.sleep(2)\nprint('done')\n");
@@ -176,7 +176,7 @@ print(agent.run_sync("ping").message)
     await expect(page.getByTestId("wb-prev-btn")).toBeDisabled();
     await expect(page.getByTestId("wb-next-btn")).toBeDisabled();
     // After the subprocess finishes, prev should be enabled (we're on
-    // tutorial 02), next too.
+    // notebook 02), next too.
     await expect(page.getByTestId("wb-output")).toContainText("done", { timeout: 30_000 });
     await expect(page.getByTestId("wb-prev-btn")).toBeEnabled();
     await expect(page.getByTestId("wb-next-btn")).toBeEnabled();

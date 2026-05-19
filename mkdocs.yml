@@ -46,12 +46,15 @@ theme:
   - content.tabs.link
   - search.highlight
   - search.share
+  - search.suggest
 
 extra_css:
 - stylesheets/locus.css
 
 extra_javascript:
 - javascripts/header-home.js
+- javascripts/notebook-filter.js
+- javascripts/sidebar-filter.js
 
 copyright: <span class="footer-brand"><span class="footer-brand__o" aria-hidden="true"></span><span class="footer-brand__text">Oracle Generative AI</span></span><br><span class="footer-copy">Copyright &copy; 2025–2026 <span class="oracle-mark" aria-label="Oracle"></span> and/or its affiliates</span>
 
@@ -62,8 +65,8 @@ extra:
     link: https://github.com/oracle-samples/locus
     name: locus on GitHub
   - icon: fontawesome/brands/python
-    link: https://pypi.org/project/locus/
-    name: locus on PyPI
+    link: https://pypi.org/project/locus-sdk/
+    name: locus-sdk on PyPI
   generator: false
 
 markdown_extensions:
@@ -171,79 +174,89 @@ nav:
     - SSE event catalogue: concepts/sse-events.md
     - Safety & Guardrails: concepts/safety.md
     - Evaluation: concepts/evaluation.md
-- Tutorials:
+- Notebooks:
   - Quickstart: how-to/quickstart.md
-  - Overview: tutorials/index.md
-  - Foundations:
-    - 00 · OCI Transports:
-      - tutorials/tutorial_00_oci_transports.md
-      - 57 · OCI v1 (OCIOpenAIModel) deep dive: tutorials/tutorial_57_oci_openai_chat.md
-      - 58 · OCI Responses (OCIResponsesModel) deep dive: tutorials/tutorial_58_oci_responses.md
-    - 01 · Basic Agent: tutorials/tutorial_01_basic_agent.md
-    - 02 · Agent with Tools: tutorials/tutorial_02_agent_with_tools.md
-    - 03 · Memory & Checkpointing: tutorials/tutorial_03_agent_memory.md
-    - 04 · Streaming & Events: tutorials/tutorial_04_agent_streaming.md
-    - 05 · Hooks & Lifecycle: tutorials/tutorial_05_agent_hooks.md
-    - 21 · SSE Streaming: tutorials/tutorial_21_sse_streaming.md
-    - 27 · Advanced Hooks: tutorials/tutorial_27_hooks_advanced.md
-    - 28 · Agent Server: tutorials/tutorial_28_agent_server.md
-    - 37 · Termination conditions: tutorials/tutorial_37_termination.md
+  - Overview: notebooks/index.md
+  - OCI Generative AI (start here):
+    - 01 · OCI transports overview: notebooks/notebook_01_oci_transports.md
+    - 02 · OCI v1: notebooks/notebook_02_oci_openai_chat.md
+    - 03 · OCI Responses: notebooks/notebook_03_oci_responses.md
+    - 04 · OCI Dedicated AI Cluster: notebooks/notebook_04_oci_dac.md
+    - 05 · Cohere Reranker V4 on OCI: notebooks/notebook_05_cohere_reranker.md
+  - Oracle Database 26ai:
+    - 06 · Oracle 26ai RAG: notebooks/notebook_06_oracle_26ai_rag.md
+    - 07 · Oracle 26ai checkpointer: notebooks/notebook_07_oracle_26ai_checkpointer.md
+    - 08 · Oracle ADB document loader: notebooks/notebook_08_oracle_adb_loader.md
+    - 09 · Oracle in-DB chunker: notebooks/notebook_09_oracle_indb_chunker.md
+    - 10 · Oracle in-DB embeddings: notebooks/notebook_10_oracle_indb_embeddings.md
+    - 11 · Oracle store: notebooks/notebook_11_oracle_store.md
+    - 12 · Oracle versioned checkpoint saver: notebooks/notebook_12_oracle_versioned_saver.md
+  - Agent Foundations:
+    - 13 · Basic agent: notebooks/notebook_13_basic_agent.md
+    - 14 · Agent with tools: notebooks/notebook_14_agent_with_tools.md
+    - 15 · Conversation memory: notebooks/notebook_15_agent_memory.md
+    - 16 · Streaming events: notebooks/notebook_16_agent_streaming.md
+    - 17 · Lifecycle hooks: notebooks/notebook_17_agent_hooks.md
+    - 18 · SSE streaming: notebooks/notebook_18_sse_streaming.md
+    - 19 · Hooks: notebooks/notebook_19_hooks_advanced.md
+    - 20 · Termination conditions: notebooks/notebook_20_termination.md
   - Graphs & composition:
-    - 06 · Basic Graph: tutorials/tutorial_06_basic_graph.md
-    - 07 · Conditional Routing: tutorials/tutorial_07_conditional_routing.md
-    - 08 · State Reducers: tutorials/tutorial_08_state_reducers.md
-    - 09 · Human-in-the-Loop: tutorials/tutorial_09_human_in_the_loop.md
-    - 10 · Advanced Patterns: tutorials/tutorial_10_advanced_patterns.md
-    - 25 · Composition (Sequential / Parallel / Loop): tutorials/tutorial_25_composition.md
-    - 35 · Advanced Graph: tutorials/tutorial_35_graph_advanced.md
-    - 36 · Functional API: tutorials/tutorial_36_functional_api.md
+    - 21 · Basic graph: notebooks/notebook_21_basic_graph.md
+    - 22 · Conditional routing: notebooks/notebook_22_conditional_routing.md
+    - 23 · State reducers: notebooks/notebook_23_state_reducers.md
+    - 24 · Human-in-the-loop: notebooks/notebook_24_human_in_the_loop.md
+    - 25 · Command + advanced patterns: notebooks/notebook_25_advanced_patterns.md
+    - 26 · Composition: notebooks/notebook_26_composition.md
+    - 27 · Graph: notebooks/notebook_27_graph_advanced.md
+    - 28 · Functional API: notebooks/notebook_28_functional_api.md
   - Multi-agent:
-    - 11 · Swarm: tutorials/tutorial_11_swarm_multiagent.md
-    - 16 · Agent Handoff: tutorials/tutorial_16_agent_handoff.md
-    - 17 · Orchestrator: tutorials/tutorial_17_orchestrator_pattern.md
-    - 18 · Specialist Agents: tutorials/tutorial_18_specialist_agents.md
-    - 34 · A2A Protocol: tutorials/tutorial_34_a2a_protocol.md
-    - 42 · Map-Reduce code review: tutorials/tutorial_42_map_reduce_code_review.md
-    - 43 · Supervisor + critic loop: tutorials/tutorial_43_supervisor_critic_loop.md
-    - 44 · Adversarial debate + judge: tutorials/tutorial_44_debate_with_judge.md
-    - 45 · Multi-agent + HITL: tutorials/tutorial_45_multiagent_human_in_loop.md
-  - DeepAgent:
-    - 41 · DeepAgent — research factory: tutorials/tutorial_41_deepagent.md
-  - Reasoning:
-    - 13 · Structured Output: tutorials/tutorial_13_structured_output.md
-    - 14 · Reasoning Patterns: tutorials/tutorial_14_reasoning_patterns.md
-    - 39 · GSAR typed grounding: tutorials/tutorial_39_gsar_typed_grounding.md
+    - 29 · Swarm: notebooks/notebook_29_swarm_multiagent.md
+    - 30 · Agent handoff: notebooks/notebook_30_agent_handoff.md
+    - 31 · Orchestrator pattern: notebooks/notebook_31_orchestrator_pattern.md
+    - 32 · Specialist agents: notebooks/notebook_32_specialist_agents.md
+    - 33 · A2A protocol: notebooks/notebook_33_a2a_protocol.md
+    - 34 · DeepAgent: notebooks/notebook_34_deepagent.md
+    - 35 · Map-reduce code review: notebooks/notebook_35_map_reduce_code_review.md
+    - 36 · Supervisor + critic loop: notebooks/notebook_36_supervisor_critic_loop.md
+    - 37 · Adversarial debate + judge: notebooks/notebook_37_debate_with_judge.md
+    - 38 · Multi-agent + human-in-the-loop: notebooks/notebook_38_multiagent_human_in_loop.md
+    - 39 · Emergent routing: notebooks/notebook_39_emergent_routing.md
+  - Reasoning & structured output:
+    - 40 · Structured output: notebooks/notebook_40_structured_output.md
+    - 41 · Reasoning patterns: notebooks/notebook_41_reasoning_patterns.md
+    - 42 · GSAR typed grounding: notebooks/notebook_42_gsar_typed_grounding.md
   - RAG:
-    - 22 · RAG Basics: tutorials/tutorial_22_rag_basics.md
-    - 23 · RAG Providers: tutorials/tutorial_23_rag_providers.md
-    - 24 · RAG Agents: tutorials/tutorial_24_rag_agents.md
+    - 43 · RAG basics: notebooks/notebook_43_rag_basics.md
+    - 44 · RAG providers: notebooks/notebook_44_rag_providers.md
+    - 45 · RAG agents: notebooks/notebook_45_rag_agents.md
   - Skills, playbooks & plugins:
-    - 12 · MCP Integration: tutorials/tutorial_12_mcp_integration.md
-    - 15 · Playbooks: tutorials/tutorial_15_playbooks.md
-    - 31 · Plugins: tutorials/tutorial_31_plugins.md
-    - 32 · Skills: tutorials/tutorial_32_skills.md
-    - 33 · Steering: tutorials/tutorial_33_steering.md
+    - 46 · MCP integration: notebooks/notebook_46_mcp_integration.md
+    - 47 · Playbooks: notebooks/notebook_47_playbooks.md
+    - 48 · Plugins: notebooks/notebook_48_plugins.md
+    - 49 · Skills: notebooks/notebook_49_skills.md
+    - 50 · Steering: notebooks/notebook_50_steering.md
   - Production:
-    - 19 · Guardrails & Security: tutorials/tutorial_19_guardrails_security.md
-    - 20 · Checkpoint Backends: tutorials/tutorial_20_checkpoint_backends.md
-    - 26 · Evaluation: tutorials/tutorial_26_evaluation.md
-    - 29 · Model Providers: tutorials/tutorial_29_model_providers.md
-    - 30 · Advanced Guardrails: tutorials/tutorial_30_guardrails_advanced.md
-    - 38 · Multi-modal providers: tutorials/tutorial_38_multimodal_providers.md
-    - 40 · OCI Dedicated AI Cluster: tutorials/tutorial_40_oci_dac.md
-  - Real-world workflows:
-    - 46 · Incident-response runbook: tutorials/tutorial_46_incident_response.md
-    - 47 · Procurement approval: tutorials/tutorial_47_procurement_approval.md
-    - 48 · Contract review: tutorials/tutorial_48_contract_review.md
-    - 49 · Voice output: tutorials/tutorial_49_audio_response.md
-    - 50 · Voice in → voice out: tutorials/tutorial_50_audio_chat.md
+    - 51 · Guardrails & security: notebooks/notebook_51_guardrails_security.md
+    - 52 · Guardrails: notebooks/notebook_52_guardrails_advanced.md
+    - 53 · Checkpoint backends: notebooks/notebook_53_checkpoint_backends.md
+    - 54 · Evaluation: notebooks/notebook_54_evaluation.md
+    - 55 · Model providers: notebooks/notebook_55_model_providers.md
+    - 56 · Multi-modal providers: notebooks/notebook_56_multimodal_providers.md
   - Cognitive router & observability:
-    - 51 · Cognitive router (PRISM): tutorials/tutorial_51_cognitive_router.md
-    - 52 · Observability basics: tutorials/tutorial_52_observability_basics.md
-    - 53 · Agent yield bridge: tutorials/tutorial_53_agent_yield_bridge.md
-    - 54 · EventBus subscriber patterns: tutorials/tutorial_54_eventbus_subscribers.md
-    - 55 · Full event catalogue: tutorials/tutorial_55_event_catalogue.md
-    - 59 · Emergent routing (opt-in LLM picker): tutorials/tutorial_59_emergent_routing.md
+    - 57 · Cognitive router: notebooks/notebook_57_cognitive_router.md
+    - 58 · Observability basics: notebooks/notebook_58_observability_basics.md
+    - 59 · Agent yield bridge + token usage: notebooks/notebook_59_agent_yield_bridge.md
+    - 60 · EventBus subscriber patterns: notebooks/notebook_60_eventbus_subscribers.md
+    - 61 · Full event catalogue tour: notebooks/notebook_61_event_catalogue.md
+  - Real-world workflows:
+    - 62 · On-call incident response: notebooks/notebook_62_incident_response.md
+    - 63 · Tiered procurement approval: notebooks/notebook_63_procurement_approval.md
+    - 64 · Contract review + negotiation: notebooks/notebook_64_contract_review.md
+    - 65 · Voice output: notebooks/notebook_65_audio_response.md
+    - 66 · Voice in → voice out: notebooks/notebook_66_audio_chat.md
+  - Server & full pipelines:
+    - 67 · Agent server: notebooks/notebook_67_agent_server.md
+    - 68 · Research workflow: notebooks/notebook_68_research_workflow.md
   - Guides:
     - Deploy: how-to/deploy.md
     - Persist conversations: how-to/persist-conversations.md

@@ -1,7 +1,7 @@
 /** Inline interrupt input form. The bootstrap monkey-patches
  *  `locus.core.interrupt` to emit an `InterruptEvent` __LE__ line and
  *  block on stdin; the workbench shows this form, the user types,
- *  the answer is POSTed to /api/tutorials/runs/<id>/respond which writes
+ *  the answer is POSTed to /api/notebooks/runs/<id>/respond which writes
  *  it to the subprocess's stdin. */
 import { respondToInterrupt } from "../api";
 import { appendInterruptForm } from "./output";

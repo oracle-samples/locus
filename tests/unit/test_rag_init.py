@@ -110,15 +110,6 @@ class TestRAGLazyImports:
         except ImportError:
             pytest.skip("OpenSearch dependencies not available")
 
-    def test_lazy_import_qdrant_store(self):
-        """Test lazy importing QdrantVectorStore."""
-        try:
-            from locus.rag import QdrantVectorStore
-
-            assert QdrantVectorStore is not None
-        except ImportError:
-            pytest.skip("Qdrant dependencies not available")
-
     def test_lazy_import_unknown_raises(self):
         """Test that unknown attribute raises AttributeError."""
         from locus import rag

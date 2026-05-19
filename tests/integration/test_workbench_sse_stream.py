@@ -3,18 +3,18 @@
 # https://oss.oracle.com/licenses/upl/
 
 """End-to-end test that the workbench SSE stream carries every layer
-of locus telemetry — router, agent, tutorial — for a single
-``/api/tutorials/run`` dispatch.
+of locus telemetry — router, agent, notebook — for a single
+``/api/notebooks/run`` dispatch.
 
 How it works:
 
-1. POST a small piece of tutorial source to ``/api/tutorials/run``.
+1. POST a small piece of notebook source to ``/api/notebooks/run``.
 2. Concurrently subscribe to ``/api/events/{run_id}`` once we observe
    the ``runStarted`` event in the legacy stream.
 3. Both streams run to completion. We collect every event from each
    side and assert: the bus stream contains the same exit code, the
-   structured ``agent.*`` events fire, every tutorial line shows up
-   as a ``tutorial.stdout`` bus event, and tokens are reported.
+   structured ``agent.*`` events fire, every notebook line shows up
+   as a ``notebook.stdout`` bus event, and tokens are reported.
 
 Skipped without a model provider (Anthropic key by default — cheapest
 for the smoke test) or if the backend isn't reachable.
@@ -128,10 +128,10 @@ async def _sse_iter(client: httpx.AsyncClient, path: str) -> AsyncIterator[tuple
 async def _post_and_iter_legacy(
     client: httpx.AsyncClient, source: str, provider: dict[str, str | None]
 ) -> AsyncIterator[dict]:
-    """Drive ``/api/tutorials/run`` and yield each parsed event payload."""
+    """Drive ``/api/notebooks/run`` and yield each parsed event payload."""
     async with client.stream(
         "POST",
-        "/api/tutorials/run",
+        "/api/notebooks/run",
         json={"source": source, "provider": provider, "timeout_seconds": 240},
     ) as resp:
         resp.raise_for_status()
@@ -151,14 +151,14 @@ async def _post_and_iter_legacy(
 
 
 # ---------------------------------------------------------------------------
-# Tutorial source. Tiny + deterministic + emits a recognisable token in
+# Notebook source. Tiny + deterministic + emits a recognisable token in
 # stdout so we can assert the bus relayed it.
 # ---------------------------------------------------------------------------
 
 _MARKER = "locus-sse-e2e-marker-9173"
 
-TINY_TUTORIAL = f'''
-"""Tiny SSE smoke tutorial — runs one Agent and prints a marker."""
+TINY_NOTEBOOK = f'''
+"""Tiny SSE smoke notebook — runs one Agent and prints a marker."""
 from config import get_model
 from locus.agent import Agent
 
@@ -188,7 +188,7 @@ class TestWorkbenchSseStream:
         async with httpx.AsyncClient(base_url=WORKBENCH_URL, timeout=300.0) as client:
 
             async def consume_legacy() -> None:
-                async for ev in _post_and_iter_legacy(client, TINY_TUTORIAL, provider):
+                async for ev in _post_and_iter_legacy(client, TINY_NOTEBOOK, provider):
                     legacy_events.append(ev)
                     if ev.get("type") == "runStarted" and run_id_holder["run_id"] is None:
                         run_id_holder["run_id"] = ev.get("run_id")
@@ -219,7 +219,7 @@ class TestWorkbenchSseStream:
         assert "runStarted" in kinds, f"legacy stream missed runStarted: {kinds}"
         assert "exit" in kinds, f"legacy stream missed exit: {kinds}"
         exit_event = next(e for e in legacy_events if e.get("type") == "exit")
-        assert exit_event["code"] == 0, f"tutorial subprocess exited non-zero: {exit_event}"
+        assert exit_event["code"] == 0, f"notebook subprocess exited non-zero: {exit_event}"
         # The marker should land in the legacy stdout stream.
         stdout_blob = "\n".join(
             e.get("text", "") for e in legacy_events if e.get("type") == "stdout"
@@ -230,16 +230,16 @@ class TestWorkbenchSseStream:
         bus_types = [t for t, _ in bus_events]
         assert bus_events, "bus stream produced zero events for the run"
 
-        # Tutorial-level events bridge the subprocess output.
-        assert any(t == "tutorial.exited" for t in bus_types), (
-            f"missing tutorial.exited on bus; saw: {set(bus_types)}"
+        # Notebook-level events bridge the subprocess output.
+        assert any(t == "notebook.exited" for t in bus_types), (
+            f"missing notebook.exited on bus; saw: {set(bus_types)}"
         )
 
         # Marker reached the bus through the stdout-bridge.
         bus_stdout_blob = "\n".join(
-            data.get("text", "") for t, data in bus_events if t == "tutorial.stdout"
+            data.get("text", "") for t, data in bus_events if t == "notebook.stdout"
         )
-        assert _MARKER in bus_stdout_blob, f"marker {_MARKER!r} not on bus tutorial.stdout stream"
+        assert _MARKER in bus_stdout_blob, f"marker {_MARKER!r} not on bus notebook.stdout stream"
 
         # Agent-level structured events fire — proves the bootstrap's
         # callback_handler reached the EventBus via the __LE__: bridge.
@@ -248,7 +248,7 @@ class TestWorkbenchSseStream:
         )
 
         # Final exit event matches.
-        bus_exit = next((data for t, data in bus_events if t == "tutorial.exited"), None)
+        bus_exit = next((data for t, data in bus_events if t == "notebook.exited"), None)
         assert bus_exit is not None
         assert bus_exit["code"] == exit_event["code"], (
             f"bus exit code {bus_exit['code']} ≠ legacy {exit_event['code']}"
@@ -263,7 +263,7 @@ class TestWorkbenchSseStream:
         run_id: str | None = None
 
         async with httpx.AsyncClient(base_url=WORKBENCH_URL, timeout=300.0) as client:
-            async for ev in _post_and_iter_legacy(client, TINY_TUTORIAL, provider):
+            async for ev in _post_and_iter_legacy(client, TINY_NOTEBOOK, provider):
                 if ev.get("type") == "runStarted":
                     run_id = ev.get("run_id")
                 if ev.get("type") == "exit":
@@ -280,10 +280,10 @@ class TestWorkbenchSseStream:
                 if len(late_events) > 100:
                     pytest.fail("late subscriber would not stop")
 
-            # Replay must include the tutorial.exited marker since we
+            # Replay must include the notebook.exited marker since we
             # wait for run completion before subscribing.
             replayed_types = set(late_events)
-            assert "tutorial.exited" in replayed_types or any(
+            assert "notebook.exited" in replayed_types or any(
                 e.endswith(".exited") for e in replayed_types
             ), f"history replay missed terminal event: {replayed_types}"
 
@@ -296,7 +296,7 @@ class TestWorkbenchSseStream:
 
         async with httpx.AsyncClient(base_url=WORKBENCH_URL, timeout=300.0) as client:
             for _ in range(2):
-                async for ev in _post_and_iter_legacy(client, TINY_TUTORIAL, provider):
+                async for ev in _post_and_iter_legacy(client, TINY_NOTEBOOK, provider):
                     if ev.get("type") == "runStarted":
                         run_ids.append(ev["run_id"])
                     if ev.get("type") == "exit":

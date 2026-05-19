@@ -7,9 +7,6 @@
 Available stores:
 - OracleVectorStore: Oracle 26ai with native VECTOR type (recommended)
 - OpenSearchVectorStore: OpenSearch with k-NN plugin
-- QdrantVectorStore: Qdrant vector database
-- PineconeVectorStore: Pinecone managed vector database
-- ChromaVectorStore: Chroma lightweight vector database
 - PgVectorStore: PostgreSQL with pgvector extension
 - InMemoryVectorStore: In-memory store (testing)
 """
@@ -34,10 +31,8 @@ __all__ = [
     "VectorStoreConfig",
     # Stores (lazy imports)
     "OracleVectorStore",
+    "OracleSyncVectorStore",
     "OpenSearchVectorStore",
-    "QdrantVectorStore",
-    "PineconeVectorStore",
-    "ChromaVectorStore",
     "PgVectorStore",
     "InMemoryVectorStore",
 ]
@@ -50,25 +45,15 @@ def __getattr__(name: str) -> Any:
 
         return OracleVectorStore
 
+    if name == "OracleSyncVectorStore":
+        from locus.rag.stores.oracle_sync import OracleSyncVectorStore
+
+        return OracleSyncVectorStore
+
     if name == "OpenSearchVectorStore":
         from locus.rag.stores.opensearch import OpenSearchVectorStore
 
         return OpenSearchVectorStore
-
-    if name == "QdrantVectorStore":
-        from locus.rag.stores.qdrant import QdrantVectorStore
-
-        return QdrantVectorStore
-
-    if name == "PineconeVectorStore":
-        from locus.rag.stores.pinecone import PineconeVectorStore
-
-        return PineconeVectorStore
-
-    if name == "ChromaVectorStore":
-        from locus.rag.stores.chroma import ChromaVectorStore
-
-        return ChromaVectorStore
 
     if name == "PgVectorStore":
         from locus.rag.stores.pgvector import PgVectorStore

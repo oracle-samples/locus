@@ -100,8 +100,7 @@ Everything `locus` ships, what it does, and where to find it.
 | `FileCheckpointer` | Local dev — JSON files on disk | `locus.memory.backends.file` |
 | `HTTPCheckpointer` | A remote checkpoint service you already run | `locus.memory.backends.http` |
 | **`OCIBucketBackend`** | OCI-native, lifecycle policies, region replication | `locus.memory.backends.oci_bucket` |
-| `SQLiteBackend` | Single-process durability | `locus.memory.backends.sqlite` |
-| `RedisBackend` | Multi-replica, fast, TTLs | `locus.memory.backends.redis` |
+| `RedisBackend` | Multi-replica, fast, TTLs (OCI Cache with Redis) | `locus.memory.backends.redis` |
 | `PostgreSQLBackend` | Production DB with metadata queries | `locus.memory.backends.postgresql` |
 | `OpenSearchBackend` | Full-text search across past runs | `locus.memory.backends.opensearch` |
 | `OracleBackend` | Oracle DB with JSON queries | `locus.memory.backends.oracle` |
@@ -142,7 +141,7 @@ Everything `locus` ships, what it does, and where to find it.
 
 | Component | Options | Surface |
 |---|---|---|
-| Vector stores | Oracle 26ai · OpenSearch · pgvector · Qdrant · Pinecone · Chroma · in-memory | `locus.rag.stores` · [RAG](concepts/rag.md) |
+| Vector stores | Oracle 26ai · OpenSearch · pgvector · in-memory | `locus.rag.stores` · [RAG](concepts/rag.md) |
 | Embeddings | `OCIEmbeddings` (Cohere) · `OpenAIEmbeddings` | `locus.rag.embeddings` |
 | Multimodal processors | Text · PDF (text + OCR) · Image (OCR) · Audio (transcription) | `locus.rag.multimodal` |
 | Tool wiring | `create_rag_tool(retriever)` exposes the retriever as a `@tool` | `locus.rag.tools` |

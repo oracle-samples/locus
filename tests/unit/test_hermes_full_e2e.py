@@ -18,8 +18,8 @@ run that exercises:
 * **C.1 metadata** — context length comes from the registry.
 * **C.2 + C.3** — auxiliary-model summarises long history through
   the ``LLMCompactor``.
-* **D.1 result storage** — oversized tool output is offloaded to the
-  ``SQLiteBackend`` checkpointer with a recoverable reference key.
+* **D.1 result storage** — oversized tool output is offloaded to an
+  external store with a recoverable reference key.
 * **D.2 prompt cache** — the system message is marked when the model
   metadata says caching is supported.
 
@@ -30,7 +30,6 @@ prove the *integration*, not to benchmark the model.
 
 from __future__ import annotations
 
-import asyncio
 import socket
 from collections.abc import AsyncIterator
 from pathlib import Path
@@ -42,7 +41,7 @@ from pydantic import SecretStr
 from locus.agent.agent import Agent
 from locus.agent.config import AgentConfig
 from locus.core.messages import Message, Role, ToolCall
-from locus.memory.backends.sqlite import SQLiteBackend
+from locus.memory.backends.memory import MemoryCheckpointer
 from locus.memory.compactor import LLMCompactor
 from locus.models import ModelResponse
 from locus.models.auxiliary import resolve_auxiliary
@@ -256,21 +255,25 @@ def workspace(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def checkpointer(tmp_path: Path) -> SQLiteBackend:
-    return SQLiteBackend(path=str(tmp_path / "agent.db"))
+def checkpointer() -> MemoryCheckpointer:
+    return MemoryCheckpointer()
 
 
 @pytest.fixture
-def result_store(checkpointer: SQLiteBackend) -> ToolResultStore:
+def result_store() -> ToolResultStore:
+    """A ToolResultStore backed by an in-process dict.
+
+    The D.1 contract only requires that ``save`` and ``load`` round-trip
+    a key/value mapping; a plain dict captures that without dragging in
+    any backend driver.
+    """
+    backing: dict[str, str] = {}
+
     def _save(key: str, content: str) -> None:
-        asyncio.run(checkpointer.save(key, {"content": content}))
+        backing[key] = content
 
     def _load(key: str) -> str | None:
-        data = asyncio.run(checkpointer.load(key))
-        if isinstance(data, dict):
-            v = data.get("content")
-            return v if isinstance(v, str) else None
-        return None
+        return backing.get(key)
 
     store = ToolResultStore(save=_save, load=_load, threshold_chars=2_000, preview_chars=500)
     global RESULT_STORE
@@ -286,7 +289,7 @@ def result_store(checkpointer: SQLiteBackend) -> ToolResultStore:
 
 def test_e2e_redaction_compactor_metadata_and_caching(
     workspace: Path,
-    checkpointer: SQLiteBackend,
+    checkpointer: MemoryCheckpointer,
     result_store: ToolResultStore,
 ) -> None:
     aux = _StubAux()
@@ -464,7 +467,7 @@ def test_e2e_path_safety_blocks_traversal(workspace: Path) -> None:
 
 
 def test_e2e_tool_result_offloaded_to_checkpointer(
-    checkpointer: SQLiteBackend, result_store: ToolResultStore
+    checkpointer: MemoryCheckpointer, result_store: ToolResultStore
 ) -> None:
     primary = _StubModel(
         scripted_responses=[

@@ -23,7 +23,7 @@ test.describe("workbench · Patterns tab", () => {
     await expect(page.getByTestId("side-tab-patterns")).toBeVisible();
     await page.getByTestId("side-tab-patterns").click();
     await expect(page.getByTestId("side-tab-patterns")).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByTestId("side-tab-tutorials")).toHaveAttribute("aria-selected", "false");
+    await expect(page.getByTestId("side-tab-notebooks")).toHaveAttribute("aria-selected", "false");
     await expect(page.getByTestId("side-tab-skills")).toHaveAttribute("aria-selected", "false");
     await expect(page.getByTestId("side-tab-protocols")).toHaveAttribute("aria-selected", "false");
   });

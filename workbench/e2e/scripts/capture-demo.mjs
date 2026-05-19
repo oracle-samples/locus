@@ -37,10 +37,10 @@ const page = await context.newPage();
 console.log(`[capture] navigating to ${URL}`);
 await page.goto(URL, { waitUntil: "networkidle" });
 
-// Best-effort wait for the tutorials sidebar to populate (depends on the
+// Best-effort wait for the notebooks sidebar to populate (depends on the
 // BFF responding with the catalog). Continue even if it doesn't show up.
 await page
-  .waitForSelector('[data-testid="side-tutorials"] .side__item', {
+  .waitForSelector('[data-testid="side-notebooks"] .side__item', {
     timeout: 8_000,
   })
   .catch(() => console.log("[capture] sidebar slow to populate; continuing"));
@@ -56,7 +56,7 @@ await page.screenshot({
 // close it again. Keeps the recording short (≈8s) so the gif stays small.
 console.log("[capture] recording walk-through");
 await page.waitForTimeout(800);
-const items = page.locator('[data-testid="side-tutorials"] .side__item');
+const items = page.locator('[data-testid="side-notebooks"] .side__item');
 const count = Math.min(await items.count(), 6);
 for (let i = 0; i < count; i++) {
   await items.nth(i).hover();

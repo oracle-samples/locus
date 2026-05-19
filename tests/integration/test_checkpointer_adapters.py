@@ -15,9 +15,7 @@ from locus.core.messages import Message, Role
 from locus.core.state import AgentState
 from locus.memory.backends import (
     MemoryCheckpointer,
-    SQLiteBackend,
     StorageBackendAdapter,
-    sqlite_checkpointer,
 )
 
 
@@ -48,14 +46,37 @@ def sample_state() -> AgentState:
 # =============================================================================
 
 
+class _FakeStorageBackend:
+    """In-memory storage backend exposing the simple save/load dict API."""
+
+    def __init__(self) -> None:
+        self._data: dict[str, dict] = {}
+
+    async def save(self, thread_id: str, data: dict) -> None:
+        self._data[thread_id] = data
+
+    async def load(self, thread_id: str) -> dict | None:
+        return self._data.get(thread_id)
+
+    async def delete(self, thread_id: str) -> bool:
+        return self._data.pop(thread_id, None) is not None
+
+    async def exists(self, thread_id: str) -> bool:
+        return thread_id in self._data
+
+    async def list_threads(
+        self, limit: int = 100, offset: int = 0, pattern: str = "%"
+    ) -> list[str]:
+        return list(self._data.keys())[offset : offset + limit]
+
+
 class TestStorageBackendAdapter:
-    """Test StorageBackendAdapter with SQLite backend."""
+    """Test StorageBackendAdapter using an in-memory storage backend."""
 
     @pytest.fixture
-    def adapter(self, tmp_path):
-        """Create adapter with SQLite backend."""
-        backend = SQLiteBackend(path=str(tmp_path / "test.db"))
-        return StorageBackendAdapter(backend)
+    def adapter(self):
+        """Create adapter with in-memory storage backend."""
+        return StorageBackendAdapter(_FakeStorageBackend())
 
     @pytest.mark.asyncio
     async def test_save_and_load(self, adapter, sample_state):
@@ -150,23 +171,6 @@ class TestStorageBackendAdapter:
 # =============================================================================
 
 
-class TestFactoryFunctions:
-    """Test checkpointer factory functions."""
-
-    @pytest.mark.asyncio
-    async def test_sqlite_checkpointer(self, tmp_path, sample_state):
-        """Test sqlite_checkpointer factory."""
-        checkpointer = sqlite_checkpointer(str(tmp_path / "factory.db"))
-
-        # Should work like a full checkpointer
-        checkpoint_id = await checkpointer.save(sample_state, "thread-1")
-        assert checkpoint_id is not None
-
-        loaded = await checkpointer.load("thread-1")
-        assert loaded is not None
-        assert loaded.agent_id == sample_state.agent_id
-
-
 # =============================================================================
 # Agent Integration Tests
 # =============================================================================
@@ -219,56 +223,14 @@ class TestAgentWithCheckpointer:
         assert loaded is not None
 
     @pytest.mark.asyncio
-    async def test_agent_with_sqlite_adapter(self, tmp_path):
-        """Agent with SQLite-backed checkpointer."""
-        from unittest.mock import AsyncMock, MagicMock
-
-        from locus import Agent
-        from locus.memory.backends import sqlite_checkpointer
-        from locus.models.base import ModelResponse
-
-        # Create mock model
-        mock_model = MagicMock()
-        mock_response = ModelResponse(
-            message=Message(
-                role=Role.ASSISTANT,
-                content="Hello! How can I help?",
-                tool_calls=[],
-            ),
-            usage={"total_tokens": 50},
-            raw={},
-        )
-        mock_model.complete = AsyncMock(return_value=mock_response)
-
-        # Create checkpointer
-        checkpointer = sqlite_checkpointer(str(tmp_path / "agent.db"))
-
-        # Create agent
-        agent = Agent(
-            model=mock_model,
-            system_prompt="You are helpful.",
-            checkpointer=checkpointer,
-            max_iterations=5,
-        )
-
-        # Run agent
-        result = agent.run_sync("Hello!", thread_id="sqlite-thread")
-
-        assert result.success
-
-        # Verify checkpoint was saved
-        assert await checkpointer.exists("sqlite-thread")
-
-    @pytest.mark.asyncio
-    async def test_agent_resumes_from_checkpoint(self, tmp_path):
+    async def test_agent_resumes_from_checkpoint(self):
         """Agent resumes conversation from checkpoint."""
         from unittest.mock import AsyncMock, MagicMock
 
         from locus import Agent
-        from locus.memory.backends import sqlite_checkpointer
         from locus.models.base import ModelResponse
 
-        checkpointer = sqlite_checkpointer(str(tmp_path / "resume.db"))
+        checkpointer = MemoryCheckpointer()
 
         def create_mock_model(response_text: str):
             mock_model = MagicMock()
@@ -304,16 +266,15 @@ class TestAgentWithCheckpointer:
         assert len(loaded_state.messages) >= 2
 
     @pytest.mark.asyncio
-    async def test_agent_with_auto_checkpoint(self, tmp_path):
+    async def test_agent_with_auto_checkpoint(self):
         """Agent with auto-checkpoint every N iterations."""
         from unittest.mock import AsyncMock, MagicMock
 
         from locus import Agent
         from locus.core.messages import ToolCall
-        from locus.memory.backends import sqlite_checkpointer
         from locus.tools import tool
 
-        checkpointer = sqlite_checkpointer(str(tmp_path / "auto.db"))
+        checkpointer = MemoryCheckpointer()
 
         # Create mock model that makes tool calls
         mock_model = MagicMock()
