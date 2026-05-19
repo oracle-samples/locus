@@ -1,4 +1,4 @@
-# Tutorial 63 — Research workflow (full pipeline)
+# Research Workflow
 
 The end-of-series capstone: a research-shaped pipeline that strings six
 node primitives into a single `StateGraph` and streams every step.

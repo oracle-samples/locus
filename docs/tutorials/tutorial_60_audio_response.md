@@ -1,4 +1,4 @@
-# Voice output — turn an agent's reply into speech
+# Voice Output
 
 A real agent often needs to talk, not just type. This tutorial pairs a
 regular chat-completions agent (text in, text out) with an

@@ -1,4 +1,4 @@
-# Agent server — deploy an agent as an HTTP API
+# Agent Server
 
 `AgentServer` wraps any Locus `Agent` in a FastAPI app: synchronous
 invoke, streaming SSE, persisted threads scoped to the bearer principal

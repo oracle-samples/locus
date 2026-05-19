@@ -1,4 +1,4 @@
-# Voice in, voice out chat through one audio-capable model call
+# Voice Chat
 
 Tutorial 60 was text in, voice out (Agent plus dedicated TTS). This is
 the next step: a single multimodal chat call to an audio-capable model

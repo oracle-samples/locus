@@ -71,7 +71,7 @@ export async function selectTutorial(id: string): Promise<void> {
   showEmptyState();
   $("#wb-output-pill").style.display = "none";
   $("#wb-status").textContent = `loaded ${current.filename}`;
-  $("#crumbs").textContent = `Workbench · Tutorial ${current.number}`;
+  $("#crumbs").textContent = `Workbench · Notebook ${current.number}`;
   renderList(search().value);
   renderNavState();
   document

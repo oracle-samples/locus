@@ -1,4 +1,4 @@
-# Procurement approval with tiered human gates
+# Procurement Approval
 
 Real procurement workflows have a threshold-based escalation chain::
 

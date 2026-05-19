@@ -1,4 +1,4 @@
-# EventBus subscriber patterns
+# EventBus Subscribers
 
 The bus has three subscribe shapes, each suited to a different consumer:
 

@@ -74,7 +74,7 @@ async with run_context() as rid:
 ## Start with Oracle
 
 The Oracle-native path through Locus — two short tracks: five
-tutorials on **OCI Generative AI** (inference) followed by two on
+notebooks on **OCI Generative AI** (inference) followed by two on
 **Oracle Database 26ai** (data layer with native `VECTOR`).
 
 ### OCI Generative AI (01–05)
@@ -173,7 +173,7 @@ Eight built-in protocols, each mapping to a different runtime shape:
 | `handoff_chain` | `SequentialPipeline` of one-tool Agents | `COORDINATE` |
 
 [Full reference](concepts/router.md){ .md-button }
-[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_52_cognitive_router.py){ .md-button }
+[Notebook](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_52_cognitive_router.py){ .md-button }
 
 ### Agents that verify their own answers
 
@@ -207,7 +207,7 @@ print(f"grounding score: {result.grounding_score:.2f}")
 ```
 
 [Full reference](concepts/reasoning.md){ .md-button }
-[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_36_reasoning_patterns.py){ .md-button }
+[Notebook](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_36_reasoning_patterns.py){ .md-button }
 
 ### No double-booking. No duplicate emails
 
@@ -239,7 +239,7 @@ result = agent.run_sync("Approve Acme for the $42k laptop refresh.")
 ```
 
 [Full reference](concepts/idempotency.md){ .md-button }
-[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_19_human_in_the_loop.py){ .md-button }
+[Notebook](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_19_human_in_the_loop.py){ .md-button }
 
 ### One conversation, many specialists
 
@@ -272,7 +272,7 @@ desk = create_handoff_manager(
 ```
 
 [Full reference](concepts/multi-agent/handoff.md){ .md-button }
-[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_25_agent_handoff.py){ .md-button }
+[Notebook](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_25_agent_handoff.py){ .md-button }
 
 ### See everything your agents are doing
 
@@ -314,7 +314,7 @@ Slow consumers get dropped events, never stall the publisher.
 
 [Full reference](concepts/observability.md){ .md-button }
 [Event catalogue](concepts/sse-events.md){ .md-button }
-[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_53_observability_basics.py){ .md-button }
+[Notebook](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_53_observability_basics.py){ .md-button }
 
 ### Tell agents exactly when to stop
 
@@ -344,7 +344,7 @@ print(result.stop_reason)
 ```
 
 [Full reference](concepts/termination.md){ .md-button }
-[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_15_termination.py){ .md-button }
+[Notebook](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_15_termination.py){ .md-button }
 
 ### Deploy in two lines of code
 
@@ -378,7 +378,7 @@ server.run(host="0.0.0.0", port=8080)
 ```
 
 [Full reference](concepts/server.md){ .md-button }
-[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_62_agent_server.py){ .md-button }
+[Notebook](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_62_agent_server.py){ .md-button }
 
 ## How every agent runs
 
@@ -559,7 +559,7 @@ charges once. The agent stops.
 A three-agent vendor PO approval workflow against a live Oracle 26ai
 catalogue — Procurement and Compliance debate, hand off to an Approval
 Officer, the human approves, idempotent writes fire — runs end-to-end
-in the multi-agent and idempotency tutorials under
+in the multi-agent and idempotency notebooks under
 [`examples/`](https://github.com/oracle-samples/locus/tree/main/examples).
 
 ## Source
@@ -580,8 +580,8 @@ Full source map → [Capabilities](capabilities.md) · [API reference](api/agent
 ## Learn locus in an afternoon
 
 The [`examples/`](https://github.com/oracle-samples/locus/tree/main/examples)
-tree is **63 progressive tutorials**, numbered in suggested reading
-order. Every tutorial is one runnable file and adds exactly one idea
+tree is **63 progressive notebooks**, numbered in suggested reading
+order. Every notebook is one runnable file and adds exactly one idea
 on top of the previous. The first seven walk you through the Oracle
 native path; from 08 onward you're learning the agent framework itself.
 

@@ -21,7 +21,7 @@
   <a href="https://oracle-samples.github.io/locus/concepts/router/">Cognitive Router</a> ·
   <a href="https://oracle-samples.github.io/locus/concepts/multi-agent/">Multi-agent</a> ·
   <a href="https://oracle-samples.github.io/locus/concepts/deepagent/">DeepAgent</a> ·
-  <a href="examples/">56 Tutorials</a> ·
+  <a href="examples/">63 Notebooks</a> ·
   <a href="https://oracle-samples.github.io/locus/workbench/">Workbench</a>
 </p>
 
@@ -29,6 +29,10 @@
   <strong>Try every locus pattern in your browser →</strong>
   <a href="https://oracle-samples.github.io/locus/workbench/"><strong>Workbench guide</strong></a><br>
   <em>Step-by-step setup for the browser playground — run it on localhost in three terminals, or in a single Docker container. Wire up an OCI profile, or bring your own OpenAI / Anthropic key.</em>
+</p>
+
+<p align="center">
+  <em>Oracle 26ai is wired in as a first-class backend — native <code>VECTOR(N, FLOAT32)</code> RAG and durable agent threads in ADB, at parity with the LangChain Oracle integrations.</em>
 </p>
 
 ---
@@ -79,7 +83,7 @@ pip install "locus-sdk[anthropic]"     # Anthropic
 pip install "locus-sdk[sdk]"           # everything
 ```
 
-No mandatory cloud account to start — `MockModel` lets every tutorial run offline.
+No mandatory cloud account to start — `MockModel` lets every notebook run offline.
 
 ---
 
@@ -211,13 +215,18 @@ Every node emits a write-protected typed event — same stream powers SSE, telem
 
 ---
 
-## 56 tutorials
+## 63 notebooks
 
-[`examples/`](examples/) has 63 progressive tutorials, numbered in suggested
-reading order. Tutorials default to **Oracle Cloud Infrastructure (OCI)
+[`examples/`](examples/) has 63 progressive notebooks, numbered in suggested
+reading order. Notebooks default to **Oracle Cloud Infrastructure (OCI)
 Generative AI** when an OCI profile is available, and fall back to a
 bundled mock model when one isn't — every example runs offline with no
 credentials needed.
+
+The first seven notebooks land the **Oracle 26ai** primitives end-to-end:
+OCI transports, OCI inference deep-dives, Dedicated AI Cluster, Cohere
+Reranker V4, native `VECTOR` RAG, and durable agent threads in the
+database.
 
 ```bash
 git clone https://github.com/oracle-samples/locus.git
@@ -246,7 +255,7 @@ python examples/tutorial_63_research_workflow.py     # full research pipeline
 | **Real-world workflows** | 57–61 | Incident response, procurement, contract review, audio |
 | **Server & full pipelines** | 62–63 | Agent server (FastAPI), full research workflow |
 
-→ [Full tutorials index](https://oracle-samples.github.io/locus/tutorials/)
+→ [Full notebooks index](https://oracle-samples.github.io/locus/tutorials/)
 
 ---
 
@@ -254,8 +263,8 @@ python examples/tutorial_63_research_workflow.py     # full research pipeline
 
 A browser-based playground for every locus pattern. Two clicks to a
 running agent — no CLI install, no editor setup. Three model slots
-(A / B / C) so multi-agent tutorials can mix a fast triage model
-with a deeper specialist. Four sidebar tabs: **Tutorials** (every
+(A / B / C) so multi-agent notebooks can mix a fast triage model
+with a deeper specialist. Four sidebar tabs: **Notebooks** (every
 runnable `tutorial_*.py`), **Skills** (SKILL.md packages),
 **Protocols** (the eight cognitive-router shapes with cost / latency
 metadata), and **Patterns** (the nine first-class
@@ -353,9 +362,9 @@ src/locus/
 ├── evaluation/     EvalCase + EvalRunner + EvalReport
 └── integrations/   MCP (client + server)
 
-workbench/          Browser playground — Tutorials / Skills / Protocols tabs,
+workbench/          Browser playground — Notebooks / Skills / Protocols tabs,
                     three model slots, SSE event stream, Docker-ready.
-examples/           56 progressive tutorials, each a single runnable file.
+examples/           63 progressive notebooks, each a single runnable file.
 tests/unit/         Deterministic, no external deps. Runs in CI on every PR.
 tests/integration/  Live OCI / OpenAI / Oracle Database 26ai. Gated on credentials.
 ```

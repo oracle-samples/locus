@@ -1,4 +1,4 @@
-# Full event catalogue tour
+# Event Catalogue
 
 Every component in Locus emits typed events under one stable prefix:
 `agent.*`, `multiagent.*`, `composition.*`, `router.*`, `rag.*`,

@@ -8,7 +8,7 @@ container — both end at the same UI at <http://localhost:5173>.
 [Workbench README](https://github.com/oracle-samples/locus/tree/main/workbench){ .md-button }
 
 Once it's up: open *Provider settings*, paste an OpenAI / Anthropic
-key or wire up an OCI profile, pick a tutorial in the sidebar, hit
+key or wire up an OCI profile, pick a notebook in the sidebar, hit
 **Run**. A real agent streams events back into the browser.
 
 ![locus workbench](img/workbench.gif)
@@ -34,13 +34,13 @@ runnable demos pinned to the top of the sidebar:
   `VECTOR_DISTANCE COSINE`. Requires `ORACLE_DSN` / `ORACLE_USER` /
   `ORACLE_PASSWORD` / `ORACLE_WALLET` on the backend host (plus an
   OCI provider in the UI for embeddings). See
-  [tutorial 61](tutorials/tutorial_06_oracle_26ai_rag.md).
+  [notebook 06](tutorials/tutorial_06_oracle_26ai_rag.md).
 - **Retrieve-then-rerank (Cohere V4)** — `CohereReranker` on OCI
   on-demand `rerank-v4`. Provider panel set to OCI is enough. See
-  [tutorial 60](tutorials/tutorial_05_cohere_reranker.md).
+  [notebook 05](tutorials/tutorial_05_cohere_reranker.md).
 
-The tutorial sidebar also surfaces the rest of the Oracle-native
-path — tutorials 00 / 57 / 58 (transports), 40 (Dedicated AI
+The notebook sidebar also surfaces the rest of the Oracle-native
+path — notebooks 01 / 02 / 03 (transports), 04 (Dedicated AI
 Cluster) — under the same "Oracle primitives" group.
 
 ### Database settings (Oracle 26ai)
@@ -96,7 +96,7 @@ being the path namespace.
 If the per-tab Database panel is empty, the backend falls back to
 `ORACLE_DSN` / `ORACLE_USER` / `ORACLE_PASSWORD` / `ORACLE_WALLET`
 (plus `ORACLE_WALLET_PASSWORD`) read from the process environment —
-matching the convention used by every Oracle-backed tutorial under
+matching the convention used by every Oracle-backed notebook under
 `examples/`. UI input always overrides the env when both are set.
 
 It's also the canonical demo: visitors arrive at this app, pick a
@@ -105,7 +105,7 @@ workflow, and learn the SDK by running real ones.
 ```
 ┌───────────────────────────────────────┐
 │  workbench/web   — vanilla TS + Vite  │  :5173
-│  Tutorial catalog · provider settings │
+│  Notebook catalog · provider settings │
 └───────────────────┬───────────────────┘
                     │ /api/*
                     ▼
@@ -179,7 +179,7 @@ make web                                          # pane 3 — :5173
 end-to-end test suite in `workbench/e2e/`. The `make backend` target
 is the workbench runner — distinct from `make backend-research` and
 `make backend-finance`, which spin up the A2A mesh demo peers for
-[tutorial 34](tutorials/tutorial_28_a2a_protocol.md), not the
+[notebook 28](tutorials/tutorial_28_a2a_protocol.md), not the
 workbench.
 
 ### Verify it's up
@@ -192,7 +192,7 @@ curl -sI http://127.0.0.1:5173/ | head -1            # web → HTTP/1.1 200 OK
 
 Then open <http://localhost:5173>. Click **Provider settings** (top
 right), pick your provider, fill the credentials, hit Save. Pick a
-tutorial from the sidebar, hit **Run**.
+notebook from the sidebar, hit **Run**.
 
 ## Run it in Docker
 
@@ -286,7 +286,8 @@ happen.
 
 ## What you can run
 
-The catalog populates from the BFF's `/api/tutorials` endpoint, which
+The catalog populates from the BFF's `/api/notebooks` endpoint
+(aliased to `/api/tutorials` for backwards compatibility), which
 walks `examples/tutorial_*.py`. As of writing the workbench has 9
 dedicated FastAPI pattern endpoints:
 
@@ -303,11 +304,11 @@ dedicated FastAPI pattern endpoints:
 | **Cognitive routing** | Rule-based vs LLM-picker selection — see below |
 
 The rest run as plain Python subprocesses against your provider —
-same behaviour as running the tutorial from a terminal, just inside
+same behaviour as running the notebook from a terminal, just inside
 the workbench so you can watch streamed events instead of tailing
 stdout.
 
-Tutorial 41 (DeepAgent) ships a `part5_datastores` section that
+Notebook 29 (DeepAgent) ships a `part5_datastores` section that
 exercises `create_deepagent(datastores={"medical": …})` against an
 in-memory `RAGRetriever`. The same auto-wiring backs the
 [deep-research project examples][dr] — seven runnable demos that
@@ -390,7 +391,7 @@ correlate findings.
 → specialist_fanout
 ```
 
-See [tutorial 59](tutorials/tutorial_34_emergent_routing.md) for the
+See [notebook 34](tutorials/tutorial_34_emergent_routing.md) for the
 full code path and [concepts/router.md](concepts/router.md#emergent-picker-opt-in-second-mode)
 for the architectural details.
 
@@ -398,7 +399,7 @@ for the architectural details.
 
 **You pay $0 to run the workbench itself.** All three tiers run
 locally — your laptop or your Docker daemon. The only thing you pay
-for is the model calls your tutorials make, and those go directly
+for is the model calls your notebooks make, and those go directly
 to *your* provider key (OpenAI / Anthropic) or *your* OCI tenancy.
 Oracle pays nothing.
 
@@ -421,7 +422,7 @@ Oracle pays nothing.
   to resolve inside the container. The `-v "$HOME/.oci:$HOME/.oci:ro"
   -e "HOME=$HOME"` pair mirrors the host layout so absolute paths
   line up.
-- **Tutorial fails with "no parsed Pydantic" / empty output** — your
+- **Notebook fails with "no parsed Pydantic" / empty output** — your
   model is too small for structured output. Use `gpt-5.5-2026-04-23`,
   `gpt-4o`, or `claude-sonnet-4-6` for the demos that use
   `output_schema`.

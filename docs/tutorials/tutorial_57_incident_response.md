@@ -1,4 +1,4 @@
-# Incident-response runbook (SRE workflow)
+# Incident Response
 
 Models the loop a real on-call engineer runs when a page fires::
 

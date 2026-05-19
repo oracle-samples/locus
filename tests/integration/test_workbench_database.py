@@ -135,7 +135,9 @@ class TestResolveDb:
         monkeypatch.setenv("ORACLE_USER", "env_user")
         monkeypatch.setenv("ORACLE_PASSWORD", "env_pw")
         cfg = runner_module.DatabaseConfig(
-            dsn="from_request_low", user="req_user", password="req_pw"  # noqa: S105, S106
+            dsn="from_request_low",
+            user="req_user",
+            password="req_pw",  # noqa: S105, S106
         )
         out = runner_module._resolve_db(cfg)
         assert out.dsn == "from_request_low"

@@ -1,4 +1,4 @@
-# Contract-review workflow (parallel review and negotiation loop)
+# Contract Review
 
 Real contract review involves multiple stakeholders working in
 parallel, then a back-and-forth negotiation phase, then sign-off::
