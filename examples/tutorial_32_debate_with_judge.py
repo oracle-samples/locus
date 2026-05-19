@@ -174,7 +174,7 @@ async def judge_turn(state: dict[str, Any]) -> dict[str, Any]:
         try:
             final = await _asyncio.to_thread(agent.run_sync, prompt)
             break
-        # noqa BLE001 — retry covers transient OCI flakiness.
+        # Retry covers transient OCI flakiness.
         except Exception as exc:  # noqa: BLE001
             last_exc = exc
             await _asyncio.sleep(0.5 * (attempt + 1))

@@ -171,7 +171,7 @@ nav:
     - SSE event catalogue: concepts/sse-events.md
     - Safety & Guardrails: concepts/safety.md
     - Evaluation: concepts/evaluation.md
-- Tutorials:
+- Notebooks:
   - Quickstart: how-to/quickstart.md
   - Overview: tutorials/index.md
   - OCI Generative AI (start here):

@@ -1,4 +1,4 @@
-# Emergent routing — opt-in LLM protocol picker
+# Emergent Routing
 
 [Tutorial 52](tutorial_52_cognitive_router.md) covers the default
 deterministic router: the LLM fills a typed `GoalFrame`, then

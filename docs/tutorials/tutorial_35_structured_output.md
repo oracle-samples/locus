@@ -1,4 +1,4 @@
-# Structured output — typed JSON from an LLM
+# Structured Output
 
 Get a Pydantic object back from a model call instead of a string you
 have to re-parse. Every part below fires a real model call and prints

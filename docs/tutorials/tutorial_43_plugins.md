@@ -1,4 +1,4 @@
-# Plugins — composable agent extensions
+# Plugins
 
 Plugins bundle hooks (and optionally tools) into one reusable object.
 Drop a plugin onto an agent and every relevant hook method runs

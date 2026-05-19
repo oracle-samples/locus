@@ -1,4 +1,4 @@
-# Steering — runtime tool approval driven by a policy LLM
+# Steering
 
 `SteeringHook` runs a second LLM ("the steering model") in front of
 every tool call. The steering model reads a natural-language policy

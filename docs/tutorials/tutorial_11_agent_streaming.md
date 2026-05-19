@@ -1,4 +1,4 @@
-# Agent streaming and events
+# Agent Streaming
 
 `agent.run(prompt)` returns an async iterator of events. Watch the agent
 think, call tools, and terminate — live, in order. This is what lets you

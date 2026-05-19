@@ -104,8 +104,7 @@ async def main() -> None:
     )
 
     port = _free_port()
-    # noqa is fine here — this string is the demo bearer token, not a
-    # real credential.
+    # Demo bearer token, not a real credential.
     api_key = "tutorial-secret"  # noqa: S105
 
     server = A2AServer(

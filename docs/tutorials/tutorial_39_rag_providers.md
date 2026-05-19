@@ -1,4 +1,4 @@
-# RAG providers — embeddings and Oracle 26ai vector store variants
+# RAG Providers
 
 Production RAG on OCI is two pieces. `OracleVectorStore` is the
 default backend across this tutorial series — Oracle Database 26ai

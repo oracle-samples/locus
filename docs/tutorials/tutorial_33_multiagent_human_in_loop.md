@@ -1,4 +1,4 @@
-# Multi-agent workflows with a human in the loop
+# Multi-Agent HITL
 
 Tutorial 19 covered HITL for a single agent. Production systems
 typically combine a triage agent, several specialists, and a human

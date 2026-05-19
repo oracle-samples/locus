@@ -1,4 +1,4 @@
-# DeepAgent — research-shaped Agent factory with Oracle grounding
+# DeepAgent
 
 `create_deepagent` bundles the configuration patterns for deep research
 into one call: reflexion + grounding on by default, a typed termination

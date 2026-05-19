@@ -1,4 +1,4 @@
-# OCIResponsesModel: the OCI GenAI Responses endpoint
+# OCIResponsesModel
 
 `OCIResponsesModel` is the Locus client for Oracle Cloud Infrastructure
 (OCI) Generative AI's Responses endpoint

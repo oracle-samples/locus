@@ -1,4 +1,4 @@
-# Composition — Sequential, Parallel, Loop
+# Composition Patterns
 
 Chain agents, run them in parallel, or loop one until it's satisfied.
 When the work decomposes cleanly into agent-shaped pieces, you don't

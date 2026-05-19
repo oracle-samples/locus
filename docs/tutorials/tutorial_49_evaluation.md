@@ -1,4 +1,4 @@
-# Evaluation — score an agent against a test suite
+# Evaluation
 
 Treat the agent like any other piece of code. Declare cases, run them,
 read the report. Locus ships a small, dependency-free harness so you

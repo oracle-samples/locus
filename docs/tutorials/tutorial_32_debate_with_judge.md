@@ -1,4 +1,4 @@
-# Adversarial debate with a structured-output judge
+# Debate with Judge
 
 PRO and CON take turns arguing a resolution. After N rounds a Judge
 reads the full transcript and emits a typed `Verdict` — winner,

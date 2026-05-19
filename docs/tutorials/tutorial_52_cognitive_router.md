@@ -1,4 +1,4 @@
-# Cognitive router — natural language to bounded graph
+# Cognitive Router
 
 `locus.router` compiles a natural-language request onto existing Locus
 primitives. The LLM never picks topology — it fills a typed

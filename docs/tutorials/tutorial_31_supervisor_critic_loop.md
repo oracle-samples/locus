@@ -1,4 +1,4 @@
-# Supervisor + critic — drafting with a refinement loop
+# Supervisor + Critic
 
 A researcher gathers notes, a writer drafts a response, a critic
 either approves or sends it back for revision. The loop caps at two

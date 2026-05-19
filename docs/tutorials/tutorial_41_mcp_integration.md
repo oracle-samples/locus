@@ -1,4 +1,4 @@
-# MCP integration — publish and consume tools across processes
+# MCP Integration
 
 MCP (Model Context Protocol) is the open standard that lets AI
 assistants call tools running in a different process. Locus speaks

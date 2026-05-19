@@ -1,4 +1,4 @@
-# Swarm — capability-matched workers, shared queue
+# Swarm Multi-Agent
 
 A swarm is a pool of agents pulling tasks from a shared queue. No
 supervisor decides who does what — each task finds the worker whose

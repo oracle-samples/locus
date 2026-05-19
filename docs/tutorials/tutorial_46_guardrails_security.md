@@ -1,4 +1,4 @@
-# Guardrails and security
+# Guardrails and Security
 
 Block dangerous calls before the model sees them. Each part wires a
 guardrail into a real agent run and prints the model round-trip cost,

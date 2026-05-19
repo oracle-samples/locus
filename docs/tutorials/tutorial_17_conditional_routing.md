@@ -1,4 +1,4 @@
-# Conditional routing
+# Conditional Routing
 
 Pick the next node at runtime based on graph state. A conditional edge
 is a function attached to a node — it runs after the node returns,

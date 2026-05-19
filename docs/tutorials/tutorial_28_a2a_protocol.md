@@ -1,4 +1,4 @@
-# A2A — Locus Agent as a spec-compliant peer
+# A2A Protocol
 
 A2A (Agent-to-Agent) is the public cross-framework protocol at
 [a2aproject.github.io/A2A](https://a2aproject.github.io/A2A/). Locus

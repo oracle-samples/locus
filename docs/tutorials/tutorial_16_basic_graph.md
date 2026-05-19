@@ -1,4 +1,4 @@
-# Basic graph
+# Basic Graph
 
 Build a workflow as a graph of nodes that pass state to each other. A
 `StateGraph` is a directed graph where each node is an async function

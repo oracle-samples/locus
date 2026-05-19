@@ -1,4 +1,4 @@
-# Model providers — OCI Generative AI default, OpenAI / Anthropic / Ollama alternatives
+# Model Providers
 
 Locus targets OCI Generative AI as its primary provider, and OpenAI,
 Anthropic, and Ollama as first-class alternatives. The same `Agent`

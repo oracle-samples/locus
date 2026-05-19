@@ -1,4 +1,4 @@
-# Functional API — `@task` and `@entrypoint`
+# Functional API
 
 Express a workflow as decorated async functions instead of a graph. If
 `StateGraph` feels like overkill for a straight-line pipeline, the

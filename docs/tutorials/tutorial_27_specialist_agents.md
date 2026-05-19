@@ -1,4 +1,4 @@
-# Specialist agents — domain focus, tools, playbooks
+# Specialist Agents
 
 Tutorial 26 introduced the Specialist as the worker an orchestrator
 hands tasks to. This tutorial dives into the Specialist itself: how to

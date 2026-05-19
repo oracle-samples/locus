@@ -1,4 +1,4 @@
-# Agent hooks and lifecycle
+# Agent Hooks
 
 Hooks are middleware for agents. Subclass `HookProvider`, override the
 callbacks you need, and Locus invokes them at four lifecycle points:

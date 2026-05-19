@@ -1,4 +1,4 @@
-# Reasoning patterns — reflexion, grounding, causal chains
+# Reasoning Patterns
 
 Walks the Locus reasoning toolkit one piece at a time. Each part fires
 a real model call and prints `[model call: X.XXs · prompt→completion

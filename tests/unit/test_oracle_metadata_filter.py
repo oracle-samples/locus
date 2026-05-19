@@ -23,7 +23,7 @@ from locus.rag.stores.oracle import OracleVectorStore
 
 
 def _store() -> OracleVectorStore:
-    return OracleVectorStore(dsn="x", user="u", password="p", dimension=8, distance_metric="COSINE")
+    return OracleVectorStore(dsn="x", user="u", password="p", dimension=8, distance_metric="COSINE")  # noqa: S105, S106
 
 
 class TestLeafOperators:
@@ -138,7 +138,7 @@ class TestValidation:
             _store()._compile_metadata_filter({"foo.bar": "x"}, {})
 
     def test_and_or_require_list(self) -> None:
-        with pytest.raises(ValueError, match="\\$and expects a list"):
+        with pytest.raises(TypeError, match="\\$and expects a list"):
             _store()._compile_metadata_filter({"$and": {"a": "1"}}, {})
 
     def test_in_requires_list(self) -> None:

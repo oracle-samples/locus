@@ -1,4 +1,4 @@
-# OCI Dedicated AI Cluster (DAC) endpoints
+# OCI Dedicated AI Cluster
 
 A Dedicated AI Cluster (DAC) is Oracle Cloud Infrastructure (OCI)
 Generative AI's provisioned-capacity serving mode: instead of

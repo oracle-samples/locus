@@ -1,4 +1,4 @@
-# RAG basics on Oracle Database 26ai
+# RAG Basics
 
 Retrieval-Augmented Generation grounds an agent's answers in your own
 documents. This tutorial drives the four-step pipeline against a real

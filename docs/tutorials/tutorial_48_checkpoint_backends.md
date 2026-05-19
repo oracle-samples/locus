@@ -1,4 +1,4 @@
-# Checkpoint backends on Oracle Autonomous Database 26ai
+# Checkpoint Backends
 
 The checkpointer contract is backend-agnostic, but the production
 recommendation on OCI is Oracle 26ai — native JSON columns, vector and

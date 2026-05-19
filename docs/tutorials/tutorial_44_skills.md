@@ -1,4 +1,4 @@
-# Skills — packaged instruction bundles with progressive disclosure
+# Skills
 
 A Skill (the AgentSkills.io shape) bundles a name, a description, and
 a block of instructions. The `SkillsPlugin` exposes a catalog of

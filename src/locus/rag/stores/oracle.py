@@ -64,7 +64,7 @@ def _validate_int_in_range(
     if value is None:
         return
     if isinstance(value, bool) or not isinstance(value, int):
-        raise ValueError(f"{field_name} must be an integer.")
+        raise TypeError(f"{field_name} must be an integer.")
     if value < min_value:
         raise ValueError(f"{field_name} must be at least {min_value}.")
     if max_value is not None and value > max_value:

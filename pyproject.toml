@@ -389,8 +389,6 @@ ignore = [
     "FBT",     # boolean trap in tests
     "PLR2004", # magic values
     "S101",    # assert
-    "S105",    # hardcoded password — test stubs use literal "password" / "p"
-    "S106",    # hardcoded password kwarg — same reason
     "SLF001",  # private member access
     "N802",    # test method names with mixed case (test_implicit_AND_…)
     "RUF059",  # unpacked-but-unused vars in (state, events) destructuring

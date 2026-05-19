@@ -1,4 +1,4 @@
-# Retrieve-then-rerank on Oracle 26ai with Cohere Reranker V4
+# Cohere Reranker V4
 
 Embedding-only retrieval often isn't enough for production RAG. The
 embedding model sees query and document independently and can mis-rank

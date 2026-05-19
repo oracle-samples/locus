@@ -171,7 +171,7 @@ class OracleADBLoader(BaseModel):
 
         bind_params = bind_params if bind_params is not None else {}
         if not isinstance(bind_params, dict):
-            raise ValueError("bind_params must be a dict (may be empty)")
+            raise TypeError("bind_params must be a dict (may be empty)")
 
         # Bind-key safety: the SQL itself is the caller's responsibility,
         # but bind keys hit cursor.execute as a kwargs-style mapping. A

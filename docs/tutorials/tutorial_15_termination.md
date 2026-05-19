@@ -1,4 +1,4 @@
-# Composable termination, output_key, dynamic system prompt
+# Termination Conditions
 
 Every agent loop needs to know when to stop. Locus ships small
 predicates you compose with `|` (OR) and `&` (AND) to describe the exit

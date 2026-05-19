@@ -1,4 +1,4 @@
-# Agent with tools
+# Agent with Tools
 
 Plain Python functions, decorated with `@tool`, become things the agent
 can call. The model decides when to use them; Locus runs them and feeds

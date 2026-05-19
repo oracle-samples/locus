@@ -1,4 +1,4 @@
-# Durable agent threads on Oracle Database 26ai
+# Oracle 26ai Checkpointer
 
 In-memory and on-disk checkpointers are fine for local development —
 when the process restarts, the conversation is gone. This tutorial

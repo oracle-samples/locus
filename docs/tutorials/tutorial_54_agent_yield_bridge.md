@@ -1,4 +1,4 @@
-# Agent yield bridge and token usage
+# Agent Yield Bridge
 
 Every `Agent.run` is decorated with `@_bus_bridge` so the nine typed
 events it yields get republished on the bus as `agent.*` events when a

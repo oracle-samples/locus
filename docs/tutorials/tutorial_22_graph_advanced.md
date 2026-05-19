@@ -1,4 +1,4 @@
-# Graph (advanced) — retries, caching, diagrams, streaming
+# Advanced Graphs
 
 Per-node retry and caching, plus graph diagrams and live streaming.
 The executor lets you attach policies to individual nodes — so a flaky

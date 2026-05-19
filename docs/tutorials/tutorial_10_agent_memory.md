@@ -1,4 +1,4 @@
-# Agent memory on Oracle Autonomous Database 26ai
+# Agent Memory
 
 Give an agent a checkpointer and every conversation turn is persisted to
 a real database. Restart the process, attach a new agent to the same

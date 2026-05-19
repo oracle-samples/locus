@@ -158,7 +158,7 @@ class OracleInDBEmbeddingsConfig(BaseModel):
     # the batch path.
     use_batch_function: bool = True
 
-    def model_post_init(self, __context: Any) -> None:
+    def model_post_init(self, _: Any, /) -> None:
         """Validate identifiers and positive dimension."""
         # model_name is spliced into the JSON literal of the SQL call; the
         # JSON parser would happily accept "X","Y":"injection but we

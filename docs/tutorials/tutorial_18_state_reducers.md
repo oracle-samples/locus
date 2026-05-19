@@ -1,4 +1,4 @@
-# State reducers
+# State Reducers
 
 Control how state updates combine instead of overwriting each other.
 By default, when two nodes write to the same field, the second one

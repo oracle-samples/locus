@@ -1,4 +1,4 @@
-# Multi-modal providers — web search, web fetch, image, speech
+# Multi-Modal Providers
 
 Set a provider on the Agent kwargs (`web_search`, `web_fetch`,
 `image_generator`, `speech_provider`) and Locus auto-registers a

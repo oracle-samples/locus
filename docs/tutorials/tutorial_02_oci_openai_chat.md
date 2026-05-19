@@ -1,4 +1,4 @@
-# OCIOpenAIModel: the default OCI GenAI client
+# OCIOpenAIModel
 
 Deep dive on the default Oracle Cloud Infrastructure (OCI) Generative
 AI client class. `OCIOpenAIModel` targets the OpenAI-compatible

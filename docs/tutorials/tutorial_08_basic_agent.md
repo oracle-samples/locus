@@ -1,4 +1,4 @@
-# Basic agent — your first Locus agent
+# Basic Agent
 
 The smallest end-to-end Locus example. Build an agent, send it a prompt
 two ways (blocking and streaming), and look at what comes back.

@@ -1,4 +1,4 @@
-# Human-in-the-loop
+# Human-in-the-Loop
 
 Pause a graph mid-execution, ask a human, then resume with their
 answer. `interrupt(payload)` pauses the running node and returns

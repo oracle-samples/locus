@@ -1,4 +1,4 @@
-# Agent-to-agent handoff with structured context
+# Agent Handoff
 
 A handoff is one agent saying "I'm done, please take this further." The
 source packages the task, its findings, and a reason into a typed

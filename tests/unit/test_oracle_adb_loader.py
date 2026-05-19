@@ -103,7 +103,7 @@ class TestValidation:
             OracleADBLoader(sql="SELECT 1 FROM dual", content_column="", dsn="x")
 
     def test_bind_params_non_dict_rejected(self) -> None:
-        with pytest.raises(ValueError, match="bind_params"):
+        with pytest.raises(TypeError, match="bind_params"):
             OracleADBLoader(
                 sql="SELECT 1 FROM dual",
                 content_column="body",
@@ -142,7 +142,7 @@ class TestValidation:
                 content_column="content",  # column actually named body
                 dsn="x",
                 user="u",
-                password="p",
+                password="p",  # noqa: S105, S106
             )
             with pytest.raises(ValueError, match="content_column"):
                 async for _ in loader.lazy_load():
@@ -172,7 +172,7 @@ class TestLazyLoad:
                 metadata_columns=["author"],
                 dsn="mydb_low",
                 user="locus_app",
-                password="secret",
+                password="secret",  # noqa: S105, S106
             )
             docs = [d async for d in loader.lazy_load()]
 
@@ -180,7 +180,7 @@ class TestLazyLoad:
         assert mock_pool_ctor.call_count == 1
         kwargs = mock_pool_ctor.call_args.kwargs
         assert kwargs["user"] == "locus_app"
-        assert kwargs["password"] == "secret"
+        assert kwargs["password"] == "secret"  # noqa: S105
         assert kwargs["dsn"] == "mydb_low"
 
         # execute() got our verbatim SQL plus the bind dict.
@@ -220,7 +220,7 @@ class TestLazyLoad:
                 id_column="id",
                 dsn="x",
                 user="u",
-                password="p",
+                password="p",  # noqa: S105, S106
             )
             docs = [d async for d in loader.lazy_load()]
 
@@ -247,7 +247,7 @@ class TestLazyLoad:
                 metadata_columns=["notes"],
                 dsn="x",
                 user="u",
-                password="p",
+                password="p",  # noqa: S105, S106
             )
             docs = [d async for d in loader.lazy_load()]
 
@@ -271,7 +271,7 @@ class TestLazyLoad:
                 content_column="body",
                 dsn="x",
                 user="u",
-                password="p",
+                password="p",  # noqa: S105, S106
             )
             docs = [d async for d in loader.lazy_load()]
 
@@ -294,7 +294,7 @@ class TestLazyLoad:
                 id_column="id",
                 dsn="x",
                 user="u",
-                password="p",
+                password="p",  # noqa: S105, S106
             )
             docs = await loader.load()
 
@@ -316,7 +316,7 @@ class TestLazyLoad:
                 id_column="id",
                 dsn="x",
                 user="u",
-                password="p",
+                password="p",  # noqa: S105, S106
             )
             _ = await loader.load()
             await loader.close()

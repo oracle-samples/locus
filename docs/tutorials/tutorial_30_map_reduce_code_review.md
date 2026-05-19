@@ -1,4 +1,4 @@
-# Map-reduce code review — scatter-gather with the `Send` primitive
+# Map-Reduce Code Review
 
 Three source files, three reviewer roles (security, performance,
 style) = nine reviewer agents running in parallel, then one

@@ -241,7 +241,7 @@ class TestOracleSyncCheckpointSaver:
         wrapper = OracleSyncCheckpointSaver(
             dsn="x",
             user="u",
-            password="p",
+            password="p",  # noqa: S105, S106
             table_name="myapp",  # noqa: S106
         )
         # Sanity: the underlying saver picked up the table prefix.
@@ -302,7 +302,7 @@ class TestOracleSyncStore:
         wrapper = OracleSyncStore(
             dsn="x",
             user="u",
-            password="p",
+            password="p",  # noqa: S105, S106
             dimension=1024,  # noqa: S106
         )
         assert wrapper._async.config.dimension == 1024
@@ -325,7 +325,7 @@ class TestOracleSyncStore:
         wrapper = OracleSyncStore(
             dsn="x",
             user="u",
-            password="p",
+            password="p",  # noqa: S105, S106
             dimension=4,  # noqa: S106
         )
         mock = _patch_async_with_mock(wrapper, search_by_embedding=[])
@@ -362,7 +362,7 @@ class TestOracleSyncVectorStore:
         wrapper = OracleSyncVectorStore(
             dsn="x",
             user="u",
-            password="p",
+            password="p",  # noqa: S105, S106
             dimension=1536,  # noqa: S106
         )
         assert wrapper._async.oracle_config.dimension == 1536

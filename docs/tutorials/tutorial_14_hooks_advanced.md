@@ -1,4 +1,4 @@
-# Advanced hooks — cancel, retry, write protection
+# Advanced Hooks
 
 Tutorial 12 covered hook basics. This one focuses on the safety
 properties Locus enforces on the event objects hooks see, and on the

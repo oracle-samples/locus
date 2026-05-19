@@ -57,23 +57,23 @@ from locus.rag.chunkers import OracleInDBChunker  # noqa: E402
 
 class TestConstructor:
     def test_rejects_bad_by(self) -> None:
-        with pytest.raises(ValueError, match="^by must be one of"):
-            OracleInDBChunker(dsn="x", user="u", password="p", by="bogus")
+        with pytest.raises(ValueError, match=r"^by must be one of"):
+            OracleInDBChunker(dsn="x", user="u", password="p", by="bogus")  # noqa: S105, S106
 
     def test_rejects_bad_normalize(self) -> None:
-        with pytest.raises(ValueError, match="^normalize must be one of"):
-            OracleInDBChunker(dsn="x", user="u", password="p", normalize="lowercase")
+        with pytest.raises(ValueError, match=r"^normalize must be one of"):
+            OracleInDBChunker(dsn="x", user="u", password="p", normalize="lowercase")  # noqa: S105, S106
 
     def test_rejects_zero_max_tokens(self) -> None:
-        with pytest.raises(ValueError, match="^max_tokens must be"):
-            OracleInDBChunker(dsn="x", user="u", password="p", max_tokens=0)
+        with pytest.raises(ValueError, match=r"^max_tokens must be"):
+            OracleInDBChunker(dsn="x", user="u", password="p", max_tokens=0)  # noqa: S105, S106
 
     def test_rejects_negative_overlap(self) -> None:
-        with pytest.raises(ValueError, match="^overlap must be"):
-            OracleInDBChunker(dsn="x", user="u", password="p", overlap=-1)
+        with pytest.raises(ValueError, match=r"^overlap must be"):
+            OracleInDBChunker(dsn="x", user="u", password="p", overlap=-1)  # noqa: S105, S106
 
     def test_defaults_match_oracle_recommended(self) -> None:
-        c = OracleInDBChunker(dsn="x", user="u", password="p")
+        c = OracleInDBChunker(dsn="x", user="u", password="p")  # noqa: S105, S106
         params = json.loads(c._params_json())
         assert params == {
             "by": "words",
@@ -88,15 +88,15 @@ class TestChunkText:
     @pytest.mark.asyncio
     async def test_empty_text_returns_empty_list(self, stub) -> None:
         _, _, cursor = stub
-        c = OracleInDBChunker(dsn="x", user="u", password="p")
+        c = OracleInDBChunker(dsn="x", user="u", password="p")  # noqa: S105, S106
         out = await c.chunk_text("")
         assert out == []
         cursor.execute.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_non_string_rejected(self, stub) -> None:
-        c = OracleInDBChunker(dsn="x", user="u", password="p")
-        with pytest.raises(TypeError, match="text must be str"):
+        c = OracleInDBChunker(dsn="x", user="u", password="p")  # noqa: S105, S106
+        with pytest.raises(TypeError, match=r"text must be str"):
             await c.chunk_text(123)  # type: ignore[arg-type]
 
     @pytest.mark.asyncio
@@ -107,7 +107,7 @@ class TestChunkText:
         c = OracleInDBChunker(
             dsn="x",
             user="u",
-            password="p",
+            password="p",  # noqa: S105, S106
             max_tokens=42,
             overlap=4,
             by="chars",
@@ -135,7 +135,7 @@ class TestChunkText:
             return_value=[("1", "0", "5", "hello"), ("2", "6", "5", "world")]
         )
 
-        c = OracleInDBChunker(dsn="x", user="u", password="p")
+        c = OracleInDBChunker(dsn="x", user="u", password="p")  # noqa: S105, S106
         out = await c.chunk_text("hello world")
 
         assert out == [
@@ -147,18 +147,18 @@ class TestChunkText:
 class TestChunkColumn:
     @pytest.mark.asyncio
     async def test_validates_identifiers(self, stub) -> None:
-        c = OracleInDBChunker(dsn="x", user="u", password="p")
-        with pytest.raises(ValueError, match="^Invalid table_name"):
+        c = OracleInDBChunker(dsn="x", user="u", password="p")  # noqa: S105, S106
+        with pytest.raises(ValueError, match=r"^Invalid table_name"):
             async for _ in c.chunk_column(table_name="bad.name", text_column="t"):
                 pass
-        with pytest.raises(ValueError, match="^Invalid text_column"):
+        with pytest.raises(ValueError, match=r"^Invalid text_column"):
             async for _ in c.chunk_column(table_name="t", text_column="; DROP"):
                 pass
 
     @pytest.mark.asyncio
     async def test_rejects_where_with_semicolon(self, stub) -> None:
-        c = OracleInDBChunker(dsn="x", user="u", password="p")
-        with pytest.raises(ValueError, match="where clause must not contain"):
+        c = OracleInDBChunker(dsn="x", user="u", password="p")  # noqa: S105, S106
+        with pytest.raises(ValueError, match=r"where clause must not contain"):
             async for _ in c.chunk_column(
                 table_name="docs", text_column="body", where="topic = 'x'; DROP TABLE docs"
             ):
@@ -169,7 +169,7 @@ class TestClose:
     @pytest.mark.asyncio
     async def test_close_releases_pool(self, stub) -> None:
         _, pool, _ = stub
-        c = OracleInDBChunker(dsn="x", user="u", password="p")
+        c = OracleInDBChunker(dsn="x", user="u", password="p")  # noqa: S105, S106
         await c._get_pool()
         assert c._pool is pool
         await c.close()

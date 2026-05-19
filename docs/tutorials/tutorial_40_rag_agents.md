@@ -1,4 +1,4 @@
-# RAG agents — knowledge-augmented Q&A
+# RAG Agents
 
 Once you have documents in a vector store (tutorial 38 / 39), the next
 step is to let an agent reach into it. `RAGRetriever.as_tool()` turns

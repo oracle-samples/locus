@@ -1,4 +1,4 @@
-# Production RAG against Oracle Database 26ai with native vectors
+# Oracle 26ai RAG
 
 The Oracle-native RAG target on Oracle Cloud Infrastructure (OCI).
 Embeddings live in a real `VECTOR(N, FLOAT32)` column, similarity is

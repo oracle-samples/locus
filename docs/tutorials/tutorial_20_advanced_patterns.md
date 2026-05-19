@@ -1,4 +1,4 @@
-# Advanced patterns
+# Advanced Patterns
 
 Five primitives that turn a `StateGraph` into a general-purpose
 runtime. Reach for these once basic graphs stop being enough: dynamic

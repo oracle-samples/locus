@@ -1,4 +1,4 @@
-# OCI Generative AI: pick the right client class
+# OCI Transports
 
 Locus ships three model classes for Oracle Cloud Infrastructure (OCI)
 Generative AI. They are not interchangeable — the right one depends on

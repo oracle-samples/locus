@@ -1,4 +1,4 @@
-# GSAR — typed grounding for hallucination detection
+# GSAR Typed Grounding
 
 GSAR (Grounded Structured Answer Reasoning) is the Locus layer from
 `arXiv:2604.23366` (Kamelhar 2026). It partitions an answer's claims

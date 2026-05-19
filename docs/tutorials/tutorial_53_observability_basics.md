@@ -1,4 +1,4 @@
-# Observability basics — opt-in SSE telemetry
+# Observability Basics
 
 Locus ships an in-process pub/sub `EventBus` that publishes typed
 `StreamEvent`s for every meaningful step of execution: agent thinking,

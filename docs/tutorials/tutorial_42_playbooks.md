@@ -1,4 +1,4 @@
-# Playbooks — typed step-by-step procedures the agent must follow
+# Playbooks
 
 A playbook is a typed, ordered sequence of steps with declared
 `expected_tools`. Wire it into an agent and the agent is constrained

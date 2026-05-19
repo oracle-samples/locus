@@ -1,4 +1,4 @@
-# Advanced guardrails — topic, content safety, output filtering
+# Advanced Guardrails
 
 Three policy types that work on top of the basic `GuardrailsHook` from
 tutorial 46. They focus on what the agent talks about, not just what

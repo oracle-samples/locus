@@ -98,7 +98,7 @@ def _compile_node(
     metadata_column: str,
 ) -> str:
     if not isinstance(node, dict):
-        raise ValueError(f"metadata filter node must be a dict, got {type(node).__name__}")
+        raise TypeError(f"metadata filter node must be a dict, got {type(node).__name__}")
     if not node:
         return "1=1"
 
@@ -125,7 +125,7 @@ def _compile_logical(
         inner = _compile_node(value, params, f"{prefix}n", metadata_column)
         return f"NOT ({inner})"
     if not isinstance(value, list):
-        raise ValueError(f"{op} expects a list of expressions, got {type(value).__name__}")
+        raise TypeError(f"{op} expects a list of expressions, got {type(value).__name__}")
     joiner = " AND " if op == "$and" else " OR "
     sub_parts = [
         f"({_compile_node(item, params, f'{prefix}_{i}', metadata_column)})"

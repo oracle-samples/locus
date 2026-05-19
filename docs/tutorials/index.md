@@ -1,11 +1,11 @@
-# Tutorials
+# Notebooks
 
 63 runnable `examples/tutorial_NN_*.py` files. Every one runs end-to-end
 against the bundled `MockModel` (no credentials required) and upgrades
 to live **Oracle Cloud Infrastructure (OCI) Generative AI** —
 or OpenAI / Anthropic / Ollama — by setting one environment variable.
 
-Run any tutorial directly:
+Run any notebook directly:
 
 ```bash
 git clone https://github.com/oracle-samples/locus.git
@@ -13,7 +13,7 @@ cd locus && pip install -e .
 python examples/tutorial_01_oci_transports.py
 ```
 
-The tutorials are numbered in **suggested reading order**. Start at
+The notebooks are numbered in **suggested reading order**. Start at
 01 and walk forward; each one builds on the last. If you're shipping
 on OCI, the first seven are the path you came for.
 
@@ -22,7 +22,7 @@ on OCI, the first seven are the path you came for.
 The OCI inference platform end-to-end: pick a transport, point at a
 cluster, on-demand reranking. **Start here if you're shipping on OCI.**
 
-| # | Tutorial | What you get |
+| # | Notebook | What you get |
 |---|---|---|
 | 01 | [OCI transports — start here][t01] | The three OCI transports side by side (V1, Responses, generic chat) |
 | 02 | [OCI v1 (`OCIOpenAIModel`)][t02] | The default transport — every OCI model family in one class |
@@ -36,7 +36,7 @@ The Oracle data layer: native `VECTOR(N, FLOAT32)` data type and the
 `VECTOR_DISTANCE` SQL function let your agent ground answers and
 durably checkpoint conversations directly in Oracle Autonomous Database.
 
-| # | Tutorial | What you get |
+| # | Notebook | What you get |
 |---|---|---|
 | 06 | [Oracle 26ai RAG][t06] | `OracleVectorStore` against an Autonomous Database wallet — native `VECTOR(N, FLOAT32)`, `VECTOR_DISTANCE` SQL |
 | 07 | [Oracle 26ai checkpointer][t07] | `oracle_checkpointer` — resume agent conversations from ADB |
@@ -46,7 +46,7 @@ durably checkpoint conversations directly in Oracle Autonomous Database.
 The agent loop, tools, memory, streaming, hooks. Where to send a
 brand-new developer.
 
-| # | Tutorial |
+| # | Notebook |
 |---|---|
 | 08 | [Basic agent][t08] |
 | 09 | [Agent with tools][t09] |
@@ -61,7 +61,7 @@ brand-new developer.
 
 `StateGraph`, conditional edges, reducers, retries, the functional API.
 
-| # | Tutorial |
+| # | Notebook |
 |---|---|
 | 16 | [Basic graph][t16] |
 | 17 | [Conditional routing][t17] |
@@ -76,7 +76,7 @@ brand-new developer.
 
 In-process patterns plus A2A, DeepAgent, and real-world crew workflows.
 
-| # | Tutorial | Shape |
+| # | Notebook | Shape |
 |---|---|---|
 | 24 | [Swarm][t24] | Peer-to-peer shared context |
 | 25 | [Agent handoff][t25] | Sequential escalation |
@@ -94,7 +94,7 @@ In-process patterns plus A2A, DeepAgent, and real-world crew workflows.
 
 Pydantic schemas, Reflexion, Grounding, Causal, GSAR.
 
-| # | Tutorial |
+| # | Notebook |
 |---|---|
 | 35 | [Structured output (Pydantic)][t35] |
 | 36 | [Reasoning patterns][t36] |
@@ -102,7 +102,7 @@ Pydantic schemas, Reflexion, Grounding, Causal, GSAR.
 
 ## 38–40 · RAG
 
-| # | Tutorial |
+| # | Notebook |
 |---|---|
 | 38 | [RAG basics][t38] |
 | 39 | [RAG providers (vector stores, embeddings)][t39] |
@@ -110,7 +110,7 @@ Pydantic schemas, Reflexion, Grounding, Causal, GSAR.
 
 ## 41–45 · Skills, playbooks & plugins
 
-| # | Tutorial |
+| # | Notebook |
 |---|---|
 | 41 | [MCP integration][t41] |
 | 42 | [Playbooks][t42] |
@@ -122,7 +122,7 @@ Pydantic schemas, Reflexion, Grounding, Causal, GSAR.
 
 Guardrails, checkpointers, evaluation, provider matrix, multi-modal.
 
-| # | Tutorial |
+| # | Notebook |
 |---|---|
 | 46 | [Guardrails & security (basics)][t46] |
 | 47 | [Guardrails (advanced)][t47] |
@@ -135,7 +135,7 @@ Guardrails, checkpointers, evaluation, provider matrix, multi-modal.
 
 Cognitive router + opt-in EventBus telemetry.
 
-| # | Tutorial |
+| # | Notebook |
 |---|---|
 | 52 | [Cognitive router (PRISM)][t52] |
 | 53 | [Observability basics — opt-in SSE telemetry][t53] |
@@ -147,7 +147,7 @@ Cognitive router + opt-in EventBus telemetry.
 
 End-to-end use cases — incident response, contract review, audio chat.
 
-| # | Tutorial |
+| # | Notebook |
 |---|---|
 | 57 | [On-call incident response][t57] |
 | 58 | [Tiered procurement approval][t58] |
@@ -157,7 +157,7 @@ End-to-end use cases — incident response, contract review, audio chat.
 
 ## 62–63 · Server & full pipelines
 
-| # | Tutorial |
+| # | Notebook |
 |---|---|
 | 62 | [Agent server (FastAPI)][t62] |
 | 63 | [Research workflow (full pipeline)][t63] |

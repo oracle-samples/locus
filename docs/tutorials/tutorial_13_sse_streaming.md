@@ -1,4 +1,4 @@
-# SSE streaming for web clients
+# SSE Streaming
 
 Server-Sent Events is the simplest way to push live agent updates from a
 Python backend to a browser. Locus ships two handlers that turn the

@@ -1,4 +1,4 @@
-# Orchestrator — supervisor + specialists + parallel fan-out
+# Orchestrator Pattern
 
 An orchestrator routes a task to a chosen set of specialist agents, runs
 them in parallel under a semaphore, then correlates their outputs into a
