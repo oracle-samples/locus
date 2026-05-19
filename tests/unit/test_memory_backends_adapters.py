@@ -17,9 +17,9 @@ This file targets the remaining gaps:
 - ``list_threads`` signature variations: ``pattern=`` arg, ``limit=`` arg,
   no-arg, plus client-side pattern filter when backend doesn't support it.
 - ``list_with_metadata`` and ``close`` delegation.
-- Each factory function (``redis``, ``postgresql``, ``sqlite``,
-  ``opensearch``, ``oci_bucket``, ``oracle``) — uses ``sys.modules``
-  stubs so we don't need the real SDK clients.
+- Each factory function (``redis``, ``postgresql``, ``opensearch``,
+  ``oci_bucket``, ``oracle``) — uses ``sys.modules`` stubs so we don't
+  need the real SDK clients.
 """
 
 from __future__ import annotations
@@ -406,17 +406,6 @@ def fake_pg_module() -> Any:
 
 
 @pytest.fixture
-def fake_sqlite_module() -> Any:
-    class FakeSQLiteBackend:
-        def __init__(self, **kw: Any) -> None:
-            self.kwargs = kw
-
-    _stub_module("locus.memory.backends.sqlite", SQLiteBackend=FakeSQLiteBackend)
-    yield FakeSQLiteBackend
-    sys.modules.pop("locus.memory.backends.sqlite", None)
-
-
-@pytest.fixture
 def fake_os_module() -> Any:
     class FakeOSBackend:
         def __init__(self, **kw: Any) -> None:
@@ -463,13 +452,6 @@ class TestFactoryFunctions:
         cp = postgresql_checkpointer(database="db", user="u", password="p")  # noqa: S106
         assert isinstance(cp, StorageBackendAdapter)
         assert isinstance(cp._backend, fake_pg_module)
-
-    def test_sqlite_checkpointer(self, fake_sqlite_module: Any) -> None:
-        from locus.memory.backends.adapters import sqlite_checkpointer
-
-        cp = sqlite_checkpointer(path="/tmp/x.db")
-        assert isinstance(cp, StorageBackendAdapter)
-        assert isinstance(cp._backend, fake_sqlite_module)
 
     def test_opensearch_checkpointer(self, fake_os_module: Any) -> None:
         from locus.memory.backends.adapters import opensearch_checkpointer

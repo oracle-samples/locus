@@ -1,0 +1,52 @@
+# Contract-review workflow (parallel review and negotiation loop)
+
+Real contract review involves multiple stakeholders working in
+parallel, then a back-and-forth negotiation phase, then sign-off::
+
+    Contract intake
+       │
+       ▼
+    Parser  (extracts clauses)
+       │
+       ▼
+    Scatter to 3 parallel reviewers
+       ├── Legal    (regulatory risk, indemnity, termination)
+       ├── Risk     (financial exposure, liability cap)
+       └── Commercial (price, terms, SLAs)
+       ▼
+    Synthesizer  (consolidated review report)
+       │
+       ▼
+    Negotiation gate ── any blockers? ── yes ──> Negotiate (interrupt; loop)
+                                       │            │
+                                       │            └── revised terms ──┐
+                                       │                                │
+                                       └── no ──┐                       │
+                                                ▼                       │
+                                          Sign-off  <───────────────────┘
+                                                ▼
+                                          ContractDecision (typed)
+
+- `Send`: three reviewers run concurrently.
+- `add_conditional_edges` with cycles enabled: negotiation can loop
+  back to re-review when terms change. Hard cap of 3 rounds.
+- `interrupt()`: negotiation step pauses for human counsel to edit terms.
+- `output_schema=ContractDecision`: typed terminal artifact.
+
+Run it (OCI Generative AI is the default; auto-detected from `~/.oci/config`):
+
+    python examples/tutorial_59_contract_review.py
+
+Offline:
+
+    LOCUS_MODEL_PROVIDER=mock python examples/tutorial_59_contract_review.py
+
+Pin a strong-enough model for the structured ContractDecision schema:
+
+    LOCUS_MODEL_ID=openai.gpt-4.1 python examples/tutorial_59_contract_review.py
+
+## Source
+
+```python
+--8<-- "examples/tutorial_59_contract_review.py"
+```

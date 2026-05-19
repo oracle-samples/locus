@@ -163,25 +163,6 @@ class TestHTTPCheckpointerFactory:
         assert cp is not None
 
 
-class TestSQLiteCheckpointerFactory:
-    """Tests for SQLite checkpointer factory."""
-
-    def test_sqlite_registered(self):
-        """Test SQLite is registered."""
-        providers = list_checkpointers()
-        assert "sqlite" in providers
-
-    def test_sqlite_with_config_hint(self):
-        """Test SQLite with config_hint path."""
-        import tempfile
-        from pathlib import Path
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            db_path = str(Path(tmpdir) / "test.db")
-            cp = get_checkpointer(f"sqlite:{db_path}")
-            assert cp is not None
-
-
 class TestRedisCheckpointerFactory:
     """Tests for Redis checkpointer factory."""
 
@@ -232,20 +213,6 @@ class TestCustomCheckpointerFactory:
 
         # Cleanup
         del _CHECKPOINTERS["custom_test"]
-
-
-class TestSQLiteFactoryDetails:
-    """Detailed tests for SQLite factory."""
-
-    def test_sqlite_factory_path_kwarg(self):
-        """Test SQLite factory with path kwarg."""
-        import tempfile
-        from pathlib import Path
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            db_path = str(Path(tmpdir) / "test2.db")
-            cp = get_checkpointer("sqlite", path=db_path)
-            assert cp is not None
 
 
 class TestRedisFactoryDetails:
@@ -358,12 +325,6 @@ class TestProviderAvailability:
         assert "memory" in providers
         assert "file" in providers
         assert "http" in providers
-
-    def test_sqlite_usually_available(self):
-        """Test SQLite is available when aiosqlite is installed."""
-        providers = list_checkpointers()
-        # aiosqlite is in our dependencies, so sqlite should be there
-        assert "sqlite" in providers
 
     def test_all_providers_are_callable(self):
         """Test all registered providers are callable."""

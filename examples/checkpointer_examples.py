@@ -11,7 +11,6 @@ Run with: uv run python examples/checkpointer_examples.py
 """
 
 import asyncio
-from pathlib import Path
 
 
 # =============================================================================
@@ -98,67 +97,7 @@ async def example_memory_checkpointer():
 
 
 # =============================================================================
-# 2. SQLiteBackend - For local persistence
-# =============================================================================
-
-
-async def example_sqlite_backend():
-    """
-    SQLiteBackend stores state in a local SQLite database.
-
-    Use cases:
-    - Local development with persistence
-    - Single-user applications
-    - Desktop applications
-    - Edge deployments
-    """
-    print("\n" + "=" * 60)
-    print("2. SQLiteBackend Example")
-    print("=" * 60)
-
-    from locus.core.state import AgentState
-    from locus.memory.backends import SQLiteBackend
-
-    # Create backend with custom path
-    db_path = Path("/tmp/locus_demo.db")
-    backend = SQLiteBackend(path=str(db_path))
-    print(f"\nDatabase: {db_path}")
-
-    # Save state as dictionary
-    state = create_sample_state()
-    data = state.to_checkpoint()
-    await backend.save("sqlite-thread-1", data)
-    print("\nSaved checkpoint to SQLite")
-
-    # Save another thread
-    state2 = state.with_confidence(0.9)
-    await backend.save("sqlite-thread-2", state2.to_checkpoint())
-
-    # Load and restore
-    loaded_data = await backend.load("sqlite-thread-1")
-    loaded_state = AgentState.from_checkpoint(loaded_data)
-    print("\nRestored state:")
-    print_state_summary(loaded_state)
-
-    # List threads
-    threads = await backend.list_threads()
-    print(f"\nAll threads: {threads}")
-
-    # Get metadata
-    meta = await backend.get_metadata("sqlite-thread-1")
-    print(f"Metadata: {meta}")
-
-    # Pattern matching
-    sqlite_threads = await backend.list_threads(pattern="sqlite-%")
-    print(f"SQLite threads: {sqlite_threads}")
-
-    # Cleanup
-    await backend.delete("sqlite-thread-1")
-    await backend.delete("sqlite-thread-2")
-
-
-# =============================================================================
-# 3. RedisBackend - For distributed/production use
+# 2. RedisBackend - For distributed/production use
 # =============================================================================
 
 
@@ -175,7 +114,7 @@ async def example_redis_backend():
     Requires: redis-py and running Redis server
     """
     print("\n" + "=" * 60)
-    print("3. RedisBackend Example")
+    print("2. RedisBackend Example")
     print("=" * 60)
 
     try:
@@ -221,7 +160,7 @@ async def example_redis_backend():
 
 
 # =============================================================================
-# 4. PostgreSQLBackend - For enterprise/production use
+# 3. PostgreSQLBackend - For enterprise/production use
 # =============================================================================
 
 
@@ -244,7 +183,7 @@ async def example_postgresql_backend():
     Requires: asyncpg and running PostgreSQL server
     """
     print("\n" + "=" * 60)
-    print("4. PostgreSQLBackend Example")
+    print("3. PostgreSQLBackend Example")
     print("=" * 60)
 
     try:
@@ -301,7 +240,7 @@ async def example_postgresql_backend():
 
 
 # =============================================================================
-# 5. OpenSearchBackend - For search and analytics
+# 4. OpenSearchBackend - For search and analytics
 # =============================================================================
 
 
@@ -324,7 +263,7 @@ async def example_opensearch_backend():
     Requires: opensearch-py and running OpenSearch
     """
     print("\n" + "=" * 60)
-    print("5. OpenSearchBackend Example")
+    print("4. OpenSearchBackend Example")
     print("=" * 60)
 
     try:
@@ -375,7 +314,7 @@ async def example_opensearch_backend():
 
 
 # =============================================================================
-# 6. OCIBucketBackend - For OCI cloud deployments
+# 5. OCIBucketBackend - For OCI cloud deployments
 # =============================================================================
 
 
@@ -398,7 +337,7 @@ async def example_oci_bucket_backend():
     Requires: oci package and OCI credentials
     """
     print("\n" + "=" * 60)
-    print("6. OCIBucketBackend Example")
+    print("5. OCIBucketBackend Example")
     print("=" * 60)
 
     try:
@@ -451,7 +390,7 @@ async def example_oci_bucket_backend():
 
 
 # =============================================================================
-# 7. Agent with Checkpointing Example
+# 6. Agent with Checkpointing Example
 # =============================================================================
 
 
@@ -462,12 +401,12 @@ async def example_agent_with_checkpointing():
     This shows how to integrate checkpointing with an agent.
     """
     print("\n" + "=" * 60)
-    print("7. Agent with Checkpointing (Full Integration)")
+    print("6. Agent with Checkpointing (Full Integration)")
     print("=" * 60)
 
     from locus.core.messages import Message, Role
     from locus.core.state import AgentState
-    from locus.memory.backends import MemoryCheckpointer, sqlite_checkpointer
+    from locus.memory.backends import FileCheckpointer, MemoryCheckpointer
 
     # ==========================================================================
     # Option 1: Using MemoryCheckpointer (for testing)
@@ -495,36 +434,32 @@ async def example_agent_with_checkpointing():
     print(f"  Saved and loaded state: {len(loaded.messages)} messages")
 
     # ==========================================================================
-    # Option 2: Using SQLite checkpointer (persistent)
+    # Option 2: Using FileCheckpointer (simple local persistence)
     # ==========================================================================
-    print("\nOption 2: SQLite Checkpointer")
+    print("\nOption 2: FileCheckpointer")
     print("-" * 40)
 
-    # The sqlite_checkpointer factory creates a proper BaseCheckpointer
-    checkpointer = sqlite_checkpointer("/tmp/agent_sessions.db")
+    checkpointer = FileCheckpointer(base_dir="/tmp/agent_sessions")
 
     # Save a state
-    checkpoint_id = await checkpointer.save(state, "sqlite-session")
+    checkpoint_id = await checkpointer.save(state, "file-session")
     print(f"  Checkpoint saved: {checkpoint_id[:8]}...")
 
     # Load it back
-    loaded = await checkpointer.load("sqlite-session")
+    loaded = await checkpointer.load("file-session")
     print(f"  Loaded: {len(loaded.messages)} messages, agent_id={loaded.agent_id}")
 
-    # List checkpoints
-    checkpoints = await checkpointer.list_checkpoints("sqlite-session")
-    print(f"  Available checkpoints: {len(checkpoints)}")
-
     # ==========================================================================
-    # Option 3: Other backends (Redis, PostgreSQL, etc.)
+    # Option 3: Production backends (Redis, PostgreSQL, Oracle, etc.)
     # ==========================================================================
-    print("\nOption 3: Other Backends")
+    print("\nOption 3: Production Backends")
     print("-" * 40)
 
     print("  Available factory functions:")
     print("    - redis_checkpointer(url='redis://localhost:6379')")
     print("    - postgresql_checkpointer(host='localhost', database='myapp')")
     print("    - opensearch_checkpointer(hosts=['localhost:9200'])")
+    print("    - oracle_checkpointer(dsn='mydb_high', user='admin', password='...')")
     print("    - oci_bucket_checkpointer(bucket_name='...', namespace='...')")
 
     print("\n  Example with Redis:")
@@ -539,10 +474,10 @@ async def example_agent_with_checkpointing():
     print("-" * 40)
     print("""
     from locus.agent import Agent
-    from locus.memory.backends import sqlite_checkpointer
+    from locus.memory.backends import redis_checkpointer
 
     # Create checkpointer
-    checkpointer = sqlite_checkpointer("./sessions.db")
+    checkpointer = redis_checkpointer("redis://localhost:6379")
 
     # Create agent with checkpointing
     agent = Agent(
@@ -573,7 +508,6 @@ async def main():
 
     # Run examples
     await example_memory_checkpointer()
-    await example_sqlite_backend()
     await example_redis_backend()
     await example_postgresql_backend()
     await example_opensearch_backend()

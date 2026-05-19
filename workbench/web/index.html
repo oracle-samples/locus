@@ -319,6 +319,43 @@
           <input id="cfg-compartment" class="input" placeholder="ocid1.compartment.oc1..…" data-testid="cfg-compartment" />
         </div>
 
+        <hr style="margin: 1.25rem 0; border: 0; border-top: 1px solid var(--or-divider)" />
+
+        <h3 style="margin: 0 0 0.5rem">Oracle 26ai database (optional)</h3>
+        <p class="modal__lede" style="margin-top: 0">
+          Filled per-tab, never persisted. Required for the Oracle 26ai patterns (vector RAG, durable checkpoints). The wallet path must be readable by the backend process — under Docker, mount the wallet directory into the container.
+        </p>
+
+        <div class="field">
+          <label class="field__label">DSN</label>
+          <input id="cfg-db-dsn" class="input" placeholder="mydb_low — tnsnames alias in the wallet" data-testid="cfg-db-dsn" />
+        </div>
+
+        <div class="field">
+          <label class="field__label">User</label>
+          <input id="cfg-db-user" class="input" placeholder="locus_app (least-privileged app schema)" data-testid="cfg-db-user" />
+        </div>
+
+        <div class="field">
+          <label class="field__label">Password</label>
+          <input type="password" id="cfg-db-password" class="input" autocomplete="off" data-testid="cfg-db-password" />
+        </div>
+
+        <div class="field">
+          <label class="field__label">Wallet path</label>
+          <input id="cfg-db-wallet" class="input" placeholder="~/.oci/wallets/mydb — directory containing tnsnames.ora" data-testid="cfg-db-wallet" />
+        </div>
+
+        <div class="field">
+          <label class="field__label">Wallet password (if encrypted)</label>
+          <input type="password" id="cfg-db-wallet-password" class="input" autocomplete="off" data-testid="cfg-db-wallet-password" />
+        </div>
+
+        <div class="form-row" style="margin-top: 0.5rem">
+          <button class="btn" id="cfg-db-test" data-testid="cfg-db-test">Test connection</button>
+          <span id="cfg-db-status" style="margin-left:0.75rem;color:var(--or-text-mute);align-self:center"></span>
+        </div>
+
         <div class="form-row" style="margin-top: 1rem">
           <div style="flex: 1"></div>
           <button class="btn" id="settings-cancel">Cancel</button>

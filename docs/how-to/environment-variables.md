@@ -42,7 +42,7 @@ export OCI_PROFILE=DEFAULT
 export OCI_REGION=us-chicago-1
 
 # Run any tutorial:
-python examples/tutorial_01_basic_agent.py
+python examples/tutorial_08_basic_agent.py
 ```
 
 When the SDK itself is constructed directly (not via the tutorial

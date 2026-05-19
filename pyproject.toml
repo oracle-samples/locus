@@ -83,7 +83,6 @@ server = [
 
 # Checkpoint backends — one extra per backend under
 # src/locus/memory/backends/ that needs a runtime dep. Keep in sync.
-sqlite = ["aiosqlite>=0.20"]
 redis = ["redis>=5.0"]
 postgresql = ["asyncpg>=0.29"]
 opensearch = ["opensearch-py>=2.4"]
@@ -91,7 +90,6 @@ oracledb = ["oracledb>=2.2.0"]
 
 # All checkpoint backends.
 checkpoints = [
-    "aiosqlite>=0.20",
     "redis>=5.0",
     "asyncpg>=0.29",
     "opensearch-py>=2.4",
@@ -115,7 +113,6 @@ rag = [
     "asyncpg>=0.29",
     "opensearch-py>=2.4",
     "oracledb>=2.2.0",
-    "aiosqlite>=0.20",
     "oci>=2.173.0",
     "openai>=1.50",
 ]
@@ -132,7 +129,6 @@ sdk = [
     "mcp>=1.0",
     "fastapi>=0.110",
     "uvicorn[standard]>=0.27",
-    "aiosqlite>=0.20",
     "redis>=5.0",
     "asyncpg>=0.29",
     "opensearch-py>=2.4",
@@ -158,7 +154,6 @@ dev = [
     # rather than in ``[dependency-groups].dev`` so a plain
     # ``pip install -e ".[dev]"`` (used by CI and contributors) covers
     # the entire test surface.
-    "aiosqlite>=0.22.1",  # used by SQLite checkpointer tests
     "fastmcp>=3.2.0",     # MCP server tests in tests/unit/test_fastmcp.py
     "pyyaml>=6.0.3",      # Playbook YAML loader tests
     "redis>=7.1.0",       # Redis checkpointer tests
@@ -242,7 +237,7 @@ features = [
     "dev",
     "openai", "anthropic", "ollama", "oci",
     "telemetry", "mcp", "server",
-    "sqlite", "redis", "postgresql", "opensearch", "oracledb",
+    "redis", "postgresql", "opensearch", "oracledb",
     "qdrant", "chroma", "pinecone", "pgvector",
 ]
 
@@ -385,12 +380,19 @@ ignore = [
 "examples/tutorial_05_agent_hooks.py" = ["PLE2510"]
 "examples/projects/**/*.py" = ["PLE2510"]
 "workbench/scripts/*.py" = ["EXE001", "EXE005"]
+"workbench/backend/runner.py" = [
+    "ASYNC240", # os.path in async — wallet-path resolution, fast/local
+    "PTH111",   # os.path.expanduser — OCI / wallet config paths
+]
 "tests/**/*.py" = [
     "ARG",     # unused arguments in fixtures
     "FBT",     # boolean trap in tests
     "PLR2004", # magic values
     "S101",    # assert
+    "S105",    # hardcoded password — test stubs use literal "password" / "p"
+    "S106",    # hardcoded password kwarg — same reason
     "SLF001",  # private member access
+    "N802",    # test method names with mixed case (test_implicit_AND_…)
     "RUF059",  # unpacked-but-unused vars in (state, events) destructuring
     "B011",    # assert False — idiomatic in try/except asserting raise
     "PT015",   # same as above — pytest's preferred form is opt-in
@@ -448,6 +450,10 @@ ignore = [
     "S608",    # SQL built from validated identifiers
     "PYI063",  # PEP 570 positional-only — `__context` is Pydantic's spelling
 ]
+"src/locus/memory/store_backends/**/*.py" = [
+    "S608",    # SQL built from validated identifiers (regex-checked at init)
+    "PYI063",  # PEP 570 positional-only — `__context` is Pydantic's spelling
+]
 "src/locus/agent/agent.py" = [
     "SLF001",  # Private attr access for internal state (_has_unverified_writes)
 ]
@@ -468,6 +474,7 @@ ignore = [
     "FURB110",  # Ternary vs or — readability preference
     "PTH108",   # os.unlink vs Path.unlink — temp file cleanup
     "PTH111",   # os.path.expanduser — OCI config paths
+    "S608",     # SQL built from validated identifiers — see _oracle_filter / chunkers
     # S324 (md5 for deterministic IDs) no longer needed — Qdrant point IDs
     # are now derived via UUIDv5 under a fixed namespace.
     "UP042",    # str+Enum — needed for serialization compat
@@ -494,10 +501,6 @@ ignore = [
 ]
 "src/locus/memory/backends/oci_bucket.py" = [
     "FURB162", # Timezone replacement — OCI API returns specific format
-]
-"src/locus/memory/backends/sqlite.py" = [
-    "S608",    # SQL from validated identifiers
-    "PYI063",  # PEP 570 positional-only
 ]
 
 [tool.ruff.lint.isort]

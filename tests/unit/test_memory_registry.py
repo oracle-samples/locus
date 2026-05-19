@@ -129,13 +129,6 @@ class TestDefaultRegistrations:
         """Test http is registered by default."""
         assert "http" in list_checkpointers()
 
-    def test_sqlite_registered_if_available(self):
-        """Test sqlite is registered if aiosqlite is available."""
-        # SQLite may or may not be available depending on deps
-        providers = list_checkpointers()
-        # Just check it doesn't break
-        assert isinstance(providers, list)
-
 
 class TestHttpCheckpointer:
     """Tests for HTTP checkpointer factory."""
@@ -151,24 +144,6 @@ class TestHttpCheckpointer:
         # HTTP checkpointer requires base_url, so it should be provided
         with pytest.raises(TypeError):
             get_checkpointer("http")
-
-
-class TestSqliteCheckpointer:
-    """Tests for SQLite checkpointer factory."""
-
-    def test_sqlite_with_path_hint(self):
-        """Test SQLite factory with path hint."""
-        providers = list_checkpointers()
-        if "sqlite" not in providers:
-            pytest.skip("SQLite not available")
-
-        import tempfile
-        from pathlib import Path
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            db_path = Path(tmpdir) / "test.db"
-            checkpointer = get_checkpointer(f"sqlite:{db_path}")
-            assert checkpointer is not None
 
 
 class TestRedisCheckpointer:
@@ -544,38 +519,6 @@ class TestOracleFactoryConfigHint:
                 _CHECKPOINTERS["oracle"] = original_factory
             else:
                 del _CHECKPOINTERS["oracle"]
-
-
-class TestActualFactoryInvocation:
-    """Tests that exercise the actual registered factory functions."""
-
-    def test_sqlite_factory_invoked_with_hint(self):
-        """Test actual SQLite factory with config hint."""
-        providers = list_checkpointers()
-        if "sqlite" not in providers:
-            pytest.skip("SQLite not available")
-
-        import tempfile
-        from pathlib import Path
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            db_path = Path(tmpdir) / "registry_test.db"
-            cp = get_checkpointer(f"sqlite:{db_path}")
-            assert cp is not None
-
-    def test_sqlite_factory_invoked_with_kwargs(self):
-        """Test actual SQLite factory with kwargs."""
-        providers = list_checkpointers()
-        if "sqlite" not in providers:
-            pytest.skip("SQLite not available")
-
-        import tempfile
-        from pathlib import Path
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            db_path = Path(tmpdir) / "registry_kwarg_test.db"
-            cp = get_checkpointer("sqlite", path=str(db_path))
-            assert cp is not None
 
 
 class TestActualRedisFactory:

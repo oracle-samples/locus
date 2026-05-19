@@ -122,10 +122,3 @@ class TestRealFactoryClosures:
         captured = _patch_adapter(monkeypatch, "oracle_checkpointer")
         get_checkpointer("oracle")
         assert "database" not in captured["kwargs"]
-
-    def test_sqlite_factory_passes_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        if "sqlite" not in list_checkpointers():
-            pytest.skip("sqlite backend not registered")
-        captured = _patch_adapter(monkeypatch, "sqlite_checkpointer")
-        get_checkpointer("sqlite:/var/lib/checkpoints.db")
-        assert captured["kwargs"]["path"] == "/var/lib/checkpoints.db"

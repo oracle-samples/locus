@@ -22,9 +22,9 @@ All memories are persisted via a
 [`BaseStore`](checkpointers.md#cross-thread-store) backend — the same
 store abstraction used for cross-thread key-value storage.  Every
 backend that implements `BaseStore` works: `InMemoryStore` for local
-development, `SQLiteBackend` for single-process persistence,
-`RedisBackend` / `PostgreSQLBackend` / `OracleBackend` for distributed
-production workloads.
+development, `RedisBackend` / `PostgreSQLBackend` / `OracleBackend` /
+`OpenSearchBackend` / `OCIBucketBackend` for distributed production
+workloads.
 
 Storage layout inside the store:
 
@@ -139,13 +139,13 @@ Each combination gets its own set of memories — no cross-contamination.
 Replace `InMemoryStore` with any `BaseStore` backend:
 
 ```python
-from locus.memory.backends import SQLiteBackend, RedisBackend, OracleBackend
+from locus.memory.backends import RedisBackend, PostgreSQLBackend, OracleBackend
 
-# SQLite — single process, file-based
-manager = LLMMemoryManager(store=SQLiteBackend("sqlite:///memories.db"))
-
-# Redis — distributed, fast
+# Redis — distributed, fast (OCI Cache with Redis)
 manager = LLMMemoryManager(store=RedisBackend("redis://localhost:6379"))
+
+# PostgreSQL — relational, JSONB metadata (OCI Database with PostgreSQL)
+manager = LLMMemoryManager(store=PostgreSQLBackend(host="...", database="..."))
 
 # Oracle ADB — production, full-text + vector search
 manager = LLMMemoryManager(store=OracleBackend(dsn="..."))

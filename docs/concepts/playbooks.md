@@ -192,7 +192,7 @@ for execution in plan.executions:
 
 ## Source and tutorial
 
-- [`tutorial_15_playbooks.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_15_playbooks.py) — runnable end-to-end with execution tracking.
+- [`tutorial_42_playbooks.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_42_playbooks.py) — runnable end-to-end with execution tracking.
 - [`locus.playbooks`](https://github.com/oracle-samples/locus/tree/main/src/locus/playbooks) — `Playbook`, `PlaybookStep`, `PlaybookEnforcerHook`, `load_playbook`.
 
 ## See also

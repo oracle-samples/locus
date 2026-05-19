@@ -11,63 +11,18 @@ Uses python-oracledb in thin mode (no Oracle Client required).
 from __future__ import annotations
 
 import json
-import re
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, SecretStr
 
 from locus.core.state import AgentState
+from locus.memory.backends._oracle_config import (
+    OracleConfig,
+)
 
 
 if TYPE_CHECKING:
     import oracledb
-
-
-_SAFE_SQL_IDENTIFIER = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_$#]{0,127}$")
-
-
-def _validate_sql_identifier(value: str, field_name: str) -> str:
-    """Validate that a string is a safe Oracle SQL identifier."""
-    if not _SAFE_SQL_IDENTIFIER.match(value):
-        msg = (
-            f"Invalid {field_name}: {value!r}. "
-            "Must start with a letter or underscore and contain only "
-            "alphanumeric characters, underscores, $, or # (max 128 chars)."
-        )
-        raise ValueError(msg)
-    return value
-
-
-class OracleConfig(BaseModel):
-    """Configuration for Oracle Database backend."""
-
-    # Connection options
-    dsn: str | None = None  # TNS name or connection string
-    user: str = "admin"
-    password: SecretStr = SecretStr("")
-
-    # For Autonomous Database with wallet
-    wallet_location: str | None = None
-    wallet_password: SecretStr | None = None
-
-    # Connection string components (alternative to DSN)
-    host: str | None = None
-    port: int = 1521
-    service_name: str | None = None
-
-    # Table settings
-    table_name: str = "locus_checkpoints"
-    schema_name: str | None = None  # Uses user's default schema if None
-
-    # Pool settings
-    min_pool_size: int = 1
-    max_pool_size: int = 5
-
-    def model_post_init(self, __context: Any) -> None:
-        """Validate SQL identifiers to prevent injection."""
-        _validate_sql_identifier(self.table_name, "table_name")
-        if self.schema_name is not None:
-            _validate_sql_identifier(self.schema_name, "schema_name")
 
 
 class OracleBackend(BaseModel):
@@ -258,10 +213,28 @@ class OracleBackend(BaseModel):
 
         from uuid import uuid4
 
+        # Handle both calling conventions:
+        #   1. BaseCheckpointer:        save(state, thread_id, ...)
+        #   2. StorageBackendAdapter:   save(storage_key_str, data_dict, ...)
+        # Detected by the type of the first arg.
+        if isinstance(state, str) and isinstance(thread_id, dict):
+            state, thread_id = thread_id, state  # swap to (data_dict, key_str)
+
         checkpoint_id = checkpoint_id or uuid4().hex
         data = state.to_checkpoint() if isinstance(state, AgentState) else state
 
         async with pool.acquire() as conn, conn.cursor() as cursor:
+            # Pin :data / :metadata to CLOB so large agent-state payloads
+            # don't hit ORA-01461 (character-to-LOB conversion) when
+            # oracledb thin mode tries to bind them as VARCHAR2. Mirrors
+            # the temporary-BLOB binding pattern langgraph-oracledb adopted
+            # for its checkpoint blob columns (oracle/langchain-oracle#224).
+            import oracledb as _oracledb
+
+            cursor.setinputsizes(
+                data=_oracledb.DB_TYPE_CLOB,
+                metadata=_oracledb.DB_TYPE_CLOB,
+            )
             # Use MERGE for upsert
             await cursor.execute(
                 f"""
@@ -293,13 +266,17 @@ class OracleBackend(BaseModel):
         self,
         thread_id: str,
         checkpoint_id: str | None = None,
-    ) -> AgentState | None:
-        """Load agent state from Oracle Database.
+    ) -> dict | None:
+        """Load a saved payload from Oracle Database.
 
-        ``checkpoint_id`` is accepted for :class:`BaseCheckpointer`
-        signature parity but ignored — this backend stores one row per
-        ``thread_id`` (MERGE upsert), so latest-state is the only
-        retrievable checkpoint.
+        Returns the raw dict payload as written by :meth:`save`. The
+        :class:`StorageBackendAdapter` wrapper rehydrates this into an
+        :class:`AgentState` for the agent runtime; callers that hold a
+        bare ``OracleBackend`` get the dict directly.
+
+        ``checkpoint_id`` is accepted for signature parity but ignored —
+        this backend stores one row per ``thread_id`` (MERGE upsert), so
+        latest-state is the only retrievable checkpoint.
         """
         del checkpoint_id  # one-row-per-thread; arg present for parity
         await self._ensure_table()
@@ -322,10 +299,9 @@ class OracleBackend(BaseModel):
 
         # oracledb might already return JSON as dict
         if isinstance(data, dict):
-            payload = data
-        else:
-            payload = json.loads(data)
-        return AgentState.from_checkpoint(payload)
+            return data
+        loaded: dict = json.loads(data)
+        return loaded
 
     async def delete(self, thread_id: str) -> bool:
         """Delete checkpoint from Oracle Database."""

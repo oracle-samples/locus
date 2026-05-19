@@ -37,7 +37,6 @@ agent.run_sync("What were we discussing?", thread_id="user-c42")
 |---|---|
 | Unit tests, single-process REPL | `MemoryCheckpointer` |
 | Local development, single machine | `FileCheckpointer` |
-| Single-process durability with file overhead | `sqlite_checkpointer` |
 | Multi-worker deployment, fast access, TTLs | `redis_checkpointer` |
 | Postgres shop, want SQL queries on metadata | `postgresql_checkpointer` |
 | Need full-text search across past runs | `opensearch_checkpointer` |
@@ -135,8 +134,8 @@ to wire them differently:
 
 2. **Storage backends** expose a simpler dict-shaped interface and
    need adapter wrapping:
-   - `SQLiteBackend`, `RedisBackend`, `PostgreSQLBackend`,
-     `OpenSearchBackend`, `OracleBackend`.
+   - `RedisBackend`, `PostgreSQLBackend`, `OpenSearchBackend`,
+     `OracleBackend`.
    - Use the factory function: `redis_checkpointer(...)`,
      `postgresql_checkpointer(...)`, etc.
 
@@ -205,7 +204,7 @@ conversation.
 
 ```python
 from locus.memory.store import InMemoryStore   # tests / REPL
-# or: SQLiteBackend, RedisBackend, PostgreSQLBackend, OracleBackend —
+# or: RedisBackend, PostgreSQLBackend, OracleBackend —
 # every storage-backed checkpointer backend also implements BaseStore.
 
 store = InMemoryStore()

@@ -48,7 +48,6 @@ def get_checkpointer(checkpointer_string: str, **kwargs: Any) -> BaseCheckpointe
         - "file:./checkpoints" -> FileCheckpointer(base_dir="./checkpoints")
         - "redis:localhost:6379" -> RedisCheckpointer(url="redis://localhost:6379")
         - "postgresql:mydb" -> PostgreSQLCheckpointer(database="mydb")
-        - "sqlite:./data.db" -> SQLiteCheckpointer(path="./data.db")
         - "opensearch" -> OpenSearchCheckpointer()
         - "oci:bucket/namespace" -> OCIBucketCheckpointer(bucket_name="bucket", namespace="namespace")
         - "oracle:mydb" -> OracleCheckpointer(database="mydb")
@@ -124,20 +123,6 @@ def _register_defaults() -> None:
         return HTTPCheckpointer(**kwargs)
 
     register_checkpointer("http", http_factory)
-
-    # SQLite (optional - aiosqlite)
-    try:
-
-        def sqlite_factory(config_hint: str | None = None, **kwargs: Any) -> BaseCheckpointer:
-            from locus.memory.backends.adapters import sqlite_checkpointer
-
-            if config_hint:
-                kwargs.setdefault("path", config_hint)
-            return sqlite_checkpointer(**kwargs)
-
-        register_checkpointer("sqlite", sqlite_factory)
-    except ImportError:
-        pass
 
     # Redis (optional)
     try:

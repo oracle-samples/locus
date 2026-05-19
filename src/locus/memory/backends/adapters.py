@@ -508,35 +508,6 @@ def postgresql_checkpointer(
     return StorageBackendAdapter(backend)
 
 
-def sqlite_checkpointer(
-    path: str = "locus_checkpoints.db",
-    **kwargs: Any,
-) -> StorageBackendAdapter:
-    """
-    Create a SQLite-backed checkpointer.
-
-    Args:
-        path: Path to SQLite database
-        **kwargs: Additional SQLiteBackend options
-
-    Returns:
-        StorageBackendAdapter wrapping SQLiteBackend
-
-    Capabilities:
-        - list_threads: Yes
-        - metadata_query: Yes (via get_metadata)
-        - persistent_checkpoint_ids: Yes
-
-    Example:
-        >>> checkpointer = sqlite_checkpointer("./checkpoints.db")
-        >>> agent = Agent(model=model, checkpointer=checkpointer)
-    """
-    from locus.memory.backends.sqlite import SQLiteBackend
-
-    backend = SQLiteBackend(path=path, **kwargs)
-    return StorageBackendAdapter(backend)
-
-
 def opensearch_checkpointer(
     hosts: list[str] | None = None,
     index_name: str = "locus-checkpoints",

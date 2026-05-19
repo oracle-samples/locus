@@ -71,6 +71,25 @@ async with run_context() as rid:
 </div>
 </div>
 
+## Start with Oracle
+
+The Oracle-native path through Locus — two short tracks: five
+tutorials on **OCI Generative AI** (inference) followed by two on
+**Oracle Database 26ai** (data layer with native `VECTOR`).
+
+### OCI Generative AI (01–05)
+
+- [01 · OCI transports — start here](tutorials/tutorial_01_oci_transports.md)
+- [02 · OCI v1 (`OCIOpenAIModel`) — default transport](tutorials/tutorial_02_oci_openai_chat.md)
+- [03 · OCI Responses (`OCIResponsesModel`) — stateful path](tutorials/tutorial_03_oci_responses.md)
+- [04 · OCI Dedicated AI Cluster (DAC)](tutorials/tutorial_04_oci_dac.md)
+- [05 · Cohere Reranker V4 on OCI — retrieve-then-rerank](tutorials/tutorial_05_cohere_reranker.md)
+
+### Oracle Database 26ai (06–07)
+
+- [06 · Oracle 26ai RAG — native `VECTOR(N, FLOAT32)` + `VECTOR_DISTANCE`](tutorials/tutorial_06_oracle_26ai_rag.md)
+- [07 · Oracle 26ai checkpointer — durable agent threads in ADB](tutorials/tutorial_07_oracle_26ai_checkpointer.md)
+
 ## Six things you can ship
 
 <div class="grid cards locus-feature-cards" markdown>
@@ -154,7 +173,7 @@ Eight built-in protocols, each mapping to a different runtime shape:
 | `handoff_chain` | `SequentialPipeline` of one-tool Agents | `COORDINATE` |
 
 [Full reference](concepts/router.md){ .md-button }
-[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_51_cognitive_router.py){ .md-button }
+[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_52_cognitive_router.py){ .md-button }
 
 ### Agents that verify their own answers
 
@@ -188,7 +207,7 @@ print(f"grounding score: {result.grounding_score:.2f}")
 ```
 
 [Full reference](concepts/reasoning.md){ .md-button }
-[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_14_reasoning_patterns.py){ .md-button }
+[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_36_reasoning_patterns.py){ .md-button }
 
 ### No double-booking. No duplicate emails
 
@@ -220,7 +239,7 @@ result = agent.run_sync("Approve Acme for the $42k laptop refresh.")
 ```
 
 [Full reference](concepts/idempotency.md){ .md-button }
-[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_09_human_in_the_loop.py){ .md-button }
+[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_19_human_in_the_loop.py){ .md-button }
 
 ### One conversation, many specialists
 
@@ -253,7 +272,7 @@ desk = create_handoff_manager(
 ```
 
 [Full reference](concepts/multi-agent/handoff.md){ .md-button }
-[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_16_agent_handoff.py){ .md-button }
+[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_25_agent_handoff.py){ .md-button }
 
 ### See everything your agents are doing
 
@@ -295,7 +314,7 @@ Slow consumers get dropped events, never stall the publisher.
 
 [Full reference](concepts/observability.md){ .md-button }
 [Event catalogue](concepts/sse-events.md){ .md-button }
-[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_52_observability_basics.py){ .md-button }
+[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_53_observability_basics.py){ .md-button }
 
 ### Tell agents exactly when to stop
 
@@ -325,7 +344,7 @@ print(result.stop_reason)
 ```
 
 [Full reference](concepts/termination.md){ .md-button }
-[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_37_termination.py){ .md-button }
+[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_15_termination.py){ .md-button }
 
 ### Deploy in two lines of code
 
@@ -359,7 +378,7 @@ server.run(host="0.0.0.0", port=8080)
 ```
 
 [Full reference](concepts/server.md){ .md-button }
-[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_28_agent_server.py){ .md-button }
+[Tutorial](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_62_agent_server.py){ .md-button }
 
 ## How every agent runs
 
@@ -496,7 +515,7 @@ From simple parallel research to multi-team handoffs across services. Pick one p
 | **🧠 Reasoning** | Reflexion + Grounding as first-class loop nodes. `CausalChain` for root-cause chains. **GSAR** (`arXiv:2604.23366`): four-way claim partition + tiered replanning. |
 | **🛂 Termination algebra** | `MaxIterations(10) \| TextMention("DONE") & ConfidenceMet(0.9)` — real Python `__or__`/`__and__` overloads. Greppable, unit-testable, serialisable. |
 | **🛡 Idempotent tools** | `@tool(idempotent=True)` dedupes on `(name, args)` inside Execute. No double-charge on model retry or checkpoint resume. |
-| **💾 Durable memory** | Four native checkpointers + five storage-backed (PostgreSQL, OpenSearch, Redis, SQLite, Oracle 26ai). |
+| **💾 Durable memory** | Four native checkpointers + four storage-backed (PostgreSQL, OpenSearch, Redis, Oracle 26ai). |
 
 ### Deployment & integration
 
@@ -561,77 +580,84 @@ Full source map → [Capabilities](capabilities.md) · [API reference](api/agent
 ## Learn locus in an afternoon
 
 The [`examples/`](https://github.com/oracle-samples/locus/tree/main/examples)
-tree is **55 progressive tutorials**. Every tutorial is one runnable
-file and adds exactly one idea on top of the previous.
+tree is **63 progressive tutorials**, numbered in suggested reading
+order. Every tutorial is one runnable file and adds exactly one idea
+on top of the previous. The first seven walk you through the Oracle
+native path; from 08 onward you're learning the agent framework itself.
 
-### Track 1 — basics (first hour)
+### Track 1 — Oracle native path (01–07)
 
-| # | What you learn |
-|---|---|
-| [01 basic agent](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_01_basic_agent.py) | Make an `Agent`, give it a model, run a prompt. |
-| [02 agent + tools](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_02_agent_with_tools.py) | Decorate a Python function with `@tool`. The model sees a typed contract. |
-| [03 agent memory](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_03_agent_memory.py) | Conversations across runs — checkpointers, `thread_id`. |
-| [04 streaming](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_04_agent_streaming.py) | Stream typed events as the agent thinks, calls tools, terminates. |
-| [05 hooks](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_05_agent_hooks.py) | Lifecycle hooks — log every model call and every tool result. |
+The path you came for if you're shipping on OCI. See the list at the
+top of this page.
 
-### Track 2 — graphs & state (06–10)
+### Track 2 — Foundations (08–15)
 
 | # | What you learn |
 |---|---|
-| [06 basic graph](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_06_basic_graph.py) | `StateGraph` — explicit nodes and edges over implicit ReAct. |
-| [07 conditional routing](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_07_conditional_routing.py) | Branch on state — `add_conditional_edges`. |
-| [08 state reducers](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_08_state_reducers.py) | Custom reducers for accumulating fields across nodes. |
-| [09 human in the loop](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_09_human_in_the_loop.py) | Pause the graph for human approval, resume on input. |
-| [10 advanced patterns](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_10_advanced_patterns.py) | `Send`, broadcasts, subgraphs — map/reduce on agents. |
+| [08 basic agent](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_08_basic_agent.py) | Make an `Agent`, give it a model, run a prompt. |
+| [09 agent + tools](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_09_agent_with_tools.py) | Decorate a Python function with `@tool`. The model sees a typed contract. |
+| [10 agent memory](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_10_agent_memory.py) | Conversations across runs — checkpointers, `thread_id`. |
+| [11 streaming](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_11_agent_streaming.py) | Stream typed events as the agent thinks, calls tools, terminates. |
+| [12 hooks](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_12_agent_hooks.py) | Lifecycle hooks — log every model call and every tool result. |
 
-### Track 3 — multi-agent (11, 16–18, 25, 34, 36)
+### Track 3 — Graphs & state (16–23)
+
+| # | What you learn |
+|---|---|
+| [16 basic graph](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_16_basic_graph.py) | `StateGraph` — explicit nodes and edges over implicit ReAct. |
+| [17 conditional routing](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_17_conditional_routing.py) | Branch on state — `add_conditional_edges`. |
+| [18 state reducers](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_18_state_reducers.py) | Custom reducers for accumulating fields across nodes. |
+| [19 human in the loop](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_19_human_in_the_loop.py) | Pause the graph for human approval, resume on input. |
+| [20 advanced patterns](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_20_advanced_patterns.py) | `Send`, broadcasts, subgraphs — map/reduce on agents. |
+
+### Track 4 — Multi-agent (24–34)
 
 The six native patterns plus A2A:
-[Swarm](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_11_swarm_multiagent.py) ·
-[Handoff](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_16_agent_handoff.py) ·
-[Orchestrator](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_17_orchestrator_pattern.py) ·
-[Specialists](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_18_specialist_agents.py) ·
-[Composition](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_25_composition.py) ·
-[A2A](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_34_a2a_protocol.py) ·
-[Functional](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_36_functional_api.py).
+[Swarm](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_24_swarm_multiagent.py) ·
+[Handoff](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_25_agent_handoff.py) ·
+[Orchestrator](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_26_orchestrator_pattern.py) ·
+[Specialists](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_27_specialist_agents.py) ·
+[Composition](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_21_composition.py) ·
+[A2A](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_28_a2a_protocol.py) ·
+[Functional](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_23_functional_api.py).
 
 ### Track 4 — reasoning, RAG, skills (13–15, 22–24, 32)
 
-[Structured output](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_13_structured_output.py) ·
-[Reasoning patterns](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_14_reasoning_patterns.py) ·
-[Playbooks](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_15_playbooks.py) ·
-[RAG basics](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_22_rag_basics.py) ·
-[RAG providers](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_23_rag_providers.py) ·
-[RAG agents](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_24_rag_agents.py) ·
-[Skills](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_32_skills.py).
+[Structured output](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_35_structured_output.py) ·
+[Reasoning patterns](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_36_reasoning_patterns.py) ·
+[Playbooks](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_42_playbooks.py) ·
+[RAG basics](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_38_rag_basics.py) ·
+[RAG providers](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_39_rag_providers.py) ·
+[RAG agents](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_40_rag_agents.py) ·
+[Skills](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_44_skills.py).
 
 ### Track 5 — production (12, 19–21, 26–30, 33, 35, 37–40)
 
-[MCP](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_12_mcp_integration.py) ·
-[Guardrails](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_19_guardrails_security.py) ·
-[Checkpoint backends](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_20_checkpoint_backends.py) ·
-[SSE streaming](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_21_sse_streaming.py) ·
-[Evaluation](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_26_evaluation.py) ·
-[Hooks advanced](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_27_hooks_advanced.py) ·
-[Agent Server](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_28_agent_server.py) ·
-[Model providers](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_29_model_providers.py) ·
-[Guardrails advanced](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_30_guardrails_advanced.py) ·
-[Plugins](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_31_plugins.py) ·
-[Steering](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_33_steering.py) ·
-[Graph advanced](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_35_graph_advanced.py) ·
-[Termination](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_37_termination.py) ·
-[Multi-modal providers](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_38_multimodal_providers.py) ·
-[GSAR typed grounding](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_39_gsar_typed_grounding.py) ·
-[OCI Dedicated AI Cluster (DAC)](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_40_oci_dac.py).
+[MCP](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_41_mcp_integration.py) ·
+[Guardrails](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_46_guardrails_security.py) ·
+[Checkpoint backends](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_48_checkpoint_backends.py) ·
+[SSE streaming](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_13_sse_streaming.py) ·
+[Evaluation](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_49_evaluation.py) ·
+[Hooks advanced](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_14_hooks_advanced.py) ·
+[Agent Server](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_62_agent_server.py) ·
+[Model providers](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_50_model_providers.py) ·
+[Guardrails advanced](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_47_guardrails_advanced.py) ·
+[Plugins](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_43_plugins.py) ·
+[Steering](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_45_steering.py) ·
+[Graph advanced](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_22_graph_advanced.py) ·
+[Termination](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_15_termination.py) ·
+[Multi-modal providers](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_51_multimodal_providers.py) ·
+[GSAR typed grounding](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_37_gsar_typed_grounding.py) ·
+[OCI Dedicated AI Cluster (DAC)](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_04_oci_dac.py).
 
 ### Track 6 — cognitive router + observability (41, 51–55)
 
-[DeepAgent](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_41_deepagent.py) ·
-[Cognitive router](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_51_cognitive_router.py) ·
-[Observability basics](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_52_observability_basics.py) ·
-[Agent yield bridge](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_53_agent_yield_bridge.py) ·
-[EventBus subscriber patterns](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_54_eventbus_subscribers.py) ·
-[Full event catalogue](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_55_event_catalogue.py).
+[DeepAgent](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_29_deepagent.py) ·
+[Cognitive router](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_52_cognitive_router.py) ·
+[Observability basics](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_53_observability_basics.py) ·
+[Agent yield bridge](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_54_agent_yield_bridge.py) ·
+[EventBus subscriber patterns](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_55_eventbus_subscribers.py) ·
+[Full event catalogue](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_56_event_catalogue.py).
 
 ## Then deploy
 

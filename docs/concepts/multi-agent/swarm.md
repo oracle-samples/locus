@@ -99,7 +99,7 @@ Swarms stop when:
 
 ## Tutorial
 
-[`tutorial_11_swarm_multiagent.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_11_swarm_multiagent.py)
+[`tutorial_24_swarm_multiagent.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_24_swarm_multiagent.py)
 — a three-agent research swarm with shared context.
 
 ## Source

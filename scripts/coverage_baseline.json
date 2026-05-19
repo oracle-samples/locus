@@ -67,7 +67,6 @@
   "src/locus/memory/backends/memory.py": 100.0,
   "src/locus/memory/backends/postgresql.py": 100.0,
   "src/locus/memory/backends/redis.py": 90.0,
-  "src/locus/memory/backends/sqlite.py": 94.32,
   "src/locus/memory/checkpointer.py": 100.0,
   "src/locus/memory/compactor.py": 88.33,
   "src/locus/memory/conversation.py": 91.18,

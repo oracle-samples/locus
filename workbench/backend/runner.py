@@ -176,9 +176,30 @@ def build_model(cfg: ProviderConfig) -> Any:
 # ---------------------------------------------------------------------------
 
 
+class DatabaseConfig(BaseModel):
+    """Per-request Oracle 26ai connection envelope.
+
+    Lets the workbench UI collect ADB credentials per browser tab
+    instead of forcing every user to set ORACLE_* env vars on the
+    backend host. The wallet_location is a *path on the backend's
+    filesystem* — for Docker, that path must be visible inside the
+    container via a volume mount.
+    """
+
+    dsn: str = ""
+    user: str = ""
+    password: str = ""
+    wallet_location: str = ""
+    wallet_password: str = ""
+
+    def is_set(self) -> bool:
+        return bool(self.dsn and self.user and self.password)
+
+
 class RunRequest(BaseModel):
     prompt: str
     provider: ProviderConfig
+    database: DatabaseConfig | None = None
     # Cognitive-routing toggle. False = default rule-based ranker
     # (deterministic). True = opt-in LLMProtocolPicker — the model
     # picks the protocol from the filtered candidate set. Only honoured
@@ -257,6 +278,29 @@ async def _drive_pipeline(runnable: Any, prompt: str) -> tuple[str, list[RunEven
 
 PATTERNS: list[dict[str, Any]] = [
     {
+        "id": "oracle_26ai_rag",
+        "title": "Oracle 26ai RAG (native VECTOR)",
+        "tutorial": 61,
+        "summary": (
+            "OracleVectorStore against an Autonomous Database wallet — native "
+            "VECTOR(1024, FLOAT32) + VECTOR_DISTANCE COSINE, same RAGRetriever "
+            "as the in-memory tutorials. Requires ORACLE_DSN / ORACLE_USER / "
+            "ORACLE_PASSWORD / ORACLE_WALLET on the backend plus an OCI "
+            "provider for embeddings."
+        ),
+    },
+    {
+        "id": "cohere_reranker",
+        "title": "Retrieve-then-rerank (Cohere V4)",
+        "tutorial": 60,
+        "summary": (
+            "Same query, two orderings: embedding-only vs Cohere V4 "
+            "cross-encoder. The reranker promotes the canonical answer to "
+            "the top — visible side-by-side with scores. Requires an OCI "
+            "provider config (OCI on-demand rerank-v4 endpoint)."
+        ),
+    },
+    {
         "id": "agent",
         "title": "Basic agent",
         "tutorial": 1,
@@ -315,17 +359,6 @@ PATTERNS: list[dict[str, Any]] = [
             "Dispatch a prompt through the cognitive router. Toggle the "
             "LLM picker checkbox to compare rule-based protocol selection "
             "against the opt-in LLMProtocolPicker."
-        ),
-    },
-    {
-        "id": "cohere_reranker",
-        "title": "Retrieve-then-rerank (Cohere V4)",
-        "tutorial": 60,
-        "summary": (
-            "Same query, two orderings: embedding-only vs Cohere V4 "
-            "cross-encoder. The reranker promotes the canonical answer to "
-            "the top — visible side-by-side with scores. Requires an OCI "
-            "provider config (OCI on-demand rerank-v4 endpoint). Closes #216."
         ),
     },
 ]
@@ -1082,7 +1115,131 @@ async def _run_cohere_reranker(req: RunRequest) -> RunResponse:
     return RunResponse(reply=reply, events=events)
 
 
+def _resolve_db(cfg: DatabaseConfig | None) -> DatabaseConfig:
+    """Pick the DatabaseConfig to use, falling back to ORACLE_* env vars.
+
+    Per-request config wins; env vars only kick in if every UI field is
+    blank. That lets a deployment hard-code creds via env while still
+    letting individual tabs override them.
+    """
+    if cfg and cfg.is_set():
+        return cfg
+    return DatabaseConfig(
+        dsn=os.environ.get("ORACLE_DSN", ""),
+        user=os.environ.get("ORACLE_USER", ""),
+        password=os.environ.get("ORACLE_PASSWORD", ""),
+        wallet_location=os.environ.get("ORACLE_WALLET", ""),
+        wallet_password=os.environ.get("ORACLE_WALLET_PASSWORD", ""),
+    )
+
+
+async def _run_oracle_26ai_rag(req: RunRequest) -> RunResponse:
+    """Workbench demo for tutorial 61 — Oracle 26ai native VECTOR RAG.
+
+    Embeds a tiny Oracle-themed corpus with ``OCIEmbeddings``
+    (Cohere V3, 1024-dim) and stores it in an ``OracleVectorStore``
+    backed by an Autonomous Database wallet. The store auto-creates a
+    ``VECTOR(1024, FLOAT32)`` table on first use and serves cosine
+    similarity via ``VECTOR_DISTANCE``.
+
+    Requires the database side via env vars (set them where the
+    workbench backend runs): ``ORACLE_DSN``, ``ORACLE_USER``,
+    ``ORACLE_PASSWORD``, ``ORACLE_WALLET``, and (if the wallet is
+    encrypted) ``ORACLE_WALLET_PASSWORD``. The OCI side comes from
+    the provider panel in the UI.
+    """
+    from locus.rag import OCIEmbeddings, OracleVectorStore, RAGRetriever
+
+    if req.provider.provider not in {"oci-session", "oci-apikey"}:
+        raise HTTPException(
+            400,
+            "Oracle 26ai RAG requires OCI embeddings (Cohere V3 on us-chicago-1). "
+            "Switch the provider to OCI session or OCI api_key in the UI.",
+        )
+
+    db = _resolve_db(req.database)
+    if not db.is_set():
+        raise HTTPException(
+            400,
+            "Oracle ADB connection envelope not provided. Fill in the "
+            "Database panel (DSN, user, password, wallet path) and click "
+            "'Test connection' before running this pattern. The wallet "
+            "path must be readable by the backend process — when running "
+            "in Docker, mount it into the container.",
+        )
+
+    corpus = [
+        "Oracle 26ai introduces a native VECTOR(N, FLOAT32) column type "
+        "with HNSW and IVF index organisations.",
+        "VECTOR_DISTANCE(embedding, :query, COSINE) returns the cosine "
+        "distance between a stored vector and a query vector.",
+        "Autonomous Database wallets bundle a tnsnames.ora alias per "
+        "consumer group — _low, _medium, _high, _tp, _tpurgent.",
+        "Locus exposes Oracle 26ai through OracleVectorStore; the same "
+        "RAGRetriever drives every backend uniformly.",
+        "A vector index on a VECTOR column is built asynchronously after "
+        "the first INSERT, so the first query may be slower than steady-state.",
+        "PostgreSQL stores embeddings through the pgvector extension, not a native type.",
+    ]
+    query = (req.prompt or "How does Oracle 26ai store and search embeddings?").strip()
+
+    cfg = req.provider
+    region = cfg.region or "us-chicago-1"
+    auth_type = "security_token" if cfg.provider == "oci-session" else "api_key"
+    endpoint = f"https://inference.generativeai.{region}.oci.oraclecloud.com"
+
+    embedder = OCIEmbeddings(
+        model_id="cohere.embed-english-v3.0",
+        profile_name=cfg.profile or "DEFAULT",
+        auth_type=auth_type,
+        compartment_id=cfg.compartment_id or "",
+        service_endpoint=endpoint,
+    )
+
+    store = OracleVectorStore(
+        dsn=db.dsn,
+        user=db.user,
+        password=db.password,
+        wallet_location=os.path.expanduser(db.wallet_location),
+        wallet_password=db.wallet_password,
+        table_name="locus_workbench_61",
+        dimension=1024,
+        distance_metric="COSINE",
+    )
+
+    retriever = RAGRetriever(embedder=embedder, store=store)
+    await retriever.add_documents(corpus)
+    hits = await retriever.retrieve(query, limit=3)
+
+    events: list[RunEvent] = [
+        RunEvent(kind="info", text=f"query: {query}"),
+        RunEvent(
+            kind="info",
+            text=f"backend: OracleVectorStore dsn={os.environ['ORACLE_DSN']} "
+            f"dim=1024 metric=COSINE",
+        ),
+    ]
+    for i, h in enumerate(hits.documents, start=1):
+        events.append(
+            RunEvent(
+                kind="hit",
+                text=f"#{i}  score={h.score:.4f}  {h.document.content[:90]}",
+                extra={"rank": i, "score": h.score, "doc_id": h.document.id},
+            )
+        )
+
+    top = hits.documents[0].document.content if hits.documents else ""
+    reply = (
+        f"Top match (VECTOR_DISTANCE / COSINE):\n{top}"
+        if top
+        else "No documents returned — the table is empty or the query embedding failed."
+    )
+    return RunResponse(reply=reply, events=events)
+
+
 PATTERN_RUNNERS: dict[str, Any] = {
+    "oracle_26ai_rag": _run_oracle_26ai_rag,
+    "cohere_reranker": _run_cohere_reranker,
     "agent": _run_agent,
     "agent_with_tools": _run_agent_with_tools,
     "composition": _run_composition,
@@ -1092,7 +1249,6 @@ PATTERN_RUNNERS: dict[str, Any] = {
     "structured_output": _run_structured_output,
     "memory_manager": _run_memory_manager,
     "cognitive_routing": _run_cognitive_routing,
-    "cohere_reranker": _run_cohere_reranker,
 }
 
 
@@ -1111,6 +1267,61 @@ app.add_middleware(
 
 
 STREAMABLE = {"agent", "agent_with_tools", "structured_output"}
+
+
+@app.post("/api/database/test")
+async def test_database(cfg: DatabaseConfig) -> dict[str, Any]:
+    """Open a connection pool, run SELECT 1, return ok/error.
+
+    Validates the connection envelope before the user attempts to run
+    any Oracle-backed pattern. Surfaces the underlying oracledb error
+    verbatim so wallet / TLS / credential problems are diagnosable
+    from the UI. Works the same way against a local backend or a
+    Docker backend as long as the wallet path is readable from where
+    the process runs.
+    """
+    if not cfg.is_set():
+        return {
+            "ok": False,
+            "detail": "DSN / user / password are required.",
+        }
+    try:
+        import oracledb
+    except ImportError as exc:
+        raise HTTPException(500, "oracledb package not installed on backend") from exc
+
+    try:
+        params: dict[str, Any] = {}
+        if cfg.wallet_location:
+            wallet = os.path.expanduser(cfg.wallet_location)
+            params["config_dir"] = wallet
+            params["wallet_location"] = wallet
+            if cfg.wallet_password:
+                params["wallet_password"] = cfg.wallet_password
+
+        pool = oracledb.create_pool_async(
+            user=cfg.user,
+            password=cfg.password,
+            dsn=cfg.dsn,
+            min=1,
+            max=1,
+            **params,
+        )
+        async with pool.acquire() as conn, conn.cursor() as cur:
+            await cur.execute("SELECT 1 FROM dual")
+            row = await cur.fetchone()
+        await pool.close()
+        return {
+            "ok": True,
+            "detail": f"Connection OK (SELECT 1 returned {row[0]}).",
+            "dsn": cfg.dsn,
+        }
+    except Exception as exc:  # surface to UI verbatim
+        return {
+            "ok": False,
+            "detail": f"{type(exc).__name__}: {exc}",
+            "dsn": cfg.dsn,
+        }
 
 
 @app.get("/api/patterns")
@@ -1372,6 +1583,16 @@ _TUTORIAL_DIR = (Path(__file__).resolve().parents[2] / "examples").resolve()
 # without renumbering — gaps ("RAG suite blocked in workbench") leave
 # the category empty rather than reshuffling.
 TUTORIAL_CATEGORIES: list[dict[str, Any]] = [
+    {
+        "id": "oracle",
+        "name": "Oracle primitives",
+        "description": (
+            "The Oracle-native path — pick a transport, point at a cluster, "
+            "ground your agent with VECTOR_DISTANCE. Start here if you're "
+            "shipping on OCI."
+        ),
+        "members": [0, 57, 58, 40, 60, 61, 62],
+    },
     {
         "id": "fundamentals",
         "name": "Fundamentals",

@@ -112,11 +112,11 @@ Specialist(
 
 ## Tutorials
 
-- [`tutorial_17_orchestrator_pattern.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_17_orchestrator_pattern.py)
+- [`tutorial_26_orchestrator_pattern.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_26_orchestrator_pattern.py)
   — router + three parallel specialists, results merged.
-- [`tutorial_18_specialist_agents.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_18_specialist_agents.py)
+- [`tutorial_27_specialist_agents.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_27_specialist_agents.py)
   — confidence floors and per-specialist playbooks.
-- [`tutorial_47_procurement_approval.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_47_procurement_approval.py)
+- [`tutorial_58_procurement_approval.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_58_procurement_approval.py)
   — orchestrator-shaped procurement with tiered approval gates and a
   typed `PurchaseOrder` artifact.
 

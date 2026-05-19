@@ -1,184 +1,227 @@
 # Tutorials
 
-55 runnable `examples/tutorial_NN_*.py` files in the repo. Every one
-runs end-to-end against the bundled `MockModel` (no creds required) and
-upgrades to live OCI / OpenAI / Anthropic / Ollama by setting one env
-var.
+63 runnable `examples/tutorial_NN_*.py` files. Every one runs end-to-end
+against the bundled `MockModel` (no credentials required) and upgrades
+to live **Oracle Cloud Infrastructure (OCI) Generative AI** —
+or OpenAI / Anthropic / Ollama — by setting one environment variable.
 
 Run any tutorial directly:
 
 ```bash
 git clone https://github.com/oracle-samples/locus.git
 cd locus && pip install -e .
-python examples/tutorial_01_basic_agent.py
+python examples/tutorial_01_oci_transports.py
 ```
 
-## Foundations
+The tutorials are numbered in **suggested reading order**. Start at
+01 and walk forward; each one builds on the last. If you're shipping
+on OCI, the first seven are the path you came for.
 
-The agent loop, tools, state, memory, hooks, streaming.
+## 01–05 · OCI Generative AI
+
+The OCI inference platform end-to-end: pick a transport, point at a
+cluster, on-demand reranking. **Start here if you're shipping on OCI.**
+
+| # | Tutorial | What you get |
+|---|---|---|
+| 01 | [OCI transports — start here][t01] | The three OCI transports side by side (V1, Responses, generic chat) |
+| 02 | [OCI v1 (`OCIOpenAIModel`)][t02] | The default transport — every OCI model family in one class |
+| 03 | [OCI Responses (`OCIResponsesModel`)][t03] | Opt-in stateful path with built-in tools |
+| 04 | [OCI Dedicated AI Cluster (DAC)][t04] | Wiring a private endpoint OCID into Locus |
+| 05 | [Cohere Reranker V4 on OCI][t05] | Retrieve-then-rerank with OCI on-demand `rerank-v4` |
+
+## 06–07 · Oracle Database 26ai
+
+The Oracle data layer: native `VECTOR(N, FLOAT32)` data type and the
+`VECTOR_DISTANCE` SQL function let your agent ground answers and
+durably checkpoint conversations directly in Oracle Autonomous Database.
+
+| # | Tutorial | What you get |
+|---|---|---|
+| 06 | [Oracle 26ai RAG][t06] | `OracleVectorStore` against an Autonomous Database wallet — native `VECTOR(N, FLOAT32)`, `VECTOR_DISTANCE` SQL |
+| 07 | [Oracle 26ai checkpointer][t07] | `oracle_checkpointer` — resume agent conversations from ADB |
+
+## 08–15 · Foundations
+
+The agent loop, tools, memory, streaming, hooks. Where to send a
+brand-new developer.
 
 | # | Tutorial |
 |---|---|
-| 1 | [Basic agent][t01] |
-| 2 | [Agent with tools][t02] |
-| 3 | [Conversation memory][t03] |
-| 4 | [Streaming events][t04] |
-| 5 | [Lifecycle hooks][t05] |
-| 21 | [SSE streaming][t21] |
-| 27 | [Hooks (advanced)][t27] |
-| 28 | [Agent server (FastAPI)][t28] |
-| 37 | [Termination conditions][t37] |
+| 08 | [Basic agent][t08] |
+| 09 | [Agent with tools][t09] |
+| 10 | [Conversation memory][t10] |
+| 11 | [Streaming events][t11] |
+| 12 | [Lifecycle hooks][t12] |
+| 13 | [SSE streaming][t13] |
+| 14 | [Hooks (advanced)][t14] |
+| 15 | [Termination conditions][t15] |
 
-## Graphs & composition
+## 16–23 · Graphs & composition
 
 `StateGraph`, conditional edges, reducers, retries, the functional API.
 
 | # | Tutorial |
 |---|---|
-| 6 | [Basic graph][t06] |
-| 7 | [Conditional routing][t07] |
-| 8 | [State reducers][t08] |
-| 9 | [Human-in-the-loop][t09] |
-| 10 | [Command + advanced patterns][t10] |
-| 25 | [Composition (Sequential / Parallel / Loop)][t25] |
-| 35 | [Graph (advanced) — retries, subgraphs][t35] |
-| 36 | [Functional API (`@task`, `@entrypoint`)][t36] |
+| 16 | [Basic graph][t16] |
+| 17 | [Conditional routing][t17] |
+| 18 | [State reducers][t18] |
+| 19 | [Human-in-the-loop][t19] |
+| 20 | [Command + advanced patterns][t20] |
+| 21 | [Composition (Sequential / Parallel / Loop)][t21] |
+| 22 | [Graph (advanced) — retries, subgraphs][t22] |
+| 23 | [Functional API (`@task`, `@entrypoint`)][t23] |
 
-## Multi-agent
+## 24–34 · Multi-agent
 
 In-process patterns plus A2A, DeepAgent, and real-world crew workflows.
 
 | # | Tutorial | Shape |
 |---|---|---|
-| 11 | [Swarm][t11] | Peer-to-peer shared context |
-| 16 | [Agent handoff][t16] | Sequential escalation |
-| 17 | [Orchestrator pattern][t17] | Coordinator + parallel specialists |
-| 18 | [Specialist agents][t18] | Named domain experts |
-| 34 | [A2A protocol (cross-process)][t34] | HTTP + SSE mesh |
-| 41 | [DeepAgent — research factory][t41] | Reflexion + grounding + subagents |
-| 42 | [Map-reduce code review][t42] | `Send` fan-out / reduce |
-| 43 | [Supervisor + critic loop][t43] | Refinement loop with cycles |
-| 44 | [Adversarial debate + judge][t44] | Typed `Verdict` via `output_schema` |
-| 45 | [Multi-agent + human-in-the-loop][t45] | 3 HITL patterns in one file |
+| 24 | [Swarm][t24] | Peer-to-peer shared context |
+| 25 | [Agent handoff][t25] | Sequential escalation |
+| 26 | [Orchestrator pattern][t26] | Coordinator + parallel specialists |
+| 27 | [Specialist agents][t27] | Named domain experts |
+| 28 | [A2A protocol (cross-process)][t28] | HTTP + SSE mesh |
+| 29 | [DeepAgent — research factory][t29] | Reflexion + grounding + subagents |
+| 30 | [Map-reduce code review][t30] | `Send` fan-out / reduce |
+| 31 | [Supervisor + critic loop][t31] | Refinement loop with cycles |
+| 32 | [Adversarial debate + judge][t32] | Typed `Verdict` via `output_schema` |
+| 33 | [Multi-agent + human-in-the-loop][t33] | Three HITL patterns in one file |
+| 34 | [Emergent routing][t34] | Opt-in LLM-as-picker |
 
-## Reasoning
+## 35–37 · Reasoning & structured output
 
-Reflexion, Grounding, Causal, GSAR (typed grounding).
-
-| # | Tutorial |
-|---|---|
-| 13 | [Structured output (Pydantic)][t13] |
-| 14 | [Reasoning patterns][t14] |
-| 39 | [GSAR — typed grounding][t39] |
-
-## RAG
+Pydantic schemas, Reflexion, Grounding, Causal, GSAR.
 
 | # | Tutorial |
 |---|---|
-| 22 | [RAG basics][t22] |
-| 23 | [RAG providers (vector stores, embeddings)][t23] |
-| 24 | [RAG agents][t24] |
+| 35 | [Structured output (Pydantic)][t35] |
+| 36 | [Reasoning patterns][t36] |
+| 37 | [GSAR — typed grounding][t37] |
 
-## Skills, playbooks & plugins
-
-| # | Tutorial |
-|---|---|
-| 12 | [MCP integration][t12] |
-| 15 | [Playbooks][t15] |
-| 31 | [Plugins][t31] |
-| 32 | [Skills][t32] |
-| 33 | [Steering (LLM-as-policy hook)][t33] |
-
-## Production
-
-Structured output, guardrails, checkpointers, multi-modal, DAC.
+## 38–40 · RAG
 
 | # | Tutorial |
 |---|---|
-| 19 | [Guardrails / security basics][t19] |
-| 20 | [Checkpoint backends][t20] |
-| 26 | [Evaluation][t26] |
-| 29 | [Model providers][t29] |
-| 30 | [Guardrails (advanced)][t30] |
-| 38 | [Multi-modal providers (web, images, audio)][t38] |
-| 40 | [OCI Dedicated AI Cluster (DAC)][t40] |
+| 38 | [RAG basics][t38] |
+| 39 | [RAG providers (vector stores, embeddings)][t39] |
+| 40 | [RAG agents][t40] |
 
-## Real-world workflows
-
-End-to-end use cases — incident response, contract review, audio chat.
+## 41–45 · Skills, playbooks & plugins
 
 | # | Tutorial |
 |---|---|
-| 46 | [On-call incident response][t46] |
-| 47 | [Tiered approval workflow][t47] |
-| 48 | [Contract review + negotiation][t48] |
-| 49 | [Voice output (TTS)][t49] |
-| 50 | [Voice in → voice out (gpt-audio)][t50] |
+| 41 | [MCP integration][t41] |
+| 42 | [Playbooks][t42] |
+| 43 | [Plugins][t43] |
+| 44 | [Skills][t44] |
+| 45 | [Steering (LLM-as-policy hook)][t45] |
 
-## Cognitive router & observability
+## 46–51 · Production
+
+Guardrails, checkpointers, evaluation, provider matrix, multi-modal.
+
+| # | Tutorial |
+|---|---|
+| 46 | [Guardrails & security (basics)][t46] |
+| 47 | [Guardrails (advanced)][t47] |
+| 48 | [Checkpoint backends][t48] |
+| 49 | [Evaluation][t49] |
+| 50 | [Model providers][t50] |
+| 51 | [Multi-modal providers (web, images, audio)][t51] |
+
+## 52–56 · Cognitive router & observability
 
 Cognitive router + opt-in EventBus telemetry.
 
 | # | Tutorial |
 |---|---|
-| 51 | [Cognitive router][t51] |
-| 52 | [Observability basics — opt-in SSE telemetry][t52] |
-| 53 | [Agent yield bridge + token usage][t53] |
-| 54 | [EventBus subscriber patterns][t54] |
-| 55 | [Full event catalogue tour][t55] |
+| 52 | [Cognitive router (PRISM)][t52] |
+| 53 | [Observability basics — opt-in SSE telemetry][t53] |
+| 54 | [Agent yield bridge + token usage][t54] |
+| 55 | [EventBus subscriber patterns][t55] |
+| 56 | [Full event catalogue tour][t56] |
 
-[t01]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_01_basic_agent.py
-[t02]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_02_agent_with_tools.py
-[t03]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_03_agent_memory.py
-[t04]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_04_agent_streaming.py
-[t05]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_05_agent_hooks.py
-[t06]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_06_basic_graph.py
-[t07]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_07_conditional_routing.py
-[t08]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_08_state_reducers.py
-[t09]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_09_human_in_the_loop.py
-[t10]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_10_advanced_patterns.py
-[t11]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_11_swarm_multiagent.py
-[t12]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_12_mcp_integration.py
-[t13]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_13_structured_output.py
-[t14]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_14_reasoning_patterns.py
-[t15]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_15_playbooks.py
-[t16]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_16_agent_handoff.py
-[t17]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_17_orchestrator_pattern.py
-[t18]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_18_specialist_agents.py
-[t19]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_19_guardrails_security.py
-[t20]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_20_checkpoint_backends.py
-[t21]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_21_sse_streaming.py
-[t22]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_22_rag_basics.py
-[t23]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_23_rag_providers.py
-[t24]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_24_rag_agents.py
-[t25]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_25_composition.py
-[t26]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_26_evaluation.py
-[t27]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_27_hooks_advanced.py
-[t28]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_28_agent_server.py
-[t29]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_29_model_providers.py
-[t30]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_30_guardrails_advanced.py
-[t31]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_31_plugins.py
-[t32]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_32_skills.py
-[t33]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_33_steering.py
-[t34]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_34_a2a_protocol.py
-[t35]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_35_graph_advanced.py
-[t36]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_36_functional_api.py
-[t37]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_37_termination.py
-[t38]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_38_multimodal_providers.py
-[t39]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_39_gsar_typed_grounding.py
-[t40]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_40_oci_dac.py
-[t41]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_41_deepagent.py
-[t42]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_42_map_reduce_code_review.py
-[t43]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_43_supervisor_critic_loop.py
-[t44]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_44_debate_with_judge.py
-[t45]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_45_multiagent_human_in_loop.py
-[t46]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_46_incident_response.py
-[t47]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_47_procurement_approval.py
-[t48]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_48_contract_review.py
-[t49]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_49_audio_response.py
-[t50]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_50_audio_chat.py
-[t51]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_51_cognitive_router.py
-[t52]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_52_observability_basics.py
-[t53]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_53_agent_yield_bridge.py
-[t54]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_54_eventbus_subscribers.py
-[t55]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_55_event_catalogue.py
+## 57–61 · Real-world workflows
+
+End-to-end use cases — incident response, contract review, audio chat.
+
+| # | Tutorial |
+|---|---|
+| 57 | [On-call incident response][t57] |
+| 58 | [Tiered procurement approval][t58] |
+| 59 | [Contract review + negotiation][t59] |
+| 60 | [Voice output (TTS)][t60] |
+| 61 | [Voice in → voice out (gpt-audio)][t61] |
+
+## 62–63 · Server & full pipelines
+
+| # | Tutorial |
+|---|---|
+| 62 | [Agent server (FastAPI)][t62] |
+| 63 | [Research workflow (full pipeline)][t63] |
+
+[t01]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_01_oci_transports.py
+[t02]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_02_oci_openai_chat.py
+[t03]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_03_oci_responses.py
+[t04]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_04_oci_dac.py
+[t05]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_05_cohere_reranker.py
+[t06]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_06_oracle_26ai_rag.py
+[t07]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_07_oracle_26ai_checkpointer.py
+[t08]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_08_basic_agent.py
+[t09]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_09_agent_with_tools.py
+[t10]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_10_agent_memory.py
+[t11]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_11_agent_streaming.py
+[t12]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_12_agent_hooks.py
+[t13]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_13_sse_streaming.py
+[t14]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_14_hooks_advanced.py
+[t15]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_15_termination.py
+[t16]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_16_basic_graph.py
+[t17]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_17_conditional_routing.py
+[t18]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_18_state_reducers.py
+[t19]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_19_human_in_the_loop.py
+[t20]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_20_advanced_patterns.py
+[t21]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_21_composition.py
+[t22]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_22_graph_advanced.py
+[t23]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_23_functional_api.py
+[t24]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_24_swarm_multiagent.py
+[t25]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_25_agent_handoff.py
+[t26]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_26_orchestrator_pattern.py
+[t27]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_27_specialist_agents.py
+[t28]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_28_a2a_protocol.py
+[t29]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_29_deepagent.py
+[t30]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_30_map_reduce_code_review.py
+[t31]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_31_supervisor_critic_loop.py
+[t32]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_32_debate_with_judge.py
+[t33]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_33_multiagent_human_in_loop.py
+[t34]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_34_emergent_routing.py
+[t35]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_35_structured_output.py
+[t36]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_36_reasoning_patterns.py
+[t37]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_37_gsar_typed_grounding.py
+[t38]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_38_rag_basics.py
+[t39]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_39_rag_providers.py
+[t40]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_40_rag_agents.py
+[t41]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_41_mcp_integration.py
+[t42]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_42_playbooks.py
+[t43]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_43_plugins.py
+[t44]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_44_skills.py
+[t45]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_45_steering.py
+[t46]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_46_guardrails_security.py
+[t47]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_47_guardrails_advanced.py
+[t48]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_48_checkpoint_backends.py
+[t49]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_49_evaluation.py
+[t50]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_50_model_providers.py
+[t51]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_51_multimodal_providers.py
+[t52]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_52_cognitive_router.py
+[t53]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_53_observability_basics.py
+[t54]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_54_agent_yield_bridge.py
+[t55]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_55_eventbus_subscribers.py
+[t56]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_56_event_catalogue.py
+[t57]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_57_incident_response.py
+[t58]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_58_procurement_approval.py
+[t59]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_59_contract_review.py
+[t60]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_60_audio_response.py
+[t61]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_61_audio_chat.py
+[t62]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_62_agent_server.py
+[t63]: https://github.com/oracle-samples/locus/blob/main/examples/tutorial_63_research_workflow.py

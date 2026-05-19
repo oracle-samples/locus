@@ -250,7 +250,7 @@ Standalone use (no retriever):
 top_5 = await reranker.rerank(query, candidates)
 ```
 
-See [`tutorial_60_cohere_reranker.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_60_cohere_reranker.py)
+See [`tutorial_05_cohere_reranker.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_05_cohere_reranker.py)
 for a runnable example, and the workbench has a `Retrieve-then-rerank
 (Cohere V4)` pattern that shows the embedding-vs-reranked ordering
 side-by-side at `/api/run/cohere_reranker`.
@@ -304,9 +304,9 @@ re-ranking before they reach the agent.
 
 ## Source and tutorials
 
-- [`tutorial_22_rag_basics.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_22_rag_basics.py) — minimal end-to-end RAG.
-- [`tutorial_23_rag_providers.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_23_rag_providers.py) — picking an embedder + store.
-- [`tutorial_24_rag_agents.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_24_rag_agents.py) — `create_rag_tool` plugged into an agent.
+- [`tutorial_38_rag_basics.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_38_rag_basics.py) — minimal end-to-end RAG.
+- [`tutorial_39_rag_providers.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_39_rag_providers.py) — picking an embedder + store.
+- [`tutorial_40_rag_agents.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_40_rag_agents.py) — `create_rag_tool` plugged into an agent.
 - [`locus.rag`](https://github.com/oracle-samples/locus/tree/main/src/locus/rag) — `RAGRetriever`, all embedders, all stores, `create_rag_tool`, `RAGToolkit`.
 
 ## See also

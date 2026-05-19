@@ -104,9 +104,9 @@ customer's last message.
 
 ## Tutorials
 
-- [`tutorial_16_agent_handoff.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_16_agent_handoff.py)
+- [`tutorial_25_agent_handoff.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_25_agent_handoff.py)
   — full triage + billing + shipping + returns escalation flow.
-- [`tutorial_45_multiagent_human_in_loop.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_45_multiagent_human_in_loop.py)
+- [`tutorial_33_multiagent_human_in_loop.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_33_multiagent_human_in_loop.py)
   — handoff to a human via `interrupt()` (one of three HITL patterns
   in the same file).
 

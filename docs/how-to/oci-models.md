@@ -123,7 +123,7 @@ when the server owns the history). Memory, Reflexion, GSAR,
 grounding, tool hooks, idempotency, checkpointing, output schema,
 streaming, and termination conditions all work identically. See the
 [OCI Responses concept page](../concepts/oci-responses.md) and
-[tutorial 58](../tutorials/tutorial_58_oci_responses.md).
+[tutorial 58](../tutorials/tutorial_03_oci_responses.md).
 
 ## Cohere R-series — `OCIModel`
 
@@ -174,7 +174,7 @@ export LOCUS_OCI_TRANSPORT=v1     # or "sdk"
 
 Tutorials that use `from examples.config import get_model` inherit
 this routing. Tutorials that instantiate a class directly
-(e.g. `tutorial_29_model_providers.py`) show both transports
+(e.g. `tutorial_50_model_providers.py`) show both transports
 side-by-side.
 
 ## What's not supported today

@@ -284,41 +284,6 @@ class TestCheckpointBackends:
     """Test checkpoint backend implementations."""
 
     @pytest.mark.asyncio
-    async def test_sqlite_backend(self, tmp_path):
-        """Test SQLite checkpoint backend."""
-        from locus.memory.backends import SQLiteBackend
-
-        db_path = tmp_path / "test.db"
-        backend = SQLiteBackend(path=str(db_path))
-
-        # Save
-        await backend.save("thread_1", {"messages": ["hello"], "iteration": 1})
-
-        # Load
-        data = await backend.load("thread_1")
-        assert data is not None
-        assert data["messages"] == ["hello"]
-        assert data["iteration"] == 1
-
-        # Exists
-        assert await backend.exists("thread_1")
-        assert not await backend.exists("thread_2")
-
-        # List
-        threads = await backend.list_threads()
-        assert "thread_1" in threads
-
-        # Update
-        await backend.save("thread_1", {"messages": ["hello", "world"], "iteration": 2})
-        data = await backend.load("thread_1")
-        assert len(data["messages"]) == 2
-
-        # Delete
-        deleted = await backend.delete("thread_1")
-        assert deleted
-        assert not await backend.exists("thread_1")
-
-    @pytest.mark.asyncio
     async def test_memory_backend(self):
         """Test in-memory checkpoint backend."""
         from locus.core.state import AgentState

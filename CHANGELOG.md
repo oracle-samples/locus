@@ -8,6 +8,50 @@ policy.
 
 ## [Unreleased]
 
+### Changed — tutorial renumber + Oracle-first reordering
+
+Renumbered every `examples/tutorial_NN_*.py` and its matching
+`docs/tutorials/tutorial_NN_*.md` so the numbers reflect suggested
+reading order, not historical order of authorship.
+
+- **Tutorials 01–05 are now the OCI Generative AI section** (inference
+  platform): OCI transports, OCIOpenAIModel, OCIResponsesModel, DAC,
+  Cohere Reranker V4.
+- **Tutorials 06–07 are now the Oracle Database 26ai section** (data
+  layer): native `VECTOR(N, FLOAT32)` RAG and durable agent-thread
+  checkpointer in Autonomous Database.
+- **08–15 Foundations** (basic agent → termination conditions)
+- **16–23 Graphs & composition**
+- **24–34 Multi-agent**
+- **35–37 Reasoning & structured output**
+- **38–40 RAG**
+- **41–45 Skills, playbooks, plugins**
+- **46–51 Production**
+- **52–56 Cognitive router & observability**
+- **57–61 Real-world workflows**
+- **62–63 Server + full pipelines**
+
+Every cross-reference was updated: `mkdocs.yml`, `docs/tutorials/index.md`,
+`docs/index.md`, README, all `docs/concepts/*` and `docs/how-to/*` pages,
+and the integration test file (renamed from `test_tutorials_13_21.py` to
+`test_tutorials_subset.py`).
+
+Embedded references migrated to match the new numbers: database table
+names (`locus_tutorial_NN_*`), thread IDs, audio asset filenames
+(`tutorial_60_response.mp3`, `tutorial_61_question.wav`,
+`tutorial_61_answer.wav`), and `Tutorial NN` headers inside each file.
+
+### Changed — `config.py` now defaults to OCI Generative AI
+
+`examples/config.py` auto-detects the provider: OCI Generative AI when
+`~/.oci/config` (or `LOCUS_OCI_AUTH_TYPE=instance_principal` /
+`resource_principal`) is available, the bundled `MockModel` otherwise.
+This means developer laptops with OCI configured run every tutorial
+against live OCI with zero setup; clean CI machines still get the
+mock model. Set `LOCUS_MODEL_PROVIDER` explicitly to force a choice.
+
+`examples/.env.example` was reorganised to lead with the OCI section.
+
 ## [0.2.0b16] - 2026-05-18
 
 This release closes every issue in the 2026-05-18 audit feedback set
@@ -47,7 +91,7 @@ Reuses `OCIClient` internally so every auth mode (api_key /
 security_token / session_token / instance & resource principal) works
 without duplicating the signer plumbing.
 
-- New tutorial: [`tutorial_60_cohere_reranker.py`](examples/tutorial_60_cohere_reranker.py)
+- New tutorial: [`tutorial_05_cohere_reranker.py`](examples/tutorial_05_cohere_reranker.py)
   — runnable end-to-end demo against OCI.
 - New workbench pattern: `cohere_reranker` (id `Retrieve-then-rerank
   (Cohere V4)`) reachable at `POST /api/run/cohere_reranker`.
@@ -140,7 +184,7 @@ from the user's shell-default OCI config. New docs page:
   `openai.gpt-4.1` — frontier OpenAI, different rate-limit pool, same
   OpenAI-compat tool_calls codepath.
 - `test_tutorials_all_live._TUTORIAL_TIMEOUT_OVERRIDES` adds a
-  per-tutorial budget. `tutorial_59_emergent_routing` lifted from 360s
+  per-tutorial budget. `tutorial_34_emergent_routing` lifted from 360s
   → 900s (legitimately takes ~10 min under the reasoning model with 5
   dispatches × ≥3 LLM calls each).
 
@@ -413,12 +457,12 @@ and verified output stats from a real ADB run.
 - `docs/concepts/deepagent.md` — new "Datastore auto-wiring" section
   with an Oracle Autonomous DB example and the provider-quirk +
   async-loop notes.
-- `docs/tutorials/tutorial_41_deepagent.md` — topic 6 cross-references
+- `docs/tutorials/tutorial_29_deepagent.md` — topic 6 cross-references
   the deep-research project for the multi-backend variants.
 - `docs/workbench.md` and `workbench/README.md` — cross-references
   under "What you can run" so workbench users discover the project
   examples.
-- `examples/tutorial_41_deepagent.py` — new `part5_datastores()` that
+- `examples/tutorial_29_deepagent.py` — new `part5_datastores()` that
   exercises `create_deepagent(datastores=...)` against an in-memory
   `RAGRetriever`, so the workbench picks the tutorial up and demos
   the auto-wiring without external dependencies.
@@ -575,10 +619,10 @@ stays green (4564 passed, 3 skipped). Closes
   plus a new "Responses transport — `OCIResponsesModel` (opt-in)"
   section covering both `store=True` (server-state) and `store=False`
   (ZDR-safe) modes.
-- Both pages cross-link [tutorial 00](docs/tutorials/tutorial_00_oci_transports.md)
-  (transports side-by-side), [tutorial 57](docs/tutorials/tutorial_57_oci_openai_chat.md)
+- Both pages cross-link [tutorial 00](docs/tutorials/tutorial_01_oci_transports.md)
+  (transports side-by-side), [tutorial 57](docs/tutorials/tutorial_02_oci_openai_chat.md)
   (OCIOpenAIModel deep dive) and
-  [tutorial 58](docs/tutorials/tutorial_58_oci_responses.md)
+  [tutorial 58](docs/tutorials/tutorial_03_oci_responses.md)
   (OCIResponsesModel deep dive).
 - **Voice pass** — locus is an *agentic* framework. Removed every
   occurrence of "deterministic" and "automatic" from user-facing
@@ -772,7 +816,7 @@ First internal-review version. Core shape established:
 - `BaseCheckpointer` abstraction and `MemoryCheckpointer`,
   `FileCheckpointer`, `HTTPCheckpointer` implementations.
 - Storage backends (still dict-shaped in 0.1.0, migrated to native
-  `BaseCheckpointer` in subsequent MRs): SQLite, Redis, PostgreSQL,
+  `BaseCheckpointer` in subsequent MRs): Redis, PostgreSQL,
   OpenSearch, Oracle, OCI Object Storage — wrapped via
   `StorageBackendAdapter`.
 - Model providers: OCI GenAI (Cohere, Meta, OpenAI, xAI, Google,

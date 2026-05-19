@@ -10,8 +10,8 @@ tutorial is parametrized so the failure surface points at the offender.
 
 Activation:
 * ``OCI_PROFILE=<profile>`` — required (drives the OCI v1 transport).
-* ``OPENAI_API_KEY`` — optional, used by tutorial_29 to demo OpenAI direct.
-* ``ANTHROPIC_API_KEY`` — optional, used by tutorial_29 to demo Anthropic direct.
+* ``OPENAI_API_KEY`` — optional, used by tutorial_50 to demo OpenAI direct.
+* ``ANTHROPIC_API_KEY`` — optional, used by tutorial_50 to demo Anthropic direct.
 * ``OCI_REGION=<region>`` — defaults to ``us-chicago-1``.
 
 The runner does not pre-skip anything by name — every
@@ -56,9 +56,9 @@ _TUTORIALS_DIR = _REPO / "examples"
 # the default and override per-tutorial below.
 _DEFAULT_TIMEOUT = 360
 _TUTORIAL_TIMEOUT_OVERRIDES: dict[str, int] = {
-    # tutorial_59_emergent_routing: 5 dispatches × 2-3 LLM calls each
+    # tutorial_34_emergent_routing: 5 dispatches × 2-3 LLM calls each
     # through a reasoning model — empirical wall time ~7-9 min.
-    "tutorial_59_emergent_routing.py": 900,
+    "tutorial_34_emergent_routing.py": 900,
 }
 
 

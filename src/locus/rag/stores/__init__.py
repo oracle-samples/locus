@@ -34,6 +34,7 @@ __all__ = [
     "VectorStoreConfig",
     # Stores (lazy imports)
     "OracleVectorStore",
+    "OracleSyncVectorStore",
     "OpenSearchVectorStore",
     "QdrantVectorStore",
     "PineconeVectorStore",
@@ -49,6 +50,11 @@ def __getattr__(name: str) -> Any:
         from locus.rag.stores.oracle import OracleVectorStore
 
         return OracleVectorStore
+
+    if name == "OracleSyncVectorStore":
+        from locus.rag.stores.oracle_sync import OracleSyncVectorStore
+
+        return OracleSyncVectorStore
 
     if name == "OpenSearchVectorStore":
         from locus.rag.stores.opensearch import OpenSearchVectorStore

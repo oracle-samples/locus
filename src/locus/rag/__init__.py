@@ -105,6 +105,7 @@ __all__ = [
     "EmbeddingResult",
     # Embeddings - Providers (lazy)
     "OCIEmbeddings",
+    "OracleInDBEmbeddings",
     # Stores - Base
     "BaseVectorStore",
     "Document",
@@ -116,6 +117,9 @@ __all__ = [
     "OpenSearchVectorStore",
     "QdrantVectorStore",
     "InMemoryVectorStore",
+    # Loaders / chunkers (lazy)
+    "OracleADBLoader",
+    "OracleInDBChunker",
     # Retriever
     "RAGRetriever",
     "RetrievalResult",
@@ -162,6 +166,22 @@ def __getattr__(name: str) -> Any:
         from locus.rag.stores.memory import InMemoryVectorStore
 
         return InMemoryVectorStore
+
+    # In-DB primitives (Oracle 23ai/26ai DBMS_VECTOR_CHAIN).
+    if name == "OracleInDBEmbeddings":
+        from locus.rag.embeddings.oracle_indb import OracleInDBEmbeddings
+
+        return OracleInDBEmbeddings
+
+    if name == "OracleADBLoader":
+        from locus.rag.loaders.oracle import OracleADBLoader
+
+        return OracleADBLoader
+
+    if name == "OracleInDBChunker":
+        from locus.rag.chunkers.oracle_indb import OracleInDBChunker
+
+        return OracleInDBChunker
 
     msg = f"module {__name__!r} has no attribute {name!r}"
     raise AttributeError(msg)

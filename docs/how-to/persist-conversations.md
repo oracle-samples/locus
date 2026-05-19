@@ -21,11 +21,10 @@ matters: you pass the **native** ones straight to `Agent`, and you
 **Storage-backed checkpointers** (wrap a dict-shaped storage with a
 factory):
 
-- `redis_checkpointer(...)` — Redis cluster
-- `postgresql_checkpointer(...)` — managed Postgres
-- `sqlite_checkpointer(...)` — single-process durability
-- `opensearch_checkpointer(...)` — OpenSearch cluster
-- `oracle_checkpointer(...)` — Oracle Database
+- `redis_checkpointer(...)` — Redis cluster (OCI Cache with Redis)
+- `postgresql_checkpointer(...)` — managed Postgres (OCI Database with PostgreSQL)
+- `opensearch_checkpointer(...)` — OpenSearch cluster (OCI Search with OpenSearch)
+- `oracle_checkpointer(...)` — Oracle Autonomous Database
 
 The native ones are normal classes — `OCIBucketBackend(...)` and
 hand it to `Agent`. The storage-backed ones are the underlying

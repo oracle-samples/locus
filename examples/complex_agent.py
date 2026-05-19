@@ -380,7 +380,7 @@ async def search_knowledge_base(
         },
         {
             "topic": "Checkpointing",
-            "content": "State can be persisted to Redis, SQLite, or custom backends.",
+            "content": "State can be persisted to Redis, Oracle Database, PostgreSQL, OpenSearch, OCI Object Storage, or custom backends.",
         },
     ]
 

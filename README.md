@@ -136,7 +136,7 @@ of planner→executor→validator, and a write-affecting action to an
 approval-gated agent — chosen by protocol selection, not by the model.
 
 → [Cognitive router concept](https://oracle-samples.github.io/locus/concepts/router/) ·
-[`examples/tutorial_51_cognitive_router.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_51_cognitive_router.py)
+[`examples/tutorial_52_cognitive_router.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_52_cognitive_router.py)
 
 ---
 
@@ -182,7 +182,7 @@ print(result.text)
 | **[📡 Observability](https://oracle-samples.github.io/locus/concepts/observability/)** | Opt-in `EventBus` — one `run_context()` streams 40+ canonical events from every layer, no external broker. `TelemetryHook` for OpenTelemetry/OTLP. |
 | **[🧠 Reasoning](https://oracle-samples.github.io/locus/concepts/reasoning/)** | `reflexion=True` · `grounding=True` · `CausalChain` · **GSAR** typed grounding layer (`arXiv:2604.23366`). |
 | **[🛡 Idempotent tools](https://oracle-samples.github.io/locus/concepts/idempotency/)** | `@tool(idempotent=True)` — dedupes on `(name, args)`. The model can't double-charge, double-book, or double-page. |
-| **[💾 Durable memory](https://oracle-samples.github.io/locus/concepts/checkpointers/)** | 9 backends — OCI Object Storage, PostgreSQL, Redis, SQLite, Oracle 26ai, OpenSearch, in-memory, file, HTTP. |
+| **[💾 Durable memory](https://oracle-samples.github.io/locus/concepts/checkpointers/)** | 8 backends — OCI Object Storage, PostgreSQL, Redis, Oracle 26ai, OpenSearch, in-memory, file, HTTP. |
 | **[🔎 RAG](https://oracle-samples.github.io/locus/concepts/rag/)** | 7 vector stores · OCI Cohere + OpenAI embeddings · multimodal (PDF, image OCR, audio). |
 | **[📡 Streaming + Server](https://oracle-samples.github.io/locus/concepts/server/)** | Typed events · SSE · `AgentServer` (FastAPI, per-principal thread isolation). |
 | **[🪝 Hooks](https://oracle-samples.github.io/locus/concepts/hooks/)** | Logging · OpenTelemetry · ModelRetry · Guardrails · Steering (LLM-as-judge). |
@@ -213,31 +213,38 @@ Every node emits a write-protected typed event — same stream powers SSE, telem
 
 ## 56 tutorials
 
-[`examples/`](examples/) has 56 progressive tutorials, each a single runnable file.
-Every tutorial runs offline with `MockModel`; set one env var to upgrade to a real provider.
+[`examples/`](examples/) has 63 progressive tutorials, numbered in suggested
+reading order. Tutorials default to **Oracle Cloud Infrastructure (OCI)
+Generative AI** when an OCI profile is available, and fall back to a
+bundled mock model when one isn't — every example runs offline with no
+credentials needed.
 
 ```bash
 git clone https://github.com/oracle-samples/locus.git
 cd locus && pip install -e .
 
-python examples/tutorial_01_basic_agent.py          # start here
-python examples/tutorial_02_agent_with_tools.py     # add tools
-python examples/tutorial_41_deepagent.py            # deep research
-python examples/tutorial_51_cognitive_router.py     # routing
-python examples/tutorial_56_research_workflow.py    # full research pipeline
+python examples/tutorial_01_oci_transports.py        # start here — three OCI transports
+python examples/tutorial_06_oracle_26ai_rag.py       # native VECTOR RAG on Oracle 26ai
+python examples/tutorial_07_oracle_26ai_checkpointer.py  # durable agent threads in ADB
+python examples/tutorial_08_basic_agent.py           # your first agent
+python examples/tutorial_29_deepagent.py             # deep-research factory
+python examples/tutorial_63_research_workflow.py     # full research pipeline
 ```
 
-| Track | What you learn |
-|---|---|
-| **Foundations** (01–05, 21, 27, 28, 37) | Agent, tools, memory, streaming, hooks, server, termination |
-| **Graphs** (06–10, 25, 35, 36) | StateGraph, conditional routing, reducers, HITL, composition |
-| **Multi-agent** (11, 16–18, 34, 41–45) | Swarm, handoff, orchestrator, A2A, DeepAgent, real-world crews |
-| **Reasoning** (13, 14, 39) | Structured output, reflexion + grounding, GSAR typed grounding |
-| **RAG** (22–24) | Basics, providers, RAG agents |
-| **Skills, playbooks, plugins** (12, 15, 31–33) | MCP, playbooks, plugins, steering |
-| **Production** (19, 20, 26, 29, 30, 38, 40) | Guardrails, checkpoints, evaluation, model providers, DAC |
-| **Real-world workflows** (46–50) | Incident response, procurement, contract review, audio |
-| **Cognitive router + observability** (51–56) | Routing, EventBus, agent yield bridge, event catalogue, research |
+| Track | Range | What you learn |
+|---|---|---|
+| **OCI Generative AI** | 01–05 | OCI transports, OCIOpenAIModel, Responses, Dedicated AI Cluster, Cohere Reranker V4 |
+| **Oracle Database 26ai** | 06–07 | Native `VECTOR(N, FLOAT32)` RAG + durable conversation checkpointer in ADB |
+| **Foundations** | 08–15 | Agent, tools, memory, streaming, hooks, termination |
+| **Graphs & composition** | 16–23 | StateGraph, conditional routing, reducers, HITL, composition, functional API |
+| **Multi-agent** | 24–34 | Swarm, handoff, orchestrator, A2A, DeepAgent, debate, emergent routing |
+| **Reasoning & structured** | 35–37 | Pydantic schemas, reasoning patterns, GSAR typed grounding |
+| **RAG** | 38–40 | Basics, providers, RAG agents |
+| **Skills, playbooks, plugins** | 41–45 | MCP, playbooks, plugins, skills, steering |
+| **Production** | 46–51 | Guardrails, checkpoints, evaluation, providers, multi-modal |
+| **Cognitive router + observability** | 52–56 | Routing, EventBus, yield bridge, event catalogue |
+| **Real-world workflows** | 57–61 | Incident response, procurement, contract review, audio |
+| **Server & full pipelines** | 62–63 | Agent server (FastAPI), full research workflow |
 
 → [Full tutorials index](https://oracle-samples.github.io/locus/tutorials/)
 

@@ -24,6 +24,81 @@ sequential pipeline, a map-reduce fan-out, a critic loop with
 that imports locus, builds the agent, and streams events through to
 your browser.
 
+### Start with Oracle
+
+The catalog leads with the **Oracle primitives** category. Two
+runnable demos pinned to the top of the sidebar:
+
+- **Oracle 26ai RAG (native VECTOR)** — `OracleVectorStore` against
+  an Autonomous Database wallet, native `VECTOR(1024, FLOAT32)` +
+  `VECTOR_DISTANCE COSINE`. Requires `ORACLE_DSN` / `ORACLE_USER` /
+  `ORACLE_PASSWORD` / `ORACLE_WALLET` on the backend host (plus an
+  OCI provider in the UI for embeddings). See
+  [tutorial 61](tutorials/tutorial_06_oracle_26ai_rag.md).
+- **Retrieve-then-rerank (Cohere V4)** — `CohereReranker` on OCI
+  on-demand `rerank-v4`. Provider panel set to OCI is enough. See
+  [tutorial 60](tutorials/tutorial_05_cohere_reranker.md).
+
+The tutorial sidebar also surfaces the rest of the Oracle-native
+path — tutorials 00 / 57 / 58 (transports), 40 (Dedicated AI
+Cluster) — under the same "Oracle primitives" group.
+
+### Database settings (Oracle 26ai)
+
+Provider settings now include a **second panel for Oracle Database
+26ai** — fill it in once per tab and the workbench will route every
+Oracle-backed pattern (vector RAG, durable checkpoints) at your
+Autonomous Database. The panel collects five fields:
+
+| Field | Example | Notes |
+|---|---|---|
+| **DSN** | `mydb_low` | A tnsnames alias from inside the wallet directory. |
+| **User** | `locus_app` | Use a least-privileged app schema, not `ADMIN`. |
+| **Password** | (secret) | Sent only to the backend; never persisted. |
+| **Wallet path** | `~/.oci/wallets/mydb` | A directory on the *backend's* filesystem holding `tnsnames.ora`. See the Docker note below. |
+| **Wallet password** | (secret) | Required only if the wallet bundle is encrypted. |
+
+Same trust model as the provider API key: held in browser-tab memory
+only, never written to localStorage, never sent anywhere except the
+local BFF on its way to the backend. Closing the tab clears
+everything.
+
+Hit **Test connection** to validate. The backend opens a pool, runs
+`SELECT 1 FROM dual`, returns a green ✓ on success or the raw
+`oracledb` error string verbatim on failure — wallet TLS issues,
+DPY-… error codes, bad credentials, all surface here before you try
+to run a pattern.
+
+**Path vs upload.** This release accepts a path that's already
+readable from the backend process. Uploading a wallet bundle through
+the browser is on the roadmap; the path mode covers the
+developer-on-localhost case today.
+
+#### Docker
+
+When the workbench backend runs in Docker (the default container
+image), the **wallet path the user types into the panel is resolved
+inside the container**, not on the host. Mount the wallet directory
+when starting the container:
+
+```bash
+docker run --rm -p 8100:8100 \
+  -v $HOME/.oci/wallets/mydb:/wallets/mydb:ro \
+  ghcr.io/oracle-samples/locus-workbench:latest
+```
+
+Then enter `/wallets/mydb` (the in-container path) in the Wallet
+path field. Same flow as the localhost run, with the only difference
+being the path namespace.
+
+#### Backend env-var fallback
+
+If the per-tab Database panel is empty, the backend falls back to
+`ORACLE_DSN` / `ORACLE_USER` / `ORACLE_PASSWORD` / `ORACLE_WALLET`
+(plus `ORACLE_WALLET_PASSWORD`) read from the process environment —
+matching the convention used by every Oracle-backed tutorial under
+`examples/`. UI input always overrides the env when both are set.
+
 It's also the canonical demo: visitors arrive at this app, pick a
 workflow, and learn the SDK by running real ones.
 
@@ -104,7 +179,7 @@ make web                                          # pane 3 — :5173
 end-to-end test suite in `workbench/e2e/`. The `make backend` target
 is the workbench runner — distinct from `make backend-research` and
 `make backend-finance`, which spin up the A2A mesh demo peers for
-[tutorial 34](tutorials/tutorial_34_a2a_protocol.md), not the
+[tutorial 34](tutorials/tutorial_28_a2a_protocol.md), not the
 workbench.
 
 ### Verify it's up
@@ -315,7 +390,7 @@ correlate findings.
 → specialist_fanout
 ```
 
-See [tutorial 59](tutorials/tutorial_59_emergent_routing.md) for the
+See [tutorial 59](tutorials/tutorial_34_emergent_routing.md) for the
 full code path and [concepts/router.md](concepts/router.md#emergent-picker-opt-in-second-mode)
 for the architectural details.
 

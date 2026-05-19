@@ -1,4 +1,4 @@
-import type { ProviderConfig } from "./types";
+import type { DatabaseConfig, DatabaseTestResult, ProviderConfig } from "./types";
 
 export type Tutorial = {
   id: string;
@@ -216,11 +216,14 @@ export async function runPattern(
   patternId: string,
   prompt: string,
   provider: ProviderConfig,
-  options: { use_llm_picker?: boolean } = {},
+  options: { use_llm_picker?: boolean; database?: DatabaseConfig | null } = {},
 ): Promise<PatternRunResponse> {
   const body: Record<string, unknown> = { prompt, provider };
   if (options.use_llm_picker !== undefined) {
     body.use_llm_picker = options.use_llm_picker;
+  }
+  if (options.database) {
+    body.database = options.database;
   }
   const r = await fetch(`/api/run/${encodeURIComponent(patternId)}`, {
     method: "POST",
@@ -229,6 +232,16 @@ export async function runPattern(
   });
   if (!r.ok) throw new Error(`run ${r.status}: ${await r.text()}`);
   return (await r.json()) as PatternRunResponse;
+}
+
+export async function testDatabase(cfg: DatabaseConfig): Promise<DatabaseTestResult> {
+  const r = await fetch("/api/database/test", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(cfg),
+  });
+  if (!r.ok) throw new Error(`database test ${r.status}: ${await r.text()}`);
+  return (await r.json()) as DatabaseTestResult;
 }
 
 export function streamPattern(

@@ -303,7 +303,7 @@ class LLMMemoryManager(BaseMemoryManager):
     Args:
         store: Any :class:`~locus.memory.store.BaseStore` implementation.
             ``InMemoryStore`` works for development; use
-            ``SQLiteBackend``, ``RedisBackend``, ``OracleBackend``, etc.
+            ``RedisBackend``, ``PostgreSQLBackend``, ``OracleBackend``, etc.
             for production.
         extract_fn: Optional async callable
             ``(messages: list[Message]) -> list[Memory]``.  When
@@ -318,10 +318,10 @@ class LLMMemoryManager(BaseMemoryManager):
     Example::
 
         from locus.memory.manager import LLMMemoryManager
-        from locus.memory.backends import SQLiteBackend
+        from locus.memory.backends import OracleBackend
 
         manager = LLMMemoryManager(
-            store=SQLiteBackend("sqlite:///memories.db"),
+            store=OracleBackend(dsn="mydb_high", user="admin", password="secret"),
             extract_fn=my_llm_extractor,
             namespace_prefix=("users", user_id),
         )

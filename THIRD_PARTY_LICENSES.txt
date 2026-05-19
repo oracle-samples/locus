@@ -201,12 +201,6 @@ Copyright (c) Ollama
 OPTIONAL DEPENDENCIES (Checkpoint/Memory Backends)
 ================================================================================
 
-aiosqlite
----------
-License: MIT
-Home: https://github.com/omnilib/aiosqlite
-Copyright (c) Amethyst Reese
-
 redis (redis-py)
 ----------------
 License: MIT
