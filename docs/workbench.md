@@ -34,10 +34,10 @@ runnable demos pinned to the top of the sidebar:
   `VECTOR_DISTANCE COSINE`. Requires `ORACLE_DSN` / `ORACLE_USER` /
   `ORACLE_PASSWORD` / `ORACLE_WALLET` on the backend host (plus an
   OCI provider in the UI for embeddings). See
-  [notebook 06](tutorials/tutorial_06_oracle_26ai_rag.md).
+  [notebook 06](notebooks/notebook_06_oracle_26ai_rag.md).
 - **Retrieve-then-rerank (Cohere V4)** — `CohereReranker` on OCI
   on-demand `rerank-v4`. Provider panel set to OCI is enough. See
-  [notebook 05](tutorials/tutorial_05_cohere_reranker.md).
+  [notebook 05](notebooks/notebook_05_cohere_reranker.md).
 
 The notebook sidebar also surfaces the rest of the Oracle-native
 path — notebooks 01 / 02 / 03 (transports), 04 (Dedicated AI
@@ -179,7 +179,7 @@ make web                                          # pane 3 — :5173
 end-to-end test suite in `workbench/e2e/`. The `make backend` target
 is the workbench runner — distinct from `make backend-research` and
 `make backend-finance`, which spin up the A2A mesh demo peers for
-[notebook 28](tutorials/tutorial_28_a2a_protocol.md), not the
+[notebook 28](notebooks/notebook_33_a2a_protocol.md), not the
 workbench.
 
 ### Verify it's up
@@ -288,7 +288,7 @@ happen.
 
 The catalog populates from the BFF's `/api/notebooks` endpoint
 (aliased to `/api/tutorials` for backwards compatibility), which
-walks `examples/tutorial_*.py`. As of writing the workbench has 9
+walks `examples/notebook_*.py`. As of writing the workbench has 9
 dedicated FastAPI pattern endpoints:
 
 | Pattern | What it shows |
@@ -391,7 +391,7 @@ correlate findings.
 → specialist_fanout
 ```
 
-See [notebook 34](tutorials/tutorial_34_emergent_routing.md) for the
+See [notebook 34](notebooks/notebook_39_emergent_routing.md) for the
 full code path and [concepts/router.md](concepts/router.md#emergent-picker-opt-in-second-mode)
 for the architectural details.
 

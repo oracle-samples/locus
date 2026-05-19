@@ -128,7 +128,7 @@ and `|` work across the whole hierarchy.
 
 ## Source and tutorial
 
-- [`tutorial_15_termination.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_15_termination.py) — runnable algebra examples.
+- [`notebook_20_termination.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_20_termination.py) — runnable algebra examples.
 - [`locus.core.termination`](https://github.com/oracle-samples/locus/blob/main/src/locus/core/termination.py) — every condition class, plus `__or__` / `__and__`.
 
 ## See also

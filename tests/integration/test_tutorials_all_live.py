@@ -10,12 +10,12 @@ tutorial is parametrized so the failure surface points at the offender.
 
 Activation:
 * ``OCI_PROFILE=<profile>`` — required (drives the OCI v1 transport).
-* ``OPENAI_API_KEY`` — optional, used by tutorial_50 to demo OpenAI direct.
-* ``ANTHROPIC_API_KEY`` — optional, used by tutorial_50 to demo Anthropic direct.
+* ``OPENAI_API_KEY`` — optional, used by notebook_50 to demo OpenAI direct.
+* ``ANTHROPIC_API_KEY`` — optional, used by notebook_50 to demo Anthropic direct.
 * ``OCI_REGION=<region>`` — defaults to ``us-chicago-1``.
 
 The runner does not pre-skip anything by name — every
-``tutorial_NN_*.py`` is exercised end-to-end. Tutorials that touch
+``notebook_NN_*.py`` is exercised end-to-end. Tutorials that touch
 external infra they can't reach (third-party MCP servers, live
 Redis/Postgres/OpenSearch clusters, etc.) gracefully degrade in their
 own code so the run still exits 0.
@@ -56,14 +56,14 @@ _TUTORIALS_DIR = _REPO / "examples"
 # the default and override per-tutorial below.
 _DEFAULT_TIMEOUT = 360
 _TUTORIAL_TIMEOUT_OVERRIDES: dict[str, int] = {
-    # tutorial_34_emergent_routing: 5 dispatches × 2-3 LLM calls each
+    # notebook_39_emergent_routing: 5 dispatches × 2-3 LLM calls each
     # through a reasoning model — empirical wall time ~7-9 min.
-    "tutorial_34_emergent_routing.py": 900,
+    "notebook_39_emergent_routing.py": 900,
 }
 
 
 def _all_tutorials() -> list[Path]:
-    return sorted(_TUTORIALS_DIR.glob("tutorial_*.py"))
+    return sorted(_TUTORIALS_DIR.glob("notebook_*.py"))
 
 
 @pytest.mark.parametrize(
@@ -71,8 +71,8 @@ def _all_tutorials() -> list[Path]:
     _all_tutorials(),
     ids=lambda p: p.name.removesuffix(".py"),
 )
-def test_tutorial_runs_clean(tutorial: Path):
-    """Run ``python examples/tutorial_NN_*.py`` and assert exit code 0.
+def test_notebook_runs_clean(tutorial: Path):
+    """Run ``python examples/notebook_NN_*.py`` and assert exit code 0.
 
     The script must finish within 180s and not write to stderr beyond the
     occasional warning.

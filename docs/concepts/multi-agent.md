@@ -15,20 +15,20 @@ compile the right one from a natural-language task description.
 
 ## What you can ship today
 
-Every example below is a real `examples/tutorial_NN_*.py` file in the
+Every example below is a real `examples/notebook_NN_*.py` file in the
 repo, runs end-to-end against the bundled `MockModel` (no creds), and
 upgrades to live OCI / OpenAI by setting one env var.
 
 | | Workflow | One line | Code |
 |---|---|---|---|
-| **41** | DeepAgent — research factory | `create_deepagent` with reflexion + grounding + subagent dispatch + `deepagent.*` SSE events. | [`tutorial_29_deepagent.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_29_deepagent.py) |
-| **42** | Map-reduce code review | Scatter a diff to `N` reviewers via `Send`, reduce findings into one report. | [`tutorial_30_map_reduce_code_review.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_30_map_reduce_code_review.py) |
-| **43** | Supervisor + critic loop | Researcher → Writer → Critic, loop back to Writer until critic approves (cap'd revisions). | [`tutorial_31_supervisor_critic_loop.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_31_supervisor_critic_loop.py) |
-| **44** | Adversarial debate + judge | PRO and CON argue across N rounds; Judge emits a typed `Verdict` via `output_schema`. | [`tutorial_32_debate_with_judge.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_32_debate_with_judge.py) |
-| **45** | Multi-agent + human-in-the-loop | Three patterns in one file: approval gate, human-as-tool, long-pause snapshot/resume. | [`tutorial_33_multiagent_human_in_loop.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_33_multiagent_human_in_loop.py) |
-| **46** | On-call incident response | Triage → 3 parallel investigators (logs / metrics / traces) → severity gate → page-the-human → mitigate → typed `Postmortem`. | [`tutorial_57_incident_response.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_57_incident_response.py) |
-| **47** | Tiered approval workflow | Justifier → Vendor analyst → tier router (auto / manager / +finance / +CFO) → typed `PurchaseOrder`. Three stacked `interrupt()` gates on the top tier. | [`tutorial_58_procurement_approval.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_58_procurement_approval.py) |
-| **48** | Contract review + negotiation | Parser → 3 parallel reviewers → negotiation gate → human counsel → `Command(goto="sign_off")` short-circuits when resolved. Cycles enabled. | [`tutorial_59_contract_review.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_59_contract_review.py) |
+| **41** | DeepAgent — research factory | `create_deepagent` with reflexion + grounding + subagent dispatch + `deepagent.*` SSE events. | [`notebook_34_deepagent.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_34_deepagent.py) |
+| **42** | Map-reduce code review | Scatter a diff to `N` reviewers via `Send`, reduce findings into one report. | [`notebook_35_map_reduce_code_review.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_35_map_reduce_code_review.py) |
+| **43** | Supervisor + critic loop | Researcher → Writer → Critic, loop back to Writer until critic approves (cap'd revisions). | [`notebook_36_supervisor_critic_loop.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_36_supervisor_critic_loop.py) |
+| **44** | Adversarial debate + judge | PRO and CON argue across N rounds; Judge emits a typed `Verdict` via `output_schema`. | [`notebook_37_debate_with_judge.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_37_debate_with_judge.py) |
+| **45** | Multi-agent + human-in-the-loop | Three patterns in one file: approval gate, human-as-tool, long-pause snapshot/resume. | [`notebook_38_multiagent_human_in_loop.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_38_multiagent_human_in_loop.py) |
+| **46** | On-call incident response | Triage → 3 parallel investigators (logs / metrics / traces) → severity gate → page-the-human → mitigate → typed `Postmortem`. | [`notebook_62_incident_response.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_62_incident_response.py) |
+| **47** | Tiered approval workflow | Justifier → Vendor analyst → tier router (auto / manager / +finance / +CFO) → typed `PurchaseOrder`. Three stacked `interrupt()` gates on the top tier. | [`notebook_63_procurement_approval.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_63_procurement_approval.py) |
+| **48** | Contract review + negotiation | Parser → 3 parallel reviewers → negotiation gate → human counsel → `Command(goto="sign_off")` short-circuits when resolved. Cycles enabled. | [`notebook_64_contract_review.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_64_contract_review.py) |
 
 ## Pick a shape
 

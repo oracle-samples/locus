@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # ruff: noqa: T201
-"""Generate one docs/tutorials/<id>.md per examples/tutorial_*.py.
+"""Generate one docs/notebooks/<id>.md per examples/notebook_*.py.
 
 Each generated page renders:
   - H1 = "Tutorial NN: <Title>"  (parsed from the .py docstring)
@@ -9,7 +9,7 @@ Each generated page renders:
 
 Run after editing tutorials::
 
-    python scripts/gen_tutorial_pages.py
+    python scripts/gen_notebook_pages.py
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ def _parse(path: Path) -> tuple[int, str, str]:
     """Return (number, title, body) parsed from the .py docstring."""
     src = path.read_text(encoding="utf-8")
     doc = ast.get_docstring(ast.parse(src)) or ""
-    m = re.match(r"tutorial_(\d+)_", path.name)
+    m = re.match(r"notebook_(\d+)_", path.name)
     num = int(m.group(1)) if m else 0
     first, _, rest = doc.partition("\n")
     # ``Tutorial NN: Title`` — strip the leading prefix for the H1
@@ -40,14 +40,14 @@ def _parse(path: Path) -> tuple[int, str, str]:
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     pages: list[tuple[int, str, str]] = []
-    for py in sorted(EX.glob("tutorial_*.py")):
+    for py in sorted(EX.glob("notebook_*.py")):
         try:
             num, title, body = _parse(py)
         except SyntaxError:
             continue
         if not title:
             continue
-        slug = py.stem  # e.g. tutorial_08_basic_agent
+        slug = py.stem  # e.g. notebook_13_basic_agent
         page = OUT / f"{slug}.md"
         page.write_text(
             f"# Tutorial {num:02d}: {title}\n\n"

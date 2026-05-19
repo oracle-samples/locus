@@ -787,13 +787,13 @@ class TestTutorialExecution:
     """Tests that run actual tutorials (with mock model)."""
 
     @pytest.mark.asyncio
-    async def test_tutorial_35_runs(self):
+    async def test_notebook_35_runs(self):
         """Test that tutorial 35 runs without error."""
         import subprocess
         import sys
 
         result = subprocess.run(
-            [sys.executable, "examples/tutorial_35_structured_output.py"],
+            [sys.executable, "examples/notebook_40_structured_output.py"],
             capture_output=True,
             text=True,
             timeout=60,
@@ -802,13 +802,13 @@ class TestTutorialExecution:
         assert result.returncode == 0, f"Tutorial 35 failed: {result.stderr}"
 
     @pytest.mark.asyncio
-    async def test_tutorial_36_runs(self):
+    async def test_notebook_36_runs(self):
         """Test that tutorial 36 runs without error."""
         import subprocess
         import sys
 
         result = subprocess.run(
-            [sys.executable, "examples/tutorial_36_reasoning_patterns.py"],
+            [sys.executable, "examples/notebook_41_reasoning_patterns.py"],
             capture_output=True,
             text=True,
             timeout=60,
@@ -817,13 +817,13 @@ class TestTutorialExecution:
         assert result.returncode == 0, f"Tutorial 36 failed: {result.stderr}"
 
     @pytest.mark.asyncio
-    async def test_tutorial_42_runs(self):
+    async def test_notebook_42_runs(self):
         """Test that tutorial 42 runs without error."""
         import subprocess
         import sys
 
         result = subprocess.run(
-            [sys.executable, "examples/tutorial_42_playbooks.py"],
+            [sys.executable, "examples/notebook_47_playbooks.py"],
             capture_output=True,
             text=True,
             timeout=60,
@@ -832,13 +832,13 @@ class TestTutorialExecution:
         assert result.returncode == 0, f"Tutorial 42 failed: {result.stderr}"
 
     @pytest.mark.asyncio
-    async def test_tutorial_48_runs(self):
+    async def test_notebook_48_runs(self):
         """Test that tutorial 48 runs without error."""
         import subprocess
         import sys
 
         result = subprocess.run(
-            [sys.executable, "examples/tutorial_48_checkpoint_backends.py"],
+            [sys.executable, "examples/notebook_53_checkpoint_backends.py"],
             capture_output=True,
             text=True,
             timeout=60,
@@ -847,13 +847,13 @@ class TestTutorialExecution:
         assert result.returncode == 0, f"Tutorial 48 failed: {result.stderr}"
 
     @pytest.mark.asyncio
-    async def test_tutorial_13_runs(self):
+    async def test_notebook_13_runs(self):
         """Test that tutorial 13 runs without error."""
         import subprocess
         import sys
 
         result = subprocess.run(
-            [sys.executable, "examples/tutorial_13_sse_streaming.py"],
+            [sys.executable, "examples/notebook_18_sse_streaming.py"],
             capture_output=True,
             text=True,
             timeout=60,

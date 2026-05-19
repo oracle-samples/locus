@@ -105,7 +105,7 @@ agent = Agent(
 print(agent.run_sync("Should I bring an umbrella to Tokyo tomorrow?").text)
 ```
 
-[Notebook 08 — basic agent →](tutorials/tutorial_08_basic_agent.md)
+[Notebook 13 — basic agent →](notebooks/notebook_13_basic_agent.md)
 
 ## What locus gives you
 

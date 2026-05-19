@@ -172,7 +172,7 @@ use `Message` + `client.send_message()` so they can read the full
 
 ## Tutorial
 
-[`tutorial_28_a2a_protocol.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_28_a2a_protocol.py)
+[`notebook_33_a2a_protocol.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_33_a2a_protocol.py)
 — host + client + streaming.
 
 ## Source

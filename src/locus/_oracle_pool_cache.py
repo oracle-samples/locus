@@ -21,7 +21,8 @@ copies stay one line.
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Awaitable, Callable, Protocol
+from collections.abc import Awaitable, Callable
+from typing import Any, Protocol
 
 
 class _PoolHolder(Protocol):

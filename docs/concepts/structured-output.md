@@ -158,14 +158,14 @@ builder, validation-error formatter.
 
 ## Tutorials
 
-- [`tutorial_35_structured_output.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_35_structured_output.py)
+- [`notebook_40_structured_output.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_40_structured_output.py)
   covers both the standalone `parse_structured()` parser (useful for
   non-Agent flows) and the Agent `output_schema=` integration above.
-- [`tutorial_32_debate_with_judge.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_32_debate_with_judge.py)
+- [`notebook_37_debate_with_judge.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_37_debate_with_judge.py)
   — typed `Verdict` as the workflow boundary artifact.
-- [`tutorial_57_incident_response.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_57_incident_response.py)
+- [`notebook_62_incident_response.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_62_incident_response.py)
   — typed `Postmortem` as the terminal artifact of an incident graph.
-- [`tutorial_58_procurement_approval.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_58_procurement_approval.py)
+- [`notebook_63_procurement_approval.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_63_procurement_approval.py)
   — typed `PurchaseOrder` from a tiered approval flow.
-- [`tutorial_59_contract_review.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_59_contract_review.py)
+- [`notebook_64_contract_review.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_64_contract_review.py)
   — typed `ContractDecision` from a parallel-review + negotiation loop.

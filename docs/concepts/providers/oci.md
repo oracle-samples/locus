@@ -155,7 +155,7 @@ Need to override? Set `LOCUS_OCI_TRANSPORT=v1` or `LOCUS_OCI_TRANSPORT=sdk`.
 For the **Responses transport**, instantiate `OCIResponsesModel`
 explicitly — it's opt-in, not selected by prefix. See the
 [Responses concept page](../oci-responses.md) and
-[tutorial 58](../../tutorials/tutorial_03_oci_responses.md).
+[tutorial 58](../../notebooks/notebook_03_oci_responses.md).
 
 ## One auth surface — laptop, CI, OCI workloads
 
@@ -235,9 +235,9 @@ The agent doesn't care. That's the OCI provider's whole pitch.
 
 - [Models overview](../models.md) — the full provider tree.
 - [OCI Responses transport](../oci-responses.md) — when to opt in, ZDR mode, server-stateful continuation.
-- [Tutorial 00 — three OCI transports side-by-side](../../tutorials/tutorial_01_oci_transports.md).
-- [Tutorial 57 — `OCIOpenAIModel` deep dive](../../tutorials/tutorial_02_oci_openai_chat.md).
-- [Tutorial 58 — `OCIResponsesModel` deep dive](../../tutorials/tutorial_03_oci_responses.md).
+- [Tutorial 00 — three OCI transports side-by-side](../../notebooks/notebook_01_oci_transports.md).
+- [Tutorial 57 — `OCIOpenAIModel` deep dive](../../notebooks/notebook_02_oci_openai_chat.md).
+- [Tutorial 58 — `OCIResponsesModel` deep dive](../../notebooks/notebook_03_oci_responses.md).
 - [OCI GenAI models how-to](../../how-to/oci-models.md) — auth setup, region selection, debugging.
 - [OCI Dedicated AI Cluster (DAC)](../../how-to/oci-dac.md) — provisioned-capacity endpoints.
 - [OpenAI](openai.md) — direct OpenAI when OCI lags.

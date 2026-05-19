@@ -46,7 +46,7 @@ export async function bootstrapTutorials(): Promise<void> {
     );
     renderList("");
     if (tutorials.length) {
-      const first = tutorials.find((t) => t.id === "tutorial_01_basic_agent") ?? tutorials[0];
+      const first = tutorials.find((t) => t.id === "notebook_01_basic_agent") ?? tutorials[0];
       await selectTutorial(first.id);
     }
   } catch (err) {

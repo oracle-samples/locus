@@ -413,6 +413,7 @@ ignore = [
     "ASYNC240", # pathlib in async tests — fine, trio.Path/anyio.path overkill
 ]
 "examples/**/*.py" = [
+    "S608",     # Oracle notebooks construct SQL from validated identifiers
     "T201",     # print — tutorials/examples intentionally use print
     "DTZ005",   # datetime.now without tz — fine for demo UX
     "BLE001",   # blind except — simplified error handling in examples
@@ -454,6 +455,9 @@ ignore = [
 ]
 "src/locus/agent/agent.py" = [
     "SLF001",  # Private attr access for internal state (_has_unverified_writes)
+]
+"src/locus/_oracle_pool_cache.py" = [
+    "SLF001",  # this helper IS the private-state plumbing — by design
 ]
 "src/locus/agent/initializer.py" = [
     "SLF001",  # Extracted constructor body — its job is to populate

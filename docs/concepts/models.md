@@ -116,7 +116,7 @@ or persistent 5xx it fails over to the next entry. Source:
 
 ## Tutorial
 
-[`tutorial_50_model_providers.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_50_model_providers.py)
+[`notebook_55_model_providers.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_55_model_providers.py)
 exercises all four providers with the same agent.
 
 ## Source

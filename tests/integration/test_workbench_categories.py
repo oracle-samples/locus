@@ -70,7 +70,7 @@ class TestTutorialCategories:
             assert c["name"], f"category {c['id']} has empty name"
             assert c["description"], f"category {c['id']} has empty description"
 
-    def test_every_tutorial_has_known_category(self, client: TestClient) -> None:
+    def test_every_notebook_has_known_category(self, client: TestClient) -> None:
         cats = {c["id"] for c in client.get("/api/tutorials/categories").json()}
         cats.add("misc")
         for t in client.get("/api/tutorials").json():

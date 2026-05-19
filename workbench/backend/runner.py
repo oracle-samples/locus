@@ -1539,7 +1539,7 @@ async def list_models(req: ListModelsRequest) -> dict[str, Any]:
 # Workbench — list every model-only notebook under examples/, serve its
 # source code, and run user-edited copies in a subprocess with streamed
 # stdout/stderr over SSE. Notebook files follow the legacy
-# ``tutorial_NN_*.py`` naming convention; the user-facing label is
+# ``notebook_NN_*.py`` naming convention; the user-facing label is
 # "Notebook" everywhere we surface it.
 # ---------------------------------------------------------------------------
 
@@ -1585,84 +1585,92 @@ _TUTORIAL_DIR = (Path(__file__).resolve().parents[2] / "examples").resolve()
 # without renumbering — gaps ("RAG suite blocked in workbench") leave
 # the category empty rather than reshuffling.
 TUTORIAL_CATEGORIES: list[dict[str, Any]] = [
+    # Category order + members track docs/mkdocs.yml `Notebooks:` exactly.
+    # When the catalog reorders, mirror it here.
+    {
+        "id": "oci-genai",
+        "name": "OCI Generative AI (start here)",
+        "description": "Pick a transport, point at a cluster, layer in a reranker.",
+        "members": [1, 2, 3, 4, 5],
+    },
     {
         "id": "oracle",
-        "name": "Oracle primitives",
+        "name": "Oracle Database 26ai",
         "description": (
-            "The Oracle-native path — pick a transport, point at a cluster, "
-            "ground your agent with VECTOR_DISTANCE. Start here if you're "
-            "shipping on OCI."
+            "Native primitives for Oracle 26ai — vector store, checkpointer, "
+            "loader, in-DB chunker + embeddings, long-term store, versioned "
+            "saver. Zero langchain dependency."
         ),
-        "members": [0, 57, 58, 40, 60, 61, 62],
+        "members": [6, 7, 8, 9, 10, 11, 12],
     },
     {
         "id": "fundamentals",
         "name": "Fundamentals",
         "description": "Build your first agent — model, tools, memory, streaming, hooks.",
-        "members": [1, 2, 3, 4, 5],
+        "members": [13, 14, 15, 16, 17, 18, 19, 20],
     },
     {
         "id": "graphs",
-        "name": "Graphs & flow control",
-        "description": "StateGraph, conditional routing, reducers, HITL, advanced patterns.",
-        "members": [6, 7, 8, 9, 10, 35, 36, 37],
-    },
-    {
-        "id": "structured-output",
-        "name": "Structured reasoning",
-        "description": "Typed outputs, playbooks, reasoning patterns, GSAR grounding, evaluation.",
-        "members": [13, 14, 15, 26, 39],
-    },
-    {
-        "id": "composition",
-        "name": "Composition",
-        "description": "SequentialPipeline, ParallelPipeline, LoopAgent — wiring agents together.",
-        "members": [25],
+        "name": "Graphs & composition",
+        "description": "StateGraph, conditional routing, reducers, HITL, composition, functional API.",
+        "members": [21, 22, 23, 24, 25, 26, 27, 28],
     },
     {
         "id": "multi-agent",
         "name": "Multi-agent",
-        "description": "Swarm, handoff, orchestrator, specialists, A2A, debate, supervisor patterns, DeepAgent.",
-        "members": [11, 16, 17, 18, 33, 34, 41, 42, 43, 44],
+        "description": "Swarm, handoff, orchestrator, specialists, A2A, DeepAgent, map-reduce, debate.",
+        "members": [29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
+    },
+    {
+        "id": "reasoning",
+        "name": "Reasoning & structured output",
+        "description": "Typed outputs, reasoning patterns, GSAR typed grounding.",
+        "members": [40, 41, 42],
+    },
+    {
+        "id": "rag",
+        "name": "RAG",
+        "description": "Provider-agnostic RAG basics, providers, agents.",
+        "members": [43, 44, 45],
+    },
+    {
+        "id": "skills-plugins",
+        "name": "Skills, playbooks & plugins",
+        "description": "MCP integration, playbooks, plugins, skills, steering.",
+        "members": [46, 47, 48, 49, 50],
     },
     {
         "id": "production",
         "name": "Production",
-        "description": "Guardrails, hooks (advanced), model providers, servers, checkpoint backends.",
-        "members": [19, 20, 21, 27, 28, 29, 30, 38, 40],
+        "description": "Guardrails, checkpoint backends, evaluation, model providers, multi-modal.",
+        "members": [51, 52, 53, 54, 55, 56],
     },
     {
-        "id": "skills-plugins",
-        "name": "Skills & plugins",
-        "description": "Pluggable skill packs and integration plugins (MCP, fastmcp, more).",
-        "members": [12, 31, 32],
+        "id": "router-observability",
+        "name": "Cognitive router & observability",
+        "description": "PRISM router + opt-in EventBus telemetry, agent yield bridge, event catalogue.",
+        "members": [57, 58, 59, 60, 61],
     },
     {
         "id": "real-world",
         "name": "Real-world workflows",
-        "description": "End-to-end use cases — incident response, contract review, audio chat.",
-        "members": [45, 46, 47, 48, 49, 50],
+        "description": "End-to-end use cases — incident response, contract review, voice.",
+        "members": [62, 63, 64, 65, 66],
     },
     {
-        "id": "router",
-        "name": "Cognitive router (PRISM)",
-        "description": "Bounded graph generation — typed extraction → registry → compiler.",
-        "members": [51],
-    },
-    {
-        "id": "observability",
-        "name": "Observability & SSE",
-        "description": "Opt-in telemetry — run_context, event bus, agent yield bridge, token usage, full catalogue.",
-        "members": [52, 53, 54, 55],
+        "id": "server",
+        "name": "Server & full pipelines",
+        "description": "Agent server, full research workflow.",
+        "members": [67, 68],
     },
 ]
 
 
-def _tutorial_category(number: int) -> tuple[str, int]:
+def _notebook_category(number: int) -> tuple[str, int]:
     """Return ``(category_id, order_within_category)`` for a notebook.
 
     Notebooks not bound to a category fall under ``"misc"`` so a stray
-    ``tutorial_99_*`` still renders. ``order_within_category`` is the
+    ``notebook_99_*`` still renders. ``order_within_category`` is the
     member's index in the category's ``members`` list — preserves
     declaration order rather than numeric sort, so we can manually
     foreground a notebook that's logically a prerequisite.
@@ -1696,9 +1704,9 @@ def _parse_tutorial(path: Path) -> dict[str, Any]:
             if ln.strip():
                 summary = ln.strip()
                 break
-    num_match = re.match(r"tutorial_(\d+)_", path.name)
+    num_match = re.match(r"notebook_(\d+)_", path.name)
     number = int(num_match.group(1)) if num_match else 0
-    category_id, order_in_category = _tutorial_category(number)
+    category_id, order_in_category = _notebook_category(number)
     return {
         "id": path.stem,
         "number": number,
@@ -1716,8 +1724,8 @@ def _list_tutorials() -> list[dict[str, Any]]:
     if not _TUTORIAL_DIR.is_dir():
         return []
     out: list[dict[str, Any]] = []
-    for p in sorted(_TUTORIAL_DIR.glob("tutorial_*.py")):
-        m = re.match(r"tutorial_(\d+)_", p.name)
+    for p in sorted(_TUTORIAL_DIR.glob("notebook_*.py")):
+        m = re.match(r"notebook_(\d+)_", p.name)
         if not m:
             continue
         n = int(m.group(1))
@@ -1761,7 +1769,7 @@ def list_tutorial_categories() -> list[dict[str, Any]]:
 
 
 @app.get("/api/tutorials/{tid}")
-def tutorial_source(tid: str) -> dict[str, Any]:
+def get_tutorial_source(tid: str) -> dict[str, Any]:
     for t in _list_tutorials():
         if t["id"] == tid:
             return t
@@ -1787,9 +1795,9 @@ def list_notebook_categories() -> list[dict[str, Any]]:
 
 
 @app.get("/api/notebooks/{tid}")
-def notebook_source(tid: str) -> dict[str, Any]:
+def get_notebook_source(tid: str) -> dict[str, Any]:
     """Alias of ``/api/tutorials/{tid}``."""
-    return tutorial_source(tid)
+    return get_tutorial_source(tid)
 
 
 # ---------------------------------------------------------------------------
@@ -2521,7 +2529,7 @@ except Exception:
     # Write the user's source to a tmp file. Keep it inside examples/ so
     # notebooks' relative imports (`from config import get_model`) resolve.
     tmp_dir = Path(tempfile.mkdtemp(prefix="locus-wb-"))
-    tmp_file = tmp_dir / "tutorial_workbench.py"
+    tmp_file = tmp_dir / "notebook_workbench.py"
     rendered = bootstrap.replace("__SB_PROVIDER_VALUE__", _describe_provider(req.provider))
     # `from __future__` imports MUST be the first executable statement in
     # the file. If the notebook has any, split them out and place them

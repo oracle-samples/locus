@@ -274,7 +274,7 @@ class OracleStore(BaseStore):
             auto_create_table=auto_create_table,
         )
         self._pool: oracledb.AsyncConnectionPool | None = None
-    _pool_loop: Any = None  # asyncio loop the pool is bound to
+        self._pool_loop: Any = None  # asyncio loop the pool is bound to
         self._initialized: bool = False
 
     # -- Capabilities --------------------------------------------------------

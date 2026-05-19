@@ -62,7 +62,7 @@ PROVIDERS = {
 def get_tutorials() -> list[Path]:
     """Get list of tutorial files."""
     examples_dir = Path(__file__).parent.parent / "examples"
-    tutorials = sorted(examples_dir.glob("tutorial_*.py"))
+    tutorials = sorted(examples_dir.glob("notebook_*.py"))
     return tutorials
 
 
@@ -159,7 +159,7 @@ def main():
     if args.tutorial:
         numbers = args.tutorial.split(",")
         tutorials = [
-            t for t in tutorials if any(f"tutorial_{n.zfill(2)}" in t.name for n in numbers)
+            t for t in tutorials if any(f"notebook_{n.zfill(2)}" in t.name for n in numbers)
         ]
 
     if not tutorials:

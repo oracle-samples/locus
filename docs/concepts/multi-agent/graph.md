@@ -119,23 +119,23 @@ a design review.
 
 ## Tutorials
 
-- [`tutorial_16_basic_graph.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_16_basic_graph.py)
+- [`notebook_21_basic_graph.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_21_basic_graph.py)
   — your first StateGraph.
-- [`tutorial_17_conditional_routing.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_17_conditional_routing.py)
+- [`notebook_22_conditional_routing.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_22_conditional_routing.py)
   — `add_conditional_edges`.
-- [`tutorial_18_state_reducers.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_18_state_reducers.py)
+- [`notebook_23_state_reducers.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_23_state_reducers.py)
   — custom state reducers.
-- [`tutorial_22_graph_advanced.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_22_graph_advanced.py)
+- [`notebook_27_graph_advanced.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_27_graph_advanced.py)
   — `RetryPolicy`, `CachePolicy`, subgraphs, Mermaid output.
-- [`tutorial_30_map_reduce_code_review.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_30_map_reduce_code_review.py)
+- [`notebook_35_map_reduce_code_review.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_35_map_reduce_code_review.py)
   — `Send` fan-out / reduce in a graph.
-- [`tutorial_31_supervisor_critic_loop.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_31_supervisor_critic_loop.py)
+- [`notebook_36_supervisor_critic_loop.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_36_supervisor_critic_loop.py)
   — `allow_cycles=True` + `max_iterations` for refine-until-confidence.
-- [`tutorial_57_incident_response.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_57_incident_response.py)
+- [`notebook_62_incident_response.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_62_incident_response.py)
   — triage → parallel investigators → severity gate → page-the-human.
-- [`tutorial_58_procurement_approval.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_58_procurement_approval.py)
+- [`notebook_63_procurement_approval.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_63_procurement_approval.py)
   — stacked `interrupt()` gates with tier routing.
-- [`tutorial_59_contract_review.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_59_contract_review.py)
+- [`notebook_64_contract_review.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_64_contract_review.py)
   — parallel reviewers + `Command(goto=...)` to short-circuit a loop.
 
 ## Source

@@ -140,7 +140,7 @@ of planner→executor→validator, and a write-affecting action to an
 approval-gated agent — chosen by protocol selection, not by the model.
 
 → [Cognitive router concept](https://oracle-samples.github.io/locus/concepts/router/) ·
-[`examples/tutorial_52_cognitive_router.py`](https://github.com/oracle-samples/locus/blob/main/examples/tutorial_52_cognitive_router.py)
+[`examples/notebook_57_cognitive_router.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_57_cognitive_router.py)
 
 ---
 
@@ -232,12 +232,12 @@ database.
 git clone https://github.com/oracle-samples/locus.git
 cd locus && pip install -e .
 
-python examples/tutorial_01_oci_transports.py        # start here — three OCI transports
-python examples/tutorial_06_oracle_26ai_rag.py       # native VECTOR RAG on Oracle 26ai
-python examples/tutorial_07_oracle_26ai_checkpointer.py  # durable agent threads in ADB
-python examples/tutorial_08_basic_agent.py           # your first agent
-python examples/tutorial_29_deepagent.py             # deep-research factory
-python examples/tutorial_63_research_workflow.py     # full research pipeline
+python examples/notebook_01_oci_transports.py        # start here — three OCI transports
+python examples/notebook_06_oracle_26ai_rag.py       # native VECTOR RAG on Oracle 26ai
+python examples/notebook_07_oracle_26ai_checkpointer.py  # durable agent threads in ADB
+python examples/notebook_13_basic_agent.py           # your first agent
+python examples/notebook_34_deepagent.py             # deep-research factory
+python examples/notebook_68_research_workflow.py     # full research pipeline
 ```
 
 | Track | Range | What you learn |
@@ -265,7 +265,7 @@ A browser-based playground for every locus pattern. Two clicks to a
 running agent — no CLI install, no editor setup. Three model slots
 (A / B / C) so multi-agent notebooks can mix a fast triage model
 with a deeper specialist. Four sidebar tabs: **Notebooks** (every
-runnable `tutorial_*.py`), **Skills** (SKILL.md packages),
+runnable `notebook_*.py`), **Skills** (SKILL.md packages),
 **Protocols** (the eight cognitive-router shapes with cost / latency
 metadata), and **Patterns** (the nine first-class
 runtimes — including [Cognitive routing](docs/workbench.md#cognitive-routing-pattern)
