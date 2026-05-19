@@ -59,6 +59,7 @@ class OracleBackend(BaseModel):
 
     config: OracleConfig = Field(default_factory=OracleConfig)
     _pool: oracledb.AsyncConnectionPool | None = None
+    _pool_loop: Any = None  # asyncio.AbstractEventLoop the pool is bound to
     _initialized: bool = False
 
     model_config = {"arbitrary_types_allowed": True}
@@ -91,8 +92,10 @@ class OracleBackend(BaseModel):
         super().__init__(config=config)
 
     async def _get_pool(self) -> oracledb.AsyncConnectionPool:
-        """Get or create connection pool."""
-        if self._pool is None:
+        """Get or create the connection pool, rebuilding on loop change."""
+        from locus._oracle_pool_cache import get_pool
+
+        def _build() -> oracledb.AsyncConnectionPool:
             try:
                 import oracledb
             except ImportError as e:
@@ -101,7 +104,6 @@ class OracleBackend(BaseModel):
                     "Install with: pip install oracledb"
                 ) from e
 
-            # Build DSN if not provided
             dsn = self.config.dsn
             if dsn is None and self.config.host and self.config.service_name:
                 dsn = oracledb.makedsn(
@@ -110,17 +112,14 @@ class OracleBackend(BaseModel):
                     service_name=self.config.service_name,
                 )
 
-            # Configure wallet if provided
-            params = {}
+            params: dict[str, Any] = {}
             if self.config.wallet_location:
                 params["config_dir"] = self.config.wallet_location
                 params["wallet_location"] = self.config.wallet_location
                 if self.config.wallet_password:
                     params["wallet_password"] = self.config.wallet_password.get_secret_value()
 
-            # Note: create_pool_async returns the pool directly (not a coroutine)
-            # The "async" refers to the pool type, not the creation function
-            self._pool = oracledb.create_pool_async(
+            return oracledb.create_pool_async(
                 user=self.config.user,
                 password=self.config.password.get_secret_value(),
                 dsn=dsn,
@@ -129,7 +128,7 @@ class OracleBackend(BaseModel):
                 **params,
             )
 
-        return self._pool
+        return await get_pool(self, _build)
 
     @property
     def _full_table_name(self) -> str:

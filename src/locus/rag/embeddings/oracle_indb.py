@@ -233,6 +233,7 @@ class OracleInDBEmbeddings(BaseEmbedding):
             use_batch_function=use_batch_function,
         )
         self._pool: oracledb.AsyncConnectionPool | None = None
+    _pool_loop: Any = None  # asyncio loop the pool is bound to
 
     # -- Public introspection -----------------------------------------------
 

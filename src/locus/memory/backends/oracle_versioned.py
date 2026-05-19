@@ -122,6 +122,7 @@ class OracleCheckpointSaver(BaseModel):
     config: OracleConfig = Field(default_factory=OracleConfig)
     auto_create_table: bool = True
     _pool: oracledb.AsyncConnectionPool | None = None
+    _pool_loop: Any = None
     _initialized: bool = False
 
     model_config = {"arbitrary_types_allowed": True}
@@ -209,13 +210,10 @@ class OracleCheckpointSaver(BaseModel):
         return f"{self._table_prefix}_writes"
 
     async def _get_pool(self) -> oracledb.AsyncConnectionPool:
-        """Lazily create the oracledb async pool.
+        """Lazily create the oracledb async pool, rebuilding on loop change."""
+        from locus._oracle_pool_cache import get_pool
 
-        ``oracledb`` is imported here so installs without the driver
-        can still ``import`` this module. Same pattern
-        :class:`OracleBackend` uses.
-        """
-        if self._pool is None:
+        def _build() -> oracledb.AsyncConnectionPool:
             try:
                 import oracledb
             except ImportError as e:
@@ -236,9 +234,7 @@ class OracleCheckpointSaver(BaseModel):
                 if cfg.wallet_password:
                     params["wallet_password"] = cfg.wallet_password.get_secret_value()
 
-            # create_pool_async returns the pool directly — "async" refers
-            # to the pool type, not the call signature.
-            self._pool = oracledb.create_pool_async(
+            return oracledb.create_pool_async(
                 user=cfg.user,
                 password=cfg.password.get_secret_value(),
                 dsn=dsn,
@@ -246,7 +242,8 @@ class OracleCheckpointSaver(BaseModel):
                 max=cfg.max_pool_size,
                 **params,
             )
-        return self._pool
+
+        return await get_pool(self, _build)
 
     def _checkpoints_ddl(self) -> str:
         return (

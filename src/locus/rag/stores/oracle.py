@@ -256,6 +256,7 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
 
     oracle_config: OracleVectorConfig = Field(default_factory=OracleVectorConfig)
     _pool: oracledb.AsyncConnectionPool | None = None
+    _pool_loop: Any = None  # asyncio loop the pool is bound to
     _initialized: bool = False
 
     model_config = {"arbitrary_types_allowed": True}
@@ -295,8 +296,10 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
         )
 
     async def _get_pool(self) -> oracledb.AsyncConnectionPool:
-        """Get or create connection pool."""
-        if self._pool is None:
+        """Get or create connection pool, rebuilding on loop change."""
+        from locus._oracle_pool_cache import get_pool
+
+        def _build() -> oracledb.AsyncConnectionPool:
             try:
                 import oracledb
             except ImportError as e:
@@ -305,7 +308,6 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
                     "Install with: pip install oracledb"
                 ) from e
 
-            # Build DSN if not provided
             dsn = self.oracle_config.dsn
             if dsn is None and self.oracle_config.host and self.oracle_config.service_name:
                 dsn = oracledb.makedsn(
@@ -314,8 +316,7 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
                     service_name=self.oracle_config.service_name,
                 )
 
-            # Configure wallet if provided
-            params = {}
+            params: dict[str, Any] = {}
             if self.oracle_config.wallet_location:
                 params["config_dir"] = self.oracle_config.wallet_location
                 params["wallet_location"] = self.oracle_config.wallet_location
@@ -324,7 +325,7 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
                         self.oracle_config.wallet_password.get_secret_value()
                     )
 
-            self._pool = oracledb.create_pool_async(
+            return oracledb.create_pool_async(
                 user=self.oracle_config.user,
                 password=self.oracle_config.password.get_secret_value(),
                 dsn=dsn,
@@ -333,7 +334,7 @@ class OracleVectorStore(BaseModel, BaseVectorStore):
                 **params,
             )
 
-        return self._pool
+        return await get_pool(self, _build)
 
     @property
     def _full_table_name(self) -> str:

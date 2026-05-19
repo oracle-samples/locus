@@ -89,6 +89,7 @@ class OracleInDBChunker(BaseModel):
     oracle_config: OracleConfig
     params: _ChunkParams = _ChunkParams()
     _pool: Any = None
+    _pool_loop: Any = None  # asyncio loop the pool is bound to
 
     def __init__(
         self,

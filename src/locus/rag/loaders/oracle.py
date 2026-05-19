@@ -140,6 +140,7 @@ class OracleADBLoader(BaseModel):
     fetch_arraysize: int = 100
 
     _pool: oracledb.AsyncConnectionPool | None = None
+    _pool_loop: Any = None  # asyncio loop the pool is bound to
 
     model_config = {"arbitrary_types_allowed": True}
 
