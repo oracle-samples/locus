@@ -15,7 +15,7 @@ What you'll see:
 - Multiple reducers on one schema — each field merges independently.
 - Two LLM-producing nodes appending to the same conversation log.
 
-Runs on the same OCI GenAI default as the rest of the tutorials:
+Runs on the same OCI GenAI default as the rest of the notebooks:
 
 ```bash
 LOCUS_MODEL_ID=openai.gpt-4.1 python examples/notebook_23_state_reducers.py

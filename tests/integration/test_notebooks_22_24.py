@@ -2,9 +2,9 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Integration tests for RAG tutorials 22-24.
+"""Integration tests for RAG notebooks 22-24.
 
-Tests validate that all RAG tutorial examples work correctly.
+Tests validate that all RAG notebook examples work correctly.
 """
 
 from __future__ import annotations
@@ -81,13 +81,13 @@ def get_model():
 
 
 # =============================================================================
-# Tutorial 22: RAG Basics Tests
+# Notebook 22: RAG Basics Tests
 # =============================================================================
 
 
 @pytest.mark.skipif(not has_embedder_available(), reason="No embedder available")
-class TestTutorial22RAGBasics:
-    """Tests for Tutorial 22: RAG Basics."""
+class TestNotebook22RAGBasics:
+    """Tests for Notebook 22: RAG Basics."""
 
     @pytest.mark.asyncio
     async def test_embedding_single_text(self):
@@ -248,13 +248,13 @@ class TestTutorial22RAGBasics:
 
 
 # =============================================================================
-# Tutorial 23: RAG Providers Tests
+# Notebook 23: RAG Providers Tests
 # =============================================================================
 
 
 @pytest.mark.skipif(not has_embedder_available(), reason="No embedder available")
-class TestTutorial23RAGProviders:
-    """Tests for Tutorial 23: RAG Providers."""
+class TestNotebook23RAGProviders:
+    """Tests for Notebook 23: RAG Providers."""
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(not os.environ.get("OPENAI_API_KEY"), reason="OpenAI not configured")
@@ -310,13 +310,13 @@ class TestTutorial23RAGProviders:
 
 
 # =============================================================================
-# Tutorial 24: RAG Agents Tests
+# Notebook 24: RAG Agents Tests
 # =============================================================================
 
 
 @pytest.mark.skipif(not has_embedder_available(), reason="No embedder available")
-class TestTutorial24RAGAgents:
-    """Tests for Tutorial 24: RAG Agents."""
+class TestNotebook24RAGAgents:
+    """Tests for Notebook 24: RAG Agents."""
 
     @pytest.mark.asyncio
     async def test_rag_as_tool(self):

@@ -1,7 +1,7 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 38: RAG basics on Oracle Database 26ai.
+"""Notebook 38: RAG basics on Oracle Database 26ai.
 
 Retrieval-Augmented Generation (RAG) grounds an agent's answers in your
 own documents. The pipeline has four steps:
@@ -14,10 +14,10 @@ own documents. The pipeline has four steps:
   SQL function. The native type and operator are 26ai differentiators
   — no extension required.
 - **Generate** — feed the retrieved chunks to the LLM as grounded
-  context. (This tutorial focuses on steps 1–3; tutorial 40 wires it
+  context. (This notebook focuses on steps 1–3; notebook 40 wires it
   into an agent.)
 
-This tutorial drives the whole pipeline against a real 26ai instance.
+This notebook drives the whole pipeline against a real 26ai instance.
 There is no in-memory or local fallback — provision an Autonomous
 Database 26ai and set the env vars below before running.
 
@@ -158,7 +158,7 @@ async def using_vector_store():
                 id=f"doc_{i}",
                 content=text,
                 embedding=result.embedding,
-                metadata={"source": "tutorial", "index": i},
+                metadata={"source": "notebook", "index": i},
             )
         )
         print(f"  inserted: {text[:50]}…")
@@ -285,7 +285,7 @@ async def rag_with_metadata():
 async def main():
     missing = _missing_env()
     if missing:
-        print("\n--- Tutorial 38: RAG basics on Oracle 26ai ---")
+        print("\n--- Notebook 38: RAG basics on Oracle 26ai ---")
         print(
             "Required environment variables not set; skipping the live "
             "demo so this file still runs cleanly in CI.\n"
@@ -304,7 +304,7 @@ async def main():
     await rag_with_metadata()
 
     print("\n" + "=" * 60)
-    print("Tutorial 38 complete — every vector now lives in Oracle 26ai.")
+    print("Notebook 38 complete — every vector now lives in Oracle 26ai.")
     print("=" * 60)
 
 

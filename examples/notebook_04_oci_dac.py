@@ -1,13 +1,13 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 04: target an Oracle Cloud Infrastructure (OCI) Dedicated AI Cluster endpoint.
+"""Notebook 04: target an Oracle Cloud Infrastructure (OCI) Dedicated AI Cluster endpoint.
 
 A Dedicated AI Cluster (DAC) is OCI GenAI's provisioned-capacity
 serving mode: instead of pay-per-token inference against a shared model
 id, you address a dedicated endpoint by its OCID
 (``ocid1.generativeaiendpoint.oc1.<region>....``) and OCI routes
-inference to your cluster. This tutorial wires Locus to one.
+inference to your cluster. This notebook wires Locus to one.
 
 Key concepts:
 

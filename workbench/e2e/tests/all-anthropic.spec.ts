@@ -1,7 +1,7 @@
 /**
- * Per-tutorial Anthropic sweep — one playwright test per non-stdin
- * tutorial, run in parallel workers. Each test configures Anthropic in
- * its own browser context, then drives a single tutorial through the
+ * Per-notebook Anthropic sweep — one playwright test per non-stdin
+ * notebook, run in parallel workers. Each test configures Anthropic in
+ * its own browser context, then drives a single notebook through the
  * workbench UI and asserts exit 0.
  *
  * Catalog is fetched synchronously via curl at module load so we can
@@ -21,22 +21,22 @@ const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
 const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
 const MODEL_B = process.env.ANTHROPIC_MODEL_B ?? "";
 const MODEL_C = process.env.ANTHROPIC_MODEL_C ?? "";
-const PER_TUTORIAL_MS = Number(process.env.PER_TUTORIAL_MS ?? 360_000);
+const PER_NOTEBOOK_MS = Number(process.env.PER_NOTEBOOK_MS ?? 360_000);
 
-// Tutorials that hardcode an OCI dependency (e.g. oci.config.from_file)
+// Notebooks that hardcode an OCI dependency (e.g. oci.config.from_file)
 // or use OCI-only models like gpt-audio. They can't run against
 // Anthropic and are skipped from this sweep.
 const OCI_ONLY = new Set<string>([
-  "tutorial_41_deepagent",        // >10 min with subagents; covered by CLI tests
-  "tutorial_49_audio_response",
-  "tutorial_50_audio_chat",
-  // RAG tutorials call OCIEmbeddings internally — no OCI credentials in Anthropic sweep.
-  "tutorial_22_rag_basics",
-  "tutorial_24_rag_agents",
+  "notebook_41_deepagent",        // >10 min with subagents; covered by CLI tests
+  "notebook_49_audio_response",
+  "notebook_50_audio_chat",
+  // RAG notebooks call OCIEmbeddings internally — no OCI credentials in Anthropic sweep.
+  "notebook_22_rag_basics",
+  "notebook_24_rag_agents",
 ]);
-// Stagger gap between tutorials inside a worker. Anthropic tier 1 caps
+// Stagger gap between notebooks inside a worker. Anthropic tier 1 caps
 // at 50 RPM for sonnet — with N workers each firing back-to-back we can
-// flood. A small sleep gives the model a breather between tutorials.
+// flood. A small sleep gives the model a breather between notebooks.
 const STAGGER_MS = Number(process.env.STAGGER_MS ?? 4_000);
 const BFF = process.env.BFF_URL ?? "http://127.0.0.1:3101";
 
@@ -45,7 +45,7 @@ test.use({ video: "off", trace: "off", screenshot: "off" });
 type CatalogEntry = { id: string; number: number; title: string; needs_stdin?: boolean };
 
 const catalog: CatalogEntry[] = ANTHROPIC_KEY
-  ? JSON.parse(execSync(`curl -sf ${BFF}/api/tutorials`).toString())
+  ? JSON.parse(execSync(`curl -sf ${BFF}/api/notebooks`).toString())
   : [];
 const runnable = catalog.filter((t) => !t.needs_stdin && !OCI_ONLY.has(t.id));
 
@@ -80,7 +80,7 @@ async function configureAnthropic(page: Page): Promise<void> {
 }
 
 async function runOne(page: Page, id: string): Promise<{ code: number; tail: string }> {
-  await page.getByTestId(`tutorial-${id}`).click();
+  await page.getByTestId(`notebook-${id}`).click();
   await expect
     .poll(
       () => page.evaluate(() => ((window as any).__wb?.getSource?.() ?? "").length),
@@ -89,17 +89,17 @@ async function runOne(page: Page, id: string): Promise<{ code: number; tail: str
     .toBeGreaterThan(50);
   await page.getByTestId("wb-run-btn").click();
   const output = page.getByTestId("wb-output");
-  await expect(output).toContainText(/exited with code \d+/i, { timeout: PER_TUTORIAL_MS });
+  await expect(output).toContainText(/exited with code \d+/i, { timeout: PER_NOTEBOOK_MS });
   const text = (await output.textContent()) ?? "";
   const code = Number(text.match(/exited with code (\d+)/i)?.[1] ?? "-1");
   const tail = text.slice(-400).replace(/\s+/g, " ");
   return { code, tail };
 }
 
-const SLOW_TUTORIALS = new Set<string>([
-  "tutorial_41_deepagent",
-  "tutorial_51_cognitive_router",
-  "tutorial_56_research_workflow",
+const SLOW_NOTEBOOKS = new Set<string>([
+  "notebook_41_deepagent",
+  "notebook_51_cognitive_router",
+  "notebook_56_research_workflow",
 ]);
 const SLOW_MULTIPLIER = 3;
 
@@ -109,9 +109,9 @@ test.describe.configure({ mode: "parallel" });
 
 for (const entry of runnable) {
   guard(`#${String(entry.number).padStart(2, "0")} ${entry.id}`, async ({ page }) => {
-    const budget = SLOW_TUTORIALS.has(entry.id)
-      ? PER_TUTORIAL_MS * SLOW_MULTIPLIER
-      : PER_TUTORIAL_MS;
+    const budget = SLOW_NOTEBOOKS.has(entry.id)
+      ? PER_NOTEBOOK_MS * SLOW_MULTIPLIER
+      : PER_NOTEBOOK_MS;
     test.setTimeout(budget + 60_000);
     if (STAGGER_MS > 0) await page.waitForTimeout(Math.random() * STAGGER_MS);
     await configureAnthropic(page);

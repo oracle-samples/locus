@@ -7,7 +7,7 @@ spawning, and datastore auto-wiring. The result is a plain
 `locus.Agent` — every hook, checkpointer, and observability primitive
 attaches normally.
 
-This tutorial covers:
+This notebook covers:
 
 1. Basic `create_deepagent` with a typed submit tool — the agent loops
    with tools, self-corrects via reflexion, grounds claims against tool
@@ -33,8 +33,8 @@ sentence — `(ToolCalled("submit") & ConfidenceMet(0.85))
 
 ## Prerequisites
 
-- Tutorial 08 (Agent basics).
-- Tutorial 15 (typed termination).
+- Notebook 08 (Agent basics).
+- Notebook 15 (typed termination).
 - For Part 5 only: `ORACLE_DSN`, `ORACLE_USER`, `ORACLE_PASSWORD`,
   `ORACLE_WALLET`, and `OCI_COMPARTMENT` exported.
 

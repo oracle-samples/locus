@@ -2,7 +2,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 """
-Tutorial 13: stream agent events to a browser with Server-Sent Events.
+Notebook 13: stream agent events to a browser with Server-Sent Events.
 
 SSE is the simplest way to push live updates from a Python backend to a
 web client — one HTTP response, one event per line. Locus ships two
@@ -25,7 +25,7 @@ Key ideas:
 Run it:
     .venv/bin/python examples/notebook_18_sse_streaming.py
 
-This tutorial does not call an LLM — it only exercises the SSE
+This notebook does not call an LLM — it only exercises the SSE
 plumbing, so no provider configuration is needed. The mock provider is
 still a fine default if you set ``LOCUS_MODEL_PROVIDER=mock``.
 """
@@ -49,7 +49,7 @@ from locus.streaming.sse import (
 
 async def main():
     print("=" * 60)
-    print("Tutorial 13: SSE Streaming")
+    print("Notebook 13: SSE Streaming")
     print("=" * 60)
 
     # =========================================================================
@@ -320,7 +320,7 @@ async def run_agent(handler):
     print(f"\nHeartbeat message:\n{heartbeat.format()}")
 
     print("\n" + "=" * 60)
-    print("Tutorial 13 complete.")
+    print("Notebook 13 complete.")
     print("=" * 60)
 
 

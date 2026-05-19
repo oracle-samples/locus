@@ -1,8 +1,8 @@
 /** Notebook sidebar: catalog fetch, filter, render, prev/next nav. */
 import {
-  getTutorial,
+  getNotebook,
   listNotebookCategories,
-  listTutorials,
+  listNotebooks,
   type CategoryInfo,
   type Notebook,
   type NotebookDetail,
@@ -19,23 +19,23 @@ export function getCurrent(): NotebookDetail | null {
   return current;
 }
 
-export function getTutorials(): Notebook[] {
+export function getNotebooks(): Notebook[] {
   return notebooks;
 }
 
-function sideTutorials(): HTMLElement {
+function sideNotebooks(): HTMLElement {
   return $("#side-notebooks");
 }
 function search(): HTMLInputElement {
   return $<HTMLInputElement>("#notebook-search");
 }
 
-export async function bootstrapTutorials(): Promise<void> {
+export async function bootstrapNotebooks(): Promise<void> {
   try {
     // Categories load is best-effort — if it fails the sidebar still
     // renders, just without section headers.
     [notebooks, categories] = await Promise.all([
-      listTutorials(),
+      listNotebooks(),
       listNotebookCategories().catch((err) => {
         console.warn("[wb/notebooks] categories load failed", err);
         return [] as CategoryInfo[];
@@ -50,20 +50,20 @@ export async function bootstrapTutorials(): Promise<void> {
       // whatever sorted first if the canonical id ever moves.
       const first =
         notebooks.find((t) => t.id === "notebook_01_oci_transports") ?? notebooks[0];
-      await selectTutorial(first.id);
+      await selectNotebook(first.id);
     }
   } catch (err) {
     console.error("[wb/notebooks] catalog load failed", err);
-    sideTutorials().innerHTML = `<div style="color: var(--or-red-deep); font-size:0.8rem; padding: 0.5rem">${(err as Error).message}</div>`;
+    sideNotebooks().innerHTML = `<div style="color: var(--or-red-deep); font-size:0.8rem; padding: 0.5rem">${(err as Error).message}</div>`;
   }
   search().addEventListener("input", () => renderList(search().value));
   installNavButtons();
 }
 
-export async function selectTutorial(id: string): Promise<void> {
+export async function selectNotebook(id: string): Promise<void> {
   console.info("[wb/notebooks] select", id);
   try {
-    current = await getTutorial(id);
+    current = await getNotebook(id);
   } catch (err) {
     console.error("[wb/notebooks] failed to load", id, err);
     return;
@@ -83,7 +83,7 @@ export async function selectTutorial(id: string): Promise<void> {
 }
 
 function renderList(filter: string): void {
-  const sidebar = sideTutorials();
+  const sidebar = sideNotebooks();
   sidebar.innerHTML = "";
   const q = filter.trim().toLowerCase();
 
@@ -122,7 +122,7 @@ function renderList(filter: string): void {
       <span style="font-size: 0.82rem; flex: 1">${t.title.replace(/^Notebook \d+:\s*/i, "")}</span>
       ${stdinBadge}
     `;
-    item.addEventListener("click", () => void selectTutorial(t.id));
+    item.addEventListener("click", () => void selectNotebook(t.id));
     sidebar.appendChild(item);
   }
 }
@@ -135,7 +135,7 @@ function installNavButtons(): void {
     const cid = current.id;
     const idx = notebooks.findIndex((t) => t.id === cid);
     const target = notebooks[idx + delta];
-    if (target) void selectTutorial(target.id);
+    if (target) void selectNotebook(target.id);
   };
   prev.addEventListener("click", () => step(-1));
   next.addEventListener("click", () => step(+1));

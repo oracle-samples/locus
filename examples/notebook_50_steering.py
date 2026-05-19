@@ -1,7 +1,7 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 45: steering — runtime tool approval driven by a policy LLM.
+"""Notebook 45: steering — runtime tool approval driven by a policy LLM.
 
 ``SteeringHook`` runs a second LLM ("the steering model") in front of
 every tool call. The steering model reads a natural-language policy

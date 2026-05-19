@@ -1,7 +1,7 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 41: MCP integration — publish and consume tools across processes.
+"""Notebook 41: MCP integration — publish and consume tools across processes.
 
 MCP (Model Context Protocol) is the open standard that lets AI
 assistants call tools running in a different process. Locus speaks
@@ -395,7 +395,7 @@ def example_best_practices():
 
 async def main():
     print("=" * 60)
-    print("Tutorial 41: MCP Integration")
+    print("Notebook 41: MCP Integration")
     print("=" * 60)
     print()
 
@@ -411,7 +411,7 @@ async def main():
     example_best_practices()
 
     print("=" * 60)
-    print("Done. Next: tutorial 42 — playbooks.")
+    print("Done. Next: notebook 42 — playbooks.")
     print("=" * 60)
 
 

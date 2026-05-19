@@ -169,7 +169,7 @@ es.addEventListener('ModelChunkEvent', (e) => {
 | Same event fires twice | A hook re-yielded an event it received. Hooks observe, they don't re-emit. |
 | Browser SSE drops every 30s | Default proxy timeout. Set `proxy_read_timeout` higher or have the agent send heartbeats. |
 
-## Tutorials
+## Notebooks
 
 - [`notebook_16_agent_streaming.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_16_agent_streaming.py) — your first event consumer.
 - [`notebook_18_sse_streaming.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_18_sse_streaming.py) — full SSE wiring against `AgentServer`.

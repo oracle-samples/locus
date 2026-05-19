@@ -76,7 +76,7 @@ end_to_end = SequentialPipeline(agents=[
 result = end_to_end.run_sync("Brief on Q3 launch.")
 ```
 
-## Tutorials
+## Notebooks
 
 - [`notebook_26_composition.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_26_composition.py)
   — `SequentialPipeline`, `ParallelPipeline`, `LoopAgent`.

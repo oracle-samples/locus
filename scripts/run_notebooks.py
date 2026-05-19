@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
-"""Run Locus tutorials with a specific model provider.
+"""Run Locus notebooks with a specific model provider.
 
-This script configures the environment and runs tutorials to verify
+This script configures the environment and runs notebooks to verify
 they work correctly with real LLM providers.
 
 Usage:
-    # Run all tutorials with mock (default):
-    python scripts/run_tutorials.py
+    # Run all notebooks with mock (default):
+    python scripts/run_notebooks.py
 
-    # Run all tutorials with OCI:
-    python scripts/run_tutorials.py --provider oci --profile DEFAULT
+    # Run all notebooks with OCI:
+    python scripts/run_notebooks.py --provider oci --profile DEFAULT
 
-    # Run specific tutorial:
-    python scripts/run_tutorials.py --provider oci --tutorial 01
+    # Run specific notebook:
+    python scripts/run_notebooks.py --provider oci --notebook 01
 
-    # List available tutorials:
-    python scripts/run_tutorials.py --list
+    # List available notebooks:
+    python scripts/run_notebooks.py --list
 """
 
 import argparse
@@ -31,7 +31,7 @@ from pathlib import Path
 #   cohere.command-r-* → OCIModel (SDK transport)
 #   everything else    → OCIOpenAIModel (V1, /openai/v1)
 #
-# The default below uses an OpenAI-shape model so tutorials exercise the
+# The default below uses an OpenAI-shape model so notebooks exercise the
 # V1 transport. compartment is auto-derived from the profile's tenancy
 # under V1 — no need to hardcode a placeholder.
 PROVIDERS = {
@@ -59,25 +59,25 @@ PROVIDERS = {
 }
 
 
-def get_tutorials() -> list[Path]:
-    """Get list of tutorial files."""
+def get_notebooks() -> list[Path]:
+    """Get list of notebook files."""
     examples_dir = Path(__file__).parent.parent / "examples"
-    tutorials = sorted(examples_dir.glob("notebook_*.py"))
-    return tutorials
+    notebooks = sorted(examples_dir.glob("notebook_*.py"))
+    return notebooks
 
 
-def run_tutorial(tutorial: Path, env: dict[str, str], timeout: int = 120) -> bool:
-    """Run a single tutorial.
+def run_notebook(notebook: Path, env: dict[str, str], timeout: int = 120) -> bool:
+    """Run a single notebook.
 
     Returns True if successful, False otherwise.
     """
     print(f"\n{'=' * 60}")
-    print(f"Running: {tutorial.name}")
+    print(f"Running: {notebook.name}")
     print(f"{'=' * 60}")
 
     try:
         result = subprocess.run(
-            [sys.executable, str(tutorial)],
+            [sys.executable, str(notebook)],
             env={**os.environ, **env},
             timeout=timeout,
             capture_output=False,
@@ -85,7 +85,7 @@ def run_tutorial(tutorial: Path, env: dict[str, str], timeout: int = 120) -> boo
         )
         return result.returncode == 0
     except subprocess.TimeoutExpired:
-        print(f"TIMEOUT: {tutorial.name} exceeded {timeout}s")
+        print(f"TIMEOUT: {notebook.name} exceeded {timeout}s")
         return False
     except Exception as e:
         print(f"ERROR: {e}")
@@ -93,7 +93,7 @@ def run_tutorial(tutorial: Path, env: dict[str, str], timeout: int = 120) -> boo
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run Locus tutorials")
+    parser = argparse.ArgumentParser(description="Run Locus notebooks")
     parser.add_argument(
         "--provider",
         choices=list(PROVIDERS.keys()),
@@ -113,31 +113,31 @@ def main():
         help="Model ID (overrides default for provider)",
     )
     parser.add_argument(
-        "--tutorial",
-        help="Run specific tutorial (e.g., '01' or '01,02,03')",
+        "--notebook",
+        help="Run specific notebook (e.g., '01' or '01,02,03')",
     )
     parser.add_argument(
         "--list",
         action="store_true",
-        help="List available tutorials",
+        help="List available notebooks",
     )
     parser.add_argument(
         "--timeout",
         type=int,
         default=300,
         help=(
-            "Timeout per tutorial in seconds. Some tutorials "
+            "Timeout per notebook in seconds. Some notebooks "
             "(orchestrator/specialist/multi-agent/RAG) make many model "
             "calls — 300s gives them headroom."
         ),
     )
     args = parser.parse_args()
 
-    tutorials = get_tutorials()
+    notebooks = get_notebooks()
 
     if args.list:
-        print("Available tutorials:")
-        for t in tutorials:
+        print("Available notebooks:")
+        for t in notebooks:
             print(f"  {t.name}")
         return
 
@@ -155,22 +155,22 @@ def main():
     print(f"Provider: {args.provider}")
     print(f"Config: {env}")
 
-    # Filter tutorials if specified
-    if args.tutorial:
-        numbers = args.tutorial.split(",")
-        tutorials = [
-            t for t in tutorials if any(f"notebook_{n.zfill(2)}" in t.name for n in numbers)
+    # Filter notebooks if specified
+    if args.notebook:
+        numbers = args.notebook.split(",")
+        notebooks = [
+            t for t in notebooks if any(f"notebook_{n.zfill(2)}" in t.name for n in numbers)
         ]
 
-    if not tutorials:
-        print("No tutorials found matching criteria")
+    if not notebooks:
+        print("No notebooks found matching criteria")
         return
 
-    # Run tutorials
+    # Run notebooks
     results = {}
-    for tutorial in tutorials:
-        success = run_tutorial(tutorial, env, args.timeout)
-        results[tutorial.name] = success
+    for notebook in notebooks:
+        success = run_notebook(notebook, env, args.timeout)
+        results[notebook.name] = success
 
     # Summary
     print(f"\n{'=' * 60}")

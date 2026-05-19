@@ -21,9 +21,9 @@ Run it:
 .venv/bin/python examples/notebook_18_sse_streaming.py
 ```
 
-This tutorial exercises only the SSE plumbing — no LLM call is made, so
+This notebook exercises only the SSE plumbing — no LLM call is made, so
 no provider configuration is required. Set `LOCUS_MODEL_PROVIDER=mock`
-if you want a uniform offline setup across tutorials.
+if you want a uniform offline setup across notebooks.
 
 ## Source
 

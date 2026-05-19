@@ -3,16 +3,16 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 61: Voice in, voice out chat through one audio-capable model call.
+"""Notebook 61: Voice in, voice out chat through one audio-capable model call.
 
-Tutorial 60 was text in, voice out (Agent plus dedicated TTS). This is
+Notebook 60 was text in, voice out (Agent plus dedicated TTS). This is
 the next step: a single multimodal chat call to an audio-capable model
 on OCI Generative AI that takes a .wav as the user message and replies
 with both text and audio in one shot.
 
 Pipeline::
 
-                         (synth via tutorial 60 if absent)
+                         (synth via notebook 60 if absent)
                                        │
                                        ▼
                           ./notebook_61_question.wav
@@ -30,7 +30,7 @@ Pipeline::
 
 - One model call replaces three (transcribe → chat → synthesise),
   cutting latency for voice agents.
-- Same OCI v1 signer and base URL as the rest of the tutorials — no
+- Same OCI v1 signer and base URL as the rest of the notebooks — no
   realtime websocket plumbing required.
 - gpt-audio returns a PCM-16 audio block, wrapped in a WAV header for
   portability (re-encode to mp3 with ffmpeg if you need it).
@@ -49,7 +49,7 @@ Run it
 
     afplay notebook_61_answer.wav   # macOS
 
-Note: this tutorial does not run under LOCUS_MODEL_PROVIDER=mock —
+Note: this notebook does not run under LOCUS_MODEL_PROVIDER=mock —
 it builds an OCI signer directly, so it needs real OCI credentials.
 The smoke test for mock environments is `python -m py_compile <file>`.
 """
@@ -144,7 +144,7 @@ def _wav_to_mp3_pcm16_passthrough(pcm16_b64: str, out_path: Path) -> int:
 
 
 async def main() -> None:
-    print("Tutorial 61: Voice in, voice out chat on OCI Generative AI")
+    print("Notebook 61: Voice in, voice out chat on OCI Generative AI")
     print("=" * 60)
 
     client = _build_oci_audio_client()

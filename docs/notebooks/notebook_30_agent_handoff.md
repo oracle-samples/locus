@@ -5,7 +5,7 @@ source packages the task, its findings, and a reason into a typed
 `HandoffContext` so the target inherits the work state — not just a
 string.
 
-This tutorial covers:
+This notebook covers:
 
 - `HandoffContext` — typed payload carrying source/target ids, task,
   findings dict, confidence, instructions, and the full chain.
@@ -20,8 +20,8 @@ This tutorial covers:
 
 ## Prerequisites
 
-- Tutorial 08 (Agent basics).
-- Tutorial 24 (Swarm) for the peer-pull counterpoint to push-style
+- Notebook 08 (Agent basics).
+- Notebook 24 (Swarm) for the peer-pull counterpoint to push-style
   handoffs.
 
 ## Run

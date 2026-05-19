@@ -2,11 +2,11 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 """
-Tutorial 28: A2A — publishing a Locus Agent as a spec-compliant peer.
+Notebook 28: A2A — publishing a Locus Agent as a spec-compliant peer.
 
 A2A (Agent-to-Agent) is the public cross-framework protocol at
 https://a2aproject.github.io/A2A/. Locus implements the server and
-client sides; this tutorial spins up a real Agent behind ``A2AServer``,
+client sides; this notebook spins up a real Agent behind ``A2AServer``,
 drives every spec endpoint from ``A2AClient``, and inspects the typed
 task lifecycle.
 
@@ -32,7 +32,7 @@ present the agent talks to a live OCI model (canonical pick:
 
 Prerequisites:
 - ``pip install fastapi uvicorn`` for the server side.
-- Tutorial 08 (Agent basics). The wire format is provider-agnostic.
+- Notebook 08 (Agent basics). The wire format is provider-agnostic.
 """
 
 from __future__ import annotations
@@ -57,7 +57,7 @@ from locus.agent import Agent, AgentConfig
 
 def _free_port() -> int:
     # Bind-and-release to grab an unused port. Small TOCTOU window, fine
-    # for a tutorial.
+    # for a notebook.
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(("127.0.0.1", 0))
     port = int(s.getsockname()[1])
@@ -86,7 +86,7 @@ def _start_server(server: A2AServer, port: int) -> threading.Thread:
 
 async def main() -> None:
     print("=" * 60)
-    print("Tutorial 28: A2A — Locus Agent as a spec-compliant peer")
+    print("Notebook 28: A2A — Locus Agent as a spec-compliant peer")
     print("=" * 60)
 
     # ---------------------------------------------------------------
@@ -105,7 +105,7 @@ async def main() -> None:
 
     port = _free_port()
     # Demo bearer token, not a real credential.
-    api_key = "tutorial-secret"  # noqa: S105
+    api_key = "notebook-secret"  # noqa: S105
 
     server = A2AServer(
         agent=research,
@@ -226,7 +226,7 @@ async def main() -> None:
     # inspect the tool object instead of calling it.
 
     print("\n" + "=" * 60)
-    print("Next: Tutorial 29 — DeepAgent")
+    print("Next: Notebook 29 — DeepAgent")
     print("=" * 60)
 
 

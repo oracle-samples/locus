@@ -2,7 +2,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 """
-Tutorial 24: swarm — capability-matched workers claiming from a shared queue.
+Notebook 24: swarm — capability-matched workers claiming from a shared queue.
 
 A swarm is a pool of agents that pull tasks from a shared queue based on
 declared capabilities. No supervisor decides who does what — each task
@@ -27,8 +27,8 @@ the swarm talks to a live OCI model (canonical pick:
 ``LOCUS_MODEL_PROVIDER=mock`` for offline runs.
 
 Prerequisites:
-- Tutorial 08 (Agent basics).
-- Tutorial 26 (Orchestrator) if you want the supervised counterpoint.
+- Notebook 08 (Agent basics).
+- Notebook 26 (Orchestrator) if you want the supervised counterpoint.
 """
 
 import asyncio
@@ -384,7 +384,7 @@ def example_swarm_patterns():
 
 async def main():
     print("=" * 60)
-    print("Tutorial 24: swarm — capability-matched workers, shared queue")
+    print("Notebook 24: swarm — capability-matched workers, shared queue")
     print("=" * 60)
     print()
 
@@ -400,7 +400,7 @@ async def main():
     example_swarm_patterns()
 
     print("=" * 60)
-    print("Next: Tutorial 25 — Agent Handoff")
+    print("Next: Notebook 25 — Agent Handoff")
     print("=" * 60)
 
 

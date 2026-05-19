@@ -2,11 +2,11 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 """
-Tutorial 26: orchestrator — one supervisor, many specialists, parallel fan-out.
+Notebook 26: orchestrator — one supervisor, many specialists, parallel fan-out.
 
 An orchestrator routes a task to a chosen set of specialist agents, runs
 them in parallel under a semaphore, then correlates their outputs into a
-single summary. Compared with a swarm (Tutorial 24), the decision of who
+single summary. Compared with a swarm (Notebook 24), the decision of who
 does what is centralised here instead of emerging from capability tags.
 
 - ``Specialist`` is a domain-focused agent with tools, a system prompt,
@@ -29,13 +29,13 @@ present the agents talk to a live OCI model (canonical pick:
 ``openai.gpt-4.1`` or ``meta.llama-3.3-70b-instruct``). Set
 ``LOCUS_MODEL_PROVIDER=mock`` for offline runs.
 
-This tutorial uses Locus's "Model B" slot (``LOCUS_MODEL_ID_B``) for the
+This notebook uses Locus's "Model B" slot (``LOCUS_MODEL_ID_B``) for the
 short commentary calls — set a cheaper model there to cut runtime; falls
 back to Model A when unset.
 
 Prerequisites:
-- Tutorial 08 (Agent basics).
-- Tutorial 24 (Swarm) for the unsupervised counterpoint.
+- Notebook 08 (Agent basics).
+- Notebook 24 (Swarm) for the unsupervised counterpoint.
 """
 
 import asyncio
@@ -75,7 +75,7 @@ def _llm_call(
 
 async def main():
     print("=" * 60)
-    print("Tutorial 26: orchestrator — supervisor + specialists + parallel fan-out")
+    print("Notebook 26: orchestrator — supervisor + specialists + parallel fan-out")
     print("=" * 60)
     print()
     print_config()
@@ -324,7 +324,7 @@ Prioritize based on urgency indicated in the task.""",
     print("7. Track per-specialist confidence and duration.")
 
     print("\n" + "=" * 60)
-    print("Next: Tutorial 27 — Specialist Agents")
+    print("Next: Notebook 27 — Specialist Agents")
     print("=" * 60)
 
 

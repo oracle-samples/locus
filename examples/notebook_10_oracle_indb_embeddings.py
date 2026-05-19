@@ -67,10 +67,10 @@ Run it::
     python examples/notebook_10_oracle_indb_embeddings.py
 
 If ``ORACLE_DSN`` / ``ORACLE_PASSWORD`` / ``ORACLE_WALLET`` aren't set
-the tutorial prints the wiring snippet and exits cleanly — no
+the notebook prints the wiring snippet and exits cleanly — no
 traceback, no half-initialised state.
 
-Difficulty: Intermediate. Self-contained — no prior tutorial required.
+Difficulty: Intermediate. Self-contained — no prior notebook required.
 """
 
 from __future__ import annotations

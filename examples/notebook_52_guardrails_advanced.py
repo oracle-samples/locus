@@ -1,10 +1,10 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 47: Advanced guardrails — topic, content safety, output filtering.
+"""Notebook 47: Advanced guardrails — topic, content safety, output filtering.
 
 Three policy types that work on top of the basic GuardrailsHook from
-tutorial 46. They focus on what the agent talks about, not just what
+notebook 46. They focus on what the agent talks about, not just what
 characters appear in the prompt.
 
 - TopicPolicy: declarative topic blocking with keyword maps.

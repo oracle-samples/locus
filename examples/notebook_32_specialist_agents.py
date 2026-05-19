@@ -2,10 +2,10 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 """
-Tutorial 27: specialist agents — domain focus, tools, and playbooks.
+Notebook 27: specialist agents — domain focus, tools, and playbooks.
 
-Tutorial 26 introduced the Specialist as the worker an orchestrator
-hands tasks to. This tutorial dives into the Specialist itself: how to
+Notebook 26 introduced the Specialist as the worker an orchestrator
+hands tasks to. This notebook dives into the Specialist itself: how to
 narrow a model's failure surface with a focused system prompt, a
 hand-picked tool set, optional playbooks, and a confidence threshold.
 
@@ -30,8 +30,8 @@ present the specialists talk to a live OCI model (canonical pick:
 ``LOCUS_MODEL_PROVIDER=mock`` for offline runs.
 
 Prerequisites:
-- Tutorial 08 (Agent basics).
-- Tutorial 26 (Orchestrator) — Specialists are the workers it routes to.
+- Notebook 08 (Agent basics).
+- Notebook 26 (Orchestrator) — Specialists are the workers it routes to.
 """
 
 import asyncio
@@ -68,7 +68,7 @@ def _llm_call(
 
 async def main():
     print("=" * 60)
-    print("Tutorial 27: specialist agents — domain focus, tools, playbooks")
+    print("Notebook 27: specialist agents — domain focus, tools, playbooks")
     print("=" * 60)
     print()
     print_config()
@@ -396,7 +396,7 @@ When analyzing:
 
     # =========================================================================
     print("\n" + "=" * 60)
-    print("Next: Tutorial 28 — A2A Protocol")
+    print("Next: Notebook 28 — A2A Protocol")
     print("=" * 60)
 
 

@@ -156,7 +156,7 @@ A future locus release may bundle a typed judge directly into
 | `expected_tools` reports failure even though the tool ran | Case-sensitive name match — `book_flight` != `Book_Flight`. |
 | Score is 0.5 every time | One of two checks is consistently failing. Read `result.checks` — it carries the full pass/fail map. |
 
-## Source and tutorial
+## Source and notebook
 
 - [`notebook_54_evaluation.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_54_evaluation.py) — runnable end-to-end suite.
 - [`locus.evaluation.framework`](https://github.com/oracle-samples/locus/blob/main/src/locus/evaluation/framework.py) — `EvalCase`, `EvalRunner`, `EvalReport`.

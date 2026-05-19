@@ -28,14 +28,14 @@ Run it:
     LOCUS_MODEL_PROVIDER=mock python examples/notebook_67_agent_server.py
 
     # Boot a real uvicorn server on http://127.0.0.1:8000:
-    LOCUS_TUTORIAL_BOOT=1 python examples/notebook_67_agent_server.py
+    LOCUS_NOTEBOOK_BOOT=1 python examples/notebook_67_agent_server.py
 
 Prerequisites:
 
 - `pip install fastapi uvicorn`
 - For the persisted thread paths: an Oracle Autonomous Database with
   `ORACLE_DSN` / `ORACLE_USER` / `ORACLE_PASSWORD` / `ORACLE_WALLET`
-  set. Without those env vars the tutorial prints what's missing and
+  set. Without those env vars the notebook prints what's missing and
   exits.
 
 ## Source

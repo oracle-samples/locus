@@ -88,14 +88,14 @@ async function streamForward(path: string, req: Request, res: Response) {
   res.end();
 }
 
-app.get("/api/tutorials", (req, res) => {
+app.get("/api/notebooks", (req, res) => {
   void forward(req, res, { method: "GET" });
 });
 // /categories registered before /:tid so the parametric route doesn't match it.
-app.get("/api/tutorials/categories", (req, res) => {
+app.get("/api/notebooks/categories", (req, res) => {
   void forward(req, res, { method: "GET" });
 });
-app.get("/api/tutorials/:tid", (req, res) => {
+app.get("/api/notebooks/:tid", (req, res) => {
   void forward(req, res, { method: "GET" });
 });
 app.get("/api/skills", (req, res) => {
@@ -117,8 +117,8 @@ app.get("/api/protocols/:pid", (req, res) => {
   void forward(req, res, { method: "GET" });
 });
 
-// /api/notebooks/* — aliases of /api/tutorials/* exposed by the
-// runner. The web frontend still calls /api/tutorials/* today, but the
+// /api/notebooks/* — aliases of /api/notebooks/* exposed by the
+// runner. The web frontend still calls /api/notebooks/* today, but the
 // alias lets external tooling reach the catalog under the "Notebooks"
 // name the docs use.
 app.get("/api/notebooks", (req, res) => {
@@ -175,10 +175,10 @@ app.get("/api/events", (req, res) => {
 app.get("/api/events/:runId", (req, res) => {
   void streamSseForward(`/api/events/${encodeURIComponent(req.params.runId)}`, req, res);
 });
-app.post("/api/tutorials/run", async (req, res) => {
-  await streamForward("/api/tutorials/run", req, res);
+app.post("/api/notebooks/run", async (req, res) => {
+  await streamForward("/api/notebooks/run", req, res);
 });
-app.post("/api/tutorials/runs/:runId/respond", (req, res) => {
+app.post("/api/notebooks/runs/:runId/respond", (req, res) => {
   void forward(req, res, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

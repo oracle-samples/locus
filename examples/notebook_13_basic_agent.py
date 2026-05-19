@@ -2,7 +2,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 """
-Tutorial 08: your first Locus agent.
+Notebook 08: your first Locus agent.
 
 Build a single agent, send it prompts two different ways (blocking and
 streaming), and inspect what comes back. This is the smallest possible
@@ -115,7 +115,7 @@ async def example_async_run():
     print("Events:")
 
     # agent.run(...) yields ThinkEvent, ToolStartEvent, ToolCompleteEvent,
-    # TerminateEvent, etc., in order. Tutorial 11 covers the full event set.
+    # TerminateEvent, etc., in order. Notebook 11 covers the full event set.
     async for event in agent.run("Name 3 programming languages."):
         print(f"  {event.event_type}: ", end="")
         if hasattr(event, "reasoning") and event.reasoning:
@@ -194,9 +194,9 @@ def example_multiple_prompts():
 
 
 def main():
-    """Run all tutorial parts."""
+    """Run all notebook parts."""
     print("=" * 60)
-    print("Tutorial 08: Basic Agent")
+    print("Notebook 08: Basic Agent")
     print("=" * 60)
     print()
 
@@ -210,7 +210,7 @@ def main():
     example_multiple_prompts()
 
     print("=" * 60)
-    print("Next: Tutorial 09 — Agent With Tools")
+    print("Next: Notebook 09 — Agent With Tools")
     print("=" * 60)
 
 

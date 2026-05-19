@@ -1,11 +1,11 @@
 # Specialist Agents
 
-Tutorial 26 introduced the Specialist as the worker an orchestrator
-hands tasks to. This tutorial dives into the Specialist itself: how to
+Notebook 26 introduced the Specialist as the worker an orchestrator
+hands tasks to. This notebook dives into the Specialist itself: how to
 narrow a model's failure surface with a focused system prompt, a
 hand-picked tool set, optional playbooks, and a confidence threshold.
 
-This tutorial covers:
+This notebook covers:
 
 - `Specialist` — a Locus `Agent` with role metadata (`specialist_type`,
   `description`), a tool list, and a `confidence_threshold`.
@@ -20,8 +20,8 @@ This tutorial covers:
 
 ## Prerequisites
 
-- Tutorial 08 (Agent basics).
-- Tutorial 26 (Orchestrator) — Specialists are the workers it routes to.
+- Notebook 08 (Agent basics).
+- Notebook 26 (Orchestrator) — Specialists are the workers it routes to.
 
 ## Run
 

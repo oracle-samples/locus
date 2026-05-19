@@ -3,7 +3,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 63: Research workflow — execute, causal, summarise, ground, replan.
+"""Notebook 63: Research workflow — execute, causal, summarise, ground, replan.
 
 create_research_workflow composes six node primitives into a StateGraph
 that mirrors the production pattern used in research-shaped specialist

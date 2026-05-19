@@ -156,7 +156,7 @@ builder, validation-error formatter.
 
 `src/locus/agent/agent.py:_structure_output` — repair-on-failure loop.
 
-## Tutorials
+## Notebooks
 
 - [`notebook_40_structured_output.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_40_structured_output.py)
   covers both the standalone `parse_structured()` parser (useful for

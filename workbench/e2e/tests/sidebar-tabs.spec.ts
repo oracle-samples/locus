@@ -1,7 +1,7 @@
 /**
- * Sidebar-tabs e2e — verifies the Tutorials / Skills / Protocols
+ * Sidebar-tabs e2e — verifies the Notebooks / Skills / Protocols
  * three-tab layout. No model provider is needed: every endpoint
- * exercised here (BFF /api/skills, /api/protocols, /api/tutorials) is
+ * exercised here (BFF /api/skills, /api/protocols, /api/notebooks) is
  * read-only.
  *
  * What this spec proves end-to-end:
@@ -47,13 +47,13 @@ async function freshPage(page: Page): Promise<void> {
 }
 
 test.describe("workbench · sidebar tabs", () => {
-  test("tab switcher renders Tutorials / Skills / Protocols", async ({ page }) => {
+  test("tab switcher renders Notebooks / Skills / Protocols", async ({ page }) => {
     await freshPage(page);
-    await expect(page.getByTestId("side-tab-tutorials")).toBeVisible();
+    await expect(page.getByTestId("side-tab-notebooks")).toBeVisible();
     await expect(page.getByTestId("side-tab-skills")).toBeVisible();
     await expect(page.getByTestId("side-tab-protocols")).toBeVisible();
-    // Tutorials starts active.
-    await expect(page.getByTestId("side-tab-tutorials")).toHaveAttribute(
+    // Notebooks starts active.
+    await expect(page.getByTestId("side-tab-notebooks")).toHaveAttribute(
       "aria-selected",
       "true",
     );
@@ -164,27 +164,27 @@ test.describe("workbench · sidebar tabs", () => {
   });
 
   test("each tab is independently re-selectable", async ({ page }) => {
-    // Round-trip: tutorials → skills → protocols → tutorials. The
+    // Round-trip: notebooks → skills → protocols → notebooks. The
     // workbench view must be visible at the end (and skills/protocols
     // hidden).
     await freshPage(page);
     await page.getByTestId("side-tab-skills").click();
     await page.getByTestId("side-tab-protocols").click();
-    await page.getByTestId("side-tab-tutorials").click();
+    await page.getByTestId("side-tab-notebooks").click();
 
     await expect(page.getByTestId("wb-root")).toBeVisible();
     await expect(page.getByTestId("skills-view")).toBeHidden();
     await expect(page.getByTestId("protocols-view")).toBeHidden();
-    await expect(page.getByTestId("side-tab-tutorials")).toHaveAttribute(
+    await expect(page.getByTestId("side-tab-notebooks")).toHaveAttribute(
       "aria-selected",
       "true",
     );
   });
 
-  test("tutorial selection survives a tab round-trip", async ({ page }) => {
-    // Pick a tutorial → switch to Protocols → back to Tutorials. The
-    // editor must still hold the tutorial's source (not be wiped). We
-    // wait until the BFF-fetched tutorial body has clearly replaced
+  test("notebook selection survives a tab round-trip", async ({ page }) => {
+    // Pick a notebook → switch to Protocols → back to Notebooks. The
+    // editor must still hold the notebook's source (not be wiped). We
+    // wait until the BFF-fetched notebook body has clearly replaced
     // the boot placeholder before snapshotting.
     await freshPage(page);
     await expect
@@ -192,7 +192,7 @@ test.describe("workbench · sidebar tabs", () => {
         () => page.evaluate(() => ((window as any).__wb?.getSource?.() ?? "").length),
         { timeout: 15_000 },
       )
-      .toBeGreaterThan(500); // tutorial code is much longer than the placeholder
+      .toBeGreaterThan(500); // notebook code is much longer than the placeholder
     const original = await page.evaluate(() => (window as any).__wb.getSource());
     expect(original.length).toBeGreaterThan(500);
 
@@ -200,7 +200,7 @@ test.describe("workbench · sidebar tabs", () => {
     await page.getByTestId("protocol-debate").click();
     await expect(page.locator("#protocol-title")).toHaveText("debate");
 
-    await page.getByTestId("side-tab-tutorials").click();
+    await page.getByTestId("side-tab-notebooks").click();
     await expect(page.getByTestId("wb-root")).toBeVisible();
     const after = await page.evaluate(() => (window as any).__wb.getSource());
     expect(after).toBe(original);

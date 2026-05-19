@@ -4,7 +4,7 @@
 """
 Five primitives that turn a StateGraph into a general-purpose runtime.
 
-This tutorial introduces the building blocks you reach for once basic
+This notebook introduces the building blocks you reach for once basic
 graphs stop being enough: dynamic routing from inside a node, fan-out
 to many workers, reusable subgraphs, cross-conversation key/value
 storage, and combining them in one workflow.
@@ -123,7 +123,7 @@ async def example_goto_helpers():
 
     async def check_auth(inputs):
         token = inputs.get("token", "")
-        if token == "valid":  # noqa: S105 — tutorial literal, not a real secret
+        if token == "valid":  # noqa: S105 — notebook literal, not a real secret
             # goto("name", k=v) == Command(goto="name", update={"k": v})
             return goto("authorized", authenticated=True)
         return goto("denied", authenticated=False)
@@ -490,7 +490,7 @@ async def example_command_with_llm():
 
 async def main():
     print("=" * 60)
-    print("Tutorial 20: Advanced patterns")
+    print("Notebook 20: Advanced patterns")
     print("=" * 60)
     print()
 
@@ -504,7 +504,7 @@ async def main():
     await example_command_with_llm()
 
     print("=" * 60)
-    print("Next: Tutorial 21 — Composition")
+    print("Next: Notebook 21 — Composition")
     print("=" * 60)
 
 

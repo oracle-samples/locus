@@ -4,7 +4,7 @@ Three source files, three reviewer roles (security, performance,
 style) = nine reviewer agents running in parallel, then one
 synthesizer collapses everything into a single Markdown report.
 
-This tutorial covers:
+This notebook covers:
 
 - `Send(node, payload, metadata)` — first-class graph primitive. The
   splitter returns a list of Sends; the executor fans them out
@@ -22,8 +22,8 @@ Diff splitter ──> N reviewers (parallel via Send) ──> Synthesizer
 
 ## Prerequisites
 
-- Tutorial 16 (basic graph).
-- Tutorial 24 (Swarm) for the dynamic-claim counterpoint.
+- Notebook 16 (basic graph).
+- Notebook 24 (Swarm) for the dynamic-claim counterpoint.
 
 ## Run
 

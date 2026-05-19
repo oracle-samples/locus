@@ -1,7 +1,7 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 42: playbooks — typed step-by-step procedures the agent must follow.
+"""Notebook 42: playbooks — typed step-by-step procedures the agent must follow.
 
 A playbook is a typed, ordered sequence of steps with declared
 ``expected_tools``. Wire it into an agent and the agent is constrained
@@ -67,7 +67,7 @@ def _llm_call(
 
 def main():
     print("=" * 60)
-    print("Tutorial 42: playbooks")
+    print("Notebook 42: playbooks")
     print("=" * 60)
 
     # =========================================================================
@@ -349,7 +349,7 @@ def main():
     print(f"Triage outcome: {triage_result.message[:300]}")
 
     print("\n" + "=" * 60)
-    print("Done. Next: tutorial 43 — plugins.")
+    print("Done. Next: notebook 43 — plugins.")
     print("=" * 60)
 
 

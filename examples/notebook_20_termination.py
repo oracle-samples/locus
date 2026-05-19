@@ -2,11 +2,11 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 """
-Tutorial 15: deciding when an agent stops.
+Notebook 15: deciding when an agent stops.
 
 Every agent loop needs a termination condition. Locus ships a handful of
 small predicates that you compose with ``|`` (OR) and ``&`` (AND) to
-describe exactly when the loop should end. This tutorial also covers
+describe exactly when the loop should end. This notebook also covers
 two related features: ``output_key`` (auto-save the final message into
 the agent's state metadata) and a callable ``system_prompt`` that picks
 its text from runtime context.

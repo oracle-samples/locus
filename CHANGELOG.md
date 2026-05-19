@@ -8,16 +8,16 @@ policy.
 
 ## [Unreleased]
 
-### Changed — tutorial renumber + Oracle-first reordering
+### Changed — notebook renumber + Oracle-first reordering
 
-Renumbered every `examples/tutorial_NN_*.py` and its matching
-`docs/tutorials/tutorial_NN_*.md` so the numbers reflect suggested
+Renumbered every `examples/notebook_NN_*.py` and its matching
+`docs/notebooks/notebook_NN_*.md` so the numbers reflect suggested
 reading order, not historical order of authorship.
 
-- **Tutorials 01–05 are now the OCI Generative AI section** (inference
+- **Notebooks 01–05 are now the OCI Generative AI section** (inference
   platform): OCI transports, OCIOpenAIModel, OCIResponsesModel, DAC,
   Cohere Reranker V4.
-- **Tutorials 06–07 are now the Oracle Database 26ai section** (data
+- **Notebooks 06–07 are now the Oracle Database 26ai section** (data
   layer): native `VECTOR(N, FLOAT32)` RAG and durable agent-thread
   checkpointer in Autonomous Database.
 - **08–15 Foundations** (basic agent → termination conditions)
@@ -31,22 +31,22 @@ reading order, not historical order of authorship.
 - **57–61 Real-world workflows**
 - **62–63 Server + full pipelines**
 
-Every cross-reference was updated: `mkdocs.yml`, `docs/tutorials/index.md`,
+Every cross-reference was updated: `mkdocs.yml`, `docs/notebooks/index.md`,
 `docs/index.md`, README, all `docs/concepts/*` and `docs/how-to/*` pages,
-and the integration test file (renamed from `test_tutorials_13_21.py` to
-`test_tutorials_subset.py`).
+and the integration test file (renamed from `test_notebooks_13_21.py` to
+`test_notebooks_subset.py`).
 
 Embedded references migrated to match the new numbers: database table
-names (`locus_tutorial_NN_*`), thread IDs, audio asset filenames
-(`tutorial_60_response.mp3`, `tutorial_61_question.wav`,
-`tutorial_61_answer.wav`), and `Tutorial NN` headers inside each file.
+names (`locus_notebook_NN_*`), thread IDs, audio asset filenames
+(`notebook_65_response.mp3`, `notebook_66_question.wav`,
+`notebook_66_answer.wav`), and `Notebook NN` headers inside each file.
 
 ### Changed — `config.py` now defaults to OCI Generative AI
 
 `examples/config.py` auto-detects the provider: OCI Generative AI when
 `~/.oci/config` (or `LOCUS_OCI_AUTH_TYPE=instance_principal` /
 `resource_principal`) is available, the bundled `MockModel` otherwise.
-This means developer laptops with OCI configured run every tutorial
+This means developer laptops with OCI configured run every notebook
 against live OCI with zero setup; clean CI machines still get the
 mock model. Set `LOCUS_MODEL_PROVIDER` explicitly to force a choice.
 
@@ -91,7 +91,7 @@ Reuses `OCIClient` internally so every auth mode (api_key /
 security_token / session_token / instance & resource principal) works
 without duplicating the signer plumbing.
 
-- New tutorial: [`tutorial_05_cohere_reranker.py`](examples/tutorial_05_cohere_reranker.py)
+- New notebook: [`notebook_05_cohere_reranker.py`](examples/notebook_05_cohere_reranker.py)
   — runnable end-to-end demo against OCI.
 - New workbench pattern: `cohere_reranker` (id `Retrieve-then-rerank
   (Cohere V4)`) reachable at `POST /api/run/cohere_reranker`.
@@ -140,13 +140,13 @@ LOCUS_OCI_<NAME>  →  OCI_<NAME>  →  default
 ```
 
 So a user who's already run `oci session authenticate --profile-name
-DEFAULT` and exported `OCI_PROFILE` can run any tutorial without
+DEFAULT` and exported `OCI_PROFILE` can run any notebook without
 re-exporting variables. `LOCUS_OCI_*` still wins when set, preserving
-the existing use case where a tutorial points at a different profile
+the existing use case where a notebook points at a different profile
 from the user's shell-default OCI config. New docs page:
 [`docs/how-to/environment-variables.md`](docs/how-to/environment-variables.md).
 
-### Docs — OracleVectorStore production setup + tutorial 22 listing (closes #215, #217)
+### Docs — OracleVectorStore production setup + notebook 22 listing (closes #215, #217)
 
 - `OracleVectorStore` docstring rewritten: dropped `user="ADMIN"`
   everywhere (Oracle security anti-pattern), introduced a
@@ -155,7 +155,7 @@ from the user's shell-default OCI config. New docs page:
   DDL; `False` for production with pre-created table + DML-only privs).
   CREATE USER / GRANT script + ready-to-paste CREATE TABLE + CREATE
   VECTOR INDEX in both the docstring and `docs/concepts/rag.md`.
-- Tutorial 22 (`using_vector_stores`) now lists `OracleVectorStore`
+- Notebook 22 (`using_vector_stores`) now lists `OracleVectorStore`
   alongside the InMemory / Qdrant / OpenSearch / pgvector / Chroma
   options.
 - Three deep-research demos and the project README now default
@@ -177,14 +177,14 @@ from the user's shell-default OCI config. New docs page:
   `CognitiveCompiler`) instead of the unrelated `create_research_workflow`
   it accidentally showed before.
 
-### Tests — model swap + tutorial_59 timeout (closes #225 work)
+### Tests — model swap + notebook_59 timeout (closes #225 work)
 
 - Parallel-tool-calls matrix swapped `xai.grok-4-fast-non-reasoning`
   (was hitting team-level RPM under back-to-back sweeps) for
   `openai.gpt-4.1` — frontier OpenAI, different rate-limit pool, same
   OpenAI-compat tool_calls codepath.
-- `test_tutorials_all_live._TUTORIAL_TIMEOUT_OVERRIDES` adds a
-  per-tutorial budget. `tutorial_34_emergent_routing` lifted from 360s
+- `test_notebooks_all_live._NOTEBOOK_TIMEOUT_OVERRIDES` adds a
+  per-notebook budget. `notebook_34_emergent_routing` lifted from 360s
   → 900s (legitimately takes ~10 min under the reasoning model with 5
   dispatches × ≥3 LLM calls each).
 
@@ -457,14 +457,14 @@ and verified output stats from a real ADB run.
 - `docs/concepts/deepagent.md` — new "Datastore auto-wiring" section
   with an Oracle Autonomous DB example and the provider-quirk +
   async-loop notes.
-- `docs/tutorials/tutorial_29_deepagent.md` — topic 6 cross-references
+- `docs/notebooks/notebook_29_deepagent.md` — topic 6 cross-references
   the deep-research project for the multi-backend variants.
 - `docs/workbench.md` and `workbench/README.md` — cross-references
   under "What you can run" so workbench users discover the project
   examples.
-- `examples/tutorial_29_deepagent.py` — new `part5_datastores()` that
+- `examples/notebook_29_deepagent.py` — new `part5_datastores()` that
   exercises `create_deepagent(datastores=...)` against an in-memory
-  `RAGRetriever`, so the workbench picks the tutorial up and demos
+  `RAGRetriever`, so the workbench picks the notebook up and demos
   the auto-wiring without external dependencies.
 
 ### Fixed — embedding-config rename, ratchet refresh, docs audit
@@ -569,13 +569,13 @@ stays green (4564 passed, 3 skipped). Closes
   `method` + `rationale` off the event bus, and renders a chip
   with the protocol id + method badge + rationale callout above
   the reply.
-- **UX fix:** sidebar tabs (`Tutorials | Skills | Protocols |
+- **UX fix:** sidebar tabs (`Notebooks | Skills | Protocols |
   Patterns`) now wrap onto a second row at narrow viewport widths
   via `flex-wrap: wrap` — the rightmost tab no longer clips off
   invisible.
 - **Docs:** new `concepts/router.md#emergent-picker-opt-in-second-mode`
   section explains the filter-then-pick invariant, fallback
-  contract, and `method` enum. New tutorial 59 (`Emergent routing`)
+  contract, and `method` enum. New notebook 59 (`Emergent routing`)
   runs both modes side-by-side. Updated `workbench.md` catalogue
   (8 → 9 patterns) with a dedicated "Cognitive routing pattern"
   subsection.
@@ -619,10 +619,10 @@ stays green (4564 passed, 3 skipped). Closes
   plus a new "Responses transport — `OCIResponsesModel` (opt-in)"
   section covering both `store=True` (server-state) and `store=False`
   (ZDR-safe) modes.
-- Both pages cross-link [tutorial 00](docs/tutorials/tutorial_01_oci_transports.md)
-  (transports side-by-side), [tutorial 57](docs/tutorials/tutorial_02_oci_openai_chat.md)
+- Both pages cross-link [notebook 00](docs/notebooks/notebook_01_oci_transports.md)
+  (transports side-by-side), [notebook 57](docs/notebooks/notebook_02_oci_openai_chat.md)
   (OCIOpenAIModel deep dive) and
-  [tutorial 58](docs/tutorials/tutorial_03_oci_responses.md)
+  [notebook 58](docs/notebooks/notebook_03_oci_responses.md)
   (OCIResponsesModel deep dive).
 - **Voice pass** — locus is an *agentic* framework. Removed every
   occurrence of "deterministic" and "automatic" from user-facing
@@ -763,7 +763,7 @@ Individual MR numbers in parentheses anchor each item to its source change.
 - `examples/config.py` and the `oci:` string-factory entry in
   `locus.models.registry` now route OCI model ids by family —
   `cohere.command-r-*` flows through `OCIModel`, everything else
-  through `OCIOpenAIModel`. Existing tutorials inherit the new
+  through `OCIOpenAIModel`. Existing notebooks inherit the new
   transport without edits. Override with
   `LOCUS_OCI_TRANSPORT=v1|sdk`. (MR !70)
 - `OpenAIModel` reasoning-family detection now tolerates OCI-style

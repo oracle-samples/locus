@@ -3,7 +3,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 56: Full event catalogue tour.
+"""Notebook 56: Full event catalogue tour.
 
 Every component in Locus emits typed events under one stable prefix:
 agent.*, multiagent.*, composition.*, router.*, rag.*, memory.*, a2a.*,

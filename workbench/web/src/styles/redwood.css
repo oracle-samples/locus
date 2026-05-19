@@ -675,8 +675,13 @@ code, pre { font-family: var(--mono); }
   background: var(--or-surface);
   border: 1px solid var(--or-rule);
   border-radius: var(--radius-lg);
-  width: min(540px, 92vw);
-  padding: 1.4rem 1.5rem;
+  /* Wider so the form labels + helper text + database envelope all
+     fit on one line without wrapping. ``min`` keeps it responsive on
+     narrow viewports. */
+  width: min(820px, 95vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 1.4rem 1.75rem;
   box-shadow: 0 24px 60px -20px rgba(20, 18, 16, 0.4);
 }
 .modal__header {

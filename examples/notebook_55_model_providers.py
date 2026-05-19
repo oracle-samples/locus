@@ -1,7 +1,7 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 50: Model providers — OCI Generative AI is the default; others plug in.
+"""Notebook 50: Model providers — OCI Generative AI is the default; others plug in.
 
 Locus targets OCI Generative AI as its primary provider, and OpenAI,
 Anthropic, and Ollama as first-class alternatives. The same Agent code

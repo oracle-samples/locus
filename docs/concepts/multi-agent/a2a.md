@@ -170,7 +170,7 @@ aliases for the legacy `/a2a/invoke` shape. Spec-aware peers should
 use `Message` + `client.send_message()` so they can read the full
 `Task` (status, history, artifacts).
 
-## Tutorial
+## Notebook
 
 [`notebook_33_a2a_protocol.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_33_a2a_protocol.py)
 — host + client + streaming.

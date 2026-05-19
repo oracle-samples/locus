@@ -3,7 +3,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 29: DeepAgent — a research-shaped Agent factory with Oracle grounding.
+"""Notebook 29: DeepAgent — a research-shaped Agent factory with Oracle grounding.
 
 ``create_deepagent`` bundles the configuration patterns for deep research
 into one call: reflexion + grounding on by default, a typed termination
@@ -38,8 +38,8 @@ present the agent talks to a live OCI model (canonical pick:
 ``LOCUS_MODEL_PROVIDER=mock`` for offline runs.
 
 Prerequisites:
-- Tutorial 08 (Agent basics).
-- Tutorial 15 (typed termination) — the algebra DeepAgent uses internally.
+- Notebook 08 (Agent basics).
+- Notebook 15 (typed termination) — the algebra DeepAgent uses internally.
 - For Part 5 only: ``ORACLE_DSN``, ``ORACLE_USER``, ``ORACLE_PASSWORD``,
   ``ORACLE_WALLET``, and ``OCI_COMPARTMENT`` exported, plus an
   Autonomous Database 26ai with vector support. Absent these, Part 5

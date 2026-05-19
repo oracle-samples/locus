@@ -2,9 +2,9 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Integration tests for tutorials 13-21.
+"""Integration tests for notebooks 13-21.
 
-Tests validate that all tutorial examples work correctly.
+Tests validate that all notebook examples work correctly.
 """
 
 from __future__ import annotations
@@ -41,12 +41,12 @@ def has_model_available() -> bool:
 
 
 # =============================================================================
-# Tutorial 13: Structured Output Tests
+# Notebook 13: Structured Output Tests
 # =============================================================================
 
 
-class TestTutorial13StructuredOutput:
-    """Tests for Tutorial 13: Structured Output."""
+class TestNotebook13StructuredOutput:
+    """Tests for Notebook 13: Structured Output."""
 
     def test_json_extraction_plain_text(self):
         """Test extracting JSON from plain text."""
@@ -123,12 +123,12 @@ class TestTutorial13StructuredOutput:
 
 
 # =============================================================================
-# Tutorial 14: Reasoning Patterns Tests
+# Notebook 14: Reasoning Patterns Tests
 # =============================================================================
 
 
-class TestTutorial14ReasoningPatterns:
-    """Tests for Tutorial 14: Reasoning Patterns."""
+class TestNotebook14ReasoningPatterns:
+    """Tests for Notebook 14: Reasoning Patterns."""
 
     def test_reflector_assessment(self):
         """Test Reflector evaluation."""
@@ -254,12 +254,12 @@ class TestTutorial14ReasoningPatterns:
 
 
 # =============================================================================
-# Tutorial 15: Playbooks Tests
+# Notebook 15: Playbooks Tests
 # =============================================================================
 
 
-class TestTutorial15Playbooks:
-    """Tests for Tutorial 15: Playbooks."""
+class TestNotebook15Playbooks:
+    """Tests for Notebook 15: Playbooks."""
 
     def test_playbook_step_creation(self):
         """Test creating playbook steps."""
@@ -341,12 +341,12 @@ class TestTutorial15Playbooks:
 
 
 # =============================================================================
-# Tutorial 16: Agent Handoff Tests
+# Notebook 16: Agent Handoff Tests
 # =============================================================================
 
 
-class TestTutorial16AgentHandoff:
-    """Tests for Tutorial 16: Agent Handoff."""
+class TestNotebook16AgentHandoff:
+    """Tests for Notebook 16: Agent Handoff."""
 
     def test_handoff_agent_creation(self):
         """Test creating handoff agents."""
@@ -403,12 +403,12 @@ class TestTutorial16AgentHandoff:
 
 
 # =============================================================================
-# Tutorial 17: Orchestrator Pattern Tests
+# Notebook 17: Orchestrator Pattern Tests
 # =============================================================================
 
 
-class TestTutorial17OrchestratorPattern:
-    """Tests for Tutorial 17: Orchestrator Pattern."""
+class TestNotebook17OrchestratorPattern:
+    """Tests for Notebook 17: Orchestrator Pattern."""
 
     def test_specialist_creation(self):
         """Test creating specialists."""
@@ -458,12 +458,12 @@ class TestTutorial17OrchestratorPattern:
 
 
 # =============================================================================
-# Tutorial 18: Specialist Agents Tests
+# Notebook 18: Specialist Agents Tests
 # =============================================================================
 
 
-class TestTutorial18SpecialistAgents:
-    """Tests for Tutorial 18: Specialist Agents."""
+class TestNotebook18SpecialistAgents:
+    """Tests for Notebook 18: Specialist Agents."""
 
     def test_specialist_playbook(self):
         """Test specialist playbooks."""
@@ -529,12 +529,12 @@ class TestTutorial18SpecialistAgents:
 
 
 # =============================================================================
-# Tutorial 19: Guardrails & Security Tests
+# Notebook 19: Guardrails & Security Tests
 # =============================================================================
 
 
-class TestTutorial19GuardrailsSecurity:
-    """Tests for Tutorial 19: Guardrails & Security."""
+class TestNotebook19GuardrailsSecurity:
+    """Tests for Notebook 19: Guardrails & Security."""
 
     def test_guardrail_config(self):
         """Test guardrail configuration."""
@@ -602,12 +602,12 @@ class TestTutorial19GuardrailsSecurity:
 
 
 # =============================================================================
-# Tutorial 20: Checkpoint Backends Tests
+# Notebook 20: Checkpoint Backends Tests
 # =============================================================================
 
 
-class TestTutorial20CheckpointBackends:
-    """Tests for Tutorial 20: Checkpoint Backends."""
+class TestNotebook20CheckpointBackends:
+    """Tests for Notebook 20: Checkpoint Backends."""
 
     @pytest.mark.asyncio
     async def test_memory_checkpointer(self):
@@ -670,12 +670,12 @@ class TestTutorial20CheckpointBackends:
 
 
 # =============================================================================
-# Tutorial 21: SSE Streaming Tests
+# Notebook 21: SSE Streaming Tests
 # =============================================================================
 
 
-class TestTutorial21SSEStreaming:
-    """Tests for Tutorial 21: SSE Streaming."""
+class TestNotebook21SSEStreaming:
+    """Tests for Notebook 21: SSE Streaming."""
 
     def test_sse_message_format(self):
         """Test SSE message formatting."""
@@ -778,17 +778,17 @@ class TestTutorial21SSEStreaming:
 
 
 # =============================================================================
-# Tutorial Execution Tests
+# Notebook Execution Tests
 # =============================================================================
 
 
 @pytest.mark.requires_model
-class TestTutorialExecution:
-    """Tests that run actual tutorials (with mock model)."""
+class TestNotebookExecution:
+    """Tests that run actual notebooks (with mock model)."""
 
     @pytest.mark.asyncio
     async def test_notebook_35_runs(self):
-        """Test that tutorial 35 runs without error."""
+        """Test that notebook 35 runs without error."""
         import subprocess
         import sys
 
@@ -799,11 +799,11 @@ class TestTutorialExecution:
             timeout=60,
             check=False,
         )
-        assert result.returncode == 0, f"Tutorial 35 failed: {result.stderr}"
+        assert result.returncode == 0, f"Notebook 35 failed: {result.stderr}"
 
     @pytest.mark.asyncio
     async def test_notebook_36_runs(self):
-        """Test that tutorial 36 runs without error."""
+        """Test that notebook 36 runs without error."""
         import subprocess
         import sys
 
@@ -814,11 +814,11 @@ class TestTutorialExecution:
             timeout=60,
             check=False,
         )
-        assert result.returncode == 0, f"Tutorial 36 failed: {result.stderr}"
+        assert result.returncode == 0, f"Notebook 36 failed: {result.stderr}"
 
     @pytest.mark.asyncio
     async def test_notebook_42_runs(self):
-        """Test that tutorial 42 runs without error."""
+        """Test that notebook 42 runs without error."""
         import subprocess
         import sys
 
@@ -829,11 +829,11 @@ class TestTutorialExecution:
             timeout=60,
             check=False,
         )
-        assert result.returncode == 0, f"Tutorial 42 failed: {result.stderr}"
+        assert result.returncode == 0, f"Notebook 42 failed: {result.stderr}"
 
     @pytest.mark.asyncio
     async def test_notebook_48_runs(self):
-        """Test that tutorial 48 runs without error."""
+        """Test that notebook 48 runs without error."""
         import subprocess
         import sys
 
@@ -844,11 +844,11 @@ class TestTutorialExecution:
             timeout=60,
             check=False,
         )
-        assert result.returncode == 0, f"Tutorial 48 failed: {result.stderr}"
+        assert result.returncode == 0, f"Notebook 48 failed: {result.stderr}"
 
     @pytest.mark.asyncio
     async def test_notebook_13_runs(self):
-        """Test that tutorial 13 runs without error."""
+        """Test that notebook 13 runs without error."""
         import subprocess
         import sys
 
@@ -859,4 +859,4 @@ class TestTutorialExecution:
             timeout=60,
             check=False,
         )
-        assert result.returncode == 0, f"Tutorial 13 failed: {result.stderr}"
+        assert result.returncode == 0, f"Notebook 13 failed: {result.stderr}"

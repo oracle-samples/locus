@@ -39,7 +39,7 @@ export ORACLE_WALLET=~/.oci/wallets/mydb     # directory holding tnsnames.ora
 export ORACLE_WALLET_PASSWORD='<wallet-pw>'  # if wallet is encrypted
 ```
 
-If `ORACLE_DSN` / `ORACLE_PASSWORD` aren't set the tutorial prints the
+If `ORACLE_DSN` / `ORACLE_PASSWORD` aren't set the notebook prints the
 wiring snippet and exits cleanly — no traceback, no half-initialised
 state.
 

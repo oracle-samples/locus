@@ -2,11 +2,11 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 """
-Tutorial 11: streaming events from an agent.
+Notebook 11: streaming events from an agent.
 
 Every Locus agent run is a stream of events: thinking, tool start, tool
 complete, terminate. ``agent.run(prompt)`` returns an async iterator
-that yields them in order. This tutorial walks through the full set,
+that yields them in order. This notebook walks through the full set,
 then shows useful patterns built on top — a live console UI, event
 filtering, metric collection, and a progress bar.
 
@@ -28,7 +28,7 @@ The default provider is OCI Generative AI (canonical example:
 run set ``LOCUS_MODEL_PROVIDER=mock``; OpenAI, Anthropic, and Ollama
 work too.
 
-Prerequisite: tutorial 09.
+Prerequisite: notebook 09.
 """
 
 import ast
@@ -387,9 +387,9 @@ async def example_progress_tracking():
 
 
 def main():
-    """Run all tutorial parts."""
+    """Run all notebook parts."""
     print("=" * 60)
-    print("Tutorial 11: Agent Streaming & Events")
+    print("Notebook 11: Agent Streaming & Events")
     print("=" * 60)
     print()
 
@@ -427,7 +427,7 @@ def main():
     )
 
     print("=" * 60)
-    print("Next: Tutorial 12 — Agent Hooks")
+    print("Next: Notebook 12 — Agent Hooks")
     print("=" * 60)
 
 

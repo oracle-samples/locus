@@ -31,8 +31,8 @@ python examples/notebook_02_oci_openai_chat.py
 
 ## See also
 
-- [Tutorial 01 — the three OCI client classes side-by-side](notebook_01_oci_transports.md)
-- [Tutorial 03 — OCIResponsesModel and the Responses endpoint](notebook_03_oci_responses.md)
+- [Notebook 01 — the three OCI client classes side-by-side](notebook_01_oci_transports.md)
+- [Notebook 03 — OCIResponsesModel and the Responses endpoint](notebook_03_oci_responses.md)
 - [OCI OpenAI-compatible endpoints — Oracle docs](https://docs.oracle.com/iaas/Content/generative-ai/openai-compatible-api.htm)
 
 ## Source

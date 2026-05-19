@@ -3,7 +3,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 30: map-reduce code review — scatter-gather with the Send primitive.
+"""Notebook 30: map-reduce code review — scatter-gather with the Send primitive.
 
 Three source files, three reviewer roles (security, performance, style)
 = nine reviewer agents running in parallel, then one synthesizer
@@ -28,8 +28,8 @@ present the reviewers talk to a live OCI model (canonical pick:
 ``LOCUS_MODEL_PROVIDER=mock`` for offline runs.
 
 Prerequisites:
-- Tutorial 16 (basic graph).
-- Tutorial 24 (Swarm) for the dynamic-claim counterpoint.
+- Notebook 16 (basic graph).
+- Notebook 24 (Swarm) for the dynamic-claim counterpoint.
 """
 
 from __future__ import annotations
@@ -213,7 +213,7 @@ def build_review_graph(model: Any) -> StateGraph:
 
 
 async def main() -> None:
-    print("Tutorial 30: map-reduce code review — scatter-gather with Send")
+    print("Notebook 30: map-reduce code review — scatter-gather with Send")
     print("=" * 60)
 
     model = get_model()

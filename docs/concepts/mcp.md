@@ -196,7 +196,7 @@ implementation detail.
 | Claude Desktop doesn't show your locus tools | `claude_desktop_config.json` not picked up — check the file lives at the right path and Claude has been restarted. |
 | Hangs on `MCPClient.stdio` startup | The MCP subprocess is waiting for input on stdin (some servers expect a handshake). Pass `wait_for_init=True` and a timeout. |
 
-## Source and tutorial
+## Source and notebook
 
 - [`locus.integrations.fastmcp`](https://github.com/oracle-samples/locus/blob/main/src/locus/integrations/fastmcp.py) — built on FastMCP.
 - [`notebook_46_mcp_integration.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_46_mcp_integration.py) — consumer + producer end-to-end.

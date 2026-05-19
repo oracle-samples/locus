@@ -15,7 +15,7 @@ What you'll see:
   metadata.
 - Same execution semantics as `StateGraph`, written imperatively.
 
-Runs on the same OCI GenAI default as the rest of the tutorials:
+Runs on the same OCI GenAI default as the rest of the notebooks:
 
 ```bash
 LOCUS_MODEL_ID=openai.gpt-4.1 python examples/notebook_28_functional_api.py

@@ -1,7 +1,7 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 37: GSAR — typed grounding for hallucination detection.
+"""Notebook 37: GSAR — typed grounding for hallucination detection.
 
 GSAR (Grounded Structured Answer Reasoning) is the Locus layer from
 ``arXiv:2604.23366`` (Kamelhar 2026). It partitions an answer's claims

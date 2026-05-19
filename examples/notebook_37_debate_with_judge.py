@@ -3,7 +3,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 32: adversarial debate with a structured-output judge.
+"""Notebook 32: adversarial debate with a structured-output judge.
 
 PRO and CON take turns arguing a resolution. After N rounds a Judge
 reads the full transcript and emits a typed ``Verdict`` — winner,
@@ -17,7 +17,7 @@ audit logs, databases) can consume directly.
 - If the configured model can't honor the schema, the judge node raises
   rather than fabricating a verdict from raw text.
 - A ``check_structured_output_capable()`` guard at the top short-
-  circuits the tutorial when the model can't produce JSON (mock,
+  circuits the notebook when the model can't produce JSON (mock,
   Cohere R-series).
 
 Run it:
@@ -26,12 +26,12 @@ Run it:
 The default provider is OCI Generative AI. With ``~/.oci/config``
 present the agents talk to a live OCI model that supports constrained
 decoding (canonical pick: ``openai.gpt-4.1`` or ``openai.gpt-5``). Set
-``LOCUS_MODEL_PROVIDER=mock`` and the tutorial exits cleanly with
+``LOCUS_MODEL_PROVIDER=mock`` and the notebook exits cleanly with
 setup instructions.
 
 Prerequisites:
-- Tutorial 13 (structured output).
-- Tutorial 16 (basic graph).
+- Notebook 13 (structured output).
+- Notebook 16 (basic graph).
 """
 
 from __future__ import annotations
@@ -184,7 +184,7 @@ async def judge_turn(state: dict[str, Any]) -> dict[str, Any]:
         raise RuntimeError(
             "Judge returned no parsed Verdict. The configured model could not "
             "honor the JSON schema. Use a stronger model (e.g. openai.gpt-4o, "
-            "openai.gpt-5, anthropic.claude-3-5-sonnet) for tutorial 32. "
+            "openai.gpt-5, anthropic.claude-3-5-sonnet) for notebook 32. "
             f"Raw output: {final.message!r}"
         )
     return {"verdict": final.parsed}
@@ -224,9 +224,9 @@ def build_debate_graph() -> StateGraph:
 async def main() -> None:
     from config import check_structured_output_capable
 
-    # Short-circuits the tutorial when the model can't produce JSON.
+    # Short-circuits the notebook when the model can't produce JSON.
     check_structured_output_capable()
-    print("Tutorial 32: adversarial debate with a structured-output judge")
+    print("Notebook 32: adversarial debate with a structured-output judge")
     print("=" * 60)
 
     model = get_model()

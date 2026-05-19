@@ -376,8 +376,8 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "examples/checkpointer_examples.py" = ["ALL"]
 "examples/config.py" = ["F821", "RET503"]
-"examples/tutorial_11_swarm_multiagent.py" = ["F821"]
-"examples/tutorial_05_agent_hooks.py" = ["PLE2510"]
+"examples/notebook_11_swarm_multiagent.py" = ["F821"]
+"examples/notebook_05_agent_hooks.py" = ["PLE2510"]
 "examples/projects/**/*.py" = ["PLE2510"]
 "workbench/scripts/*.py" = ["EXE001", "EXE005"]
 "workbench/backend/runner.py" = [
@@ -414,7 +414,7 @@ ignore = [
 ]
 "examples/**/*.py" = [
     "S608",     # Oracle notebooks construct SQL from validated identifiers
-    "T201",     # print — tutorials/examples intentionally use print
+    "T201",     # print — notebooks/examples intentionally use print
     "DTZ005",   # datetime.now without tz — fine for demo UX
     "BLE001",   # blind except — simplified error handling in examples
     "S108",     # /tmp/... demo paths — examples write to /tmp on purpose
@@ -423,22 +423,22 @@ ignore = [
     "PTH110",   # os.path.exists — keep examples accessible to readers
     "PTH111",   # os.path.expanduser — idiomatic for user-facing configs
     "PTH118",   # os.path.join — pedagogical readability over Path / "x"
-    "PTH208",   # os.listdir — same; tutorials avoid pathlib import noise
+    "PTH208",   # os.listdir — same; notebooks avoid pathlib import noise
     "A002",     # builtin arg shadowing — pedagogical clarity
     "B007",     # unused loop variable — counter patterns are pedagogical
     "SLF001",   # private-member access — examples illustrate internals
-    "F401",     # unused imports — tutorials show available API surface
+    "F401",     # unused imports — notebooks show available API surface
     "F541",     # f-string without placeholders — pedagogical scaffolding
-    "F841",     # unused local — tutorials demonstrate APIs that return
+    "F841",     # unused local — notebooks demonstrate APIs that return
                 # values for inspection even when they're not consumed
                 # downstream.
     "ARG005",   # unused lambda arg — demo lambda signatures
-    "ASYNC210", # blocking HTTP — tutorials may demo sync libs alongside async
+    "ASYNC210", # blocking HTTP — notebooks may demo sync libs alongside async
     "ASYNC240", # os.path in async — examples favor stdlib readability
 ]
 "scripts/**/*.py" = [
     "T201",    # print — runner scripts are CLI tools that print to stdout
-    "S603",    # subprocess call — runner intentionally execs tutorials
+    "S603",    # subprocess call — runner intentionally execs notebooks
     "BLE001",  # blind except — runner reports failures generically
 ]
 "src/locus/memory/backends/**/*.py" = [

@@ -42,7 +42,7 @@ We welcome:
 
 - **Bug fixes** - Fix issues and improve stability
 - **Features** - New capabilities aligned with the roadmap
-- **Documentation** - Tutorials, examples, API docs
+- **Documentation** - Notebooks, examples, API docs
 - **Tests** - Unit tests, integration tests, benchmarks
 - **Performance** - Optimizations and efficiency improvements
 
@@ -124,7 +124,7 @@ Use descriptive branch names:
 ```
 feat/add-pinecone-store
 fix/memory-leak-in-checkpointer
-docs/rag-tutorial-improvements
+docs/rag-notebook-improvements
 test/add-swarm-integration-tests
 ```
 
@@ -157,7 +157,7 @@ Examples:
 ```bash
 git commit -s -m "feat(rag): add Pinecone vector store support"
 git commit -s -m "fix(memory): resolve checkpoint corruption on concurrent writes"
-git commit -s -m "docs(tutorials): add RAG with Oracle 26ai example"
+git commit -s -m "docs(notebooks): add RAG with Oracle 26ai example"
 ```
 
 ### Code Changes
@@ -372,7 +372,7 @@ class TestAgent:
 ### Workbench end-to-end sweeps
 
 The workbench app (`workbench/`) ships three Playwright specs that drive
-every non-stdin tutorial through the UI against a single provider:
+every non-stdin notebook through the UI against a single provider:
 
 ```bash
 # Bring up the three workbench tiers (terminal 1).
@@ -394,7 +394,7 @@ OCI_COMPARTMENT=ocid1.compartment.oc1.... \
 ```
 
 The OCI sweep also honours `OCI_MODEL` (slot A) and `OCI_MODEL_B` /
-`OCI_MODEL_C` so you can validate multi-model tutorials end-to-end.
+`OCI_MODEL_C` so you can validate multi-model notebooks end-to-end.
 Headless by default; pass `--headed` to watch the run.
 
 ## Documentation
@@ -406,20 +406,20 @@ Headless by default; pass `--headed` to watch the run.
 - Include type hints
 - Add examples for complex APIs
 
-### Tutorials
+### Notebooks
 
-When adding tutorials to `examples/`:
+When adding notebooks to `examples/`:
 
 1. Follow naming: `XX_topic_name.py`
-2. Include header comment explaining the tutorial
+2. Include header comment explaining the notebook
 3. Use clear, educational code
 4. Test that it runs successfully against a real provider via the workbench
-5. If the tutorial fits naturally as a multi-model demo (orchestrator,
+5. If the notebook fits naturally as a multi-model demo (orchestrator,
    handoff, debate, supervisor-critic), use `get_model_b()` for the
    lighter role(s) — it falls back to slot A when the workbench's
    "Model B" dropdown is empty, so plain CLI runs stay correct.
-6. Add a matching markdown stub under `docs/tutorials/` — the docs
-   tooling generates one page per `examples/tutorial_*.py`.
+6. Add a matching markdown stub under `docs/notebooks/` — the docs
+   tooling generates one page per `examples/notebook_*.py`.
 
 ### README Updates
 

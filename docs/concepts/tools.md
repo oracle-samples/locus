@@ -84,7 +84,7 @@ function again**. Defends against:
 - Replays after a checkpoint resume.
 
 Read the [idempotency concept page](idempotency.md) for the full
-picture and the matching tutorial.
+picture and the matching notebook.
 
 ### Sync and async bodies
 

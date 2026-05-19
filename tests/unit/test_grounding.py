@@ -305,7 +305,7 @@ class TestGroundingEvaluator:
         evidence_set = {
             "Python is a programming language",
             "Java is also popular",
-            "Python programming tutorials available",
+            "Python programming notebooks available",
         }
 
         supporting = evaluator._find_supporting_evidence(claim, evidence_set)

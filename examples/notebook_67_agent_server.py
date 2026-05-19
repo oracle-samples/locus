@@ -1,7 +1,7 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 62: Agent server — deploy an agent as an HTTP API.
+"""Notebook 62: Agent server — deploy an agent as an HTTP API.
 
 AgentServer wraps any Locus Agent in a FastAPI app: synchronous invoke,
 streaming SSE, persisted threads scoped to the bearer principal so two
@@ -28,14 +28,14 @@ Run it
     LOCUS_MODEL_PROVIDER=mock python examples/notebook_67_agent_server.py
 
     # Boot a real uvicorn server on http://127.0.0.1:8000:
-    LOCUS_TUTORIAL_BOOT=1 python examples/notebook_67_agent_server.py
+    LOCUS_NOTEBOOK_BOOT=1 python examples/notebook_67_agent_server.py
 
 Prerequisites:
 
 - pip install fastapi uvicorn
 - For the persisted thread paths: an Oracle Autonomous Database with
   ORACLE_DSN / ORACLE_USER / ORACLE_PASSWORD / ORACLE_WALLET set.
-  Without those env vars the tutorial prints what's missing and exits.
+  Without those env vars the notebook prints what's missing and exits.
 """
 
 import os
@@ -131,9 +131,9 @@ def example_server():
     r = client.delete("/threads/demo-thread")
     print(f"DELETE /threads/demo-thread: {r.json()}")
 
-    print("\nTo run as a real server, set LOCUS_TUTORIAL_BOOT=1 and run this")
+    print("\nTo run as a real server, set LOCUS_NOTEBOOK_BOOT=1 and run this")
     print("file directly. Example session:")
-    print("  LOCUS_TUTORIAL_BOOT=1 LOCUS_MODEL_PROVIDER=oci \\")
+    print("  LOCUS_NOTEBOOK_BOOT=1 LOCUS_MODEL_PROVIDER=oci \\")
     print("      python examples/notebook_67_agent_server.py")
     print("  curl -s -X POST http://127.0.0.1:8000/invoke \\")
     print("       -H 'Content-Type: application/json' \\")
@@ -148,8 +148,8 @@ def example_server():
 def boot_live_server() -> None:
     """Bind a live uvicorn instance.
 
-    Gated behind LOCUS_TUTORIAL_BOOT=1 so the integration runner that
-    imports every tutorial doesn't hang on a blocking server.
+    Gated behind LOCUS_NOTEBOOK_BOOT=1 so the integration runner that
+    imports every notebook doesn't hang on a blocking server.
     """
     model = get_model()
     agent = Agent(
@@ -175,7 +175,7 @@ def boot_live_server() -> None:
 if __name__ == "__main__":
     missing = _missing_env()
     if missing:
-        print("\n--- Tutorial 62: Agent Server on Oracle 26ai ---")
+        print("\n--- Notebook 62: Agent Server on Oracle 26ai ---")
         print(
             "Required environment variables not set; skipping the live "
             "demo so this file still runs cleanly in CI.\n"
@@ -188,7 +188,7 @@ if __name__ == "__main__":
             "and re-run."
         )
         sys.exit(0)
-    if os.getenv("LOCUS_TUTORIAL_BOOT") == "1":
+    if os.getenv("LOCUS_NOTEBOOK_BOOT") == "1":
         boot_live_server()
     else:
         example_server()

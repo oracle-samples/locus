@@ -20,7 +20,7 @@ returns the supplied response.
 Run it:
     LOCUS_MODEL_PROVIDER=mock python examples/notebook_24_human_in_the_loop.py
 
-This tutorial doesn't call any LLM, so the model provider doesn't
+This notebook doesn't call any LLM, so the model provider doesn't
 matter. The default is still OCI GenAI when ~/.oci/config exists.
 """
 
@@ -357,7 +357,7 @@ async def example_complete_workflow():
 
 async def main():
     print("=" * 60)
-    print("Tutorial 19: Human-in-the-loop")
+    print("Notebook 19: Human-in-the-loop")
     print("=" * 60)
     print()
 
@@ -368,7 +368,7 @@ async def main():
     await example_complete_workflow()
 
     print("=" * 60)
-    print("Next: Tutorial 20 — Advanced patterns")
+    print("Next: Notebook 20 — Advanced patterns")
     print("=" * 60)
 
 

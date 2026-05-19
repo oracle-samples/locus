@@ -5,7 +5,7 @@ Generative AI's provisioned-capacity serving mode: instead of
 pay-per-token inference against a shared model id, you address a
 dedicated endpoint by its OCID
 (`ocid1.generativeaiendpoint.oc1.<region>....`) and OCI routes
-inference to your cluster. This tutorial wires Locus to one.
+inference to your cluster. This notebook wires Locus to one.
 
 The shape is the same as any other OCI model — only the model id
 changes. Pass the endpoint OCID and Locus routes it through `OCIModel`

@@ -1,7 +1,7 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 51: Multi-modal providers — web search, web fetch, image, speech.
+"""Notebook 51: Multi-modal providers — web search, web fetch, image, speech.
 
 Set a provider on the Agent kwargs (web_search, web_fetch, image_generator,
 speech_provider) and Locus auto-registers a matching @tool. The model

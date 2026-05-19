@@ -100,7 +100,7 @@ async def end_to_end(catalogue: list[dict]) -> dict:
     return final
 ```
 
-## Tutorials
+## Notebooks
 
 - [`notebook_28_functional_api.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_28_functional_api.py)
   — `@task` and `@entrypoint` end-to-end.

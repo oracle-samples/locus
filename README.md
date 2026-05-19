@@ -255,7 +255,7 @@ python examples/notebook_68_research_workflow.py     # full research pipeline
 | **Real-world workflows** | 57–61 | Incident response, procurement, contract review, audio |
 | **Server & full pipelines** | 62–63 | Agent server (FastAPI), full research workflow |
 
-→ [Full notebooks index](https://oracle-samples.github.io/locus/tutorials/)
+→ [Full notebooks index](https://oracle-samples.github.io/locus/notebooks/)
 
 ---
 

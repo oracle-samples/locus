@@ -4,7 +4,7 @@ A researcher gathers notes, a writer drafts a response, a critic
 either approves or sends it back for revision. The loop caps at two
 revisions to bound runtime.
 
-This tutorial covers:
+This notebook covers:
 
 - Control flow as a `StateGraph` with conditional edges — no
   hand-rolled `while True`.
@@ -24,8 +24,8 @@ START → research → write → critique → END (approve)
 
 ## Prerequisites
 
-- Tutorial 16 (basic graph).
-- Tutorial 25 (agent handoff) for an alternative shape.
+- Notebook 16 (basic graph).
+- Notebook 25 (agent handoff) for an alternative shape.
 
 ## Run
 

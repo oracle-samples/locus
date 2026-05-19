@@ -206,7 +206,7 @@ class OCIEmbeddings(BaseModel, BaseEmbedding):
         self._oci_config_dict = config_dict
 
         # Determine service endpoint. Treat an empty-string config (which
-        # tutorials pass when no env override is set) the same as None and
+        # notebooks pass when no env override is set) the same as None and
         # auto-derive from a region. Region preference is:
         #   1. LOCUS_OCI_REGION env (so a session-token profile whose
         #      home region is e.g. us-ashburn-1 can still hit GenAI in

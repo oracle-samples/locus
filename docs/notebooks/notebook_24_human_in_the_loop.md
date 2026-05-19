@@ -18,7 +18,7 @@ What you'll see:
 - `graph.config.interrupt_before = [...]` — pause before specific nodes
   without modifying them.
 
-This tutorial doesn't call any LLM, so the model provider doesn't
+This notebook doesn't call any LLM, so the model provider doesn't
 matter:
 
 ```bash

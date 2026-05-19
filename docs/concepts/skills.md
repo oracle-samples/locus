@@ -162,7 +162,7 @@ of them call.
 | `allowed_tools` is silently ignored | Tools must also be registered on the agent (`tools=[...]`). The skill's `allowed_tools` is a *subset* filter, not a registration. |
 | Skill resource file isn't read | The model has to ask for it. If a reference is mandatory, inline its key bullets in `instructions=` instead. |
 
-## Source and tutorial
+## Source and notebook
 
 - [`notebook_49_skills.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_49_skills.py) — programmatic and filesystem-loaded skills end-to-end.
 - [`locus.skills`](https://github.com/oracle-samples/locus/tree/main/src/locus/skills) — `Skill`, `SkillsPlugin`.

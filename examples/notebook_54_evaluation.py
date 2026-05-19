@@ -1,7 +1,7 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 49: Evaluation — score an agent against a test suite.
+"""Notebook 49: Evaluation — score an agent against a test suite.
 
 Treat the agent like any other piece of code. Declare cases, run them,
 read the report. Locus ships a small, dependency-free harness so you

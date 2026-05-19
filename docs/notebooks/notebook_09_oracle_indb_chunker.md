@@ -9,8 +9,8 @@ database. Locus wraps it as `OracleInDBChunker`.
 ## What this covers
 
 - `OracleInDBChunker(dsn=..., max_tokens=20, overlap=0, by="words")` —
-  same connection envelope as the loader (tutorial 64) and the vector
-  store (tutorial 06).
+  same connection envelope as the loader (notebook 08) and the vector
+  store (notebook 06).
 - `await chunker.chunk_text(long_paragraph)` — single Python string in,
   list of `{chunk_id, offset, length, text}` rows out.
 - `async for chunk in chunker.chunk_column(table_name=..., text_column=...)`
@@ -36,7 +36,7 @@ GRANT EXECUTE ON DBMS_VECTOR_CHAIN TO locus_app;
 ```
 
 If `ORACLE_DSN` / `ORACLE_PASSWORD` / `ORACLE_WALLET` aren't set the
-tutorial prints the wiring snippet and exits cleanly — no traceback,
+notebook prints the wiring snippet and exits cleanly — no traceback,
 no half-initialised state.
 
 ## Run

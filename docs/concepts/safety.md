@@ -148,7 +148,7 @@ runs; the model sees the typed-error message and retries with `"C"`.
 | `GuardrailsHook` blocks a legitimate message | Inspect `hook._violations` after the run for the violation type, then add an action override (`action_overrides={"sql_injection": ALLOW}`) or trim the regex. |
 | Validation error swallows a tool-arg bug | The error came back to the model — it's in the trace, look for `ToolCompleteEvent.error`. |
 
-## Source and tutorials
+## Source and notebooks
 
 - [`notebook_51_guardrails_security.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_51_guardrails_security.py) — basic guardrails.
 - [`notebook_52_guardrails_advanced.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_52_guardrails_advanced.py) — topic + content + PII layered.

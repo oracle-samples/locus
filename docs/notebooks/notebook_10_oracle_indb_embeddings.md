@@ -17,8 +17,8 @@ Locus wraps `DBMS_VECTOR_CHAIN.UTL_TO_EMBEDDING` /
 - `OracleInDBEmbeddings(model_name="ALL_MINILM_L12_V2", dimension=384,
   dsn=..., user=..., password=..., wallet_location=...)` — binds the
   embedder to an in-DB ONNX model. Same connection envelope as the
-  loader (tutorial 64), chunker (tutorial 65), and vector store
-  (tutorial 06).
+  loader (notebook 08), chunker (notebook 09), and vector store
+  (notebook 06).
 - `await emb.embed(text)` — single text → `EmbeddingResult`
   (`.embedding` is `list[float]` of length `dimension`).
 - `await emb.embed_batch([t1, t2, …])` — uses `UTL_TO_EMBEDDINGS` when
@@ -52,8 +52,8 @@ GRANT MINING MODEL SELECT ON ALL_MINILM_L12_V2 TO locus_app;
 ```
 
 If `ORACLE_DSN` / `ORACLE_PASSWORD` / `ORACLE_WALLET` aren't set the
-tutorial prints the wiring snippet and exits cleanly. If the model
-isn't loaded the tutorial catches `ORA-29024` / `ORA-20100` / similar
+notebook prints the wiring snippet and exits cleanly. If the model
+isn't loaded the notebook catches `ORA-29024` / `ORA-20100` / similar
 from the SQL call and prints a friendly skip — no traceback in either
 case.
 

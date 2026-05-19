@@ -3,13 +3,13 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 34: emergent routing — let the model pick the protocol when it's ambiguous.
+"""Notebook 34: emergent routing — let the model pick the protocol when it's ambiguous.
 
-The default router (Tutorial 52) is deterministic: the LLM fills a
+The default router (Notebook 52) is deterministic: the LLM fills a
 ``GoalFrame``, then ``_rank_key`` picks a protocol via tuple
 comparison. Reproducible, auditable, rule-based.
 
-This tutorial covers the opt-in second mode. When multiple protocols
+This notebook covers the opt-in second mode. When multiple protocols
 pass the filter, an ``LLMProtocolPicker`` asks the model to make the
 last-mile choice and records its rationale on the
 ``router.protocol.selected`` event.
@@ -35,8 +35,8 @@ present both routers talk to a live OCI model (canonical pick:
 emerge with its mock rationale.
 
 Prerequisites:
-- Tutorial 13 (structured output).
-- Tutorial 52 (cognitive router — the default rule-based path).
+- Notebook 13 (structured output).
+- Notebook 52 (cognitive router — the default rule-based path).
 """
 
 from __future__ import annotations

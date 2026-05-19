@@ -3,14 +3,14 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 05: retrieve-then-rerank on Oracle 26ai with Cohere Reranker V4.
+"""Notebook 05: retrieve-then-rerank on Oracle 26ai with Cohere Reranker V4.
 
 Embedding-only retrieval often isn't enough for production RAG. The
 embedding model sees query and document independently and can mis-rank
 candidates whose surface form scores high but whose semantic relevance
 is lower. A cross-encoder reranker scores the query against each
 candidate together and catches the signals embeddings miss. This
-tutorial wires Cohere Reranker V4 on Oracle Cloud Infrastructure (OCI)
+notebook wires Cohere Reranker V4 on Oracle Cloud Infrastructure (OCI)
 GenAI on top of an Oracle Database 26ai vector store and shows the lift
 on a small medical corpus.
 
@@ -34,14 +34,14 @@ Run it::
     export OCI_AUTH_TYPE=api_key     # or security_token
     export OCI_REGION=us-chicago-1
     export OCI_COMPARTMENT=ocid1.compartment.oc1..xxx
-    # Plus the Oracle 26ai wallet (see tutorial 05):
+    # Plus the Oracle 26ai wallet (see notebook 05):
     export ORACLE_DSN=mydb_low
     export ORACLE_USER=locus_app
     export ORACLE_PASSWORD='<app-password>'
     export ORACLE_WALLET=~/.oci/wallets/mydb
     python examples/notebook_05_cohere_reranker.py
 
-Difficulty: Intermediate. Self-contained — no prior tutorial required.
+Difficulty: Intermediate. Self-contained — no prior notebook required.
 """
 
 from __future__ import annotations
@@ -98,7 +98,7 @@ def _print_table(title: str, rows: list[tuple[int, float, str]]) -> None:
 async def main() -> None:
     missing = _missing_env()
     if missing:
-        print("\n--- Tutorial 05: Cohere Reranker V4 on Oracle 26ai ---")
+        print("\n--- Notebook 05: Cohere Reranker V4 on Oracle 26ai ---")
         print(
             "Required environment variables not set; skipping the live demo so "
             "this file still runs cleanly in CI.\n"

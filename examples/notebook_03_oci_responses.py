@@ -2,7 +2,7 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 03: reach Responses-only OCI GenAI models with ``OCIResponsesModel``.
+"""Notebook 03: reach Responses-only OCI GenAI models with ``OCIResponsesModel``.
 
 ``OCIResponsesModel`` is Locus's client for the Oracle Cloud
 Infrastructure (OCI) Generative AI Responses endpoint
@@ -62,7 +62,7 @@ from locus.tools.decorator import tool
 def _env(name: str) -> str:
     val = os.environ.get(name)
     if not val:
-        sys.stderr.write(f"missing env var {name} — see prerequisites in the tutorial docstring\n")
+        sys.stderr.write(f"missing env var {name} — see prerequisites in the notebook docstring\n")
         sys.exit(2)
     return val
 
@@ -226,7 +226,7 @@ async def _amain() -> None:
 
 def main() -> None:
     print("=" * 70)
-    print("Tutorial 03 — OCIResponsesModel: the OCI GenAI Responses endpoint")
+    print("Notebook 03 — OCIResponsesModel: the OCI GenAI Responses endpoint")
     print("=" * 70 + "\n")
     print(f"OCI_PROFILE              = {os.environ.get('OCI_PROFILE', '(unset)')}")
     print(f"OCI_REGION               = {REGION}")

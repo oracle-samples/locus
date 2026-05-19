@@ -21,20 +21,20 @@ export type CategoryInfo = {
   description: string;
 };
 
-export async function listTutorials(): Promise<Notebook[]> {
-  const r = await fetch("/api/tutorials");
+export async function listNotebooks(): Promise<Notebook[]> {
+  const r = await fetch("/api/notebooks");
   if (!r.ok) throw new Error(`notebooks ${r.status}`);
   return (await r.json()) as Notebook[];
 }
 
 export async function listNotebookCategories(): Promise<CategoryInfo[]> {
-  const r = await fetch("/api/tutorials/categories");
+  const r = await fetch("/api/notebooks/categories");
   if (!r.ok) throw new Error(`notebook categories ${r.status}`);
   return (await r.json()) as CategoryInfo[];
 }
 
-export async function getTutorial(id: string): Promise<NotebookDetail> {
-  const r = await fetch(`/api/tutorials/${encodeURIComponent(id)}`);
+export async function getNotebook(id: string): Promise<NotebookDetail> {
+  const r = await fetch(`/api/notebooks/${encodeURIComponent(id)}`);
   if (!r.ok) throw new Error(`notebook ${r.status}`);
   return (await r.json()) as NotebookDetail;
 }
@@ -125,7 +125,7 @@ export type WorkbenchEvent =
   | { type: "runStarted"; run_id: string };
 
 export async function respondToInterrupt(runId: string, response: unknown): Promise<void> {
-  const r = await fetch(`/api/tutorials/runs/${encodeURIComponent(runId)}/respond`, {
+  const r = await fetch(`/api/notebooks/runs/${encodeURIComponent(runId)}/respond`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ response }),
@@ -145,7 +145,7 @@ export function runNotebookSource(
   const ctrl = new AbortController();
   void (async () => {
     try {
-      const r = await fetch("/api/tutorials/run", {
+      const r = await fetch("/api/notebooks/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // 8 minutes — long enough for the multi-protocol notebook 51

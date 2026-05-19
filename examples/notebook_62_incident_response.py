@@ -3,7 +3,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 57: Incident-response runbook (SRE workflow).
+"""Notebook 57: Incident-response runbook (SRE workflow).
 
 Models the loop a real on-call engineer runs when a page fires::
 
@@ -263,7 +263,7 @@ async def write_postmortem(state: dict[str, Any]) -> dict[str, Any]:
             "Postmortem writer returned no parsed Postmortem. The configured "
             "model could not honor the JSON schema. Use a stronger model "
             "(e.g. openai.gpt-4o, openai.gpt-5, anthropic.claude-3-5-sonnet) "
-            f"for tutorial 57. Raw output: {result.message!r}"
+            f"for notebook 57. Raw output: {result.message!r}"
         )
     return {"postmortem": pm}
 
@@ -315,7 +315,7 @@ def _print_postmortem(pm: Postmortem | None) -> None:
 
 
 async def main() -> None:
-    print("Tutorial 57: Incident response runbook")
+    print("Notebook 57: Incident response runbook")
     print("=" * 60)
 
     model = get_model()

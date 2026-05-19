@@ -2,7 +2,7 @@
 
 How much code does a developer need to write to do something useful with
 Locus? This is a short, honest snapshot from running the workbench
-against every model-only tutorial.
+against every model-only notebook.
 
 ## The 90% case is one screen
 
@@ -80,25 +80,25 @@ than ~5 lines of plumbing for the standard case.
    papers over this with an `oci_transport: "auto"` rule that mirrors
    `examples/config.py:_pick_oci_transport`. Would be nicer if the SDK
    had a single `OCIGenAIModel(model_id=...)` that auto-routed.
-2. **`output_schema=` is buried.** Tutorial 13 demonstrates it but it's
+2. **`output_schema=` is buried.** Notebook 13 demonstrates it but it's
    in a later section; first-time users tend to miss it and hand-parse
    JSON instead. Worth surfacing in `Agent`'s docstring.
 3. **Inconsistent kwargs.** `max_tokens` (some providers) vs
    `max_completion_tokens` (others). The wrappers normalise some of
    this but it leaks at the edges.
-4. **Hand-built graphs are still ~30 lines** for map-reduce (tutorial
+4. **Hand-built graphs are still ~30 lines** for map-reduce (notebook
    42's `StateGraph` + `Send`). A `MapReduce(workers=[...], reduce=fn)`
    one-liner would eat the bottom 90% of those.
 
-## Tutorial categories — what runs in the workbench
+## Notebook categories — what runs in the workbench
 
 | Category | Count | Status |
 |---|---|---|
 | GREEN — pure model + tools | 27 | runs to completion on real OCI gpt-5.5 |
 | YELLOW — minor gotchas (tmp dirs, demo sleeps) | 5 | runs but a few seconds slower |
-| RED — uses `locus.core.interrupt()` | 5 | needs human stdin, blocked in the workbench (run `python examples/tutorial_NN_*.py` locally) |
+| RED — uses `locus.core.interrupt()` | 5 | needs human stdin, blocked in the workbench (run `python examples/notebook_NN_*.py` locally) |
 
-So: **32/37** of the curated tutorials run end-to-end, fully automated,
+So: **32/37** of the curated notebooks run end-to-end, fully automated,
 against real GenAI through the workbench. The 5 stdin-dependent ones
 are human-in-the-loop demos that need a real terminal — fundamental,
 not a fix-tomorrow.

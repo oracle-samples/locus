@@ -280,11 +280,11 @@ PATTERNS: list[dict[str, Any]] = [
     {
         "id": "oracle_26ai_rag",
         "title": "Oracle 26ai RAG (native VECTOR)",
-        "tutorial": 61,
+        "notebook": 61,
         "summary": (
             "OracleVectorStore against an Autonomous Database wallet — native "
             "VECTOR(1024, FLOAT32) + VECTOR_DISTANCE COSINE, same RAGRetriever "
-            "as the in-memory tutorials. Requires ORACLE_DSN / ORACLE_USER / "
+            "as the in-memory notebooks. Requires ORACLE_DSN / ORACLE_USER / "
             "ORACLE_PASSWORD / ORACLE_WALLET on the backend plus an OCI "
             "provider for embeddings."
         ),
@@ -292,7 +292,7 @@ PATTERNS: list[dict[str, Any]] = [
     {
         "id": "cohere_reranker",
         "title": "Retrieve-then-rerank (Cohere V4)",
-        "tutorial": 60,
+        "notebook": 60,
         "summary": (
             "Same query, two orderings: embedding-only vs Cohere V4 "
             "cross-encoder. The reranker promotes the canonical answer to "
@@ -303,49 +303,49 @@ PATTERNS: list[dict[str, Any]] = [
     {
         "id": "agent",
         "title": "Basic agent",
-        "tutorial": 1,
+        "notebook": 1,
         "summary": "One Agent answers a prompt. Hello world for the SDK.",
     },
     {
         "id": "agent_with_tools",
         "title": "Agent + tools",
-        "tutorial": 2,
+        "notebook": 2,
         "summary": "Agent with two trivial tools — sees ReAct loop in action.",
     },
     {
         "id": "composition",
         "title": "Composition (Sequential)",
-        "tutorial": 25,
+        "notebook": 25,
         "summary": "Two agents chained: researcher → summariser.",
     },
     {
         "id": "orchestrator",
         "title": "Orchestrator + specialists",
-        "tutorial": 17,
+        "notebook": 17,
         "summary": "One coordinator, two specialists, parallel dispatch.",
     },
     {
         "id": "stategraph_loop",
         "title": "StateGraph (critic loop)",
-        "tutorial": 43,
+        "notebook": 43,
         "summary": "Writer → Critic loop until critic approves; allow_cycles.",
     },
     {
         "id": "map_reduce",
         "title": "Map-reduce code review",
-        "tutorial": 42,
+        "notebook": 42,
         "summary": "Send fan-out across N reviewers, reduce findings.",
     },
     {
         "id": "structured_output",
         "title": "Structured output (Verdict)",
-        "tutorial": 13,
+        "notebook": 13,
         "summary": "Pydantic output_schema — typed Verdict, not free text.",
     },
     {
         "id": "memory_manager",
         "title": "Long-term memory",
-        "tutorial": None,
+        "notebook": None,
         "summary": (
             "Two-session demo: agent extracts memories from session 1, "
             "then injects them in session 2 — no raw history needed."
@@ -354,7 +354,7 @@ PATTERNS: list[dict[str, Any]] = [
     {
         "id": "cognitive_routing",
         "title": "Cognitive routing (rule-based vs LLM)",
-        "tutorial": 59,
+        "notebook": 59,
         "summary": (
             "Dispatch a prompt through the cognitive router. Toggle the "
             "LLM picker checkbox to compare rule-based protocol selection "
@@ -1681,7 +1681,7 @@ def _parse_notebook(path: Path) -> dict[str, Any]:
     """Pull (id, number, title, summary, source) out of a notebook file."""
     src = path.read_text()
     # Extract the leading triple-quoted docstring; first line is the
-    # title, everything else up to "This tutorial covers:" is the summary.
+    # title, everything else up to "This notebook covers:" is the summary.
     m = re.search(r'^"""(.*?)"""', src, re.DOTALL | re.MULTILINE)
     docstring = m.group(1).strip() if m else ""
     title = path.stem.replace("_", " ").title()
@@ -1689,13 +1689,13 @@ def _parse_notebook(path: Path) -> dict[str, Any]:
     if docstring:
         lines = docstring.splitlines()
         title = lines[0].strip().rstrip(".")
-        # Strip the legacy "Tutorial NN:" / "Notebook NN:" prefix the
+        # Strip the legacy "Notebook NN:" / "Notebook NN:" prefix the
         # docstrings carry from before the renumber. Show only the
         # descriptive remainder so the sidebar reads cleanly. Also
         # uppercase the first letter when the remainder is now a
         # bare lowercase sentence ("call any non-R-series" → "Call …").
         title = re.sub(
-            r"^(?:Tutorial|Notebook)\s+\d+\s*[:—-]\s*",
+            r"^(?:Notebook|Notebook)\s+\d+\s*[:—-]\s*",
             "",
             title,
             flags=re.IGNORECASE,
@@ -1707,7 +1707,7 @@ def _parse_notebook(path: Path) -> dict[str, Any]:
             if (
                 ln.strip()
                 .lower()
-                .startswith(("this tutorial covers", "prerequisites", "difficulty"))
+                .startswith(("this notebook covers", "prerequisites", "difficulty"))
             ):
                 break
             if ln.strip():
@@ -1762,8 +1762,8 @@ def _list_notebooks() -> list[dict[str, Any]]:
 
 
 # Canonical notebook catalog endpoints. The 2026 rebrand renamed the
-# user-facing label from "Tutorial" to "Notebook"; the legacy
-# /api/tutorials/* paths stay live for backwards compatibility and
+# user-facing label from "Notebook" to "Notebook"; the legacy
+# /api/notebooks/* paths stay live for backwards compatibility and
 # delegate to these handlers.
 
 
@@ -1790,25 +1790,6 @@ def get_notebook_source(tid: str) -> dict[str, Any]:
         if t["id"] == tid:
             return t
     raise HTTPException(404, f"unknown notebook: {tid}")
-
-
-# Legacy /api/tutorials/* aliases — same payloads, kept for clients
-# that haven't migrated to the notebook paths.
-
-
-@app.get("/api/tutorials")
-def list_tutorials_legacy() -> list[dict[str, Any]]:
-    return list_notebooks()
-
-
-@app.get("/api/tutorials/categories")
-def list_tutorial_categories_legacy() -> list[dict[str, Any]]:
-    return list_notebook_categories()
-
-
-@app.get("/api/tutorials/{tid}")
-def get_tutorial_source_legacy(tid: str) -> dict[str, Any]:
-    return get_notebook_source(tid)
 
 
 # /api/notebooks/run + /api/notebooks/runs/{id}/respond aliases live
@@ -2160,7 +2141,7 @@ async def _bridge_subprocess_line_to_bus(run_id: str, kind: str, text: str) -> N
     Lines that start with ``__LE__:`` are typed locus events
     (``ThinkEvent``, ``ToolStartEvent``, etc.) — the JSON payload
     becomes the StreamEvent ``data``. Everything else is republished
-    as a plain ``tutorial.stdout`` / ``tutorial.stderr`` event so a
+    as a plain ``notebook.stdout`` / ``notebook.stderr`` event so a
     bus subscriber gets the full output stream from one channel.
     """
     from locus.observability import StreamEvent, get_event_bus  # noqa: PLC0415
@@ -2189,7 +2170,7 @@ async def _bridge_subprocess_line_to_bus(run_id: str, kind: str, text: str) -> N
         await bus.publish(
             StreamEvent(
                 run_id=run_id,
-                event_type=f"tutorial.{kind}",
+                event_type=f"notebook.{kind}",
                 data={"text": text},
             ),
         )
@@ -2281,7 +2262,7 @@ import uuid as _uuid
 
 
 # Active subprocess runs that can accept human-input responses via
-# `POST /api/tutorials/runs/{run_id}/respond`. Keyed by run id, value is
+# `POST /api/notebooks/runs/{run_id}/respond`. Keyed by run id, value is
 # the asyncio subprocess so the endpoint can write JSON to its stdin.
 _RUNS: dict[str, asyncio.subprocess.Process] = {}
 
@@ -2337,7 +2318,7 @@ def _split_future_imports(source: str) -> tuple[str, str]:
     return "".join(lines[:last_future]), "".join(lines[last_future:])
 
 
-@app.post("/api/tutorials/run")
+@app.post("/api/notebooks/run")
 async def run_notebook(req: WorkbenchRunRequest) -> StreamingResponse:
     """Execute user-edited notebook source in a subprocess; stream stdout/stderr as SSE.
 
@@ -2349,7 +2330,7 @@ async def run_notebook(req: WorkbenchRunRequest) -> StreamingResponse:
     the bootstrap monkey-patches ``interrupt`` to emit an
     ``InterruptEvent`` SSE line and block on stdin for the response.
     The frontend pops a modal and POSTs the answer to
-    ``/api/tutorials/runs/{run_id}/respond`` which writes a JSON line
+    ``/api/notebooks/runs/{run_id}/respond`` which writes a JSON line
     to the subprocess's stdin.
     """
     repo_root = _NOTEBOOK_DIR.parent
@@ -2512,7 +2493,7 @@ except Exception:
 
 # Override locus.core.interrupt so it emits an InterruptEvent SSE line
 # and blocks on stdin for the user's response. The runner's
-# /api/tutorials/runs/{run_id}/respond endpoint writes a JSON line to
+# /api/notebooks/runs/{run_id}/respond endpoint writes a JSON line to
 # the subprocess's stdin on the user's behalf.
 try:
     import locus.core as __sb_lcore
@@ -2553,7 +2534,7 @@ except Exception:
 # tokens land live inside the THINK chip. That patch reconstructs the
 # ModelResponse from chunks (Message.assistant(content=...)) and was
 # subtly losing fields like message-id metadata which broke
-# conversation memory in checkpointed tutorials. We rely on the agent's
+# conversation memory in checkpointed notebooks. We rely on the agent's
 # ThinkEvent body for the chain-of-thought instead — the reasoning
 # field already carries the model's response and is rendered live as
 # soon as the event fires.
@@ -2583,7 +2564,7 @@ except Exception:
         # __LE__:{...} line with the parent's run_id. The parent then
         # republishes those lines on the EventBus under the same run_id
         # so the unified /api/events/{run_id} SSE consumer sees the same
-        # structured events as the legacy /api/tutorials/run consumer.
+        # structured events as the legacy /api/notebooks/run consumer.
         "LOCUS_WORKBENCH_RUN_ID": run_id,
     }
     # Oracle 26ai credentials — pass through to the subprocess so DB
@@ -2630,7 +2611,7 @@ except Exception:
 
         _RUNS[run_id] = proc
         # First SSE message gives the client the run id so it can POST
-        # responses back to /api/tutorials/runs/{run_id}/respond when an
+        # responses back to /api/notebooks/runs/{run_id}/respond when an
         # InterruptEvent fires.
         yield _sse({"type": "runStarted", "run_id": run_id})
 
@@ -2670,7 +2651,7 @@ except Exception:
                 # Bridge structured agent events (__LE__:{json}) onto the
                 # observability EventBus so the unified SSE endpoint
                 # /api/events/{run_id} sees the same telemetry the legacy
-                # /api/tutorials/run consumer sees. Plain stdout/stderr
+                # /api/notebooks/run consumer sees. Plain stdout/stderr
                 # lines also flow as bus events so users can tail
                 # everything from one channel.
                 await _bridge_subprocess_line_to_bus(run_id, kind, text)
@@ -2685,7 +2666,7 @@ except Exception:
             await bus.publish(
                 StreamEvent(
                     run_id=run_id,
-                    event_type="tutorial.exited",
+                    event_type="notebook.exited",
                     data={"code": rc},
                 )
             )
@@ -2706,7 +2687,7 @@ class RespondRequest(BaseModel):
     response: Any
 
 
-@app.post("/api/tutorials/runs/{run_id}/respond")
+@app.post("/api/notebooks/runs/{run_id}/respond")
 async def respond_to_interrupt(run_id: str, req: RespondRequest) -> dict[str, Any]:
     """Pipe a JSON-encoded response into the running subprocess's stdin.
 
@@ -2736,25 +2717,21 @@ async def respond_to_interrupt(run_id: str, req: RespondRequest) -> dict[str, An
 
 @app.post("/api/notebooks/run")
 async def run_notebook_alias(req: WorkbenchRunRequest) -> StreamingResponse:
-    """Notebook-namespaced alias of ``/api/tutorials/run``."""
+    """Notebook-namespaced alias of ``/api/notebooks/run``."""
     return await run_notebook(req)
 
 
 @app.post("/api/notebooks/runs/{run_id}/respond")
 async def respond_to_interrupt_alias(run_id: str, req: RespondRequest) -> dict[str, Any]:
-    """Notebook-namespaced alias of ``/api/tutorials/runs/{id}/respond``."""
+    """Notebook-namespaced alias of ``/api/notebooks/runs/{id}/respond``."""
     return await respond_to_interrupt(run_id, req)
 
 
 @app.get("/api/health")
 def health() -> dict[str, Any]:
-    count = len(_list_notebooks())
     return {
         "ok": True,
         "patterns": [p["id"] for p in PATTERNS],
         "streamable": sorted(STREAMABLE),
-        # ``tutorials`` kept for backwards compatibility; ``notebooks``
-        # is the canonical key going forward.
-        "tutorials": count,
-        "notebooks": count,
+        "notebooks": len(_list_notebooks()),
     }

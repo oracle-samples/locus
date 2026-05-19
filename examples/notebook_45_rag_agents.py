@@ -1,9 +1,9 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 40: RAG agents — wire a retriever into an agent's tool set.
+"""Notebook 40: RAG agents — wire a retriever into an agent's tool set.
 
-Once you have a vector store full of documents (tutorial 38 / 39), the
+Once you have a vector store full of documents (notebook 38 / 39), the
 next step is to let an agent reach into it. ``RAGRetriever.as_tool()``
 turns the retriever into an ordinary Locus tool that the agent picks
 up alongside any other ``@tool`` you define.
@@ -111,7 +111,7 @@ def _safe_math_eval(expression: str) -> float:
 
 async def rag_as_tool():
     print("=" * 60)
-    print("Tutorial 40: RAG as a Tool")
+    print("Notebook 40: RAG as a Tool")
     print("=" * 60)
 
     from locus.rag import RAGRetriever
@@ -162,7 +162,7 @@ async def rag_as_tool():
 
 async def simple_rag_agent():
     print("\n" + "=" * 60)
-    print("Tutorial 40: Simple RAG Agent")
+    print("Notebook 40: Simple RAG Agent")
     print("=" * 60)
 
     from locus.agent import Agent
@@ -241,7 +241,7 @@ Always cite information from the documentation.""",
 
 async def multi_tool_rag_agent():
     print("\n" + "=" * 60)
-    print("Tutorial 40: Multi-Tool RAG Agent")
+    print("Notebook 40: Multi-Tool RAG Agent")
     print("=" * 60)
 
     from datetime import datetime
@@ -320,7 +320,7 @@ Use tools as needed to answer questions accurately.""",
 
 async def rag_with_streaming():
     print("\n" + "=" * 60)
-    print("Tutorial 40: RAG with Streaming")
+    print("Notebook 40: RAG with Streaming")
     print("=" * 60)
 
     from locus.agent import Agent
@@ -369,7 +369,7 @@ async def rag_with_streaming():
 
 async def rag_best_practices():
     print("\n" + "=" * 60)
-    print("Tutorial 40: RAG Best Practices")
+    print("Notebook 40: RAG Best Practices")
     print("=" * 60)
 
     print("""
@@ -458,7 +458,7 @@ def get_embedder():
 
 
 def get_model():
-    """LLM model from the shared tutorial config — honours every env var."""
+    """LLM model from the shared notebook config — honours every env var."""
     from config import get_model as _get_model
 
     return _get_model(max_tokens=512)
@@ -472,7 +472,7 @@ def get_model():
 async def main():
     missing = _missing_env()
     if missing:
-        print("\n--- Tutorial 40: RAG agents on Oracle 26ai ---")
+        print("\n--- Notebook 40: RAG agents on Oracle 26ai ---")
         print(
             "Required environment variables not set; skipping the live "
             "demo so this file still runs cleanly in CI.\n"
@@ -492,7 +492,7 @@ async def main():
     await rag_best_practices()
 
     print("\n" + "=" * 60)
-    print("Done. Next: tutorial 41 — MCP integration.")
+    print("Done. Next: notebook 41 — MCP integration.")
     print("=" * 60)
 
 

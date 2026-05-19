@@ -126,7 +126,7 @@ and `|` work across the whole hierarchy.
 | `ConfidenceMet` never trips | `reflexion=True` is required — without it, confidence stays at the default. |
 | `ToolCalled("x")` fires before the tool finishes | It checks the *call*, not the *result*. Pair with `ConfidenceMet` or a `CustomCondition` that inspects `tool_executions`. |
 
-## Source and tutorial
+## Source and notebook
 
 - [`notebook_20_termination.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_20_termination.py) — runnable algebra examples.
 - [`locus.core.termination`](https://github.com/oracle-samples/locus/blob/main/src/locus/core/termination.py) — every condition class, plus `__or__` / `__and__`.

@@ -18,7 +18,7 @@ What you'll see:
 - Subgraph-as-node — call one `StateGraph` from inside another.
 - `InMemoryStore` — durable key/value space that outlives a single run.
 
-Runs on the same OCI GenAI default as the rest of the tutorials:
+Runs on the same OCI GenAI default as the rest of the notebooks:
 
 ```bash
 LOCUS_MODEL_ID=openai.gpt-4.1 python examples/notebook_25_advanced_patterns.py

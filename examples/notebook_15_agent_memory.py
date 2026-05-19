@@ -2,7 +2,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 """
-Tutorial 10: agent memory backed by Oracle Autonomous Database 26ai.
+Notebook 10: agent memory backed by Oracle Autonomous Database 26ai.
 
 Give an agent a checkpointer and every turn is written to a real
 database. Restart the process, attach a fresh agent to the same
@@ -299,7 +299,7 @@ async def example_inspect_checkpoint():
 
 
 def _print_skip_banner(missing: list[str]) -> None:
-    print("\n--- Tutorial 10: Agent Memory & Checkpointing ---")
+    print("\n--- Notebook 10: Agent Memory & Checkpointing ---")
     print(
         "Required environment variables not set; skipping the live demo "
         "so this file still runs cleanly in CI.\n"
@@ -313,9 +313,9 @@ def _print_skip_banner(missing: list[str]) -> None:
 
 
 def main():
-    """Run all tutorial parts."""
+    """Run all notebook parts."""
     print("=" * 60)
-    print("Tutorial 10: Agent Memory & Checkpointing on Oracle 26ai")
+    print("Notebook 10: Agent Memory & Checkpointing on Oracle 26ai")
     print("=" * 60)
     print()
 
@@ -334,7 +334,7 @@ def main():
     asyncio.run(example_inspect_checkpoint())
 
     print("=" * 60)
-    print("Next: Tutorial 11 — Agent Streaming")
+    print("Next: Notebook 11 — Agent Streaming")
     print("=" * 60)
 
 

@@ -1,7 +1,7 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 46: Guardrails and security — block dangerous calls before the model sees them.
+"""Notebook 46: Guardrails and security — block dangerous calls before the model sees them.
 
 Each part wires a guardrail into a real agent run and prints the model
 round-trip cost, so the safety policy is exercised live, not described
@@ -71,7 +71,7 @@ def _llm_call(
 
 async def main():
     print("=" * 60)
-    print("Tutorial 46: Guardrails and security")
+    print("Notebook 46: Guardrails and security")
     print("=" * 60)
     print()
     print_config()
@@ -355,7 +355,7 @@ async def main():
     )
     print(f"Guarded answer: {safe_result.message[:300]}")
 
-    print(f"\nTotal violations logged in this tutorial: {len(violations_log)}")
+    print(f"\nTotal violations logged in this notebook: {len(violations_log)}")
     print("\n" + "=" * 60)
 
 

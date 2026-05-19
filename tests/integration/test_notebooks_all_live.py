@@ -2,11 +2,11 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Run every tutorial under examples/ as a subprocess and assert exit 0.
+"""Run every notebook under examples/ as a subprocess and assert exit 0.
 
-This is the user-acceptance gate: if a documented tutorial doesn't run
+This is the user-acceptance gate: if a documented notebook doesn't run
 end-to-end against a real OCI v1 model, we have a regression. Each
-tutorial is parametrized so the failure surface points at the offender.
+notebook is parametrized so the failure surface points at the offender.
 
 Activation:
 * ``OCI_PROFILE=<profile>`` — required (drives the OCI v1 transport).
@@ -15,7 +15,7 @@ Activation:
 * ``OCI_REGION=<region>`` — defaults to ``us-chicago-1``.
 
 The runner does not pre-skip anything by name — every
-``notebook_NN_*.py`` is exercised end-to-end. Tutorials that touch
+``notebook_NN_*.py`` is exercised end-to-end. Notebooks that touch
 external infra they can't reach (third-party MCP servers, live
 Redis/Postgres/OpenSearch clusters, etc.) gracefully degrade in their
 own code so the run still exits 0.
@@ -47,31 +47,31 @@ if not (_has_oci_config() and _PROFILE):  # pragma: no cover
 
 
 _REPO = Path(__file__).resolve().parents[2]
-_TUTORIALS_DIR = _REPO / "examples"
+_NOTEBOOKS_DIR = _REPO / "examples"
 
-# Default per-tutorial wall budget. Reasoning-class default model
+# Default per-notebook wall budget. Reasoning-class default model
 # (openai.gpt-5.5-*) spends real wall-clock on thinking tokens — most
-# tutorials finish well inside 6 min, but a handful with multiple
+# notebooks finish well inside 6 min, but a handful with multiple
 # agent hops + parallel dispatch reliably need longer. Keep this as
-# the default and override per-tutorial below.
+# the default and override per-notebook below.
 _DEFAULT_TIMEOUT = 360
-_TUTORIAL_TIMEOUT_OVERRIDES: dict[str, int] = {
+_NOTEBOOK_TIMEOUT_OVERRIDES: dict[str, int] = {
     # notebook_39_emergent_routing: 5 dispatches × 2-3 LLM calls each
     # through a reasoning model — empirical wall time ~7-9 min.
     "notebook_39_emergent_routing.py": 900,
 }
 
 
-def _all_tutorials() -> list[Path]:
-    return sorted(_TUTORIALS_DIR.glob("notebook_*.py"))
+def _all_notebooks() -> list[Path]:
+    return sorted(_NOTEBOOKS_DIR.glob("notebook_*.py"))
 
 
 @pytest.mark.parametrize(
-    "tutorial",
-    _all_tutorials(),
+    "notebook",
+    _all_notebooks(),
     ids=lambda p: p.name.removesuffix(".py"),
 )
-def test_notebook_runs_clean(tutorial: Path):
+def test_notebook_runs_clean(notebook: Path):
     """Run ``python examples/notebook_NN_*.py`` and assert exit code 0.
 
     The script must finish within 180s and not write to stderr beyond the
@@ -80,7 +80,7 @@ def test_notebook_runs_clean(tutorial: Path):
     env = os.environ.copy()
     # examples/config.py reads LOCUS_MODEL_PROVIDER + LOCUS_MODEL_ID +
     # LOCUS_OCI_* to build the right model. Setting these here makes
-    # every tutorial run against a real, cheap OCI model instead of the
+    # every notebook run against a real, cheap OCI model instead of the
     # hard-coded MockModel default.
     # Default to OCI but allow override via env (mostly for CI mock runs).
     env.setdefault("LOCUS_MODEL_PROVIDER", "oci")
@@ -96,10 +96,10 @@ def test_notebook_runs_clean(tutorial: Path):
     if os.environ.get("OCI_COMPARTMENT"):
         env.setdefault("LOCUS_OCI_COMPARTMENT", os.environ["OCI_COMPARTMENT"])
 
-    timeout_s = _TUTORIAL_TIMEOUT_OVERRIDES.get(tutorial.name, _DEFAULT_TIMEOUT)
+    timeout_s = _NOTEBOOK_TIMEOUT_OVERRIDES.get(notebook.name, _DEFAULT_TIMEOUT)
     proc = subprocess.run(  # noqa: S603 — controlled subprocess of our own script
-        [sys.executable, str(tutorial)],
-        cwd=str(_TUTORIALS_DIR),
+        [sys.executable, str(notebook)],
+        cwd=str(_NOTEBOOKS_DIR),
         env=env,
         capture_output=True,
         timeout=timeout_s,
@@ -108,7 +108,7 @@ def test_notebook_runs_clean(tutorial: Path):
 
     if proc.returncode != 0:
         pytest.fail(
-            f"{tutorial.name} exited {proc.returncode}\n"
+            f"{notebook.name} exited {proc.returncode}\n"
             f"--- stdout (tail) ---\n{proc.stdout.decode(errors='replace')[-2000:]}\n"
             f"--- stderr (tail) ---\n{proc.stderr.decode(errors='replace')[-2000:]}"
         )

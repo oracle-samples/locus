@@ -29,7 +29,7 @@ schema. The workflow's terminal node returns a typed object — `Verdict`,
 `Postmortem`, `PurchaseOrder`, `ContractDecision` — that the rest of
 your system can consume without a brittle JSON re-parse.
 
-Used by tutorials [44 (debate)][t44], [46 (incident)][t46],
+Used by notebooks [44 (debate)][t44], [46 (incident)][t46],
 [47 (procurement)][t47], [48 (contract)][t48].
 
 → See [Structured output](../structured-output.md).
@@ -173,7 +173,7 @@ specific node and event that diverged.
 
 ## Putting it together
 
-A tutorial-46-style incident-response graph in production looks like:
+A notebook-46-style incident-response graph in production looks like:
 
 ```python
 from locus.agent import Agent, AgentConfig

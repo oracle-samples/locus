@@ -14,7 +14,7 @@ What you'll see:
 - Two routers in sequence (auth → role).
 - An LLM acting as the router for one node.
 
-Runs on the same OCI GenAI default as the rest of the tutorials:
+Runs on the same OCI GenAI default as the rest of the notebooks:
 
 ```bash
 LOCUS_MODEL_ID=openai.gpt-4.1 python examples/notebook_22_conditional_routing.py

@@ -2,7 +2,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 """
-Tutorial 25: agent-to-agent handoff with a structured context payload.
+Notebook 25: agent-to-agent handoff with a structured context payload.
 
 A handoff is one agent saying "I'm done, please take this further." The
 source agent packages the task, its findings, and an explicit reason
@@ -29,13 +29,13 @@ present the agents talk to a live OCI model (canonical pick:
 ``openai.gpt-4.1`` or ``meta.llama-3.3-70b-instruct``). Set
 ``LOCUS_MODEL_PROVIDER=mock`` for offline runs.
 
-This tutorial fires ~9 handoffs serially, so it can use Locus's "Model B"
+This notebook fires ~9 handoffs serially, so it can use Locus's "Model B"
 slot — a second, typically cheaper model id read from ``LOCUS_MODEL_ID_B``
 — for the triage seat. With Model B unset, the slot collapses to Model A.
 
 Prerequisites:
-- Tutorial 08 (Agent basics).
-- Tutorial 24 (Swarm) for the unsupervised counterpoint.
+- Notebook 08 (Agent basics).
+- Notebook 24 (Swarm) for the unsupervised counterpoint.
 """
 
 import asyncio
@@ -60,7 +60,7 @@ def _banner(label: str, dt: float, prompt_tok: int = 0, completion_tok: int = 0)
 
 async def main():
     print("=" * 60)
-    print("Tutorial 25: agent-to-agent handoff with structured context")
+    print("Notebook 25: agent-to-agent handoff with structured context")
     print("=" * 60)
     print()
     print_config()
@@ -306,7 +306,7 @@ async def main():
 
     # =========================================================================
     print("\n" + "=" * 60)
-    print("Next: Tutorial 26 — Orchestrator Pattern")
+    print("Next: Notebook 26 — Orchestrator Pattern")
     print("=" * 60)
 
 

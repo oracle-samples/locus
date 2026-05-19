@@ -35,7 +35,7 @@ export ORACLE_WALLET_PASSWORD='<wallet-pw>'  # if wallet is encrypted
 ```
 
 If `ORACLE_DSN` / `ORACLE_PASSWORD` / `ORACLE_WALLET` aren't set the
-tutorial prints the wiring snippet and exits cleanly — no traceback,
+notebook prints the wiring snippet and exits cleanly — no traceback,
 no half-initialised state.
 
 ## Run

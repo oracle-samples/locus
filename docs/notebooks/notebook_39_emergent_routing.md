@@ -1,10 +1,10 @@
 # Emergent Routing
 
-[Tutorial 52](notebook_57_cognitive_router.md) covers the default
+[Notebook 52](notebook_57_cognitive_router.md) covers the default
 deterministic router: the LLM fills a typed `GoalFrame`, then
 `_rank_key` picks a protocol via a four-element tuple comparison.
 
-This tutorial covers the opt-in second mode. When multiple protocols
+This notebook covers the opt-in second mode. When multiple protocols
 pass the filter, an `LLMProtocolPicker` asks the model to make the
 last-mile choice and records its rationale on the
 `router.protocol.selected` event.
@@ -53,10 +53,10 @@ rationale (on the SSE event) explains why.
 
 ## See also
 
-- [Tutorial 52 — cognitive router (default rule-based path)](notebook_57_cognitive_router.md)
+- [Notebook 52 — cognitive router (default rule-based path)](notebook_57_cognitive_router.md)
 - [Concepts: cognitive router](../concepts/router.md) — the
   filter-then-pick invariant plus observability schema.
-- [Tutorial 26 — orchestrator pattern](notebook_31_orchestrator_pattern.md)
+- [Notebook 26 — orchestrator pattern](notebook_31_orchestrator_pattern.md)
   — for emergent coordination *inside* a protocol.
 
 ## Source

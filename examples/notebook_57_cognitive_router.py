@@ -3,7 +3,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 52: Cognitive router — natural language to bounded graph.
+"""Notebook 52: Cognitive router — natural language to bounded graph.
 
 locus.router compiles a natural-language request onto existing Locus
 primitives. The LLM never picks topology — it fills a typed GoalFrame;
@@ -57,7 +57,7 @@ from locus.tools.registry import create_registry
 
 
 # Per-protocol-id description of the runtime shape the builder emits.
-# Kept identical to the workbench Protocols tab so the tutorial doesn't
+# Kept identical to the workbench Protocols tab so the notebook doesn't
 # drift from the UI.
 RUNTIME_SHAPES: dict[str, str] = {
     "direct_response": "Agent (single call)",
@@ -260,7 +260,7 @@ async def _dispatch_with_fallback(
     """Run router.dispatch; fall back to the hand-built frame on parse failure.
 
     The deterministic core (protocol selection, compile, execute) works
-    even when the extractor can't produce a valid frame, so the tutorial
+    even when the extractor can't produce a valid frame, so the notebook
     runs end-to-end against the mock provider.
     """
     try:

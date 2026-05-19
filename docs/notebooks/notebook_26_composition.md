@@ -13,7 +13,7 @@ What you'll see:
 - `LoopAgent` — run one agent repeatedly until a stop condition fires.
 - One-liner helpers: `sequential()`, `parallel()`, `loop()`.
 
-Runs on the same OCI GenAI default as the rest of the tutorials:
+Runs on the same OCI GenAI default as the rest of the notebooks:
 
 ```bash
 LOCUS_MODEL_ID=openai.gpt-4.1 python examples/notebook_26_composition.py

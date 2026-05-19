@@ -2,7 +2,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 """
-Tutorial 12: hooks — middleware for agents.
+Notebook 12: hooks — middleware for agents.
 
 A ``HookProvider`` plugs into four lifecycle points: before/after the
 whole invocation, and before/after each tool call. Use hooks to add
@@ -26,7 +26,7 @@ The default provider is OCI Generative AI (canonical model id:
 ``LOCUS_MODEL_PROVIDER=mock`` for offline runs; OpenAI, Anthropic, and
 Ollama also work.
 
-Prerequisite: tutorial 11.
+Prerequisite: notebook 11.
 """
 
 from datetime import datetime
@@ -346,9 +346,9 @@ def example_guardrails_hook():
 
 
 def main():
-    """Run all tutorial parts."""
+    """Run all notebook parts."""
     print("=" * 60)
-    print("Tutorial 12: Agent Hooks & Lifecycle")
+    print("Notebook 12: Agent Hooks & Lifecycle")
     print("=" * 60)
     print()
 
@@ -362,7 +362,7 @@ def main():
     example_guardrails_hook()
 
     print("=" * 60)
-    print("Next: Tutorial 13 — Sse Streaming")
+    print("Next: Notebook 13 — Sse Streaming")
     print("=" * 60)
 
 

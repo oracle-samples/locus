@@ -3,9 +3,9 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 60: Voice output — turn an agent's reply into speech.
+"""Notebook 60: Voice output — turn an agent's reply into speech.
 
-A real agent often needs to talk, not just type. This tutorial pairs a
+A real agent often needs to talk, not just type. This notebook pairs a
 regular chat-completions agent (text in, text out) with an audio-capable
 model on OCI Generative AI so the response can be spoken aloud.
 
@@ -20,9 +20,9 @@ Pipeline::
                        │
                        │  mp3 bytes
                        ▼
-                 ./notebook_60_response.mp3
+                 ./notebook_65_response.mp3
 
-- Same OCI v1 transport as the rest of the tutorials — one signer, one
+- Same OCI v1 transport as the rest of the notebooks — one signer, one
   base URL, one set of credentials. No separate audio service to
   configure.
 - Bring-your-own-voice via the voice= parameter (alloy, ash, ballad,
@@ -31,7 +31,7 @@ Pipeline::
   an IVR system, or a podcast feed.
 
 Prerequisites: an audio-capable model on OCI Generative AI. The
-tutorial uses openai.gpt-4o-mini-tts for synthesis.
+notebook uses openai.gpt-4o-mini-tts for synthesis.
 
 Run it
     LOCUS_MODEL_PROVIDER=oci \\
@@ -41,10 +41,10 @@ Run it
     LOCUS_OCI_COMPARTMENT=ocid1.compartment.oc1..…  \\
     python examples/notebook_65_audio_response.py
 
-    afplay notebook_60_response.mp3   # macOS
+    afplay notebook_65_response.mp3   # macOS
     # or open it in any media player
 
-Note: this tutorial does not run under LOCUS_MODEL_PROVIDER=mock —
+Note: this notebook does not run under LOCUS_MODEL_PROVIDER=mock —
 it builds an OCI signer directly, so it needs real OCI credentials.
 The smoke test for mock environments is `python -m py_compile <file>`.
 """
@@ -66,7 +66,7 @@ PROMPT = (
 )
 TTS_MODEL = "openai.gpt-4o-mini-tts"
 TTS_VOICE = "alloy"
-OUT_PATH = Path(__file__).resolve().parent / "notebook_60_response.mp3"
+OUT_PATH = Path(__file__).resolve().parent / "notebook_65_response.mp3"
 
 
 def _build_oci_audio_client():
@@ -113,7 +113,7 @@ def _build_oci_audio_client():
 
 
 async def main() -> None:
-    print("Tutorial 60: Voice output via OCI Generative AI text-to-speech")
+    print("Notebook 60: Voice output via OCI Generative AI text-to-speech")
     print("=" * 60)
 
     # Step 1: a regular Locus Agent answers the prompt as text.
@@ -149,9 +149,9 @@ async def main() -> None:
     OUT_PATH.write_bytes(audio_bytes)
 
     print(f"\n✓ wrote {len(audio_bytes):,} bytes of mp3 → {OUT_PATH}")
-    print("  Play it on macOS:        afplay notebook_60_response.mp3")
-    print("  Linux (mpg123):          mpg123 notebook_60_response.mp3")
-    print("  Browser (file:// URL):   open notebook_60_response.mp3")
+    print("  Play it on macOS:        afplay notebook_65_response.mp3")
+    print("  Linux (mpg123):          mpg123 notebook_65_response.mp3")
+    print("  Browser (file:// URL):   open notebook_65_response.mp3")
 
 
 if __name__ == "__main__":

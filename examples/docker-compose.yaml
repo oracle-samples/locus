@@ -3,7 +3,7 @@
 # shared, staging, or production environment.
 #
 #  * Credentials below are intentionally weak and well-known defaults; they
-#    exist solely to make tutorials runnable on a fresh checkout.
+#    exist solely to make notebooks runnable on a fresh checkout.
 #  * All service ports are bound to 127.0.0.1 so services are *only*
 #    reachable from the developer laptop. Do not widen this bind without
 #    replacing the default credentials first.

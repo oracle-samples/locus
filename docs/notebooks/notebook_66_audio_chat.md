@@ -1,13 +1,13 @@
 # Voice Chat
 
-Tutorial 60 was text in, voice out (Agent plus dedicated TTS). This is
+Notebook 60 was text in, voice out (Agent plus dedicated TTS). This is
 the next step: a single multimodal chat call to an audio-capable model
 on OCI Generative AI that takes a `.wav` as the user message and
 replies with both text and audio in one shot.
 
 Pipeline::
 
-                         (synth via tutorial 60 if absent)
+                         (synth via notebook 60 if absent)
                                        │
                                        ▼
                           ./notebook_61_question.wav
@@ -25,7 +25,7 @@ Pipeline::
 
 - One model call replaces three (transcribe → chat → synthesise),
   cutting latency for voice agents.
-- Same OCI v1 signer and base URL as the rest of the tutorials — no
+- Same OCI v1 signer and base URL as the rest of the notebooks — no
   realtime websocket plumbing required.
 - `gpt-audio` returns a PCM-16 audio block, wrapped in a WAV header for
   portability (re-encode to mp3 with ffmpeg if you need it).
@@ -45,7 +45,7 @@ Run it:
 
     afplay notebook_61_answer.wav   # macOS
 
-This tutorial does not run under `LOCUS_MODEL_PROVIDER=mock` — it
+This notebook does not run under `LOCUS_MODEL_PROVIDER=mock` — it
 builds an OCI signer directly, so it needs real OCI credentials.
 
 ## Source

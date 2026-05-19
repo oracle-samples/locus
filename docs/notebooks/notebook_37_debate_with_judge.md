@@ -5,7 +5,7 @@ reads the full transcript and emits a typed `Verdict` — winner,
 confidence, key points, reasoning — that downstream systems (tickets,
 audit logs, databases) can consume directly.
 
-This tutorial covers:
+This notebook covers:
 
 - `Turn(side, round, text)` accumulated into a `list[Turn]` in graph
   state — the transcript.
@@ -13,7 +13,7 @@ This tutorial covers:
   populated Pydantic object, not a JSON string.
 - The judge node raises rather than fabricating a verdict if the
   configured model can't honor the schema.
-- `check_structured_output_capable()` short-circuits the tutorial with
+- `check_structured_output_capable()` short-circuits the notebook with
   setup guidance when running under the mock model or a model without
   constrained-decoding support.
 
@@ -23,8 +23,8 @@ PRO r0 → CON r0 → PRO r1 → CON r1 → ... → judge → END
 
 ## Prerequisites
 
-- Tutorial 13 (structured output).
-- Tutorial 16 (basic graph).
+- Notebook 13 (structured output).
+- Notebook 16 (basic graph).
 
 ## Run
 
@@ -34,7 +34,7 @@ python examples/notebook_37_debate_with_judge.py
 
 The default provider is OCI Generative AI. Pick a model that supports
 constrained JSON decoding (canonical: `openai.gpt-4.1` or
-`openai.gpt-5`). Under `LOCUS_MODEL_PROVIDER=mock` the tutorial exits
+`openai.gpt-5`). Under `LOCUS_MODEL_PROVIDER=mock` the notebook exits
 cleanly with setup instructions.
 
 ## Source

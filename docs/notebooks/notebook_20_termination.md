@@ -2,7 +2,7 @@
 
 Every agent loop needs to know when to stop. Locus ships small
 predicates you compose with `|` (OR) and `&` (AND) to describe the exit
-condition exactly. This tutorial also covers two related conveniences:
+condition exactly. This notebook also covers two related conveniences:
 `output_key` and a callable `system_prompt`.
 
 What you'll learn:

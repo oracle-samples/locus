@@ -123,7 +123,7 @@ when the server owns the history). Memory, Reflexion, GSAR,
 grounding, tool hooks, idempotency, checkpointing, output schema,
 streaming, and termination conditions all work identically. See the
 [OCI Responses concept page](../concepts/oci-responses.md) and
-[tutorial 58](../notebooks/notebook_03_oci_responses.md).
+[notebook 58](../notebooks/notebook_03_oci_responses.md).
 
 ## Cohere R-series — `OCIModel`
 
@@ -162,9 +162,9 @@ The string-form factory in `locus.models.registry` picks `OCIModel` for
 any id starting with `cohere.command-r` and `OCIOpenAIModel` otherwise.
 You pass kwargs in the shape the picked class expects.
 
-## Tutorials and `examples/config.py`
+## Notebooks and `examples/config.py`
 
-The shared tutorial harness (`examples/config.py`) reads
+The shared notebook harness (`examples/config.py`) reads
 `LOCUS_MODEL_ID` and routes accordingly. To force a transport (rare —
 useful only for debugging), set:
 
@@ -172,8 +172,8 @@ useful only for debugging), set:
 export LOCUS_OCI_TRANSPORT=v1     # or "sdk"
 ```
 
-Tutorials that use `from examples.config import get_model` inherit
-this routing. Tutorials that instantiate a class directly
+Notebooks that use `from examples.config import get_model` inherit
+this routing. Notebooks that instantiate a class directly
 (e.g. `notebook_55_model_providers.py`) show both transports
 side-by-side.
 

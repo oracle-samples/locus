@@ -5,21 +5,21 @@
 # Workbench helper script — relax lint rules that don't apply here.
 # ruff: noqa: BLE001, PLW2901, T201
 
-"""Run every model-only tutorial through the workbench harness.
+"""Run every model-only notebook through the workbench harness.
 
 Standalone integration sweep — not part of the playwright e2e (e2e is
 fast UI smoke; this is the slow real-GenAI sweep). Exits non-zero if
-any attempted tutorial finished with a non-zero exit.
+any attempted notebook finished with a non-zero exit.
 
 Usage:
     # With runner :8100 + BFF :3101 already up + valid OCI session.
-    python workbench/scripts/test-all-tutorials.py
+    python workbench/scripts/test-all-notebooks.py
 
-    # Scope to specific tutorials:
-    python workbench/scripts/test-all-tutorials.py --include 1,2,11
+    # Scope to specific notebooks:
+    python workbench/scripts/test-all-notebooks.py --include 1,2,11
 
-    # Bigger budget per tutorial (default 180s):
-    python workbench/scripts/test-all-tutorials.py --timeout 240
+    # Bigger budget per notebook (default 180s):
+    python workbench/scripts/test-all-notebooks.py --timeout 240
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ from typing import Any
 import requests
 
 
-# Tutorials that pause for human input via locus.core.interrupt(). The
+# Notebooks that pause for human input via locus.core.interrupt(). The
 # harness skips them — they'd hang until timeout in subprocess mode.
 RED = {9, 45, 46, 47, 48}
 
@@ -59,7 +59,7 @@ def fmt_duration(seconds: float) -> str:
 
 
 def run_one(bff: str, tut: dict[str, Any], timeout: int) -> dict[str, Any]:
-    """POST the unedited source to /api/tutorials/run; collect outcome."""
+    """POST the unedited source to /api/notebooks/run; collect outcome."""
     payload = {
         "source": tut["source"],
         "provider": {
@@ -79,7 +79,7 @@ def run_one(bff: str, tut: dict[str, Any], timeout: int) -> dict[str, Any]:
     err_msg: str | None = None
     try:
         with requests.post(
-            f"{bff}/api/tutorials/run",
+            f"{bff}/api/notebooks/run",
             json=payload,
             stream=True,
             timeout=timeout + 30,
@@ -140,20 +140,20 @@ def parse_include(s: str | None) -> set[int] | None:
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--bff", default=DEFAULT_BFF, help="BFF base URL")
-    p.add_argument("--timeout", type=int, default=180, help="Per-tutorial timeout (s)")
-    p.add_argument("--include", default=None, help="Comma list of tutorial numbers")
+    p.add_argument("--timeout", type=int, default=180, help="Per-notebook timeout (s)")
+    p.add_argument("--include", default=None, help="Comma list of notebook numbers")
     args = p.parse_args()
 
     include = parse_include(args.include)
 
-    print(f"# Workbench tutorial sweep — {DEFAULT_MODEL}")
+    print(f"# Workbench notebook sweep — {DEFAULT_MODEL}")
     print(f"# bff={args.bff}  timeout={args.timeout}s")
     print()
 
     try:
-        catalog = requests.get(f"{args.bff}/api/tutorials", timeout=10).json()
+        catalog = requests.get(f"{args.bff}/api/notebooks", timeout=10).json()
     except Exception as exc:
-        print(f"failed to reach BFF /api/tutorials: {exc}", file=sys.stderr)
+        print(f"failed to reach BFF /api/notebooks: {exc}", file=sys.stderr)
         return 2
 
     skipped = []
@@ -167,7 +167,7 @@ def main() -> int:
         runnable.append(entry)
 
     print(
-        f"Catalog: {len(catalog)} tutorials, "
+        f"Catalog: {len(catalog)} notebooks, "
         f"{len(skipped)} skipped (needs stdin), "
         f"{len(runnable)} attempting"
     )
@@ -180,7 +180,7 @@ def main() -> int:
     for entry in runnable:
         # Re-fetch detail to get source.
         try:
-            tut = requests.get(f"{args.bff}/api/tutorials/{entry['id']}", timeout=10).json()
+            tut = requests.get(f"{args.bff}/api/notebooks/{entry['id']}", timeout=10).json()
         except Exception as exc:
             print(
                 f"| {entry['number']:>2} | {entry['id']:<36} | ERR    |    - |     -     |   -   |"

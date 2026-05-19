@@ -18,7 +18,7 @@ grounding, and recover when the score is low.
 
 ## Prerequisites
 
-Tutorial 63 builds on the agent loop (tutorial 08), tools (09),
+Notebook 63 builds on the agent loop (notebook 08), tools (09),
 streaming events (11), graphs (16), DeepAgent (29), and SSE
 observability (53). Read those first if any of the pieces look
 unfamiliar.

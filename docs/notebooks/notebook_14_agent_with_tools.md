@@ -23,7 +23,7 @@ Uses the OCI Generative AI default provider (canonical model id:
 `LOCUS_MODEL_PROVIDER=mock` for an offline run. Tool-calling also works
 against OpenAI, Anthropic, and Ollama.
 
-Prerequisite: tutorial 08.
+Prerequisite: notebook 08.
 
 ## Source
 

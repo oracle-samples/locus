@@ -3,7 +3,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 55: EventBus subscriber patterns.
+"""Notebook 55: EventBus subscriber patterns.
 
 The bus has three subscribe shapes, each suited to a different consumer:
 

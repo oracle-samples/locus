@@ -1,7 +1,7 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 35: structured output — get typed JSON back from an LLM.
+"""Notebook 35: structured output — get typed JSON back from an LLM.
 
 Every part calls the configured model and prints a
 ``[model call: X.XXs · prompt→completion tokens]`` banner so you can
@@ -139,7 +139,7 @@ def main() -> None:
 
     check_structured_output_capable()
     print("=" * 60)
-    print("Tutorial 35: Structured output — typed JSON from an LLM")
+    print("Notebook 35: Structured output — typed JSON from an LLM")
     print("=" * 60)
 
     # =========================================================================
@@ -303,13 +303,13 @@ def main() -> None:
             "Vendor agent returned no parsed VendorList. The configured model "
             "could not honor the JSON schema. Use a stronger model "
             "(e.g. openai.gpt-4o, openai.gpt-5, anthropic.claude-3-5-sonnet) "
-            f"for tutorial 35 (Part 8). Raw output: {live.message!r}"
+            f"for notebook 35 (Part 8). Raw output: {live.message!r}"
         )
     for v in picks.vendors:
         print(f"  {v.name:<14}  score={v.score:.2f}  region={v.region}")
 
     print("\n" + "=" * 60)
-    print("Done. Next: tutorial 36 — reasoning patterns.")
+    print("Done. Next: notebook 36 — reasoning patterns.")
     print("=" * 60)
 
 

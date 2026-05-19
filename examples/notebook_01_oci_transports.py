@@ -1,7 +1,7 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 01: pick the right Oracle Cloud Infrastructure (OCI) Generative AI client for your model.
+"""Notebook 01: pick the right Oracle Cloud Infrastructure (OCI) Generative AI client for your model.
 
 Locus ships three model classes for OCI GenAI. They are not
 interchangeable — the right one depends on which model family you call
@@ -53,7 +53,7 @@ def _env(name: str) -> str:
     val = os.environ.get(name)
     if not val:
         sys.stderr.write(
-            f"missing env var {name} — see the prerequisites in the tutorial docstring\n"
+            f"missing env var {name} — see the prerequisites in the notebook docstring\n"
         )
         sys.exit(2)
     return val
@@ -223,7 +223,7 @@ def main() -> None:
     args = parser.parse_args()
 
     print("=" * 70)
-    print("Tutorial 01 — OCI Generative AI: pick the right client class")
+    print("Notebook 01 — OCI Generative AI: pick the right client class")
     print("=" * 70)
     print()
     print(f"OCI_PROFILE     = {os.environ.get('OCI_PROFILE', '(unset)')}")
@@ -234,7 +234,7 @@ def main() -> None:
     asyncio.run(_amain(args.transport))
 
     print("=" * 70)
-    print("Next: tutorial 02 — OCIOpenAIModel deep dive (the default path)")
+    print("Next: notebook 02 — OCIOpenAIModel deep dive (the default path)")
     print("=" * 70)
 
 

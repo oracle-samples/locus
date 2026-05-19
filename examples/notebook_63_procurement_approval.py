@@ -3,7 +3,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 58: Procurement approval with tiered human gates.
+"""Notebook 58: Procurement approval with tiered human gates.
 
 Real procurement workflows have a threshold-based escalation chain::
 
@@ -266,7 +266,7 @@ async def emit_po(state: dict[str, Any]) -> dict[str, Any]:
             "PO emitter returned no parsed PurchaseOrder. The configured model "
             "could not honor the JSON schema. Use a stronger model "
             "(e.g. openai.gpt-4o, openai.gpt-5, anthropic.claude-3-5-sonnet) "
-            f"for tutorial 58. Raw output: {result.message!r}"
+            f"for notebook 58. Raw output: {result.message!r}"
         )
     return {"purchase_order": po}
 
@@ -347,7 +347,7 @@ async def _drive(graph: StateGraph, initial: dict[str, Any], answers: list[str])
 
 
 async def main() -> None:
-    print("Tutorial 58: Procurement approval with tiered human gates")
+    print("Notebook 58: Procurement approval with tiered human gates")
     print("=" * 60)
 
     model = get_model()

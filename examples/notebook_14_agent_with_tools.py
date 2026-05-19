@@ -2,7 +2,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 """
-Tutorial 09: give an agent tools.
+Notebook 09: give an agent tools.
 
 A model without tools can only answer from what's already in its
 context. Tools let the agent reach out — do math, look up data, call
@@ -28,7 +28,7 @@ The default provider is OCI Generative AI (canonical example:
 ``LOCUS_MODEL_PROVIDER=mock`` for an offline run. Tool-calling also
 works against OpenAI, Anthropic, and Ollama.
 
-Prerequisite: tutorial 08.
+Prerequisite: notebook 08.
 """
 
 import asyncio
@@ -329,9 +329,9 @@ def example_structured_tools():
 
 
 def main():
-    """Run all tutorial parts."""
+    """Run all notebook parts."""
     print("=" * 60)
-    print("Tutorial 09: Agent with Tools")
+    print("Notebook 09: Agent with Tools")
     print("=" * 60)
     print()
 
@@ -345,7 +345,7 @@ def main():
     example_structured_tools()
 
     print("=" * 60)
-    print("Next: Tutorial 10 — Agent Memory")
+    print("Next: Notebook 10 — Agent Memory")
     print("=" * 60)
 
 

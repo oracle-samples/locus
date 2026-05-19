@@ -14,7 +14,7 @@ What you'll learn:
 - Loading the saved `AgentState` and inspecting it field by field.
 - Running many independent threads against a single ADB.
 
-This tutorial does not fall back to in-memory storage — Oracle is the
+This notebook does not fall back to in-memory storage — Oracle is the
 only backend exercised here.
 
 Run it:

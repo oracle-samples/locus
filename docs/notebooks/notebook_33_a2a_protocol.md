@@ -2,11 +2,11 @@
 
 A2A (Agent-to-Agent) is the public cross-framework protocol at
 [a2aproject.github.io/A2A](https://a2aproject.github.io/A2A/). Locus
-implements both sides; this tutorial spins up a real Agent behind
+implements both sides; this notebook spins up a real Agent behind
 `A2AServer`, drives every spec endpoint from `A2AClient`, and inspects
 the typed task lifecycle.
 
-This tutorial covers:
+This notebook covers:
 
 - Agent Card at `/.well-known/agent-card.json` with typed `AgentSkill`
   entries — enough for any A2A client to discover and call the agent.
@@ -22,7 +22,7 @@ This tutorial covers:
 ## Prerequisites
 
 - `pip install fastapi uvicorn` for the server side.
-- Tutorial 08 (Agent basics). The wire format is provider-agnostic.
+- Notebook 08 (Agent basics). The wire format is provider-agnostic.
 
 ## Run
 
@@ -35,7 +35,7 @@ present the agent talks to a live OCI model; canonical picks are
 `openai.gpt-4.1` or `meta.llama-3.3-70b-instruct`. Set
 `LOCUS_MODEL_PROVIDER=mock` for offline runs.
 
-The tutorial starts an in-process uvicorn server and drives a client
+The notebook starts an in-process uvicorn server and drives a client
 against it; expect a few seconds of warm-up before the first
 ``message/send`` returns.
 

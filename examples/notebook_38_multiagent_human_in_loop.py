@@ -3,11 +3,11 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 33: multi-agent workflows with a human in the loop.
+"""Notebook 33: multi-agent workflows with a human in the loop.
 
-Tutorial 19 covered HITL for a single agent. Production systems
+Notebook 19 covered HITL for a single agent. Production systems
 typically have a triage agent, several specialists, and a human gate
-for irreversible actions. This tutorial walks three combinations:
+for irreversible actions. This notebook walks three combinations:
 
 - Pattern A — approval gate: triage classifies a refund, a specialist
   drafts the response, a human approves before it ships.
@@ -35,8 +35,8 @@ present the specialists talk to a live OCI model (canonical pick:
 ``LOCUS_MODEL_PROVIDER=mock`` for offline runs.
 
 Prerequisites:
-- Tutorial 16 (basic graph).
-- Tutorial 19 (single-agent HITL).
+- Notebook 16 (basic graph).
+- Notebook 19 (single-agent HITL).
 """
 
 from __future__ import annotations
@@ -282,7 +282,7 @@ async def demo_pattern_c(model: Any) -> None:
 
 
 async def main() -> None:
-    print("Tutorial 33: multi-agent workflows with a human in the loop")
+    print("Notebook 33: multi-agent workflows with a human in the loop")
     print("=" * 60)
 
     model = get_model()

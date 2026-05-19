@@ -110,7 +110,7 @@ Specialist(
 )
 ```
 
-## Tutorials
+## Notebooks
 
 - [`notebook_31_orchestrator_pattern.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_31_orchestrator_pattern.py)
   — router + three parallel specialists, results merged.

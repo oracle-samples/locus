@@ -3,7 +3,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 59: Contract-review workflow (parallel review and negotiation loop).
+"""Notebook 59: Contract-review workflow (parallel review and negotiation loop).
 
 Real contract review involves multiple stakeholders working in parallel,
 then a back-and-forth negotiation phase, then sign-off::
@@ -300,7 +300,7 @@ async def sign_off(state: dict[str, Any]) -> dict[str, Any]:
             "Sign-off agent returned no parsed ContractDecision. The configured "
             "model could not honor the JSON schema. Use a stronger model "
             "(e.g. openai.gpt-4o, openai.gpt-5, anthropic.claude-3-5-sonnet) "
-            f"for tutorial 59. Raw output: {result.message!r}"
+            f"for notebook 59. Raw output: {result.message!r}"
         )
     return {"decision": decision}
 
@@ -497,7 +497,7 @@ def _print_decision(d: ContractDecision | None) -> None:
 
 
 async def main() -> None:
-    print("Tutorial 59: Contract review workflow")
+    print("Notebook 59: Contract review workflow")
     print("=" * 60)
 
     model = get_model()

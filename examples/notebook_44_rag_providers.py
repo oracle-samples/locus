@@ -1,10 +1,10 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 39: RAG providers — choose embeddings and tune the Oracle 26ai store.
+"""Notebook 39: RAG providers — choose embeddings and tune the Oracle 26ai store.
 
 Production RAG on OCI is two pieces. ``OracleVectorStore`` is the
-default backend across this tutorial series — backed by Oracle
+default backend across this notebook series — backed by Oracle
 Database 26ai with its native ``VECTOR(N, FLOAT32)`` column and the
 ``VECTOR_DISTANCE`` SQL function. Other backends (Chroma, Qdrant,
 pgvector, OpenSearch) are valid alternatives; the Locus interface is
@@ -13,7 +13,7 @@ identical.
 - **Embeddings** — ``OCIEmbeddings`` on the OCI GenAI inference endpoint.
   Cohere V3 for English (1024 dims), Cohere V4 for multilingual.
 - **Vector store** — ``OracleVectorStore`` against an Autonomous
-  Database 26ai. Every section in this tutorial talks to your ADB.
+  Database 26ai. Every section in this notebook talks to your ADB.
 
 What each part covers:
 
@@ -229,7 +229,7 @@ async def part4_batch():
 async def main():
     missing = _missing_env()
     if missing:
-        print("\n--- Tutorial 39: RAG providers on Oracle 26ai ---")
+        print("\n--- Notebook 39: RAG providers on Oracle 26ai ---")
         print(
             "Required environment variables not set; skipping the live "
             "demo so this file still runs cleanly in CI.\n"
@@ -248,7 +248,7 @@ async def main():
     await part4_batch()
 
     print("\n" + "=" * 60)
-    print("Tutorial 39 complete — every variant runs on Oracle 26ai.")
+    print("Notebook 39 complete — every variant runs on Oracle 26ai.")
     print("=" * 60)
 
 

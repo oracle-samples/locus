@@ -1,8 +1,8 @@
 # Multi-Agent HITL
 
-Tutorial 19 covered HITL for a single agent. Production systems
+Notebook 19 covered HITL for a single agent. Production systems
 typically combine a triage agent, several specialists, and a human
-gate for irreversible actions. This tutorial walks three combinations.
+gate for irreversible actions. This notebook walks three combinations.
 
 ## Patterns
 
@@ -27,8 +27,8 @@ gate for irreversible actions. This tutorial walks three combinations.
 
 ## Prerequisites
 
-- Tutorial 16 (basic graph).
-- Tutorial 19 (single-agent HITL).
+- Notebook 16 (basic graph).
+- Notebook 19 (single-agent HITL).
 
 ## Run
 

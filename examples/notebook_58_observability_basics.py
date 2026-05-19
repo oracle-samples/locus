@@ -3,7 +3,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 53: Observability basics — opt-in SSE telemetry.
+"""Notebook 53: Observability basics — opt-in SSE telemetry.
 
 Locus ships an in-process pub/sub EventBus that publishes typed
 StreamEvents for every meaningful step of execution: agent thinking,

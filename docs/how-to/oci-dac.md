@@ -113,7 +113,7 @@ DAC endpoints accept the same auth methods as on-demand:
 exists in a specific compartment, and the SDK validates the
 `compartment_id` field on every chat request.
 
-## Tutorial-style env-var workflow
+## Notebook-style env-var workflow
 
 `examples/config.py`'s `_pick_oci_transport()` recognises DAC OCIDs
 and routes them to the SDK transport:

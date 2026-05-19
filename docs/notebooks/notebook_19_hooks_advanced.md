@@ -1,6 +1,6 @@
 # Advanced Hooks
 
-Tutorial 12 covered hook basics. This one focuses on the safety
+Notebook 12 covered hook basics. This one focuses on the safety
 properties Locus enforces on the event objects hooks see, and on the
 control levers a hook can pull mid-flight: `event.cancel` to skip a tool
 call, and `event.retry` to re-issue a model call.
@@ -26,7 +26,7 @@ Uses the OCI Generative AI default provider (canonical id:
 `openai.gpt-4.1` or `meta.llama-3.3-70b-instruct`). For offline runs set
 `LOCUS_MODEL_PROVIDER=mock`; OpenAI, Anthropic and Ollama also work.
 
-Prerequisite: tutorial 12.
+Prerequisite: notebook 12.
 
 ## Source
 

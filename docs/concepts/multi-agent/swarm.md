@@ -97,7 +97,7 @@ Swarms stop when:
 - A custom `terminate` condition matches (the swarm honours
   [Termination algebra](../termination.md) the same way an `Agent` does).
 
-## Tutorial
+## Notebook
 
 [`notebook_29_swarm_multiagent.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_29_swarm_multiagent.py)
 — a three-agent research swarm with shared context.

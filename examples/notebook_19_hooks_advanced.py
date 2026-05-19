@@ -2,9 +2,9 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 """
-Tutorial 14: advanced hooks — cancel, retry, write-protected events.
+Notebook 14: advanced hooks — cancel, retry, write-protected events.
 
-Tutorial 12 covered hook basics. This one focuses on the safety
+Notebook 12 covered hook basics. This one focuses on the safety
 properties Locus enforces on the event objects hooks see, and on the
 two control levers a hook can pull mid-flight: ``event.cancel`` to skip
 a tool call, and ``event.retry`` to re-issue a model call.
@@ -27,7 +27,7 @@ The default provider is OCI Generative AI (canonical id:
 ``LOCUS_MODEL_PROVIDER=mock`` for offline runs; OpenAI, Anthropic, and
 Ollama also work.
 
-Prerequisite: tutorial 12.
+Prerequisite: notebook 12.
 """
 
 from config import get_model

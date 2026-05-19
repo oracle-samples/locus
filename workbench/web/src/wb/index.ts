@@ -7,7 +7,7 @@ import { ensureEditor } from "./editor";
 import { installFullscreenToggle, installSplitResize } from "./layout";
 import { installRunControls } from "./run";
 import { installSidebarTabs } from "./protocols";
-import { bootstrapTutorials } from "./notebooks";
+import { bootstrapNotebooks } from "./notebooks";
 
 export { endLiveStream } from "./output";
 
@@ -15,7 +15,7 @@ export function initWorkbench(): void {
   console.info("[wb] init");
   ensureEditor("# pick a notebook from the sidebar to load its source");
   refreshWorkbenchProvider();
-  void bootstrapTutorials();
+  void bootstrapNotebooks();
   installSplitResize();
   installFullscreenToggle();
   installRunControls();

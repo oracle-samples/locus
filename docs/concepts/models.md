@@ -114,7 +114,7 @@ The pool tries the primary first; on `RateLimitError`, `TimeoutError`,
 or persistent 5xx it fails over to the next entry. Source:
 [`PooledModel` in `models/pooled.py`](https://github.com/oracle-samples/locus/blob/main/src/locus/models/pooled.py).
 
-## Tutorial
+## Notebook
 
 [`notebook_55_model_providers.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_55_model_providers.py)
 exercises all four providers with the same agent.

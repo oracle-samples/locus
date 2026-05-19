@@ -365,7 +365,7 @@ async def example_graph_with_llm():
 
 async def main():
     print("=" * 60)
-    print("Tutorial 16: Basic graph")
+    print("Notebook 16: Basic graph")
     print("=" * 60)
     print()
 
@@ -378,7 +378,7 @@ async def main():
     await example_graph_with_llm()
 
     print("=" * 60)
-    print("Next: Tutorial 17 — Conditional routing")
+    print("Next: Notebook 17 — Conditional routing")
     print("=" * 60)
 
 

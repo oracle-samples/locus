@@ -175,7 +175,7 @@ async def example_chained_conditions():
 
     async def authenticate(inputs):
         token = inputs.get("token", "")
-        is_valid = token == "secret123"  # noqa: S105 — tutorial literal, not a real secret
+        is_valid = token == "secret123"  # noqa: S105 — notebook literal, not a real secret
         return {"authenticated": is_valid}
 
     async def check_permissions(inputs):
@@ -434,7 +434,7 @@ async def example_llm_router():
 
 async def main():
     print("=" * 60)
-    print("Tutorial 17: Conditional routing")
+    print("Notebook 17: Conditional routing")
     print("=" * 60)
     print()
 
@@ -446,7 +446,7 @@ async def main():
     await example_llm_router()
 
     print("=" * 60)
-    print("Next: Tutorial 18 — State reducers")
+    print("Next: Notebook 18 — State reducers")
     print("=" * 60)
 
 

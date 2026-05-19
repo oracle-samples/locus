@@ -1,13 +1,13 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 48: Checkpoint backends on Oracle Autonomous Database 26ai.
+"""Notebook 48: Checkpoint backends on Oracle Autonomous Database 26ai.
 
 The checkpointer contract is backend-agnostic, but the production
 recommendation on OCI is Oracle 26ai — native JSON columns, vector and
 text indexes in one schema, and the full capability set (list_threads,
-search, vacuum) over a single durable store. Tutorial 06 covers the
-checkpointer contract itself; this tutorial drives it against a real
+search, vacuum) over a single durable store. Notebook 06 covers the
+checkpointer contract itself; this notebook drives it against a real
 ADB.
 
 - Save and load AgentState via oracle_checkpointer.
@@ -25,8 +25,8 @@ Run it
     export ORACLE_WALLET_PASSWORD='<wallet-pw>'  # if encrypted
     python examples/notebook_53_checkpoint_backends.py
 
-Without the env vars the tutorial prints what's missing and exits cleanly
-so CI stays green. The in-memory checkpointer covered in tutorial 06 is
+Without the env vars the notebook prints what's missing and exits cleanly
+so CI stays green. The in-memory checkpointer covered in notebook 06 is
 the developer default; Oracle 26ai is the production recommendation.
 """
 
@@ -64,7 +64,7 @@ def _common_kwargs() -> dict:
 
 async def main() -> None:
     print("=" * 60)
-    print("Tutorial 48: Checkpoint backends on Oracle 26ai")
+    print("Notebook 48: Checkpoint backends on Oracle 26ai")
     print("=" * 60)
 
     missing = _missing_env()

@@ -3,7 +3,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 54: Agent yield bridge and token usage.
+"""Notebook 54: Agent yield bridge and token usage.
 
 Every Agent.run is decorated with @_bus_bridge so the nine typed events
 it yields (ThinkEvent, ToolStartEvent, ToolCompleteEvent, ReflectEvent,

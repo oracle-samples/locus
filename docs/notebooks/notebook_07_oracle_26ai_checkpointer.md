@@ -1,7 +1,7 @@
 # Oracle 26ai Checkpointer
 
 In-memory and on-disk checkpointers are fine for local development —
-when the process restarts, the conversation is gone. This tutorial
+when the process restarts, the conversation is gone. This notebook
 wires Locus's `oracle_checkpointer` adapter against an Oracle Cloud
 Infrastructure (OCI) Autonomous Database 26ai so agent threads survive
 process restarts, scale out across replicas, and can be picked up from
@@ -20,7 +20,7 @@ another machine.
 
 ## Prerequisites
 
-The checkpointer and the vector store from tutorial 05 can share a
+The checkpointer and the vector store from notebook 05 can share a
 single Autonomous Database:
 
 ```bash
@@ -31,7 +31,7 @@ export ORACLE_WALLET=~/.oci/wallets/mydb     # directory holding tnsnames.ora
 export ORACLE_WALLET_PASSWORD='<wallet-pw>'  # if wallet is encrypted
 ```
 
-If `ORACLE_DSN` / `ORACLE_PASSWORD` aren't set the tutorial prints the
+If `ORACLE_DSN` / `ORACLE_PASSWORD` aren't set the notebook prints the
 wiring snippet and exits cleanly — no traceback, no half-initialised
 state.
 
@@ -43,7 +43,7 @@ python examples/notebook_07_oracle_26ai_checkpointer.py
 
 ## Schema hygiene
 
-This tutorial writes to `locus_notebook_06` (overridable via
+This notebook writes to `locus_notebook_06` (overridable via
 `table_name=`). For production, pre-create the table out-of-band as a
 least-privileged app schema owner and run the application user with
 `INSERT / SELECT / UPDATE / DELETE` only — see the
@@ -53,7 +53,7 @@ and the rotation guidance.
 ## See also
 
 - [Concepts — Checkpointers & Store](../concepts/checkpointers.md)
-- [Tutorial 05 — Oracle 26ai RAG (shares the same wallet)](notebook_06_oracle_26ai_rag.md)
+- [Notebook 05 — Oracle 26ai RAG (shares the same wallet)](notebook_06_oracle_26ai_rag.md)
 - [Oracle AI Database 26ai — AI Vector Search User's Guide](https://docs.oracle.com/en/database/oracle/oracle-database/23/vecse/index.html)
 
 ## Source

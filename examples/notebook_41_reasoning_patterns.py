@@ -1,7 +1,7 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 36: reasoning patterns — reflexion, grounding, causal chains.
+"""Notebook 36: reasoning patterns — reflexion, grounding, causal chains.
 
 Each part exercises one piece of the Locus reasoning toolkit against a
 live model and prints a ``[model call: X.XXs · prompt→completion tokens]``
@@ -129,7 +129,7 @@ def main():
 
     check_structured_output_capable()
     print("=" * 60)
-    print("Tutorial 36: reasoning patterns")
+    print("Notebook 36: reasoning patterns")
     print("=" * 60)
 
     # =========================================================================
@@ -233,7 +233,7 @@ def main():
             "Claim agent returned no parsed ClaimList. The configured model "
             "could not honor the JSON schema. Use a stronger model "
             "(e.g. openai.gpt-4o, openai.gpt-5, anthropic.claude-3-5-sonnet) "
-            f"for tutorial 36. Raw output: {claim_result.message!r}"
+            f"for notebook 36. Raw output: {claim_result.message!r}"
         )
     claims = parsed_claims.claims[:3]
     print("Model-produced typed claims:")
@@ -293,7 +293,7 @@ def main():
             "Event agent returned no parsed EventList. The configured model "
             "could not honor the JSON schema. Use a stronger model "
             "(e.g. openai.gpt-4o, openai.gpt-5, anthropic.claude-3-5-sonnet) "
-            f"for tutorial 36. Raw output: {event_result.message!r}"
+            f"for notebook 36. Raw output: {event_result.message!r}"
         )
     event_phrases = parsed_events.events[:5]
     print("Model-generated events:")
@@ -403,7 +403,7 @@ def main():
     print(f"Conclusion: {live.message[:400]}")
 
     print("\n" + "=" * 60)
-    print("Done. Next: tutorial 37 — GSAR typed grounding.")
+    print("Done. Next: notebook 37 — GSAR typed grounding.")
     print("=" * 60)
 
 

@@ -3,11 +3,11 @@
 """Generate one docs/notebooks/<id>.md per examples/notebook_*.py.
 
 Each generated page renders:
-  - H1 = "Tutorial NN: <Title>"  (parsed from the .py docstring)
+  - H1 = "Notebook NN: <Title>"  (parsed from the .py docstring)
   - the rest of the docstring as the page body
   - a "## Source" section that includes the .py via pymdownx.snippets
 
-Run after editing tutorials::
+Run after editing notebooks::
 
     python scripts/gen_notebook_pages.py
 """
@@ -21,7 +21,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 EX = ROOT / "examples"
-OUT = ROOT / "docs" / "tutorials"
+OUT = ROOT / "docs" / "notebooks"
 
 
 def _parse(path: Path) -> tuple[int, str, str]:
@@ -31,8 +31,8 @@ def _parse(path: Path) -> tuple[int, str, str]:
     m = re.match(r"notebook_(\d+)_", path.name)
     num = int(m.group(1)) if m else 0
     first, _, rest = doc.partition("\n")
-    # ``Tutorial NN: Title`` — strip the leading prefix for the H1
-    title_match = re.match(r"^\s*Tutorial\s+\d+\s*[:.]?\s*(.+?)\.?\s*$", first)
+    # ``Notebook NN: Title`` — strip the leading prefix for the H1
+    title_match = re.match(r"^\s*Notebook\s+\d+\s*[:.]?\s*(.+?)\.?\s*$", first)
     title = title_match.group(1) if title_match else first.strip()
     return num, title, rest.strip()
 
@@ -50,7 +50,7 @@ def main() -> None:
         slug = py.stem  # e.g. notebook_13_basic_agent
         page = OUT / f"{slug}.md"
         page.write_text(
-            f"# Tutorial {num:02d}: {title}\n\n"
+            f"# Notebook {num:02d}: {title}\n\n"
             f"{body}\n\n"
             f"## Source\n\n"
             f"```python\n"
@@ -59,11 +59,11 @@ def main() -> None:
             encoding="utf-8",
         )
         pages.append((num, slug, title))
-    print(f"wrote {len(pages)} tutorial pages to {OUT}")
+    print(f"wrote {len(pages)} notebook pages to {OUT}")
     print()
-    print("# add to mkdocs.yml under `- Tutorials:`:")
+    print("# add to mkdocs.yml under `- Notebooks:`:")
     for num, slug, title in pages:
-        print(f"  - {num:02d} · {title}: tutorials/{slug}.md")
+        print(f"  - {num:02d} · {title}: notebooks/{slug}.md")
 
 
 if __name__ == "__main__":

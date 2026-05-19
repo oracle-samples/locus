@@ -198,7 +198,7 @@ anywhere FastAPI runs — see [Deploy](deploy.md).
 
 - **Read deeper.** [Agent Loop](../concepts/agent-loop.md) is the
   architectural reference for how all of this fits together.
-- **Browse examples.** Forty progressive tutorials at
+- **Browse examples.** Forty progressive notebooks at
   [`examples/`](https://github.com/oracle-samples/locus/tree/main/examples).
   Each is a single runnable file that adds one idea on top of the
   previous.

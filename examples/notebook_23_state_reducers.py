@@ -449,7 +449,7 @@ async def example_reducer_with_llm():
 
 async def main():
     print("=" * 60)
-    print("Tutorial 18: State reducers")
+    print("Notebook 18: State reducers")
     print("=" * 60)
     print()
 
@@ -463,7 +463,7 @@ async def main():
     await example_reducer_with_llm()
 
     print("=" * 60)
-    print("Next: Tutorial 19 — Human-in-the-loop")
+    print("Next: Notebook 19 — Human-in-the-loop")
     print("=" * 60)
 
 

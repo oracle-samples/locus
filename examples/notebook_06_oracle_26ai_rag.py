@@ -7,7 +7,7 @@
 
 This is the Oracle-native RAG target on Oracle Cloud Infrastructure
 (OCI). The retriever pipeline you'll see is the same one the in-memory
-RAG tutorials use — only the store import changes — but here it is
+RAG notebooks use — only the store import changes — but here it is
 backed by Oracle Database 26ai's native vector column and indexed for
 production cosine similarity search.
 
@@ -22,7 +22,7 @@ Key concepts:
 - ``OCIEmbeddings`` produces 1024-dim Cohere V3 vectors on OCI GenAI;
   ``OracleVectorStore`` opens an async pool against the Autonomous
   Database wallet and auto-creates the table on first use.
-- ``RAGRetriever`` is the same class every other Locus RAG tutorial
+- ``RAGRetriever`` is the same class every other Locus RAG notebook
   uses — swap to in-memory, pgvector, Qdrant, or OpenSearch by changing
   only the store import.
 
@@ -44,16 +44,16 @@ Run it::
     python examples/notebook_06_oracle_26ai_rag.py
 
 If ``ORACLE_DSN`` / ``ORACLE_PASSWORD`` / ``OCI_COMPARTMENT`` aren't set
-the tutorial prints the wiring snippet and exits cleanly — no
+the notebook prints the wiring snippet and exits cleanly — no
 traceback, no half-initialised state.
 
-**Schema hygiene.** This tutorial uses ``auto_create_table=True`` so the
+**Schema hygiene.** This notebook uses ``auto_create_table=True`` so the
 demo provisions the table on first run. For production, create the
 table out-of-band as a least-privileged app schema owner and set
 ``auto_create_table=False`` — see ``docs/concepts/rag.md`` for the
 ``CREATE USER locus_app`` and ``CREATE VECTOR INDEX`` DDL.
 
-Difficulty: Intermediate. Self-contained — no prior tutorial required.
+Difficulty: Intermediate. Self-contained — no prior notebook required.
 """
 
 from __future__ import annotations

@@ -287,7 +287,7 @@ happen.
 ## What you can run
 
 The catalog populates from the BFF's `/api/notebooks` endpoint
-(aliased to `/api/tutorials` for backwards compatibility), which
+(aliased to `/api/notebooks` for backwards compatibility), which
 walks `examples/notebook_*.py`. As of writing the workbench has 9
 dedicated FastAPI pattern endpoints:
 

@@ -2,16 +2,16 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 """
-Shared configuration for Locus tutorials.
+Shared configuration for Locus notebooks.
 
 Locus is built first-class on **Oracle Cloud Infrastructure (OCI)
-Generative AI**, so the tutorials default to OCI when an OCI profile
+Generative AI**, so the notebooks default to OCI when an OCI profile
 is detected and fall back to a built-in mock model when one isn't.
 That means:
 
-  - On a developer laptop with ``~/.oci/config`` present, every tutorial
+  - On a developer laptop with ``~/.oci/config`` present, every notebook
     runs against live OCI GenAI with zero extra setup.
-  - On a clean machine (no OCI config, no env vars), tutorials still run
+  - On a clean machine (no OCI config, no env vars), notebooks still run
     end-to-end against the mock model so you can read the output and
     understand the shape before authenticating.
 
@@ -29,7 +29,7 @@ Environment Variables:
     # OCI GenAI — every LOCUS_OCI_* variable below falls back to its
     # OCI_* equivalent (the OCI CLI standard) when unset. Closes #218.
     # So once you've run ``oci session authenticate --profile-name X``
-    # and exported the resulting ``OCI_PROFILE``, every locus tutorial
+    # and exported the resulting ``OCI_PROFILE``, every locus notebook
     # picks the same profile up automatically.
     LOCUS_OCI_PROFILE      - OCI config profile name. Falls back to
                               OCI_PROFILE. Default: DEFAULT.
@@ -103,21 +103,21 @@ from locus.models.base import ModelResponse
 def _oci_env(name: str, default: str | None = None) -> str | None:
     """Read an OCI config setting from the env with a consistent fallback chain.
 
-    Closes #218. Tutorials historically read ``LOCUS_OCI_*`` (the harness
+    Closes #218. Notebooks historically read ``LOCUS_OCI_*`` (the harness
     namespace) but the OCI CLI and most other tooling speak ``OCI_*``.
     Newcomers got bitten by having to maintain both. We now look up
     ``LOCUS_OCI_<name>`` first (keeps existing behaviour for users who
     already export the namespaced form), then fall back to the
     OCI-CLI-standard ``OCI_<name>``, then ``default``. This way a user
     who just typed ``oci session authenticate --profile-name DEFAULT``
-    can run any tutorial without re-exporting variables.
+    can run any notebook without re-exporting variables.
     """
     return os.environ.get(f"LOCUS_OCI_{name}") or os.environ.get(f"OCI_{name}") or default
 
 
 class MockModel(BaseModel):
     """
-    Mock model for testing tutorials without API calls.
+    Mock model for testing notebooks without API calls.
 
     Returns predetermined responses for common prompts.
     """
@@ -204,7 +204,7 @@ def check_structured_output_capable() -> None:
         else f"Cohere R-series ({model_id}) does not support constrained JSON decoding."
     )
     print(
-        f"\n⚠  This tutorial requires structured-output (JSON schema) support.\n"
+        f"\n⚠  This notebook requires structured-output (JSON schema) support.\n"
         f"   {reason}\n\n"
         "   Run with a model that supports constrained decoding:\n\n"
         "     export LOCUS_MODEL_PROVIDER=oci\n"
@@ -236,7 +236,7 @@ def _auto_detect_provider() -> str:
 
 
 def get_model(**kwargs: Any) -> Any:
-    """Return the configured model for the current tutorial.
+    """Return the configured model for the current notebook.
 
     Reads ``LOCUS_MODEL_PROVIDER`` first. If it isn't set, auto-detects:
     OCI when an OCI profile is reachable, otherwise the bundled mock.
@@ -265,10 +265,10 @@ def get_model(**kwargs: Any) -> Any:
 
 def get_model_b(**kwargs: Any) -> Any:
     """Secondary model slot — typically a cheaper/faster variant for
-    triage, routing, or color commentary in multi-agent tutorials.
+    triage, routing, or color commentary in multi-agent notebooks.
 
     Reads ``LOCUS_MODEL_ID_B`` (set by the workbench's "Model B" slot).
-    Falls back to ``LOCUS_MODEL_ID`` (= slot A) when unset, so tutorials
+    Falls back to ``LOCUS_MODEL_ID`` (= slot A) when unset, so notebooks
     that call ``get_model_b()`` still work in plain CLI runs where only
     one model is configured.
     """

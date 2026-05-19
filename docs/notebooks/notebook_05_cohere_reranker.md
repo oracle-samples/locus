@@ -6,7 +6,7 @@ candidates whose surface form scores high but whose semantic relevance
 is lower. A **cross-encoder reranker** scores the query and each
 candidate together and catches the signals embeddings miss.
 
-This tutorial wires Cohere Reranker V4 on Oracle Cloud Infrastructure
+This notebook wires Cohere Reranker V4 on Oracle Cloud Infrastructure
 (OCI) Generative AI on top of an Oracle Database 26ai vector store. The
 pattern:
 
@@ -29,7 +29,7 @@ export OCI_PROFILE=<your-profile>          # api_key or security_token
 export OCI_REGION=us-chicago-1
 export OCI_COMPARTMENT=ocid1.compartment.oc1..…
 
-# Oracle 26ai side — see tutorial 05 for wallet setup.
+# Oracle 26ai side — see notebook 05 for wallet setup.
 export ORACLE_DSN=mydb_low
 export ORACLE_USER=locus_app
 export ORACLE_PASSWORD='<app-password>'
@@ -44,7 +44,7 @@ python examples/notebook_05_cohere_reranker.py
 
 ## See also
 
-- [Tutorial 05 — Oracle 26ai RAG (the store this tutorial builds on)](notebook_06_oracle_26ai_rag.md)
+- [Notebook 05 — Oracle 26ai RAG (the store this notebook builds on)](notebook_06_oracle_26ai_rag.md)
 - [Concepts — RAG](../concepts/rag.md)
 
 ## Source

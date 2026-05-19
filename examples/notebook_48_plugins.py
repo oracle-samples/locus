@@ -1,7 +1,7 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 43: plugins — composable agent extensions.
+"""Notebook 43: plugins — composable agent extensions.
 
 Plugins bundle hooks (and optionally tools) into one reusable object.
 Drop a plugin onto an agent and every relevant hook method runs

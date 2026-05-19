@@ -5,7 +5,7 @@ supervisor decides who does what — each task finds the worker whose
 declared capabilities fit best, and the swarm runs them in parallel
 where it can.
 
-This tutorial covers:
+This notebook covers:
 
 - `create_swarm_agent` — agents advertise free-form capability tags.
 - `SwarmTask` — `required_tags` are a hard filter; `preferred_tags`
@@ -19,8 +19,8 @@ This tutorial covers:
 
 ## Prerequisites
 
-- Tutorial 08 (Agent basics).
-- Tutorial 26 (Orchestrator pattern) if you want the supervised
+- Notebook 08 (Agent basics).
+- Notebook 26 (Orchestrator pattern) if you want the supervised
   counterpoint to a swarm.
 
 ## Run

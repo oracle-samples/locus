@@ -15,7 +15,7 @@ What you'll see:
 - `graph.stream(...)` + `emit_custom` — push progress events from
   inside a node.
 
-Runs on the same OCI GenAI default as the rest of the tutorials:
+Runs on the same OCI GenAI default as the rest of the notebooks:
 
 ```bash
 LOCUS_MODEL_ID=openai.gpt-4.1 python examples/notebook_27_graph_advanced.py

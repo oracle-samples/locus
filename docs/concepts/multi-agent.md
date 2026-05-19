@@ -99,7 +99,7 @@ async def split(state):
 
 Returning a list of `Send` from a node spawns parallel executions —
 no `asyncio.gather`, no shared mutable state. Each result lands in
-`state[send.id]` keyed by the send id. Used by tutorials 42, 46, 48.
+`state[send.id]` keyed by the send id. Used by notebooks 42, 46, 48.
 
 ### `interrupt()` — pause for a human
 
@@ -113,7 +113,7 @@ async def approval_node(state):
 
 `interrupt()` raises `InterruptException`; the graph catches it,
 snapshots state, and returns control to the caller. Resume by calling
-`graph.execute(Command(resume="yes"))`. Used by tutorials 45, 46, 47, 48.
+`graph.execute(Command(resume="yes"))`. Used by notebooks 45, 46, 47, 48.
 
 ### `Command(goto=...)` — explicit routing
 
@@ -128,7 +128,7 @@ async def smart_router(state):
 
 Return a `Command` from a node to override the default edge — useful
 for short-circuiting refinement loops or skipping straight to sign-off.
-Used by tutorial 48 to skip the negotiation loop when counsel says RESOLVED.
+Used by notebook 48 to skip the negotiation loop when counsel says RESOLVED.
 
 ### `Agent(output_schema=...)` — typed terminal artifacts
 
@@ -147,7 +147,7 @@ verdict: Verdict = result.parsed   # validated Pydantic instance, not free text
 
 When you need a typed artifact at the workflow boundary — `Verdict`,
 `Postmortem`, `PurchaseOrder`, `ContractDecision` — `output_schema`
-gives you a validated Pydantic instance. Used by tutorials 44, 46, 47, 48.
+gives you a validated Pydantic instance. Used by notebooks 44, 46, 47, 48.
 
 ### `GraphConfig(allow_cycles=True)` — refinement loops
 
@@ -159,7 +159,7 @@ graph.add_edge("critic", "writer")   # loop edge — only legal with allow_cycle
 
 Cycles are off by default (so you can't accidentally infinite-loop).
 Opt in with `allow_cycles=True` plus an iteration cap. Used by
-tutorials 43, 48.
+notebooks 43, 48.
 
 ## Why these workflows ship to prod
 

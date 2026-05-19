@@ -253,13 +253,13 @@ examples/test_*.py
 examples/mcp_test_*.py
 examples/start_and_test.sh
 
-# Old tutorials directory (superseded by examples/tutorial_*.py)
-/tutorials/
+# Old notebooks directory (superseded by examples/notebook_*.py)
+/notebooks/
 site/
 .claude/
 
-# Tutorial 49 audio output (regenerated each run).
-examples/tutorial_49_response.mp3
-examples/tutorial_50_question.wav
-examples/tutorial_50_answer.wav
-examples/tutorial_50_answer.mp3
+# Notebook 49 audio output (regenerated each run).
+examples/notebook_49_response.mp3
+examples/notebook_50_question.wav
+examples/notebook_50_answer.wav
+examples/notebook_50_answer.mp3

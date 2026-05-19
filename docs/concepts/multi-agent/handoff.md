@@ -102,7 +102,7 @@ The receiving agent picks up the same loop. It does not see the
 handoff as a "new turn"; it sees the previous transcript and the
 customer's last message.
 
-## Tutorials
+## Notebooks
 
 - [`notebook_30_agent_handoff.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_30_agent_handoff.py)
   — full triage + billing + shipping + returns escalation flow.

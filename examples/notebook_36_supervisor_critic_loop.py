@@ -3,7 +3,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 31: supervisor + critic — drafting with a refinement loop.
+"""Notebook 31: supervisor + critic — drafting with a refinement loop.
 
 A researcher gathers notes, a writer drafts a response, a critic either
 approves or sends it back for revision. The loop caps at two revisions
@@ -35,8 +35,8 @@ present the roles talk to a live OCI model (canonical pick:
 ``LOCUS_MODEL_PROVIDER=mock`` for offline runs.
 
 Prerequisites:
-- Tutorial 16 (basic graph).
-- Tutorial 25 (agent handoff) for an alternative shape.
+- Notebook 16 (basic graph).
+- Notebook 25 (agent handoff) for an alternative shape.
 """
 
 from __future__ import annotations
@@ -181,7 +181,7 @@ def build_supervisor_graph() -> StateGraph:
 
 
 async def main() -> None:
-    print("Tutorial 31: supervisor + critic — drafting with a refinement loop")
+    print("Notebook 31: supervisor + critic — drafting with a refinement loop")
     print("=" * 60)
 
     model = get_model()

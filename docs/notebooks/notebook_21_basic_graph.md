@@ -14,7 +14,7 @@ What you'll see:
 - Streaming node updates and pushing custom progress events from inside a node.
 - An Agent embedded inside a graph node.
 
-Runs on the same OCI GenAI default as the rest of the tutorials:
+Runs on the same OCI GenAI default as the rest of the notebooks:
 
 ```bash
 LOCUS_MODEL_ID=openai.gpt-4.1 python examples/notebook_21_basic_graph.py

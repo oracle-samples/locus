@@ -25,7 +25,7 @@ Uses the OCI Generative AI default provider (canonical id:
 `openai.gpt-4.1` or `meta.llama-3.3-70b-instruct`). For offline runs set
 `LOCUS_MODEL_PROVIDER=mock`; OpenAI, Anthropic and Ollama also work.
 
-Prerequisite: tutorial 11.
+Prerequisite: notebook 11.
 
 ## Source
 

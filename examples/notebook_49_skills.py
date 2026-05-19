@@ -1,7 +1,7 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 44: skills — packaged instruction bundles with progressive disclosure.
+"""Notebook 44: skills — packaged instruction bundles with progressive disclosure.
 
 A Skill (the AgentSkills.io shape) bundles a name, a description, and
 a block of instructions. The ``SkillsPlugin`` exposes a catalog of

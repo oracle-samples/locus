@@ -2,10 +2,10 @@
 
 An orchestrator routes a task to a chosen set of specialist agents, runs
 them in parallel under a semaphore, then correlates their outputs into a
-single summary. Compared with a swarm (Tutorial 24), the decision of who
+single summary. Compared with a swarm (Notebook 24), the decision of who
 does what is centralised here instead of emerging from capability tags.
 
-This tutorial covers:
+This notebook covers:
 
 - `Specialist` — domain-focused agent with tools, system prompt, and a
   confidence threshold. Locus ships pre-built ones for logs, metrics,
@@ -20,8 +20,8 @@ This tutorial covers:
 
 ## Prerequisites
 
-- Tutorial 08 (Agent basics).
-- Tutorial 24 (Swarm) for the unsupervised counterpoint.
+- Notebook 08 (Agent basics).
+- Notebook 24 (Swarm) for the unsupervised counterpoint.
 
 ## Run
 

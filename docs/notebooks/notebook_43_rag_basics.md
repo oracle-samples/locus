@@ -1,7 +1,7 @@
 # RAG Basics
 
 Retrieval-Augmented Generation grounds an agent's answers in your own
-documents. This tutorial drives the four-step pipeline against a real
+documents. This notebook drives the four-step pipeline against a real
 26ai instance.
 
 - **Embed** — `OCIEmbeddings` (Cohere V3 English, 1024 dims) on the OCI

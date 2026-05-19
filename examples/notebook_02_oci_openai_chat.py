@@ -2,7 +2,7 @@
 # Copyright (c) 2025, 2026 Oracle and/or its affiliates.
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
-"""Tutorial 02: call any non-R-series OCI GenAI model with ``OCIOpenAIModel``.
+"""Notebook 02: call any non-R-series OCI GenAI model with ``OCIOpenAIModel``.
 
 This walks through the default Oracle Cloud Infrastructure (OCI)
 Generative AI client class. ``OCIOpenAIModel`` targets the
@@ -55,7 +55,7 @@ from locus.tools.decorator import tool
 def _env(name: str) -> str:
     val = os.environ.get(name)
     if not val:
-        sys.stderr.write(f"missing env var {name} — see prerequisites in the tutorial docstring\n")
+        sys.stderr.write(f"missing env var {name} — see prerequisites in the notebook docstring\n")
         sys.exit(2)
     return val
 
@@ -199,7 +199,7 @@ def part5_model_swap() -> None:
 
 def main() -> None:
     print("=" * 70)
-    print("Tutorial 02 — OCIOpenAIModel: the default OCI GenAI client")
+    print("Notebook 02 — OCIOpenAIModel: the default OCI GenAI client")
     print("=" * 70 + "\n")
     print(f"OCI_PROFILE     = {os.environ.get('OCI_PROFILE', '(unset)')}")
     print(f"OCI_REGION      = {REGION}")
@@ -212,7 +212,7 @@ def main() -> None:
     part5_model_swap()
 
     print("=" * 70)
-    print("Next: tutorial 03 — OCIResponsesModel and the Responses endpoint")
+    print("Next: notebook 03 — OCIResponsesModel and the Responses endpoint")
     print("=" * 70)
 
 

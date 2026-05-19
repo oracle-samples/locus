@@ -6,7 +6,7 @@
 """Notebook 07: durable agent threads on Oracle Database 26ai.
 
 In-memory and on-disk checkpointers are fine for local development —
-when the process restarts, the conversation is gone. This tutorial
+when the process restarts, the conversation is gone. This notebook
 wires Locus's ``oracle_checkpointer`` adapter against an Oracle Cloud
 Infrastructure (OCI) Autonomous Database 26ai so agent threads survive
 process restarts, scale out across replicas, and can be picked up from
@@ -38,11 +38,11 @@ Run it::
 
     python examples/notebook_07_oracle_26ai_checkpointer.py
 
-If ``ORACLE_DSN`` / ``ORACLE_PASSWORD`` aren't set the tutorial prints
+If ``ORACLE_DSN`` / ``ORACLE_PASSWORD`` aren't set the notebook prints
 the wiring snippet and exits cleanly — no traceback, no
 half-initialised state.
 
-Difficulty: Intermediate. Self-contained — no prior tutorial required.
+Difficulty: Intermediate. Self-contained — no prior notebook required.
 """
 
 from __future__ import annotations

@@ -5,7 +5,7 @@ Embeddings live in a real `VECTOR(N, FLOAT32)` column, similarity is
 the `VECTOR_DISTANCE` SQL function, and the index is `CREATE VECTOR
 INDEX ... ORGANIZATION NEIGHBOR PARTITIONS WITH DISTANCE COSINE` — all
 native to Oracle Database 26ai. The retriever pipeline is the same one
-the in-memory RAG tutorials use; only the store import changes.
+the in-memory RAG notebooks use; only the store import changes.
 
 ## What this covers
 
@@ -35,7 +35,7 @@ export OCI_AUTH_TYPE=api_key                 # or security_token
 ```
 
 If `ORACLE_DSN` / `ORACLE_PASSWORD` / `OCI_COMPARTMENT` aren't set the
-tutorial prints the wiring snippet and exits cleanly — no traceback,
+notebook prints the wiring snippet and exits cleanly — no traceback,
 no half-initialised state.
 
 ## Run
@@ -46,7 +46,7 @@ python examples/notebook_06_oracle_26ai_rag.py
 
 ## Schema hygiene
 
-This tutorial uses `auto_create_table=True` so the demo provisions the
+This notebook uses `auto_create_table=True` so the demo provisions the
 table on first run. For production, create the table out-of-band as a
 least-privileged app schema owner and set `auto_create_table=False` so
 the runtime user is restricted to DML only — see the

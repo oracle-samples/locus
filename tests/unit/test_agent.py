@@ -1472,10 +1472,10 @@ class TestMalformedToolCallRecovery:
     def test_parse_simple_tool_call(self, mock_model):
         """Parse a simple tool call from text."""
         agent = self._make_agent_with_tools(mock_model)
-        result = agent._parse_text_tool_calls('I will search_web(query="python tutorials")')
+        result = agent._parse_text_tool_calls('I will search_web(query="python notebooks")')
         assert len(result) == 1
         assert result[0].name == "search_web"
-        assert result[0].arguments["query"] == "python tutorials"
+        assert result[0].arguments["query"] == "python notebooks"
 
     def test_parse_single_quotes(self, mock_model):
         """Parse tool call with single-quoted arguments."""

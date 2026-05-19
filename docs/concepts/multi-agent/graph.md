@@ -117,7 +117,7 @@ graph.compile().get_mermaid()
 …returns a Mermaid flowchart string you can paste into the docs or
 a design review.
 
-## Tutorials
+## Notebooks
 
 - [`notebook_21_basic_graph.py`](https://github.com/oracle-samples/locus/blob/main/examples/notebook_21_basic_graph.py)
   — your first StateGraph.
