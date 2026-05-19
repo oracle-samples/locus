@@ -21,9 +21,9 @@ playground runs locally against developer credentials.
 Endpoints (all POST, all return ``{reply, events}``):
 
 - ``/api/patterns``                    catalog of patterns + descriptions
-- ``/api/run/agent``                   one-shot agent (tutorial 01)
-- ``/api/run/agent_with_tools``        agent + tools (tutorial 02)
-- ``/api/run/composition``             SequentialPipeline (tutorial 25)
+- ``/api/run/agent``                   one-shot agent (notebook 01)
+- ``/api/run/agent_with_tools``        agent + tools (notebook 02)
+- ``/api/run/composition``             SequentialPipeline (notebook 25)
 - ``/api/run/orchestrator``            Orchestrator + Specialists (17)
 - ``/api/run/stategraph_loop``         critic loop with cycles (43)
 - ``/api/run/map_reduce``              Send fan-out + reduce (42)
@@ -63,7 +63,7 @@ class ProviderConfig(BaseModel):
 
     provider: Literal["openai", "anthropic", "oci-session", "oci-apikey"]
     model: str = Field(default="", description="primary model id (slot A)")
-    # Optional secondary slots so a tutorial can mix models — e.g. haiku
+    # Optional secondary slots so a notebook can mix models — e.g. haiku
     # for triage, sonnet for the deep specialist. Both fall through to
     # ``model`` (slot A) when empty. Same provider + credentials as A.
     model_b: str | None = None
@@ -1134,7 +1134,7 @@ def _resolve_db(cfg: DatabaseConfig | None) -> DatabaseConfig:
 
 
 async def _run_oracle_26ai_rag(req: RunRequest) -> RunResponse:
-    """Workbench demo for tutorial 61 — Oracle 26ai native VECTOR RAG.
+    """Workbench demo for notebook 06 — Oracle 26ai native VECTOR RAG.
 
     Embeds a tiny Oracle-themed corpus with ``OCIEmbeddings``
     (Cohere V3, 1024-dim) and stores it in an ``OracleVectorStore``
@@ -1536,9 +1536,11 @@ async def list_models(req: ListModelsRequest) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Workbench — list every model-only tutorial under examples/, serve its
+# Workbench — list every model-only notebook under examples/, serve its
 # source code, and run user-edited copies in a subprocess with streamed
-# stdout/stderr over SSE.
+# stdout/stderr over SSE. Notebook files follow the legacy
+# ``tutorial_NN_*.py`` naming convention; the user-facing label is
+# "Notebook" everywhere we surface it.
 # ---------------------------------------------------------------------------
 
 import re
@@ -1547,7 +1549,7 @@ import tempfile
 from pathlib import Path
 
 
-# Tutorials kept out of the workbench because they require infra beyond
+# Notebooks kept out of the workbench because they require infra beyond
 # the model (Postgres, vector store, MCP server, multi-process A2A,
 # multimodal providers, dedicated AI cluster, etc.).
 TUTORIAL_BLOCKLIST = {
@@ -1555,10 +1557,10 @@ TUTORIAL_BLOCKLIST = {
     23,  # RAG providers — requires OPENAI_API_KEY for the OpenAI embeddings demo;
     # graceful skip but confusing UX in the workbench
     34,  # A2A — requires a second process running on a separate port
-    # 40 is NOT blocked — tutorial 40 runs Part 1 (routing docs) and prints
+    # 40 is NOT blocked — notebook 40 runs Part 1 (routing docs) and prints
     # the wiring snippet for Parts 2-5, skipping live inference when
     # OCI_DAC_ENDPOINT_OCID is not set. Graceful, educational, exit 0.
-    # Tutorials 45-48 call locus.core.interrupt() and block waiting for
+    # Notebooks 45-48 call locus.core.interrupt() and block waiting for
     # stdin that the workbench subprocess never receives.  They carry a
     # needs_stdin badge already; adding them here prevents the Run button
     # from launching a subprocess that would hang until the harness timeout.
@@ -1568,7 +1570,7 @@ TUTORIAL_BLOCKLIST = {
     48,
 }
 
-# Tutorials that pause for human input via locus.core.interrupt(). The
+# Notebooks that pause for human input via locus.core.interrupt(). The
 # subprocess has no stdin attached, so these would hang until the
 # harness timeout. Surfaced in the catalog (needs_stdin: true) so the
 # UI can flag them and /api/tutorials/run can reject early.
@@ -1577,9 +1579,9 @@ TUTORIAL_NEEDS_STDIN = {9, 45, 46, 47, 48}
 _TUTORIAL_DIR = (Path(__file__).resolve().parents[2] / "examples").resolve()
 
 
-# Topic progression for the workbench sidebar. Each tutorial number is
+# Topic progression for the workbench sidebar. Each notebook number is
 # bound to one category; categories are rendered in the order declared
-# here. Keep ranges contiguous so adding a new tutorial slots in
+# here. Keep ranges contiguous so adding a new notebook slots in
 # without renumbering — gaps ("RAG suite blocked in workbench") leave
 # the category empty rather than reshuffling.
 TUTORIAL_CATEGORIES: list[dict[str, Any]] = [
@@ -1657,13 +1659,13 @@ TUTORIAL_CATEGORIES: list[dict[str, Any]] = [
 
 
 def _tutorial_category(number: int) -> tuple[str, int]:
-    """Return ``(category_id, order_within_category)`` for a tutorial.
+    """Return ``(category_id, order_within_category)`` for a notebook.
 
-    Tutorials not bound to a category fall under ``"misc"`` so a stray
+    Notebooks not bound to a category fall under ``"misc"`` so a stray
     ``tutorial_99_*`` still renders. ``order_within_category`` is the
     member's index in the category's ``members`` list — preserves
     declaration order rather than numeric sort, so we can manually
-    foreground a tutorial that's logically a prerequisite.
+    foreground a notebook that's logically a prerequisite.
     """
     for cat in TUTORIAL_CATEGORIES:
         if number in cat["members"]:
@@ -1672,7 +1674,7 @@ def _tutorial_category(number: int) -> tuple[str, int]:
 
 
 def _parse_tutorial(path: Path) -> dict[str, Any]:
-    """Pull (id, number, title, summary, source) out of a tutorial file."""
+    """Pull (id, number, title, summary, source) out of a notebook file."""
     src = path.read_text()
     # Extract the leading triple-quoted docstring; first line is the
     # title, everything else up to "This tutorial covers:" is the summary.
@@ -1727,7 +1729,7 @@ def _list_tutorials() -> list[dict[str, Any]]:
             continue
 
     # Sort by (category position, member position within the category,
-    # tutorial number) so the sidebar reads top-to-bottom as a curated
+    # notebook number) so the sidebar reads top-to-bottom as a curated
     # learning path rather than a numeric file dump. ``misc`` falls to
     # the end via the sentinel category index.
     cat_index: dict[str, int] = {c["id"]: i for i, c in enumerate(TUTORIAL_CATEGORIES)}
@@ -1751,7 +1753,7 @@ def list_tutorials() -> list[dict[str, Any]]:
 def list_tutorial_categories() -> list[dict[str, Any]]:
     """Topic-progression categories the workbench renders as section
     headers. The ``members`` field is omitted from the wire payload —
-    membership is already encoded on each tutorial as ``category``."""
+    membership is already encoded on each notebook as ``category``."""
     return [
         {"id": c["id"], "name": c["name"], "description": c["description"]}
         for c in TUTORIAL_CATEGORIES
@@ -1763,7 +1765,31 @@ def tutorial_source(tid: str) -> dict[str, Any]:
     for t in _list_tutorials():
         if t["id"] == tid:
             return t
-    raise HTTPException(404, f"unknown tutorial: {tid}")
+    raise HTTPException(404, f"unknown notebook: {tid}")
+
+
+# Notebook aliases — same payloads as the /api/tutorials/* endpoints
+# above. The 2026 rebrand renamed the user-facing label from "Tutorial"
+# to "Notebook"; the legacy paths stay live for backwards compatibility,
+# the new paths are the canonical surface going forward.
+
+
+@app.get("/api/notebooks")
+def list_notebooks() -> list[dict[str, Any]]:
+    """Alias of ``/api/tutorials``. Same payload, notebook-branded path."""
+    return list_tutorials()
+
+
+@app.get("/api/notebooks/categories")
+def list_notebook_categories() -> list[dict[str, Any]]:
+    """Alias of ``/api/tutorials/categories``."""
+    return list_tutorial_categories()
+
+
+@app.get("/api/notebooks/{tid}")
+def notebook_source(tid: str) -> dict[str, Any]:
+    """Alias of ``/api/tutorials/{tid}``."""
+    return tutorial_source(tid)
 
 
 # ---------------------------------------------------------------------------
@@ -2103,7 +2129,7 @@ _LE_PREFIX = "__LE__:"
 
 
 async def _bridge_subprocess_line_to_bus(run_id: str, kind: str, text: str) -> None:
-    """Republish one tutorial-subprocess output line on the EventBus.
+    """Republish one notebook-subprocess output line on the EventBus.
 
     Lines that start with ``__LE__:`` are typed locus events
     (``ThinkEvent``, ``ToolStartEvent``, etc.) — the JSON payload
@@ -2148,7 +2174,7 @@ class WorkbenchRunRequest(BaseModel):
     provider: ProviderConfig
     timeout_seconds: int = 120
     # When true, the bootstrap force-enables reflexion=True on every
-    # Agent the tutorial creates — exposes chain-of-thought via
+    # Agent the notebook creates — exposes chain-of-thought via
     # ReflectEvent (assessment + guidance per step) on any provider /
     # transport, since reflexion is an SDK feature, not a model feature.
     reflexion: bool = False
@@ -2182,9 +2208,9 @@ def _provider_env(cfg: ProviderConfig) -> dict[str, str]:
     elif cfg.provider in ("oci-session", "oci-apikey"):
         env["LOCUS_MODEL_PROVIDER"] = "oci"
         env["LOCUS_MODEL_ID"] = cfg.model or "openai.gpt-5.5-2026-04-23"
-    # Optional secondary slots — tutorials read these via get_model_b()
+    # Optional secondary slots — notebooks read these via get_model_b()
     # / get_model_c() in examples/config.py. Empty means "fall back to
-    # slot A" so existing tutorials stay correct.
+    # slot A" so existing notebooks stay correct.
     if cfg.model_b:
         env["LOCUS_MODEL_ID_B"] = cfg.model_b
     if cfg.model_c:
@@ -2198,7 +2224,7 @@ def _provider_env(cfg: ProviderConfig) -> dict[str, str]:
             env["LOCUS_OCI_COMPARTMENT"] = cfg.compartment_id
         # examples/config.py reads LOCUS_OCI_TRANSPORT to override its
         # auto pick. The workbench subprocess inherits this env so the
-        # tutorial's `from config import get_model` lands on the right
+        # notebook's `from config import get_model` lands on the right
         # transport.
         if cfg.oci_transport != "auto":
             env["LOCUS_OCI_TRANSPORT"] = cfg.oci_transport
@@ -2270,13 +2296,13 @@ def _split_future_imports(source: str) -> tuple[str, str]:
 
 @app.post("/api/tutorials/run")
 async def run_tutorial(req: WorkbenchRunRequest) -> StreamingResponse:
-    """Execute user-edited tutorial source in a subprocess; stream stdout/stderr as SSE.
+    """Execute user-edited notebook source in a subprocess; stream stdout/stderr as SSE.
 
     Each output line is wrapped in an SSE ``data:`` envelope with type
     ``stdout``, ``stderr``, ``exit``, or ``error``. The frontend renders a
     terminal-shaped log.
 
-    Tutorials that call ``locus.core.interrupt()`` are supported now —
+    Notebooks that call ``locus.core.interrupt()`` are supported now —
     the bootstrap monkey-patches ``interrupt`` to emit an
     ``InterruptEvent`` SSE line and block on stdin for the response.
     The frontend pops a modal and POSTs the answer to
@@ -2287,10 +2313,10 @@ async def run_tutorial(req: WorkbenchRunRequest) -> StreamingResponse:
     examples_dir = _TUTORIAL_DIR
     src_dir = repo_root / "src"
 
-    # Bootstrap: monkey-patch Agent.__init__ so every agent the tutorial
+    # Bootstrap: monkey-patch Agent.__init__ so every agent the notebook
     # creates emits a typed event line per turn. Lines start with __LE__:
     # so the frontend can split them out from regular stdout. Only fires
-    # when the tutorial hasn't already wired its own callback_handler.
+    # when the notebook hasn't already wired its own callback_handler.
     bootstrap = """\
 import json as __le_json, sys as __le_sys, os as __le_os
 __LE_PREFIX = "__LE__:"
@@ -2337,11 +2363,11 @@ try:
 except Exception:
     pass
 
-# Hard guard: never let a tutorial silently fall back to MockModel. The
+# Hard guard: never let a notebook silently fall back to MockModel. The
 # workbench always sets LOCUS_MODEL_PROVIDER to a real provider, but
-# guard against any tutorial that hardcodes mock or imports MockModel
+# guard against any notebook that hardcodes mock or imports MockModel
 # directly. Wraps `from config import get_model` so the returned object
-# is asserted real before the tutorial uses it.
+# is asserted real before the notebook uses it.
 __SB_PROVIDER = "__SB_PROVIDER_VALUE__"
 __le_sys.stdout.write(f"[locus-workbench] running against {__SB_PROVIDER}\\n")
 __le_sys.stdout.flush()
@@ -2403,7 +2429,7 @@ def __locus_emit__(ev):
 
 # 1. After every Agent is constructed, attach a callback_handler so we
 #    see Think / Tool / Terminate events as they fire — regardless of
-#    whether the tutorial passed model=… directly or config=AgentConfig(…).
+#    whether the notebook passed model=… directly or config=AgentConfig(…).
 #    Also wrap run_sync / run so we emit a "QueryEvent" at the very top
 #    of each call carrying the prompt — that way the UI shows
 #    QUERY → ... before the THINK / TOOL chips, instead of after.
@@ -2493,12 +2519,12 @@ except Exception:
 """
 
     # Write the user's source to a tmp file. Keep it inside examples/ so
-    # tutorials' relative imports (`from config import get_model`) resolve.
+    # notebooks' relative imports (`from config import get_model`) resolve.
     tmp_dir = Path(tempfile.mkdtemp(prefix="locus-wb-"))
     tmp_file = tmp_dir / "tutorial_workbench.py"
     rendered = bootstrap.replace("__SB_PROVIDER_VALUE__", _describe_provider(req.provider))
     # `from __future__` imports MUST be the first executable statement in
-    # the file. If the tutorial has any, split them out and place them
+    # the file. If the notebook has any, split them out and place them
     # at the very top, with the bootstrap after.
     user_preamble, user_rest = _split_future_imports(req.source)
     tmp_file.write_text(user_preamble + rendered + user_rest)
@@ -2645,9 +2671,13 @@ async def respond_to_interrupt(run_id: str, req: RespondRequest) -> dict[str, An
 
 @app.get("/api/health")
 def health() -> dict[str, Any]:
+    count = len(_list_tutorials())
     return {
         "ok": True,
         "patterns": [p["id"] for p in PATTERNS],
         "streamable": sorted(STREAMABLE),
-        "tutorials": len(_list_tutorials()),
+        # ``tutorials`` kept for backwards compatibility; ``notebooks``
+        # is the canonical key going forward.
+        "tutorials": count,
+        "notebooks": count,
     }
