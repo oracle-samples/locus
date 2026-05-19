@@ -51,7 +51,7 @@ python examples/notebook_11_oracle_store.py
 
 ## Schema hygiene
 
-The notebook writes to `locus_notebook_67_store` (overridable via
+The notebook writes to `locus_notebook_11_store` (overridable via
 `table_name=`) and drops the table at the end so the demo is
 re-runnable. For production, pre-create the table out-of-band as a
 least-privileged app schema owner and pass `auto_create_table=False`
@@ -60,8 +60,8 @@ only.
 
 ## See also
 
-- [Tutorial 07 — Oracle 26ai checkpointer (single-row, per-thread)](notebook_07_oracle_26ai_checkpointer.md)
-- [Tutorial 68 — Oracle 26ai versioned checkpoint saver (LangGraph-shape history)](notebook_12_oracle_versioned_saver.md)
+- [Notebook 07 — Oracle 26ai checkpointer](notebook_07_oracle_26ai_checkpointer.md)
+- [Notebook 12 — Oracle 26ai versioned checkpoint saver](notebook_12_oracle_versioned_saver.md)
 - [Oracle AI Database 26ai — AI Vector Search User's Guide](https://docs.oracle.com/en/database/oracle/oracle-database/23/vecse/index.html)
 
 ## Source

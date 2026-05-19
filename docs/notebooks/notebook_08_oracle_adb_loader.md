@@ -20,7 +20,7 @@ other projected column into `Document.metadata`.
 - `await loader.close()` — release the pool.
 
 The notebook is self-contained: it creates a disposable demo table
-`locus_notebook_64_articles`, populates three rows, walks the loader
+`locus_notebook_08_articles`, populates three rows, walks the loader
 through both call shapes, then drops the table.
 
 ## Prerequisites
@@ -46,9 +46,9 @@ python examples/notebook_08_oracle_adb_loader.py
 
 ## See also
 
-- [Tutorial 06 — Oracle 26ai RAG (native VECTOR)](notebook_06_oracle_26ai_rag.md)
+- [Notebook 06 — Oracle 26ai RAG](notebook_06_oracle_26ai_rag.md)
 - [Notebook 09 — Oracle in-DB chunker](notebook_09_oracle_indb_chunker.md)
-- [Tutorial 66 — OracleInDBEmbeddings (DBMS_VECTOR_CHAIN.UTL_TO_EMBEDDING)](notebook_66_oracle_indb_embeddings.md)
+- [Notebook 10 — Oracle in-DB embeddings](notebook_10_oracle_indb_embeddings.md)
 - [Oracle AI Database 26ai — AI Vector Search User's Guide](https://docs.oracle.com/en/database/oracle/oracle-database/23/vecse/index.html)
 
 ## Source

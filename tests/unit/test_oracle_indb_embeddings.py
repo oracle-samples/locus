@@ -194,19 +194,22 @@ class TestConfig:
 
 
 class TestCapabilities:
-    def test_default_capabilities_advertise_batching(self) -> None:
+    def test_default_capabilities_advertise_no_batching(self) -> None:
+        # Default is now ``use_batch_function=False`` because the batch
+        # TABLE path is unreliable on Autonomous Database 23.26 — see
+        # the OracleInDBEmbeddingsConfig docstring.
         emb = _make_emb()
-        caps = emb.capabilities
-        assert caps.supports_batching is True
-        assert caps.max_batch_size == 96
-        assert caps.supports_query_vs_doc is False
-        assert caps.supports_multimodal is False
-
-    def test_batch_disabled_flag_flips_capabilities(self) -> None:
-        emb = _make_emb(use_batch_function=False)
         caps = emb.capabilities
         assert caps.supports_batching is False
         assert caps.max_batch_size == 1
+        assert caps.supports_query_vs_doc is False
+        assert caps.supports_multimodal is False
+
+    def test_batch_enabled_flag_flips_capabilities(self) -> None:
+        emb = _make_emb(use_batch_function=True)
+        caps = emb.capabilities
+        assert caps.supports_batching is True
+        assert caps.max_batch_size == 96
 
 
 # ---------------------------------------------------------------------------
@@ -227,14 +230,21 @@ class TestSqlShape:
         # VECTOR_SERIALIZE wraps the result so we can fetch it as text.
         assert "VECTOR_SERIALIZE" in sql
 
-    def test_batch_sql_uses_utl_to_embeddings_with_indexed_binds(self) -> None:
+    def test_batch_sql_uses_utl_to_embeddings_with_chunk_objects(self) -> None:
+        # The batch path builds chunk objects with ``chunk_id`` +
+        # ``chunk_data`` keys; ``UTL_TO_EMBEDDINGS`` returns one CLOB per
+        # input which ``JSON_TABLE`` decomposes into ``embed_vector``
+        # rows ordered by ``embed_id`` — guarantees output order matches
+        # input order.
         emb = _make_emb()
         sql = emb._batch_sql(3)
         assert "DBMS_VECTOR_CHAIN.UTL_TO_EMBEDDINGS" in sql
-        assert "JSON_ARRAY(:t0, :t1, :t2)" in sql
-        assert "TABLE(" in sql
-        # rownum ordering preserves input order.
-        assert "ORDER BY r" in sql
+        assert "JSON_OBJECT('chunk_id' VALUE 1, 'chunk_data' VALUE :t0)" in sql
+        assert "JSON_OBJECT('chunk_id' VALUE 2, 'chunk_data' VALUE :t1)" in sql
+        assert "JSON_OBJECT('chunk_id' VALUE 3, 'chunk_data' VALUE :t2)" in sql
+        assert "JSON_TABLE(" in sql
+        assert "embed_vector CLOB PATH '$.embed_vector'" in sql
+        assert "ORDER BY et.embed_id" in sql
         assert '"model":"ALL_MINILM_L12_V2"' in sql
 
 
@@ -321,8 +331,9 @@ class TestEmbedBatch:
     async def test_embed_batch_binds_each_text_and_preserves_order(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # UTL_TO_EMBEDDINGS yields (VECTOR_SERIALIZE, rownum) per text.
-        # rownum is consumed only for ordering; we don't read column [1].
+        # UTL_TO_EMBEDDINGS via JSON_TABLE yields
+        # (embed_vector CLOB, embed_id INT) per chunk; embed_id is
+        # consumed only for ordering, we don't read column [1].
         cursor = _StubCursor(
             fetchall=[
                 ("[0.1, 0.2]", 1),
@@ -332,7 +343,9 @@ class TestEmbedBatch:
         )
         _install_oracledb_stub(monkeypatch, cursor)
 
-        emb = _make_emb(dimension=2)
+        # Explicitly opt in to the batch path — default is now
+        # sequential per the OracleInDBEmbeddingsConfig change.
+        emb = _make_emb(dimension=2, use_batch_function=True)
         results = await emb.embed_batch(["alpha", "beta", "gamma"])
 
         # SQL + binds

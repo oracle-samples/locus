@@ -3,7 +3,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 07: durable agent threads on Oracle Database 26ai.
+"""Notebook 07: durable agent threads on Oracle Database 26ai.
 
 In-memory and on-disk checkpointers are fine for local development —
 when the process restarts, the conversation is gone. This tutorial
@@ -21,7 +21,7 @@ Key concepts:
   rehydrates the same ``AgentState`` (messages, metrics, all of it).
 - ``cp.list_threads()`` enumerates every persisted conversation — the
   primitive admin dashboards use to enumerate sessions.
-- The vector store from tutorial 05 and this checkpointer can share a
+- The vector store from notebook 06 and this checkpointer can share a
   single Autonomous Database wallet.
 
 The demo simulates two sessions: session 1 writes a few turns, session
@@ -72,7 +72,7 @@ def _missing_env() -> list[str]:
 
 
 def _print_skip_banner(missing: list[str]) -> None:
-    print("\n--- Tutorial 07: Oracle 26ai checkpointer ---")
+    print("\n--- Notebook 07: Oracle 26ai checkpointer ---")
     print(
         "Required environment variables not set; skipping the live demo so "
         "this file still runs cleanly in CI.\n"

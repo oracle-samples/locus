@@ -3,7 +3,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 06: production RAG against Oracle Database 26ai with native vectors.
+"""Notebook 06: production RAG against Oracle Database 26ai with native vectors.
 
 This is the Oracle-native RAG target on Oracle Cloud Infrastructure
 (OCI). The retriever pipeline you'll see is the same one the in-memory
@@ -97,7 +97,7 @@ def _missing_env() -> list[str]:
 
 
 def _print_skip_banner(missing: list[str]) -> None:
-    print("\n--- Tutorial 06: Oracle 26ai RAG ---")
+    print("\n--- Notebook 06: Oracle 26ai RAG ---")
     print(
         "Required environment variables not set; skipping the live demo so "
         "this file still runs cleanly in CI.\n"

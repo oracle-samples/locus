@@ -3,9 +3,9 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 68: versioned checkpoint history on Oracle Database 26ai.
+"""Notebook 12: versioned checkpoint history on Oracle Database 26ai.
 
-Tutorial 07's ``oracle_checkpointer`` keeps **one row per thread** —
+Notebook 07's ``oracle_checkpointer`` keeps **one row per thread** —
 ``MERGE`` on save means the latest write wins and history is destructive.
 That's the right shape for most agent threads. But when you need a
 LangGraph-shape *history-preserving* saver — one row per
@@ -68,7 +68,7 @@ _REQUIRED_ENV = (
 
 # Single base prefix — the saver derives _checkpoints and _writes from
 # it. Drop both at the end of the demo so the notebook is re-runnable.
-TABLE_PREFIX = "locus_notebook_68"
+TABLE_PREFIX = "locus_notebook_12"
 THREAD_ID = "t1"
 
 
@@ -77,7 +77,7 @@ def _missing_env() -> list[str]:
 
 
 def _print_skip_banner(missing: list[str]) -> None:
-    print("\n--- Tutorial 68: OracleCheckpointSaver (versioned history) ---")
+    print("\n--- Notebook 12: OracleCheckpointSaver (versioned history) ---")
     print(
         "Required environment variables not set; skipping the live demo so "
         "this file still runs cleanly in CI.\n"
@@ -100,7 +100,7 @@ def _print_skip_banner(missing: list[str]) -> None:
         password=os.environ["ORACLE_PASSWORD"],
         wallet_location=os.environ["ORACLE_WALLET"],
         wallet_password=os.environ.get("ORACLE_WALLET_PASSWORD", ""),
-        table_name="locus_notebook_68",   # creates _checkpoints + _writes
+        table_name="locus_notebook_12",   # creates _checkpoints + _writes
     )
     await saver.put(thread_id="t1", checkpoint_id="v1",
                     checkpoint_data={"step": 1})
@@ -217,7 +217,7 @@ async def main() -> None:
         print(
             "\nReach for OracleCheckpointSaver when you want LangGraph-shape "
             "history-preserving checkpoints. The single-row "
-            "oracle_checkpointer in tutorial 07 shares the same connection "
+            "oracle_checkpointer in notebook 07 shares the same connection "
             "envelope and can coexist on the same Autonomous Database."
         )
     finally:

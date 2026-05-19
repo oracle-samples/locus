@@ -41,7 +41,7 @@ durably checkpoint conversations directly in Oracle Autonomous Database.
 | 06 | [Oracle 26ai RAG][t06] | `OracleVectorStore` against an Autonomous Database wallet — native `VECTOR(N, FLOAT32)`, `VECTOR_DISTANCE` SQL |
 | 07 | [Oracle 26ai checkpointer][t07] | `oracle_checkpointer` — resume agent conversations from ADB |
 
-## 08–15 · Foundations
+## 13–20 · Agent Foundations
 
 The agent loop, tools, memory, streaming, hooks. Where to send a
 brand-new developer.

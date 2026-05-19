@@ -56,7 +56,7 @@ for the `CREATE USER locus_app` / `CREATE VECTOR INDEX` DDL.
 ## See also
 
 - [Concepts — RAG (Oracle 26ai walkthrough)](../concepts/rag.md)
-- [Tutorial 07 — Cohere Reranker V4 on top of Oracle 26ai (over-fetch + rerank)](notebook_05_cohere_reranker.md)
+- [Notebook 05 — Cohere Reranker V4 over Oracle 26ai](notebook_05_cohere_reranker.md)
 - [Oracle AI Database 26ai — AI Vector Search User's Guide](https://docs.oracle.com/en/database/oracle/oracle-database/23/vecse/index.html)
 
 ## Source

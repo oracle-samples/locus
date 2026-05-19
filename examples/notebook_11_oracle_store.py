@@ -3,9 +3,9 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 67: cross-thread long-term memory on Oracle Database 26ai.
+"""Notebook 11: cross-thread long-term memory on Oracle Database 26ai.
 
-Where ``oracle_checkpointer`` (tutorial 07) persists *per-thread* agent
+Where ``oracle_checkpointer`` (notebook 07) persists *per-thread* agent
 state, :class:`OracleStore` persists *cross-thread* facts: the
 namespaced key/value store the long-term-memory layer reaches for when
 something needs to outlive any single conversation. It is the locus
@@ -25,7 +25,7 @@ Key concepts:
   ``search_by_embedding`` use the same ``VECTOR_DISTANCE`` SQL function
   the RAG store uses, but scoped to a namespace.
 - The same connection envelope works alongside ``oracle_checkpointer``
-  in tutorial 07 and ``OracleCheckpointSaver`` in tutorial 68 — one
+  in notebook 07 and ``OracleCheckpointSaver`` in notebook 12 — one
   Autonomous Database wallet, three primitives.
 
 This notebook uses a tiny 4-dim fake embedding so the vector demo can
@@ -66,7 +66,7 @@ _REQUIRED_ENV = (
 
 # Single base name — the store uses it for the table and the namespace
 # index. Drop at the end of the demo so the notebook is re-runnable.
-TABLE_NAME = "locus_notebook_67_store"
+TABLE_NAME = "locus_notebook_11_store"
 
 # 4-dim vectors are obviously a toy; production stores hand in real
 # embedder output (1024-dim Cohere V3 etc.).
@@ -78,7 +78,7 @@ def _missing_env() -> list[str]:
 
 
 def _print_skip_banner(missing: list[str]) -> None:
-    print("\n--- Tutorial 67: OracleStore (long-term memory) ---")
+    print("\n--- Notebook 11: OracleStore (long-term memory) ---")
     print(
         "Required environment variables not set; skipping the live demo so "
         "this file still runs cleanly in CI.\n"
@@ -101,7 +101,7 @@ def _print_skip_banner(missing: list[str]) -> None:
         password=os.environ["ORACLE_PASSWORD"],
         wallet_location=os.environ["ORACLE_WALLET"],
         wallet_password=os.environ.get("ORACLE_WALLET_PASSWORD", ""),
-        table_name="locus_notebook_67_store",
+        table_name="locus_notebook_11_store",
         dimension=4,
     )
     await store.put(("memory", "u42"), "fact-1", {"note": "user likes cats"})
@@ -212,8 +212,8 @@ async def main() -> None:
         await vector_demo(store)
         print(
             "\nThe same connection envelope wires "
-            "oracle_checkpointer (tutorial 07), OracleStore (this notebook), "
-            "and OracleCheckpointSaver (tutorial 68) side-by-side."
+            "oracle_checkpointer (notebook 07), OracleStore (this notebook), "
+            "and OracleCheckpointSaver (notebook 12) side-by-side."
         )
     finally:
         print("\n--- Cleanup: drop the demo table ---")

@@ -3,7 +3,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 64: stream rows from an Autonomous Database with ``OracleADBLoader``.
+"""Notebook 08: stream rows from an Autonomous Database with ``OracleADBLoader``.
 
 The first link of any Oracle-native RAG pipeline is "get the source
 rows out of the database as ``Document`` objects". Locus ships
@@ -28,7 +28,7 @@ Key concepts:
 - ``await loader.close()`` releases the pool.
 
 This notebook is self-contained: it creates a disposable demo table
-``locus_notebook_64_articles``, populates three rows, walks the loader
+``locus_notebook_08_articles``, populates three rows, walks the loader
 through both the streaming and eager paths, then drops the table.
 
 Run it::
@@ -67,7 +67,7 @@ _REQUIRED_ENV = (
 )
 
 
-_TABLE = "locus_notebook_64_articles"
+_TABLE = "locus_notebook_08_articles"
 
 _DEMO_ROWS = [
     (
@@ -99,7 +99,7 @@ def _missing_env() -> list[str]:
 
 
 def _print_skip_banner(missing: list[str]) -> None:
-    print("\n--- Tutorial 64: OracleADBLoader ---")
+    print("\n--- Notebook 08: OracleADBLoader ---")
     print(
         "Required environment variables not set; skipping the live demo so "
         "this file still runs cleanly in CI.\n"
@@ -147,7 +147,7 @@ def _conn_kwargs() -> dict[str, str]:
 
 
 async def _setup_demo_table() -> None:
-    """Create + populate ``locus_notebook_64_articles`` via plain ``oracledb``.
+    """Create + populate ``locus_notebook_08_articles`` via plain ``oracledb``.
 
     Kept off the loader on purpose — the loader is a read-only primitive.
     For a one-shot notebook we issue the DDL/DML ourselves so the source
@@ -260,7 +260,7 @@ async def main() -> None:
     print(
         "\nThe loader yielded Document objects directly from the ADB SELECT — "
         "feed them into RAGRetriever.add_documents() or an OracleInDBChunker "
-        "(tutorial 65) without any langchain glue."
+        "(notebook 09) without any langchain glue."
     )
 
 

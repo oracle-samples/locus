@@ -3,7 +3,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 65: chunk text **inside the database** with ``OracleInDBChunker``.
+"""Notebook 09: chunk text **inside the database** with ``OracleInDBChunker``.
 
 Oracle 23ai / 26ai ships a server-side chunking primitive,
 ``DBMS_VECTOR_CHAIN.UTL_TO_CHUNKS``. It tokenises and segments text
@@ -16,8 +16,8 @@ Key concepts:
 
 - ``OracleInDBChunker(dsn=..., max_tokens=20, overlap=0, by="words")``
   builds the chunker bound to an Autonomous Database wallet. Same
-  connection envelope as the loader (tutorial 64) and the vector store
-  (tutorial 06).
+  connection envelope as the loader (notebook 08) and the vector store
+  (notebook 06).
 - ``await chunker.chunk_text(long_paragraph)`` returns
   ``[{chunk_id, offset, length, text}, …]`` for a single Python string
   — useful when you've already pulled the raw text out (loader output,
@@ -66,7 +66,7 @@ _REQUIRED_ENV = (
 )
 
 
-_TABLE = "locus_notebook_65_docs"
+_TABLE = "locus_notebook_09_docs"
 
 
 _LONG_PARAGRAPH = (
@@ -87,7 +87,7 @@ def _missing_env() -> list[str]:
 
 
 def _print_skip_banner(missing: list[str]) -> None:
-    print("\n--- Tutorial 65: OracleInDBChunker ---")
+    print("\n--- Notebook 09: OracleInDBChunker ---")
     print(
         "Required environment variables not set; skipping the live demo so "
         "this file still runs cleanly in CI.\n"
@@ -118,7 +118,7 @@ def _print_skip_banner(missing: list[str]) -> None:
     )
     chunks = await chunker.chunk_text(long_paragraph)
     async for chunk in chunker.chunk_column(
-        table_name="locus_notebook_65_docs",
+        table_name="locus_notebook_09_docs",
         text_column="body",
     ):
         ...
@@ -137,7 +137,7 @@ def _conn_kwargs() -> dict[str, str]:
 
 
 async def _setup_demo_table() -> None:
-    """Create + populate a tiny ``locus_notebook_65_docs`` table.
+    """Create + populate a tiny ``locus_notebook_09_docs`` table.
 
     Only used by the ``chunk_column`` leg of the demo. The single-string
     leg (:meth:`chunk_text`) needs no table at all.
@@ -255,7 +255,7 @@ async def main() -> None:
 
     print(
         "\nUTL_TO_CHUNKS ran entirely DB-side. Pair with OracleInDBEmbeddings "
-        "(tutorial 66) for a fully in-database ingest pipeline."
+        "(notebook 10) for a fully in-database ingest pipeline."
     )
 
 

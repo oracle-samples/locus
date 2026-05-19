@@ -1605,7 +1605,7 @@ TUTORIAL_CATEGORIES: list[dict[str, Any]] = [
     },
     {
         "id": "fundamentals",
-        "name": "Fundamentals",
+        "name": "Agent Foundations",
         "description": "Build your first agent — model, tools, memory, streaming, hooks.",
         "members": [13, 14, 15, 16, 17, 18, 19, 20],
     },

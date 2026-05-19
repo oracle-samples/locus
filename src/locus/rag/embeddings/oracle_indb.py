@@ -78,23 +78,36 @@ Single text → one ``VECTOR``::
     )) AS emb
     FROM dual
 
-Batch — ``UTL_TO_EMBEDDINGS`` over a JSON array::
+Batch — ``UTL_TO_EMBEDDINGS`` over a chunk-object JSON array, with
+``JSON_TABLE`` to break the response back into one row per input::
 
-    SELECT VECTOR_SERIALIZE(t.column_value) AS emb, rownum AS r
+    SELECT et.embed_vector, et.embed_id
     FROM TABLE(DBMS_VECTOR_CHAIN.UTL_TO_EMBEDDINGS(
-        JSON_ARRAY(:t0, :t1, ... ),
+        JSON_ARRAY(
+          JSON_OBJECT('chunk_id' VALUE 1, 'chunk_data' VALUE :t0),
+          JSON_OBJECT('chunk_id' VALUE 2, 'chunk_data' VALUE :t1),
+          ... RETURNING CLOB
+        ),
         JSON('{"provider":"database","model":"<MODEL_NAME>"}')
-    )) t
-    ORDER BY r
+    )) t,
+    JSON_TABLE(t.column_value, '$' COLUMNS (
+      embed_id INTEGER PATH '$.embed_id',
+      embed_vector CLOB PATH '$.embed_vector'
+    )) et
+    ORDER BY et.embed_id
 
-The ``VECTOR_SERIALIZE`` output is the canonical ``[0.123, -0.456, …]``
-text form which is parsed back into ``list[float]`` for the
+The ``VECTOR_SERIALIZE`` (single-input) / ``embed_vector`` (batch)
+outputs are the canonical ``[0.123, -0.456, …]`` text form which the
+wrapper parses into ``list[float]`` for the
 :class:`EmbeddingResult.embedding` field.
 
-If ``UTL_TO_EMBEDDINGS`` is unavailable on the target DB the batch
-path falls back to issuing ``UTL_TO_EMBEDDING`` per-text (still all on
-the same connection / transaction) — controlled by the
-``use_batch_function`` flag.
+``use_batch_function`` controls whether the batch path uses
+``UTL_TO_EMBEDDINGS`` or loops ``UTL_TO_EMBEDDING`` per text. The
+default is **False** — sequential — because the batch TABLE function
+is unreliable on Autonomous Database 23.26 (zero rows from the
+``VECTOR_ARRAY_T`` overload, single combined embedding from the CLOB
+overload). Enable explicitly on DBs where the batch path is known to
+work.
 """
 
 from __future__ import annotations
@@ -152,11 +165,14 @@ class OracleInDBEmbeddingsConfig(BaseModel):
     min_pool_size: int = 1
     max_pool_size: int = 5
 
-    # When False, batch calls loop UTL_TO_EMBEDDING per-text rather than
-    # using UTL_TO_EMBEDDINGS. The TABLE function isn't available in
-    # every 23ai patch level — set this False if you hit ORA-00904 on
-    # the batch path.
-    use_batch_function: bool = True
+    # When False (default), batch calls loop ``UTL_TO_EMBEDDING`` per
+    # text rather than calling ``UTL_TO_EMBEDDINGS``. The batch TABLE
+    # function is unreliable on Oracle Autonomous Database 23.26 — the
+    # VECTOR_ARRAY_T overload returns zero rows for many in-DB ONNX
+    # models, and the CLOB overload collapses every input into a single
+    # combined embedding. Set this True only if your DB exposes a
+    # working batch path (older on-prem 23ai patches in some cases).
+    use_batch_function: bool = False
 
     def model_post_init(self, _: Any, /) -> None:
         """Validate identifiers and positive dimension."""
@@ -212,7 +228,7 @@ class OracleInDBEmbeddings(BaseEmbedding):
         service_name: str | None = None,
         min_pool_size: int = 1,
         max_pool_size: int = 5,
-        use_batch_function: bool = True,
+        use_batch_function: bool = False,
     ) -> None:
         super().__init__()
         self._cfg = OracleInDBEmbeddingsConfig(
@@ -335,19 +351,29 @@ class OracleInDBEmbeddings(BaseEmbedding):
         )
 
     def _batch_sql(self, n: int) -> str:
-        """SQL for ``UTL_TO_EMBEDDINGS`` — JSON_ARRAY of texts → N vectors.
+        """SQL for ``UTL_TO_EMBEDDINGS`` — N chunk objects → N vectors.
 
-        Texts are bound as ``:t0, :t1, ..., :t{n-1}``; ordering is
-        preserved with ``ORDER BY rownum``.
+        ``UTL_TO_EMBEDDINGS`` expects each input as a chunk object
+        with ``chunk_id`` + ``chunk_data`` keys, not a bare string.
+        Texts are bound as ``:t0, :t1, ..., :t{n-1}``; the returned
+        rows are CLOBs containing ``{embed_id, embed_data, embed_vector}``
+        — ``JSON_TABLE`` extracts the ``embed_vector`` field, and
+        ``embed_id`` preserves caller order.
         """
-        binds = ", ".join(f":t{i}" for i in range(n))
+        chunks = ", ".join(
+            f"JSON_OBJECT('chunk_id' VALUE {i + 1}, 'chunk_data' VALUE :t{i})" for i in range(n)
+        )
         return (
-            "SELECT VECTOR_SERIALIZE(t.column_value) AS emb, rownum AS r "
+            "SELECT et.embed_vector, et.embed_id "
             "FROM TABLE(DBMS_VECTOR_CHAIN.UTL_TO_EMBEDDINGS("
-            f"JSON_ARRAY({binds}), "
+            f"JSON_ARRAY({chunks} RETURNING CLOB), "
             f"""JSON('{{"provider":"database","model":"{self._cfg.model_name}"}}')"""
-            ")) t "
-            "ORDER BY r"
+            ")) t, "
+            "JSON_TABLE(t.column_value, '$' COLUMNS ("
+            "  embed_id INTEGER PATH '$.embed_id', "
+            "  embed_vector CLOB PATH '$.embed_vector'"
+            ")) et "
+            "ORDER BY et.embed_id"
         )
 
     # -- VECTOR_SERIALIZE parser -------------------------------------------

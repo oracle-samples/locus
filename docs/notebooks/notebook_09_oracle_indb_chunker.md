@@ -47,9 +47,9 @@ python examples/notebook_09_oracle_indb_chunker.py
 
 ## See also
 
-- [Tutorial 06 — Oracle 26ai RAG (native VECTOR)](notebook_06_oracle_26ai_rag.md)
-- [Tutorial 64 — OracleADBLoader (stream rows out as Documents)](notebook_64_oracle_adb_loader.md)
-- [Tutorial 66 — OracleInDBEmbeddings (DBMS_VECTOR_CHAIN.UTL_TO_EMBEDDING)](notebook_66_oracle_indb_embeddings.md)
+- [Notebook 06 — Oracle 26ai RAG](notebook_06_oracle_26ai_rag.md)
+- [Notebook 08 — Oracle ADB document loader](notebook_08_oracle_adb_loader.md)
+- [Notebook 10 — Oracle in-DB embeddings](notebook_10_oracle_indb_embeddings.md)
 - [Oracle AI Database 26ai — AI Vector Search User's Guide](https://docs.oracle.com/en/database/oracle/oracle-database/23/vecse/index.html)
 
 ## Source

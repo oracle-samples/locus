@@ -68,7 +68,7 @@ async def get_pool(
         # CREATE TABLE checks; reset it so the new pool re-verifies
         # against the database.
         if hasattr(holder, "_initialized"):
-            holder._initialized = False  # type: ignore[attr-defined]
+            holder._initialized = False
 
     if holder._pool is None:
         pool = builder()

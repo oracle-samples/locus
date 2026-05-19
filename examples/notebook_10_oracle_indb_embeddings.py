@@ -3,7 +3,7 @@
 # Licensed under the Universal Permissive License v1.0 as shown at
 # https://oss.oracle.com/licenses/upl/
 
-"""Tutorial 66: in-database embeddings with ``OracleInDBEmbeddings``.
+"""Notebook 10: in-database embeddings with ``OracleInDBEmbeddings``.
 
 Oracle 23ai / 26ai can host ONNX embedding models *inside* the
 database (via ``DBMS_VECTOR.LOAD_ONNX_MODEL``). When the model lives
@@ -101,7 +101,7 @@ def _missing_env() -> list[str]:
 
 
 def _print_skip_banner(missing: list[str]) -> None:
-    print("\n--- Tutorial 66: OracleInDBEmbeddings ---")
+    print("\n--- Notebook 10: OracleInDBEmbeddings ---")
     print(
         "Required environment variables not set; skipping the live demo so "
         "this file still runs cleanly in CI.\n"
@@ -141,7 +141,7 @@ def _print_skip_banner(missing: list[str]) -> None:
 
 
 def _print_model_skip_banner(model: str, exc: Exception) -> None:
-    print("\n--- Tutorial 66: OracleInDBEmbeddings ---")
+    print("\n--- Notebook 10: OracleInDBEmbeddings ---")
     print(
         f"The ONNX model {model!r} isn't loaded (or accessible) in the "
         "target database, so the live path can't run.\n"
@@ -208,7 +208,7 @@ async def main() -> None:
     print(
         "\nThe vectors were generated entirely DB-side via "
         "DBMS_VECTOR_CHAIN.UTL_TO_EMBEDDING — no text ever left the database. "
-        "Pair with OracleVectorStore (tutorial 06) to keep the full pipeline in-DB."
+        "Pair with OracleVectorStore (notebook 06) to keep the full pipeline in-DB."
     )
 
 

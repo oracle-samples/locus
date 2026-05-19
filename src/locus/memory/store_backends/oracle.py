@@ -38,6 +38,7 @@ module imports fine on installs without it — the same pattern
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from datetime import UTC, datetime
@@ -503,7 +504,7 @@ class OracleStore(BaseStore):
 
         if row is None:
             return None
-        return _decode_value(row[0])
+        return await _decode_value(row[0])
 
     async def delete(
         self,
@@ -584,7 +585,7 @@ class OracleStore(BaseStore):
         items: list[StoreItem] = []
         for row in rows:
             ns_str, key_str, value_lob, updated_at = row
-            decoded = _decode_value(value_lob)
+            decoded = await _decode_value(value_lob)
             # If the put() helper wrapped metadata into the payload,
             # split it back out so the StoreItem matches what callers expect.
             if isinstance(decoded, dict) and set(decoded.keys()) == {"value", "_meta"}:
@@ -720,7 +721,7 @@ class OracleStore(BaseStore):
             score = _distance_to_score(metric, float(distance))
             if threshold is not None and score < threshold:
                 continue
-            decoded = _decode_value(value_lob)
+            decoded = await _decode_value(value_lob)
             if isinstance(decoded, dict) and set(decoded.keys()) == {"value", "_meta"}:
                 value = decoded["value"]
                 meta = decoded["_meta"]
@@ -776,17 +777,19 @@ class OracleStore(BaseStore):
 # ---------------------------------------------------------------------------
 
 
-def _decode_value(raw: Any) -> Any:
+async def _decode_value(raw: Any) -> Any:
     """Decode the ``value`` column.
 
-    oracledb may hand back the JSON column as a dict, a str, or a CLOB
-    LOB-locator depending on driver version and column type. Normalise
-    to a Python value.
+    oracledb may hand back the JSON column as a dict, a str, a sync
+    CLOB locator (``raw.read()`` returns a string), or an async CLOB
+    locator (``raw.read()`` is a coroutine). Normalise all four to a
+    Python value.
     """
     if raw is None:
         return None
     if hasattr(raw, "read"):
-        raw = raw.read()
+        read_result = raw.read()
+        raw = await read_result if asyncio.iscoroutine(read_result) else read_result
     if isinstance(raw, (bytes, bytearray)):
         raw = raw.decode("utf-8")
     if isinstance(raw, str):

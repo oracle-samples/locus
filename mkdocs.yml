@@ -188,7 +188,7 @@ nav:
     - 10 · Oracle in-DB embeddings: notebooks/notebook_10_oracle_indb_embeddings.md
     - 11 · Oracle store: notebooks/notebook_11_oracle_store.md
     - 12 · Oracle versioned checkpoint saver: notebooks/notebook_12_oracle_versioned_saver.md
-  - Foundations:
+  - Agent Foundations:
     - 13 · Basic agent: notebooks/notebook_13_basic_agent.md
     - 14 · Agent with tools: notebooks/notebook_14_agent_with_tools.md
     - 15 · Conversation memory: notebooks/notebook_15_agent_memory.md
