@@ -72,9 +72,7 @@ embedder = OCIEmbeddings(
 |---|---|---|
 | **Oracle 26ai** | `OracleVectorStore` | Native `VECTOR(N, FLOAT32)` + `VECTOR_DISTANCE` — day-1 target on OCI. |
 | OpenSearch | `OpenSearchVectorStore` | k-NN plugin; pairs well with existing search infra. |
-| Qdrant | `QdrantVectorStore` | Self-hosted, fast filtered search. |
 | pgvector | `PgVectorStore` | Postgres shops. |
-| Chroma | `ChromaVectorStore` | Local prototyping. |
 | In-memory | `InMemoryVectorStore` | Tests. |
 
 ```python

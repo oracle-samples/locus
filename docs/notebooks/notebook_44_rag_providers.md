@@ -3,8 +3,8 @@
 Production RAG on OCI is two pieces. `OracleVectorStore` is the
 default backend across this notebook series — Oracle Database 26ai
 with its native `VECTOR(N, FLOAT32)` column and the `VECTOR_DISTANCE`
-SQL function. Other backends (Chroma, Qdrant, pgvector, OpenSearch)
-are valid alternatives; the Locus interface is identical.
+SQL function. Other backends (pgvector, OpenSearch) are valid
+alternatives; the Locus interface is identical.
 
 - **Embeddings** — `OCIEmbeddings` on the OCI GenAI inference endpoint.
   Cohere V3 for English (1024 dims), Cohere V4 for multilingual.

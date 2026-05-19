@@ -86,14 +86,6 @@ def opensearch_available() -> bool:
 
 
 @lru_cache(maxsize=1)
-def qdrant_available() -> bool:
-    """Check if Qdrant is available."""
-    host = os.getenv("QDRANT_HOST", "localhost")
-    port = int(os.getenv("QDRANT_PORT", "6333"))
-    return _check_port(host, port)
-
-
-@lru_cache(maxsize=1)
 def oci_config_available() -> bool:
     """Check if OCI config exists and required env vars are set."""
     config_path = Path.home() / ".oci" / "config"
@@ -165,10 +157,6 @@ skip_without_postgres = pytest.mark.skipif(
 skip_without_opensearch = pytest.mark.skipif(
     not opensearch_available(),
     reason="OpenSearch not available (set OPENSEARCH_HOSTS and credentials)",
-)
-
-skip_without_qdrant = pytest.mark.skipif(
-    not qdrant_available(), reason="Qdrant not available (check QDRANT_HOST/PORT or start Qdrant)"
 )
 
 skip_without_oci = pytest.mark.skipif(
@@ -277,7 +265,6 @@ def service_status():
         "redis": redis_available(),
         "postgres": postgres_available(),
         "opensearch": opensearch_available(),
-        "qdrant": qdrant_available(),
         "oci": oci_config_available(),
         "oci_bucket": oci_bucket_available(),
         "openai": openai_available(),
@@ -321,7 +308,6 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "requires_redis: test requires Redis")
     config.addinivalue_line("markers", "requires_postgres: test requires PostgreSQL")
     config.addinivalue_line("markers", "requires_opensearch: test requires OpenSearch")
-    config.addinivalue_line("markers", "requires_qdrant: test requires Qdrant")
     config.addinivalue_line("markers", "requires_oci: test requires OCI config")
     config.addinivalue_line("markers", "requires_oci_bucket: test requires OCI bucket")
     config.addinivalue_line("markers", "requires_openai: test requires OpenAI API key")
@@ -335,7 +321,6 @@ def pytest_collection_modifyitems(config, items):
         "requires_redis": skip_without_redis,
         "requires_postgres": skip_without_postgres,
         "requires_opensearch": skip_without_opensearch,
-        "requires_qdrant": skip_without_qdrant,
         "requires_oci": skip_without_oci,
         "requires_oci_bucket": skip_without_oci_bucket,
         "requires_openai": skip_without_openai,
@@ -356,7 +341,6 @@ def pytest_report_header(config):
         ("Redis", redis_available()),
         ("PostgreSQL", postgres_available()),
         ("OpenSearch", opensearch_available()),
-        ("Qdrant", qdrant_available()),
         ("OCI GenAI", oci_config_available()),
         ("OCI Bucket", oci_bucket_available()),
         ("OpenAI", openai_available()),

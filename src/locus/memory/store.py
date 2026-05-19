@@ -373,7 +373,7 @@ class BaseStore(ABC):
         raise StoreCapabilityError(
             capability="semantic_search",
             store_class=type(self).__name__,
-            hint="Pick a vector-capable backend (e.g., Oracle 26ai, pgvector, Qdrant).",
+            hint="Pick a vector-capable backend (e.g., Oracle 26ai, pgvector).",
         )
 
     async def get_embedding(

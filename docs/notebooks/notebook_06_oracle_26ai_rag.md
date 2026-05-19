@@ -15,7 +15,7 @@ the in-memory RAG notebooks use; only the store import changes.
   `VECTOR(1024, FLOAT32)` column on first use, and serving cosine
   similarity queries via `VECTOR_DISTANCE`.
 - `RAGRetriever` driving the search — swap to OpenSearch, pgvector,
-  Qdrant, or in-memory by changing the store import only.
+  or in-memory by changing the store import only.
 
 ## Prerequisites
 

@@ -17,10 +17,6 @@ Required for OpenSearch tests:
 - OPENSEARCH_PASSWORD: OpenSearch password (REQUIRED)
 - OPENSEARCH_USE_SSL: Use SSL (default: true)
 - OPENSEARCH_VERIFY_CERTS: Verify certs (default: false)
-
-Required for Qdrant tests:
-- QDRANT_URL: Qdrant server URL (default: http://localhost:6333)
-- QDRANT_API_KEY: API key for Qdrant Cloud (optional)
 """
 
 import os
@@ -89,14 +85,6 @@ def get_opensearch_config():
     }
 
 
-def get_qdrant_config():
-    """Get Qdrant configuration from environment."""
-    return {
-        "url": os.environ.get("QDRANT_URL", "http://localhost:6333"),
-        "api_key": os.environ.get("QDRANT_API_KEY"),
-    }
-
-
 def get_oracle_adb_config():
     """Get Oracle ADB configuration from environment.
 
@@ -151,34 +139,3 @@ def oracle_adb_config():
         return get_oracle_adb_config()
     except ValueError as e:
         pytest.skip(str(e))
-
-
-@pytest.fixture
-def qdrant_config():
-    """Qdrant configuration fixture. Skips test if qdrant-client not installed."""
-    try:
-        import qdrant_client  # noqa: F401
-    except ImportError:
-        pytest.skip("qdrant-client not installed. Install with: pip install qdrant-client")
-
-    config = get_qdrant_config()
-
-    # Probe the port directly with a short-timeout TCP connect instead of
-    # constructing a QdrantClient. ``QdrantClient(...).get_collections()``
-    # spawns a background ``_check_compatibility`` thread whose exception
-    # leaks past ``pytest.skip()`` and surfaces as
-    # ``PytestUnhandledThreadExceptionWarning`` during teardown when no
-    # server is reachable.
-    import socket
-    from urllib.parse import urlparse
-
-    parsed = urlparse(config["url"])
-    host = parsed.hostname or "localhost"
-    port = parsed.port or (443 if parsed.scheme == "https" else 6333)
-    try:
-        with socket.create_connection((host, port), timeout=1.0):
-            pass
-    except (OSError, TimeoutError) as e:
-        pytest.skip(f"Qdrant server not reachable at {config['url']}: {e}")
-
-    return config

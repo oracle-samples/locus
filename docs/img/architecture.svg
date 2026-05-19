@@ -128,9 +128,9 @@
   <g filter="url(#card)">
     <rect x="80" y="747" width="513" height="118" rx="8" fill="#FFFFFF" stroke="#E7E5E4"/>
     <rect x="80" y="747" width="513" height="3" fill="#C74634"/>
-    <text x="100" y="776" font-size="14" font-weight="700" fill="#312D2A">RAG — 8 vector stores</text>
-    <text x="100" y="800" font-size="12" font-family="ui-monospace, monospace" fill="#312D2A">Oracle 26ai · OpenSearch · Qdrant · Pinecone</text>
-    <text x="100" y="820" font-size="12" font-family="ui-monospace, monospace" fill="#312D2A">pgvector · Chroma · in-memory</text>
+    <text x="100" y="776" font-size="14" font-weight="700" fill="#312D2A">RAG — vector stores</text>
+    <text x="100" y="800" font-size="12" font-family="ui-monospace, monospace" fill="#312D2A">Oracle 26ai · OpenSearch · pgvector</text>
+    <text x="100" y="820" font-size="12" font-family="ui-monospace, monospace" fill="#312D2A">in-memory</text>
     <text x="100" y="840" font-size="11" fill="#78716C">+ Multimodal: PDF text/OCR · image OCR · audio transcription</text>
     <text x="100" y="858" font-size="11" fill="#78716C">+ Embeddings: Cohere on OCI GenAI · OpenAI</text>
   </g>

@@ -18,8 +18,8 @@ up alongside any other ``@tool`` you define.
 
 Backend: ``OracleVectorStore`` is the default — Oracle Database 26ai's
 native ``VECTOR`` column and ``VECTOR_DISTANCE`` SQL function. Swap
-``_oracle_store`` for any other Locus vector store implementation if
-you prefer Chroma, Qdrant, or pgvector.
+``_oracle_store`` for any other Locus vector store implementation
+(OpenSearch, pgvector, in-memory).
 
 Run it:
     # OCI GenAI is the default — auto-detected from ~/.oci/config.
@@ -401,7 +401,7 @@ Best Practices for RAG Agents:
    - Track answer quality over time
 
 6. PRODUCTION CONSIDERATIONS
-   - Use persistent vector stores (Qdrant, OpenSearch)
+   - Use persistent vector stores (Oracle 26ai, OpenSearch, pgvector)
    - Implement caching for embeddings
    - Monitor latency and costs
 """)

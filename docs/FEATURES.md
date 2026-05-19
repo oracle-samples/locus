@@ -141,7 +141,7 @@ Everything `locus` ships, what it does, and where to find it.
 
 | Component | Options | Surface |
 |---|---|---|
-| Vector stores | Oracle 26ai · OpenSearch · pgvector · Qdrant · Pinecone · Chroma · in-memory | `locus.rag.stores` · [RAG](concepts/rag.md) |
+| Vector stores | Oracle 26ai · OpenSearch · pgvector · in-memory | `locus.rag.stores` · [RAG](concepts/rag.md) |
 | Embeddings | `OCIEmbeddings` (Cohere) · `OpenAIEmbeddings` | `locus.rag.embeddings` |
 | Multimodal processors | Text · PDF (text + OCR) · Image (OCR) · Audio (transcription) | `locus.rag.multimodal` |
 | Tool wiring | `create_rag_tool(retriever)` exposes the retriever as a `@tool` | `locus.rag.tools` |

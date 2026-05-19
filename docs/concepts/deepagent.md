@@ -196,7 +196,7 @@ translate 1:1.
 
 The retriever's `store` can be any `BaseVectorStore` implementation —
 `OracleVectorStore` (Autonomous DB), `OpenSearchVectorStore`,
-`InMemoryVectorStore`, `PgVectorStore`, `ChromaVectorStore`, etc. See
+`InMemoryVectorStore`, `PgVectorStore`, etc. See
 [`examples/projects/deep-research/`][dr] for working ports of seven
 upstream deep-research gists covering all four major backends.
 

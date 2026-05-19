@@ -23,8 +23,8 @@ Key concepts:
   ``OracleVectorStore`` opens an async pool against the Autonomous
   Database wallet and auto-creates the table on first use.
 - ``RAGRetriever`` is the same class every other Locus RAG notebook
-  uses — swap to in-memory, pgvector, Qdrant, or OpenSearch by changing
-  only the store import.
+  uses — swap to in-memory, pgvector, or OpenSearch by changing only
+  the store import.
 
 Run it::
 
@@ -192,8 +192,8 @@ async def main() -> None:
 
     print(
         "\nThe same RAGRetriever drove an Oracle 26ai vector search. "
-        "Swap to OpenSearch, pgvector, Qdrant, or in-memory by changing "
-        "the store import only."
+        "Swap to OpenSearch, pgvector, or in-memory by changing the "
+        "store import only."
     )
 
 

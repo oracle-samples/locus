@@ -15,8 +15,8 @@ any other `@tool` you define.
 
 Backend: `OracleVectorStore` is the default — Oracle Database 26ai's
 native `VECTOR` column and `VECTOR_DISTANCE` SQL function. Swap
-`_oracle_store` for any other Locus vector store if you prefer Chroma,
-Qdrant, or pgvector.
+`_oracle_store` for any other Locus vector store (OpenSearch,
+pgvector, in-memory).
 
 ## Run it
 

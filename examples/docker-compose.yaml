@@ -45,14 +45,6 @@ services:
       timeout: 3s
       retries: 5
 
-  qdrant:
-    image: qdrant/qdrant:latest
-    ports:
-    - 127.0.0.1:6333:6333
-    - 127.0.0.1:6334:6334
-    # The qdrant image is distroless — no shell or curl — so we skip the
-    # healthcheck and let the published port serve as the readiness signal.
-
   opensearch:
     image: opensearchproject/opensearch:2.11.0
     ports:

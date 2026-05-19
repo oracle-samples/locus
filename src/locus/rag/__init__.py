@@ -12,7 +12,6 @@ Embeddings (convert text to vectors):
 Vector Stores (persist and search vectors):
 - OracleVectorStore: Oracle 26ai with native VECTOR type (recommended)
 - OpenSearchVectorStore: OpenSearch with k-NN plugin
-- QdrantVectorStore: Qdrant vector database
 - InMemoryVectorStore: In-memory store (testing)
 
 Retriever (combines embedding + store):
@@ -115,7 +114,6 @@ __all__ = [
     # Stores - Implementations (lazy)
     "OracleVectorStore",
     "OpenSearchVectorStore",
-    "QdrantVectorStore",
     "InMemoryVectorStore",
     # Loaders / chunkers (lazy)
     "OracleADBLoader",
@@ -156,11 +154,6 @@ def __getattr__(name: str) -> Any:
         from locus.rag.stores.opensearch import OpenSearchVectorStore
 
         return OpenSearchVectorStore
-
-    if name == "QdrantVectorStore":
-        from locus.rag.stores.qdrant import QdrantVectorStore
-
-        return QdrantVectorStore
 
     if name == "InMemoryVectorStore":
         from locus.rag.stores.memory import InMemoryVectorStore
